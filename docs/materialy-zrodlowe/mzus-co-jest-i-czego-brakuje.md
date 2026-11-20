@@ -1,0 +1,46 @@
+# Co już jest w mZUS i czego brakuje (research do hackatonu ZUS)
+
+Research przygotowany 20.11.2026 na podstawie opisów na zus.pl i w App Store. Przed pitchem warto przejrzeć samą aplikację, bo ZUS mógł coś dodać bez komunikatu.
+
+## Co już jest w mZUS
+
+- **Wnioski:** według strony ZUS w aplikacji składa się wnioski o 800+, o świadczenia z Aktywnego Rodzica (w pracy, w żłobku, w domu) i o Dobry Start 300+. [zus.pl/mzus](https://www.zus.pl/pl/mzus)
+- **Obsługa złożonych wniosków:** można sprawdzić status wniosku z planowanym terminem załatwienia, zobaczyć wnioski złożone przez mZUS, eZUS, bankowość internetową albo Emp@tię, wycofać wniosek o 300+ i 800+, odwołać się od odmowy, zmienić numer konta w Aktywnym Rodzicu, wycofać wniosek albo zrezygnować ze świadczenia oraz dosłać brakujący załącznik pismem POG. [zus.pl/mzus](https://www.zus.pl/pl/mzus)
+- **Kreator:** pozwala utworzyć nowy wniosek o 300+ albo 800+ na podstawie wcześniej przyznanego, z przeniesionymi danymi, i wybrać dzieci zgłoszone w ZUS do ubezpieczenia zdrowotnego bez ponownego wpisywania ich danych. [zus.pl/mzus](https://www.zus.pl/pl/mzus)
+- **Dane do wglądu:** status ubezpieczenia, podstawy składek i stan konta, członkowie rodziny zgłoszeni do ubezpieczenia zdrowotnego, a także zasiłki z ostatnich 6 miesięcy z datą i kwotą wypłaty. Widać też e-ZLA z ostatnich 12 miesięcy. [zus.pl/mzus](https://www.zus.pl/pl/mzus)
+- **Pozostałe funkcje:** zaświadczenia z danymi ZUS, kalkulator emerytalny, czat z infolinią, e-wizyta i logowanie do eZUS kodem QR.
+
+## Czego w mZUS nie ma
+
+| Sprawa | Gdzie to dziś załatwić |
+| --- | --- |
+| Wniosek o zasiłek macierzyński (macierzyński, rodzicielski, ojcowski, uzupełniający) | eZUS albo pracodawca |
+| Rezygnacja matki z części zasiłku i przejęcie go przez ojca | eZUS albo pracodawca |
+| Zasiłek opiekuńczy (Z-15) | eZUS albo pracodawca |
+| Zgłoszenie dziecka do ubezpieczenia zdrowotnego (ZCNA) | pracodawca, a przy JDG samodzielnie przez eZUS |
+| Zgłoszenie do dobrowolnego chorobowego (JDG, zlecenie) | eZUS albo zleceniodawca |
+| Becikowe, dodatek z tytułu urodzenia, kosiniakowe, „Za życiem” | gmina albo MOPS, online przez Emp@tię |
+| Zgłoszenie urodzenia, uznanie ojcostwa | USC, mObywatel |
+| Wnioski o urlopy | pracodawca |
+
+- **Zasiłek macierzyński:** wniosek składa się na eZUS, gdzie w katalogu usług wybiera się „Złożenie dokumentu ZAM”. Od 24 października 2026 formularze ZAM, ZUR i ZAO zastąpił jeden nowy ZAM, obejmujący urlop macierzyński, na warunkach macierzyńskiego, rodzicielski, uzupełniający i ojcowski. Wypełnia się tylko część dotyczącą konkretnego urlopu. [jak uzyskać zasiłek macierzyński (zus.pl)](https://www.zus.pl/en/-/jak-uzyskac-zasilek-macierzynski-z-tytulu-urodzenia-dziecka), [kolejne uproszczenia w zasiłkach (zus.pl)](https://www.zus.pl/en/-/kolejne-uproszczenia-w-zasi%C5%82kach)
+- **Przejęcie zasiłku przez ojca:** matka może zrezygnować z reszty zasiłku po co najmniej 14 tygodniach po porodzie, a wtedy ojciec składa wniosek o zasiłek macierzyński za okres, którego matka nie wykorzystała. [zus.pl](https://www.zus.pl/-/jak-matka-dziecka-moze-skrocic-po-14-tygodniach-okres-wyplaty-zasilku-macierzynskiego-a-ojciec-dziecka-z-tego-powodu-uzyskac-zasilek-macierzynski)
+- **Zasiłek opiekuńczy:** od tej samej daty formularze Z-15a i Z-15b zastąpił jeden Z-15. [kolejne uproszczenia w zasiłkach (zus.pl)](https://www.zus.pl/-/kolejne-uproszczenia-w-zasi%C5%82kach)
+- **Świadczenia gminne:** przynajmniej w przypadku „Za życiem” osoby z profilem zaufanym albo podpisem kwalifikowanym mogą złożyć wniosek m.in. przez Emp@tię. [gazetaprawna.pl](https://www.gazetaprawna.pl/twoje-prawo/swiadczenia/artykuly/11269357,zasilek-z-mops-4-tys-zl-za-urodzenie-dziecka-bez-wzgledu-na-dochod-jak-zlozyc-wniosek-online-pdf-mops.html)
+
+## Co z tego wynika dla hackatonu
+
+1. **Najbardziej brakuje wniosku ZAM w mZUS.** Nowy, jeden formularz ZAM nadaje się do mobilnego kreatora: wybierasz rodzaj urlopu i wypełniasz tylko jego część. Gdy zasiłek wypłaca ZUS, nie trzeba już dołączać odpisu aktu urodzenia, bo ZUS pobiera go sam na podstawie danych dziecka. To dobry kandydat na główną funkcję demo. [kolejne uproszczenia w zasiłkach (zus.pl)](https://www.zus.pl/-/kolejne-uproszczenia-w-zasi%C5%82kach?redirect=%2F%2F)
+2. **Mapę uprawnień i kalkulator można oprzeć na danych, które mZUS już pokazuje.** Aplikacja ma podstawy składek, status ubezpieczenia, zgłoszonych członków rodziny i historię zasiłków. Pokazujecie więc rozszerzenie istniejących ekranów, a nie integrację z nowymi danymi, co jest łatwiej obronić przed jury.
+3. **Kreator mZUS już pobiera dzieci zgłoszone do ubezpieczenia zdrowotnego.** Pakiet narodzin może działać na tym samym mechanizmie: dziecko pojawia się w danych, a aplikacja podsuwa ZAM i 800+.
+4. **Rozszerzenie pasuje do planów ZUS.** Na drugą połowę 2027 roku zaplanowano nową wersję aplikacji dla klientów indywidualnych, więc możecie je przedstawić jako propozycję modułu do tej wersji. [ZUS stawia na rozwój aplikacji mobilnych (zus.pl)](https://www.zus.pl/-/zus-stawia-na-rozw%C3%B3j-aplikacji-mobilnych)
+5. **Świadczenia gminne i USC zostają poza ZUS.** Uczciwiej pokazać je jako przekierowanie do Emp@tii i mObywatela niż udawać, że da się je złożyć w mZUS.
+
+## Weryfikacja na zus.pl (20.11.2026)
+
+- **Nowe formularze:** artykuł z 22.10.2026 podaje, że 24.10.2026 wchodzi w życie nowe rozporządzenie w sprawie zasiłków. Jeden nowy ZAM zastępuje ZAM, ZUR i ZAO, a Z-15 zastępuje Z-15a i Z-15b. Nowe formularze są na zus.pl od 24.10.2026, a na eZUS od połowy listopada 2026. Do czasu zmiany na eZUS podstawą do wydania decyzji jest stary i nowy formularz. [zus.pl](https://www.zus.pl/-/kolejne-uproszczenia-w-zasi%C5%82kach)
+- **Odpis aktu urodzenia:** gdy zasiłek macierzyński wypłaca ZUS, wniosek nie wymaga skróconego odpisu aktu urodzenia. ZUS pobiera akt na podstawie imienia, nazwiska, numeru PESEL, daty i miejsca urodzenia dziecka oraz imienia, nazwiska i numeru PESEL rodzica. Gdy zasiłek wypłaca płatnik składek, odpis nadal trzeba dołączyć. [zus.pl](https://www.zus.pl/-/kolejne-uproszczenia-w-zasi%C5%82kach)
+- **Kto składa ZAM:** przez eZUS wniosek ZAM składa się tylko wtedy, gdy zasiłek wypłaca ZUS. Pracownica, której zasiłek wypłaca ZUS, nie składa ZAM, tylko wniosek o urlop do pracodawcy. Zasiłek wypłaca płatnik składek, który zgłasza do ubezpieczenia chorobowego więcej niż 20 ubezpieczonych. [zus.pl](https://www.zus.pl/en/-/jak-uzyskac-zasilek-macierzynski-z-tytulu-urodzenia-dziecka)
+- **Przejęcie zasiłku przez ojca:** matka rezygnuje po wykorzystaniu co najmniej 14 tygodni zasiłku po porodzie, a pracownica składa rezygnację co najmniej 7 dni przed powrotem do pracy. Ojciec będący pracownikiem wnioskuje o urlop u pracodawcy. [zus.pl](https://www.zus.pl/-/jak-matka-dziecka-moze-skrocic-po-14-tygodniach-okres-wyplaty-zasilku-macierzynskiego-a-ojciec-dziecka-z-tego-powodu-uzyskac-zasilek-macierzynski)
+- **Nowa wersja mZUS:** artykuł z 27.05.2026 podaje, że w drugiej połowie 2027 roku planowane jest udostępnienie nowej wersji aplikacji dla klientów indywidualnych. Informacja pochodzi z wewnętrznego Forum IT ZUS i jest planem. [zus.pl](https://www.zus.pl/-/zus-stawia-na-rozw%C3%B3j-aplikacji-mobilnych)
+- **Funkcje mZUS:** strona z 28.07.2025 potwierdza wszystkie wymienione funkcje. Kontakt z infolinią to wiadomość do Centrum Kontaktu Klientów ZUS z odpowiedzią w aplikacji oraz uwierzytelnione połączenie z CKK, a nie czat. [zus.pl/mzus](https://www.zus.pl/pl/mzus)

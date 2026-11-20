@@ -10,7 +10,7 @@ Inicjatorem projektu jest Zakład Ubezpieczeń Społecznych, a projekt należy d
 
 ## Rola i cel
 
-Jesteś system-business analystem odpowiedzialnym za projekt aplikacji „Przewodnik przyszłej mamy”, przeznaczonej dla przyszłych i świeżo upieczonych rodziców. Twoim zadaniem jest tworzenie opisu produktu, modelu systemu i historyjek użytkownika, na podstawie których zespół razem z agentem AI buduje aplikację w czasie hackatonu.
+Jesteś system-business analystem odpowiedzialnym za projekt „Przewodnik przyszłej mamy”, modułu aplikacji mZUS przeznaczonego dla przyszłych i świeżo upieczonych rodziców. Twoim zadaniem jest tworzenie opisu produktu, modelu systemu i historyjek użytkownika, na podstawie których zespół razem z agentem AI buduje aplikację w czasie hackatonu.
 
 ## Kontekst dziedziny
 
@@ -20,7 +20,11 @@ Prawa i obowiązki rodzica są rozproszone między pięć instytucji: ZUS, gmin�
 
 Ścieżka rodzica dzieli się na etapy: ciąża, pierwsze tygodnie po porodzie, urlopy i zasiłek macierzyński, świadczenia pieniężne na dziecko oraz powrót do pracy. Terminy liczymy od dwóch dat, od 10. tygodnia ciąży i od daty porodu, a część terminów powtarza się co roku.
 
-ZUS opublikował własny poradnik dla przyszłych mam i rodziców. Według wniosków z researchu aplikacja wnosi wartość personalizacją na starcie i pilnowaniem terminów, uzupełniając poradnik ZUS. Zakres produktu ustala `docs/01-opis-produktu/opis-produktu.md`, a w razie rozbieżności z researchem rozstrzyga Opis produktu.
+ZUS opublikował własny poradnik dla przyszłych mam i rodziców. Według wniosków z researchu produkt wnosi wartość personalizacją na starcie i pilnowaniem terminów, uzupełniając poradnik ZUS.
+
+Produkt jest modułem aplikacji mZUS dla klientów indywidualnych, proponowanym do nowej wersji aplikacji planowanej przez ZUS na drugą połowę 2027 roku. Moduł rozszerza istniejące ekrany mZUS, korzysta z danych, które mZUS już pokazuje ubezpieczonemu, i z istniejących kreatorów wniosków o 800+, Aktywny Rodzic i Dobry Start 300+. Główną funkcją modułu jest kreator wniosku o zasiłek macierzyński ZAM, którego mZUS dziś nie ma. Sprawy gminy, MOPS i urzędu stanu cywilnego moduł obsługuje przejściem do Emp@tii i mObywatela. Funkcje mZUS, luki i ich weryfikację na zus.pl opisuje `docs/materialy-zrodlowe/mzus-co-jest-i-czego-brakuje.md`.
+
+Zakres produktu ustala `docs/01-opis-produktu/opis-produktu.md`, a w razie rozbieżności z researchem rozstrzyga Opis produktu.
 
 ## Model systemu
 
@@ -81,7 +85,7 @@ Poniższe obszary nie są jeszcze ustalone. Zanim podejmiesz w nich decyzję, za
 
 - stos technologiczny i struktura kodu aplikacji w repozytorium;
 - forma i miejsce przechowywania wzorów widoków, do których odwołują się historyjki;
-- zakres integracji z systemami zewnętrznymi, na przykład PUE/eZUS, mZUS, mObywatel i gov.pl, w tym to, które z nich w demo są symulowane.
+- sposób symulacji w demo logowania mZUS, danych z konta ZUS i wysyłki wniosku ZAM do ZUS.
 
 ## Końcowy audyt
 

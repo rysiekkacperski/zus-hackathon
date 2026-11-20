@@ -15,11 +15,11 @@ Sekcje, które we wzorze są jedną stroną dla całego projektu, Opis produktu 
 
 W sekcji trzeciej folder najwyższego poziomu odpowiada Epikowi i nosi jego numer i nazwę z kolumny Epiki w podsekcji 2.1 Modelu systemu, folder drugiego poziomu odpowiada funkcji, a strony Story leżą w folderze funkcji, na przykład:
 
-- `03-user-stories/3.4.1-kalendarz-terminow/3.4.1.1-terminy-po-porodzie/3.4.1.1.1-wyliczenie-terminow-od-daty-porodu.md`
+- `03-user-stories/3.7.1-kalendarz-terminow/3.7.1.1-terminy-po-porodzie/3.7.1.1.1-wyliczenie-terminow-od-daty-porodu.md`
 
 Folder `03-user-stories` zawiera bezpośrednio także tablicę `tablica-komunikatow.md` z ID, nazwą sytuacji, typem, kodem HTTP i treścią każdego komunikatu, do którego odwołują się historyjki.
 
-Folder `materialy-zrodlowe` zawiera treść zadania hackatonowego oraz research prawny w wersji PDF i w wersji tekstowej `prawa-i-obowiazki-rodzica.md`.
+Folder `materialy-zrodlowe` zawiera treść zadania hackatonowego, research prawny w wersji PDF i w wersji tekstowej `prawa-i-obowiazki-rodzica.md` oraz research funkcji aplikacji mZUS `mzus-co-jest-i-czego-brakuje.md`.
 
 ## Gałęzie
 
