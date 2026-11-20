@@ -15,7 +15,7 @@ Sekcje, które we wzorze są jedną stroną dla całego projektu, Opis produktu 
 
 W sekcji trzeciej folder najwyższego poziomu odpowiada Epikowi i nosi jego numer i nazwę z kolumny Epiki w podsekcji 2.1 Modelu systemu, folder drugiego poziomu odpowiada funkcji, a strony Story leżą w folderze funkcji, na przykład:
 
-- `03-user-stories/3.7.1-kalendarz-terminow/3.7.1.1-terminy-po-porodzie/3.7.1.1.1-wyliczenie-terminow-od-daty-porodu.md`
+- `03-user-stories/3.7.1-kalendarz-terminow/3.7.1.1-wyliczanie-terminow/3.7.1.1.1-wyliczenie-terminow-od-dat-z-profilu.md`
 
 Folder `03-user-stories` zawiera bezpośrednio także tablicę `tablica-komunikatow.md` z ID, nazwą sytuacji, typem, kodem HTTP i treścią każdego komunikatu, do którego odwołują się historyjki.
 
