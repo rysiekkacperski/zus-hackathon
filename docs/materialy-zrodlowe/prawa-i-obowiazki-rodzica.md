@@ -89,7 +89,7 @@ Największą wartość da personalizacja na starcie i kalendarz terminów, bo ro
 
 1. Krótki profil na start zamiast ogólnego katalogu. Kluczowe pytania: forma zatrudnienia każdego z rodziców (etat, zlecenie, JDG, brak), czy rodzice są małżeństwem, dochód na osobę, gmina, przewidywany termin porodu, ciąża mnoga, wcześniak albo hospitalizacja.
 2. Kalendarz terminów od dwóch dat. Pierwsza to 10. tydzień ciąży, druga to data porodu (7 dni, 21 dni, 3 miesiące, 12 miesięcy). Do tego terminy powtarzalne: 800+ co roku od lutego oraz Aktywny Rodzic, gdy dziecko kończy rok.
-3. Pokazywanie, ile kosztuje spóźnienie. Najwięcej pieniędzy rodzice tracą na wyrównaniu 800+, wariancie 81,5% i zaświadczeniu z 10. tygodnia. Licznik „tyle tracisz, jeśli nie złożysz do…” dobrze wypadnie w demo.
+3. Pokazywanie, ile kosztuje spóźnienie. Najwięcej pieniędzy rodzice tracą na wyrównaniu 800+ i zaświadczeniu z 10. tygodnia. Termin 21 dni na wariant 81,5% decyduje o rozkładzie wypłat w czasie, bo przy pełnym wykorzystaniu urlopów suma obu wariantów jest prawie równa. Licznik „tyle tracisz, jeśli nie złożysz do…” dobrze wypadnie w demo.
 4. Pomoc w decyzjach, a nie tylko informacja: 81,5% czy 100/70, podział rodzicielskiego między rodziców, wybór wariantu Aktywnego Rodzica.
 5. Mama na JDG jako persona. Ta grupa gubi się najbardziej: dobrowolne chorobowe, wyrejestrowanie z ubezpieczeń, składka zdrowotna płatna dalej. ifirma radzi jej m.in. sprawdzić w e-ZUS, czy nie ma zaległości w składkach.
 6. Wspólne dane zamiast zbierania skanów. Zgłoszono propozycję, żeby o zasiłek macierzyński można było wystąpić bez dołączania odpisu aktu urodzenia. Kierunek zmian to wymiana danych między urzędami, więc lepiej nie budować aplikacji wokół gromadzenia dokumentów.

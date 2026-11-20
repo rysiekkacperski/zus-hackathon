@@ -1,4 +1,4 @@
-# Dokumentacja projektu Przewodnik przyszłej mamy
+# Wzór dokumentacji projektu Przewodnik przyszłej mamy
 
 ## Opis ogólny wzoru
 

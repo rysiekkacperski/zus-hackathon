@@ -7,7 +7,7 @@
 | Wykonawca | Ryszard Kacperski |
 | Właściciel merytoryczny | Ryszard Kacperski |
 | Status | do przeglądu |
-| Wersja | 0.2.0 |
+| Wersja | 0.3.0 |
 | Data ostatniej aktualizacji |  |
 
 **Dokument opisuje moduł Przewodnik przyszłej mamy w aplikacji mZUS na poziomie modelu systemowego: z jakich elementów się składa, jak te elementy są ze sobą powiązane i z istniejącymi mechanizmami mZUS, jakie grupy danych przepływają między nimi, kto za nie odpowiada, jakie role mają konta i jakie zależności trzeba uwzględnić w kolejności budowy poszczególnych obszarów.**
@@ -24,7 +24,7 @@
 | 6 | Świadczenia i terminy | Plan rodzica | Osobista lista świadczeń, uprawnień i obowiązków rodziny, ułożona według etapów, ze statusem i wybranym wariantem każdej sprawy. | 3.6.1 Plan świadczeń rodziny |
 | 7 | Świadczenia i terminy | Kalendarz terminów | Terminy spraw z planu rodziny liczone od 10. tygodnia ciąży, od daty porodu i od wieku dziecka, terminy powtarzalne oraz koszt spóźnienia. | 3.7.1 Kalendarz terminów |
 | 8 | Świadczenia i terminy | Przewodnik po formalnościach | Instrukcja załatwienia sprawy z planu rodziny i przejście do właściwego kanału: kreatora modułu, istniejącego kreatora mZUS, eZUS, Emp@tii albo mObywatela, a dla spraw u pracodawcy instrukcja wniosku. | 3.8.1 Instrukcje i przejścia do kanałów |
-| 9 | Wnioski | Kreatory wniosków | Mobilne kreatory wniosków ZUS, których brakuje w mZUS, uzupełniane danymi z konta ZUS i z profilu rodziny, wraz z wysyłką wniosku do ZUS albo przygotowaniem go dla płatnika składek. | 3.9.1 Wniosek o zasiłek macierzyński ZAM, 3.9.2 Rezygnacja matki i wniosek ojca o zasiłek, 3.9.3 Wniosek o zasiłek opiekuńczy Z-15, 3.9.4 Zgłoszenie dziecka do ubezpieczenia zdrowotnego, 3.9.5 Zgłoszenie do dobrowolnego ubezpieczenia chorobowego |
+| 9 | Wnioski | Kreatory wniosków | Mobilne kreatory wniosków ZUS, których brakuje w mZUS, dla rodzica ubezpieczonego z innego tytułu niż umowa o pracę, uzupełniane danymi z konta ZUS i z profilu rodziny, wraz z wysyłką wniosku do ZUS albo przygotowaniem go dla płatnika składek. | 3.9.1 Wniosek o zasiłek macierzyński ZAM, 3.9.2 Rezygnacja matki i wniosek ojca o zasiłek, 3.9.3 Wniosek o zasiłek opiekuńczy Z-15, 3.9.4 Zgłoszenie dziecka do ubezpieczenia zdrowotnego, 3.9.5 Zgłoszenie do dobrowolnego ubezpieczenia chorobowego |
 | 10 | Decyzje | Kalkulatory decyzji | Porównanie wariantów zasiłku macierzyńskiego, podział urlopu rodzicielskiego między rodziców i wybór wariantu programu Aktywny Rodzic, liczone z podstaw składek z konta ZUS, z zapisem decyzji w planie rodziny. | 3.10.1 Wariant zasiłku macierzyńskiego, 3.10.2 Podział urlopu rodzicielskiego, 3.10.3 Wariant programu Aktywny Rodzic |
 | 11 | AI | Asystent AI | Warstwa konwersacyjna odpowiadająca na pytania rodzica na podstawie tych samych danych i reguł co pozostałe elementy systemu. | 3.11.1 Asystent w czacie |
 
@@ -32,11 +32,11 @@
 
 **Element *Konto i uwierzytelnianie* jest punktem wejścia do modułu i korzysta z logowania aplikacji mZUS.** Udostępnia pozostałym elementom tożsamość zalogowanego ubezpieczonego, na podstawie której *Odczyt danych ZUS* odczytuje dane jego konta, i zapisuje zgodę na przetwarzanie danych dotyczących zdrowia, która warunkuje zapisanie danych ciąży i dziecka w *Profilu rodziny*.
 
-**Element *Odczyt danych ZUS* odczytuje dane, które mZUS pokazuje zalogowanemu ubezpieczonemu, i udostępnia je *Profilowi rodziny*, *Planowi rodzica*, *Kreatorom wniosków* i *Kalkulatorom decyzji*.** Status ubezpieczenia wskazuje tytuły ubezpieczenia, z których *Profil rodziny* proponuje formę zatrudnienia i opłacanie dobrowolnego ubezpieczenia chorobowego. Podstawy składek są podstawą wyliczeń w *Kalkulatorach decyzji*, a członkowie rodziny zgłoszeni do ubezpieczenia zdrowotnego wskazują dzieci. Zasiłki z ostatnich 6 miesięcy pomagają *Kreatorom wniosków* ustalić, kto wypłaca zasiłek. Status wniosków złożonych w ZUS przez mZUS, eZUS, bankowość elektroniczną albo Emp@tię, z planowym terminem załatwienia sprawy, aktualizuje status spraw w *Planie rodzica*. Dane drugiego rodzica moduł odczytuje wyłącznie z jego konta, po dołączeniu do rodziny.
+**Element *Odczyt danych ZUS* odczytuje dane, które mZUS pokazuje zalogowanemu ubezpieczonemu, i udostępnia je *Profilowi rodziny*, *Planowi rodzica*, *Kreatorom wniosków* i *Kalkulatorom decyzji*.** Status ubezpieczenia wskazuje tytuły ubezpieczenia, z których *Profil rodziny* proponuje formę zatrudnienia i opłacanie dobrowolnego ubezpieczenia chorobowego. Podstawy składek są podstawą wyliczeń w *Kalkulatorach decyzji*, a członkowie rodziny zgłoszeni do ubezpieczenia zdrowotnego wskazują dzieci. Płatnika zasiłku ustala *Profil rodziny*. Dla rodzica prowadzącego jednoosobową działalność gospodarczą zasiłek wypłaca ZUS. Dla pracownika i zleceniobiorcy *Profil rodziny* proponuje płatnika na podstawie zasiłków z ostatnich 6 miesięcy, jeżeli są w Danych z konta ZUS, a w przeciwnym razie pyta rodzica, czy płatnik zgłasza do ubezpieczenia chorobowego więcej niż 20 osób. Wynik *Profil rodziny* zapisuje w Danych rodziny jako płatnika zasiłku ze źródłem danej. Status wniosków złożonych w ZUS przez mZUS, eZUS, bankowość elektroniczną albo Emp@tię, z planowym terminem załatwienia sprawy, aktualizuje status spraw w *Planie rodzica*. Dane drugiego rodzica moduł odczytuje wyłącznie z jego konta, po dołączeniu do rodziny.
 
 **Od *Profilu rodziny* zależą wszystkie elementy grup Świadczenia i terminy, Wnioski i Decyzje oraz *Asystent AI*.** Profil powstaje w profilu na start, w którym rodzic potwierdza dane z konta ZUS i podaje stan cywilny, gminę, dochód na osobę w rodzinie, przewidywany termin porodu, ciążę mnogą oraz formę zatrudnienia i ubezpieczenie chorobowe drugiego rodzica. *Plan rodzica* odczytuje z profilu dane, od których zależą warunki świadczeń, *Kalendarz terminów* daty kotwiczące, *Kreatory wniosków* dane rodzica i dziecka do wniosku, *Kalkulatory decyzji* formę zatrudnienia i daty urlopów, a *Asystent AI* cały profil jako kontekst odpowiedzi.
 
-**Pakiet narodzin w *Profilu rodziny* uruchamia się, gdy *Odczyt danych ZUS* wskaże nowe dziecko wśród członków rodziny zgłoszonych do ubezpieczenia zdrowotnego.** *Profil rodziny* proponuje rodzicowi potwierdzenie daty porodu i danych dziecka, a po potwierdzeniu *Plan rodzica* i *Kalendarz terminów* przeliczają sprawy i terminy, a *Przewodnik po formalnościach* podsuwa wniosek ZAM w *Kreatorach wniosków* i wniosek o 800+ w istniejącym kreatorze mZUS. Rodzic podaje datę porodu sam, zanim dziecko pojawi się w danych ZUS, a pakiet narodzin uruchamia się wtedy po zapisaniu tej daty.
+**Pakiet narodzin w *Profilu rodziny* uruchamia się po zapisaniu daty porodu przez rodzica albo wtedy, gdy *Odczyt danych ZUS* wskaże nowe dziecko wśród członków rodziny zgłoszonych do ubezpieczenia zdrowotnego.** *Profil rodziny* proponuje rodzicowi potwierdzenie daty porodu i danych dziecka, a po potwierdzeniu *Plan rodzica* i *Kalendarz terminów* przeliczają sprawy i terminy. Propozycja zależy od formy zatrudnienia rodzica. *Przewodnik po formalnościach* podsuwa każdemu rodzicowi wniosek o 800+ w istniejącym kreatorze mZUS, rodzicowi, który składa wniosek ZAM, kreator wniosku ZAM w *Kreatorach wniosków*, a pracownikowi instrukcję wniosku o urlop do pracodawcy z terminem 21 dni. Dla rodzica, który sam zgłasza dziecko do ubezpieczenia zdrowotnego, w szczególności prowadzącego jednoosobową działalność gospodarczą, pakiet uruchamia się po zapisaniu daty porodu przez rodzica, a pojawienie się dziecka w Danych z konta ZUS potwierdza dane dziecka. Rodzic podaje datę porodu sam także wtedy, gdy chce zobaczyć terminy, zanim dziecko pojawi się w danych ZUS.
 
 **Każda zmiana w *Profilu rodziny* wyzwala ponowne wyliczenie *Planu rodzica* i *Kalendarza terminów*.** Zmianą jest w szczególności potwierdzenie daty porodu, zmiana formy zatrudnienia rodzica, zgłoszenie do dobrowolnego ubezpieczenia chorobowego i uznanie ojcostwa. Sprawy oznaczone jako złożone albo załatwione zachowują swój status po przeliczeniu.
 
@@ -48,9 +48,9 @@
 
 **Element *Przewodnik po formalnościach* prowadzi rodzica od sprawy z *Planu rodzica* do właściwego kanału.** Sprawę, dla której moduł ma kreator, prowadzi do *Kreatorów wniosków*. Wnioski o 800+, o świadczenia z programu Aktywny Rodzic i o Dobry Start 300+ prowadzi do istniejących kreatorów mZUS, sprawy ZUS bez kreatora w module do eZUS, sprawy gminy i MOPS do Emp@tii, a zgłoszenie urodzenia do mObywatela. Dla spraw u pracodawcy albo zleceniodawcy, takich jak wniosek o urlop, pokazuje instrukcję z terminem z *Kalendarza terminów*. Po powrocie z kanału poza ZUS rodzic oznacza sprawę jako załatwioną, a *Przewodnik po formalnościach* zapisuje ten status przez operacje *Planu rodzica*.
 
-**Element *Kreatory wniosków* prowadzi rodzica przez wnioski ZUS, których brakuje w mZUS, i uzupełnia je danymi z *Odczytu danych ZUS* i z *Profilu rodziny*.** Kreator wniosku o zasiłek macierzyński prowadzi przez wybór rodzaju urlopu, czyli urlopu macierzyńskiego, urlopu na warunkach urlopu macierzyńskiego, urlopu rodzicielskiego, uzupełniającego urlopu macierzyńskiego albo urlopu ojcowskiego, i przez część formularza ZAM dotyczącą tego urlopu. Kreator ustala, kto wypłaca zasiłek. Gdy wypłaca go ZUS, kreator wysyła wniosek do ZUS bez skróconego odpisu aktu urodzenia, z danymi dziecka i rodzica, na podstawie których ZUS pobiera akt sam. Gdy zasiłek wypłaca płatnik składek, kreator przygotowuje wniosek do przekazania płatnikowi i informuje, że wymaga on skróconego odpisu aktu urodzenia. Pracownik wnioskuje o urlop u pracodawcy, dlatego jego sprawę obsługuje *Przewodnik po formalnościach*. Zgłoszenie dziecka do ubezpieczenia zdrowotnego i zgłoszenie do dobrowolnego ubezpieczenia chorobowego kreatory obsługują dla rodzica prowadzącego jednoosobową działalność gospodarczą, który zgłasza je jako płatnik składek za siebie. Złożony wniosek kreator zapisuje w grupie danych Wnioski i oznacza sprawę w *Planie rodzica* jako złożoną przez jego operacje, a dalszy status sprawy *Odczyt danych ZUS* odczytuje z mZUS.
+**Element *Kreatory wniosków* prowadzi rodzica przez wnioski ZUS, których brakuje w mZUS, i uzupełnia je danymi z *Odczytu danych ZUS* i z *Profilu rodziny*.** Kreator wniosku o zasiłek macierzyński prowadzi przez wybór rodzaju urlopu, czyli urlopu macierzyńskiego, urlopu na warunkach urlopu macierzyńskiego, urlopu rodzicielskiego, uzupełniającego urlopu macierzyńskiego albo urlopu ojcowskiego, i przez część formularza ZAM dotyczącą tego urlopu. Wniosek ZAM składa osoba ubezpieczona z innego tytułu niż umowa o pracę, dlatego kreator obsługuje matkę prowadzącą jednoosobową działalność gospodarczą, matkę wykonującą umowę zlecenia, ojca prowadzącego jednoosobową działalność gospodarczą albo wykonującego umowę zlecenia, który składa wniosek o zasiłek za okres urlopu ojcowskiego i za swoją część urlopu rodzicielskiego, oraz ojca, który przejmuje zasiłek po rezygnacji matki po co najmniej 14 tygodniach od porodu. W kolejnym etapie kreator obsługuje także kobietę, której ubezpieczenie ustało w czasie ciąży z powodu likwidacji albo upadłości pracodawcy. Kreator odczytuje płatnika zasiłku z Danych rodziny. Gdy zasiłek wypłaca ZUS, kreator wysyła wniosek do ZUS bez skróconego odpisu aktu urodzenia, z danymi dziecka i rodzica, na podstawie których ZUS pobiera akt sam. Gdy zasiłek wypłaca płatnik składek, na przykład zleceniodawca zgłaszający do ubezpieczenia chorobowego więcej niż 20 osób, kreator przygotowuje wniosek do przekazania płatnikowi i informuje, że wymaga on skróconego odpisu aktu urodzenia. Pracownik wnioskuje o urlop u pracodawcy, dlatego jego sprawę obsługuje *Przewodnik po formalnościach*. Zgłoszenie dziecka do ubezpieczenia zdrowotnego i zgłoszenie do dobrowolnego ubezpieczenia chorobowego kreatory obsługują dla rodzica prowadzącego jednoosobową działalność gospodarczą, który zgłasza je jako płatnik składek za siebie. Złożony wniosek kreator zapisuje w grupie danych Wnioski i oznacza sprawę w *Planie rodzica* jako złożoną przez jego operacje, a dalszy status sprawy *Odczyt danych ZUS* odczytuje z mZUS.
 
-**Element *Kalkulatory decyzji* liczy skutki wyboru na podstawie *Profilu rodziny*, *Katalogu świadczeń* i podstaw składek z *Odczytu danych ZUS*.** Gdy konto ZUS nie zawiera podstaw składek potrzebnych do wyliczenia, rodzic podaje podstawę wymiaru zasiłku sam. Wybrany wariant kalkulator zapisuje przez operacje *Planu rodzica*, *Kalendarz terminów* dostosowuje do niego terminy, a *Kreatory wniosków* wypełniają nim wniosek ZAM, na przykład wniosek o zasiłek za okres urlopu rodzicielskiego w wariancie 81,5% złożony w ciągu 21 dni od porodu.
+**Element *Kalkulatory decyzji* liczy skutki wyboru na podstawie *Profilu rodziny*, *Katalogu świadczeń* i podstaw składek z *Odczytu danych ZUS*.** Gdy konto ZUS nie zawiera podstaw składek potrzebnych do wyliczenia, rodzic podaje podstawę wymiaru zasiłku sam. Podstawę wymiaru zasiłku kalkulator wylicza z podstaw składek pomniejszonych o 13,71%, a zasiłek macierzyński wylicza w kwocie nie niższej niż kwota świadczenia rodzicielskiego z *Katalogu świadczeń*, obecnie 1000 zł miesięcznie. Kalkulator wariantu zasiłku pokazuje rozkład wypłat w obu wariantach oraz skutek wcześniejszego powrotu do pracy przy wariancie 81,5%, czyli utratę różnicy między 100% a 81,5% zasiłku za okres urlopu macierzyńskiego. Wybrany wariant kalkulator zapisuje przez operacje *Planu rodzica*, *Kalendarz terminów* dostosowuje do niego terminy, a *Kreatory wniosków* wypełniają nim wniosek ZAM, na przykład wniosek o zasiłek za okres urlopu rodzicielskiego w wariancie 81,5% złożony w ciągu 21 dni od porodu.
 
 **Element *Ustawienia i powiadomienia* doręcza użytkownikowi przypomnienia i komunikaty, które tworzą pozostałe elementy systemu.** Zasilają go w szczególności *Kalendarz terminów* przypomnieniami o terminach, *Profil rodziny* propozycją pakietu narodzin i zaproszeniem drugiego rodzica, a *Odczyt danych ZUS* zmianą statusu wniosku. *Ustawienia i powiadomienia* doręcza je kanałami i z wyprzedzeniem zapisanymi w preferencjach, a przypomnienie o sprawie drugiego rodzica kieruje do jego konta.
 
@@ -134,7 +134,7 @@ flowchart LR
         direction TB
         ODCZ[Odczyt danych ZUS]
         PR[Profil rodziny]
-        ODCZ -->|dane do potwierdzenia<br/>i nowe dziecko| PR
+        ODCZ -->|Dane z konta ZUS| PR
     end
 
     subgraph SIT[Świadczenia i terminy]
@@ -143,12 +143,12 @@ flowchart LR
         PLAN[Plan rodzica]
         KAL[Kalendarz terminów]
         PRZ[Przewodnik<br/>po formalnościach]
-        KAT -->|warunki| PLAN
-        KAT -->|reguły terminów i kwoty| KAL
-        KAT -->|instytucje, kanały<br/>i instrukcje| PRZ
-        PLAN -->|sprawy rodziny| KAL
-        PLAN -->|sprawy rodziny| PRZ
-        PRZ -->|status sprawy| PLAN
+        KAT -->|Katalog świadczeń| PLAN
+        KAT -->|Katalog świadczeń| KAL
+        KAT -->|Katalog świadczeń| PRZ
+        PLAN -->|Pozycje planu| KAL
+        PLAN -->|Pozycje planu| PRZ
+        PRZ -->|Pozycje planu| PLAN
     end
 
     subgraph WN[Wnioski]
@@ -173,29 +173,29 @@ flowchart LR
         PRAC[Pracodawca<br/>albo zleceniodawca]
     end
 
-    KONTO -->|tożsamość ubezpieczonego| ODCZ
-    KONTO -->|zgoda na dane<br/>o zdrowiu| PR
-    SZUS -->|status ubezpieczenia, podstawy składek,<br/>członkowie rodziny, zasiłki, wnioski| ODCZ
-    ODCZ -->|status wniosków ZUS| PLAN
-    ODCZ -->|podstawy składek| KALK
-    PR -->|dane rodziny| PLAN
-    PR -->|daty kotwiczące| KAL
-    PR -->|dane rodzica i dziecka| KRE
-    PR -->|dane rodziny| KALK
-    KAT -->|stawki i warianty| KALK
-    KALK -->|wybrany wariant| PLAN
-    KALK -->|wariant do wniosku| KRE
+    KONTO -->|Dane konta użytkownika| ODCZ
+    KONTO -->|Dane konta użytkownika| PR
+    SZUS -->|Dane z konta ZUS| ODCZ
+    ODCZ -->|Dane z konta ZUS| PLAN
+    ODCZ -->|Dane z konta ZUS| KALK
+    PR -->|Dane rodziny,<br/>Dane ciąży i dziecka| PLAN
+    PR -->|Dane ciąży i dziecka| KAL
+    PR -->|Dane rodziny,<br/>Dane ciąży i dziecka| KRE
+    PR -->|Dane rodziny| KALK
+    KAT -->|Katalog świadczeń| KALK
+    KALK -->|Wyniki kalkulacji| PLAN
+    KALK -->|Wyniki kalkulacji| KRE
     PRZ -->|wniosek w module| KRE
-    KRE -->|wniosek złożony| PLAN
-    KRE -->|wniosek ZAM| SZUS
-    KRE -->|wniosek dla płatnika| PRAC
+    KRE -->|Pozycje planu| PLAN
+    KRE -->|Wnioski| SZUS
+    KRE -->|Wnioski| PRAC
     PRZ -->|przejście| MZUS
     PRZ -->|przejście| EZUS
     PRZ -->|przejście| EMP
     PRZ -->|przejście| MOB
     PRZ -->|instrukcja| PRAC
-    KAL -->|przypomnienia| UST
-    PR -->|pakiet narodzin<br/>i zaproszenie| UST
+    KAL -->|Powiadomienia| UST
+    PR -->|Powiadomienia| UST
 
     AI -. odczyt .-> ROD
     AI -. odczyt i zapis przez<br/>te same operacje .-> SIT
