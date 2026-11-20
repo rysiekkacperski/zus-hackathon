@@ -1,0 +1,5 @@
+.DS_Store
+
+# Lokalne ustawienia i worktree Claude Code, niewersjonowane
+.claude/settings.local.json
+.claude/worktrees/
