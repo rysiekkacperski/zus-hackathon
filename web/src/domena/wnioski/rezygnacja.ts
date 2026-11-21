@@ -1,6 +1,8 @@
 // Rezygnacja matki z części zasiłku macierzyńskiego (kontrakt, sekcja 7.2). Właściciel: u34 (Rezygnacja matki i wniosek ojca o zasiłek).
 // Reguły R1–R4, R7, R13 i R16 analizy 25-3.9.2. Funkcje są czyste: dzień dzisiejszy dostają w argumencie.
+import { ID_WYMIAROW } from '@/dane/katalog/slownik-wymiarow';
 import { dodajDni, liczbaDniWlacznie, parsujDate, porownajDaty, roznicaDni } from '@/domena/daty';
+import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import type {
   DaneCiazyIDziecka,
   DaneRodziny,
@@ -21,7 +23,8 @@ import type {
 
 /** Wymiar urlopu macierzyńskiego w tygodniach przy 1, 2, 3, 4 i 5 lub więcej dzieciach (słownik wymiarów i okresów). */
 export const WYMIAR_DOMYSLNY: readonly number[] = [20, 31, 33, 35, 37];
-const IDENTYFIKATORY_WPISU = ['urlop-macierzynski', 'wymiar-urlopu-macierzynskiego'];
+/** Klucze wariantów wpisu urlopu macierzyńskiego przy 1, 2, 3, 4 i 5 lub więcej dzieciach. */
+const KLUCZE_WYMIARU = ['jednoDziecko', 'dwojeDzieci', 'trojeDzieci', 'czworoDzieci', 'piecioroDzieci'] as const;
 
 /** Liczba dni po dniu porodu, po których matka może przekazać urlop: 14 tygodni, a w sytuacji szczególnej 8 tygodni. */
 export const DNI_14_TYGODNI = 98;
@@ -29,22 +32,13 @@ export const DNI_8_TYGODNI = 56;
 export const MAKS_DNI_PRZED_PORODEM = 42;
 
 /**
- * Wymiar urlopu macierzyńskiego obowiązujący w dniu porodu ze słownika wymiarów i okresów. Wariant
- * wybieramy według kolejności wariantów wpisu (1, 2, 3, 4, 5 i więcej dzieci); bez wpisu w katalogu
- * stosujemy wymiar z seedu słownika.
+ * Wymiar urlopu macierzyńskiego obowiązujący w dniu porodu ze słownika wymiarów i okresów, z wariantu
+ * dla liczby dzieci (1, 2, 3, 4, 5 i więcej); bez wartości w katalogu stosujemy wymiar z seedu słownika.
  */
 export function wymiarUrlopuMacierzynskiego(katalog: Katalog | null, dataPorodu: DataISO, liczbaDzieci: number): number {
   const indeks = Math.min(Math.max(Math.trunc(liczbaDzieci) || 1, 1), 5) - 1;
-  const wpis = katalog?.slowniki.find((s) => IDENTYFIKATORY_WPISU.includes(s.id));
-  if (wpis) {
-    const wersja = wpis.wersje.find(
-      (w) => porownajDaty(w.od, dataPorodu) <= 0 && (w.do === undefined || porownajDaty(dataPorodu, w.do) <= 0),
-    );
-    const wariant = wpis.warianty[indeks] ?? wpis.warianty[wpis.warianty.length - 1];
-    const wartosc = wersja && wariant ? wersja.wartosci[wariant.klucz] : undefined;
-    if (typeof wartosc === 'number' && wartosc > 0) return wartosc;
-  }
-  return WYMIAR_DOMYSLNY[indeks];
+  const wartosc = katalog === null ? null : wartoscObowiazujaca(katalog, ID_WYMIAROW.urlopMacierzynski, dataPorodu, KLUCZE_WYMIARU[indeks]);
+  return wartosc !== null && wartosc.wartosc > 0 ? wartosc.wartosc : WYMIAR_DOMYSLNY[indeks];
 }
 
 /** Okres urlopu macierzyńskiego: początek D − N (N dni przed porodem), koniec początek + 7 × W − 1. */

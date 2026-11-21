@@ -3,6 +3,7 @@
 // 20. dnia miesiąca, status sprawy ze stanu rozliczeń składek albo z potwierdzenia rodzica, próg zadłużenia
 // ze słownika kwot i progów, podwyższenie podstawy wymiaru składek i informacja przy K19 po porodzie.
 import { dataZeZnacznika, dodajMiesiaceDoMiesiaca, miesiacZDaty, porownajDaty } from '@/domena/daty';
+import { ID_KWOT } from '@/dane/katalog/slownik-kwot';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import type {
   DaneCiazyIDziecka,
@@ -11,6 +12,7 @@ import type {
   DataISO,
   Grosze,
   IdSprawy,
+  IdWpisuSlownika,
   Katalog,
   MiesiacISO,
   OstrzezenieSprawy,
@@ -86,18 +88,9 @@ export function miesiacZIdSprawyOplacenia(idSprawy: IdSprawy): MiesiacISO | null
   return /^\d{4}-\d{2}$/.test(miesiac) ? miesiac : null;
 }
 
-function wartoscWpisu(katalog: Katalog, czyWpis: (id: string) => boolean, dzien: DataISO): Grosze | null {
-  const wpis = katalog.slowniki.find((w) => w.slownik === 'kwoty-i-progi' && czyWpis(w.id));
-  if (!wpis || wpis.warianty.length === 0) return null;
-  const klucz = wpis.warianty[0].klucz;
-  const obowiazujaca = wartoscObowiazujaca(katalog, wpis.id, dzien, klucz);
-  const wersja = wpis.wersje.find(
-    (v) => porownajDaty(v.od, dzien) <= 0 && (v.do === undefined || porownajDaty(dzien, v.do) <= 0),
-  );
-  const wartosc = obowiazujaca?.wartosc ?? wersja?.wartosci[klucz];
-  if (typeof wartosc !== 'number') return null;
-  // Kwoty słownika są w groszach; wartość z częścią ułamkową traktujemy jako złote.
-  return Number.isInteger(wartosc) ? wartosc : Math.round(wartosc * 100);
+/** Kwota wariantu `kwota` wpisu słownika kwot i progów obowiązująca w dniu `dzien`, w groszach (jednostka 'zl'). */
+function kwotaWpisu(katalog: Katalog, idWpisu: IdWpisuSlownika, dzien: DataISO): Grosze | null {
+  return wartoscObowiazujaca(katalog, idWpisu, dzien, 'kwota')?.wartosc ?? null;
 }
 
 /**
@@ -105,9 +98,9 @@ function wartoscWpisu(katalog: Katalog, czyWpis: (id: string) => boolean, dzien:
  * wpis słownika kwot i progów z progiem zadłużenia, a bez niego 1% minimalnego wynagrodzenia ze słownika.
  */
 export function progZadluzenia(katalog: Katalog, dzien: DataISO): Grosze {
-  const prog = wartoscWpisu(katalog, (id) => id.includes('zadluzeni'), dzien);
+  const prog = kwotaWpisu(katalog, ID_KWOT.progZadluzeniaJdg, dzien);
   if (prog !== null && prog > 0) return prog;
-  const minimalne = wartoscWpisu(katalog, (id) => id.includes('minimalne-wynagrodzenie'), dzien);
+  const minimalne = kwotaWpisu(katalog, ID_KWOT.minimalneWynagrodzenie, dzien);
   return minimalne !== null && minimalne > 0 ? Math.round(minimalne / 100) : PROG_ZADLUZENIA_ZAPASOWY;
 }
 

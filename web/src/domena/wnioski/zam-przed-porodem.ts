@@ -2,6 +2,7 @@
 // Właściciel: u33 (ZAM: wniosek dla płatnika, przed porodem i przy przyjęciu dziecka).
 // Funkcje są czyste: datę „dzisiaj” dostają jako argument, wymiary czytają ze słownika wymiarów
 // i okresów z wartością domyślną z historyjek, gdy słownik nie zawiera wpisu.
+import { ID_WYMIAROW } from '@/dane/katalog/slownik-wymiarow';
 import { dodajDni, porownajDaty, maxData } from '@/domena/daty';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import { walidujDateWZakresie, walidujPlik } from '@/domena/walidacje';
@@ -28,7 +29,19 @@ const WYMIAR_MACIERZYNSKIEGO_TYGODNI: Record<LiczbaDzieci, number> = { 1: 20, 2:
 const RODZICIELSKI_WNIOSKODAWCY_TYGODNI = { jedno: 32, wiecej: 34, jednoZaZyciem: 56, wiecejZaZyciem: 58 } as const;
 
 /** Identyfikator wpisu słownika wymiarów i okresów z wymiarem urlopu macierzyńskiego. */
-export const WPIS_WYMIARU_MACIERZYNSKIEGO = 'urlop-macierzynski';
+export const WPIS_WYMIARU_MACIERZYNSKIEGO = ID_WYMIAROW.urlopMacierzynski;
+
+/**
+ * Klucze wariantów wymiaru według liczby dzieci (1, 2, 3, 4, 5 i więcej) we wpisach urlopu macierzyńskiego
+ * i urlopu na warunkach urlopu macierzyńskiego słownika wymiarów i okresów.
+ */
+export const KLUCZ_LICZBY_DZIECI = {
+  1: 'jednoDziecko',
+  2: 'dwojeDzieci',
+  3: 'trojeDzieci',
+  4: 'czworoDzieci',
+  5: 'piecioroDzieci',
+} as const satisfies Record<LiczbaDzieci, string>;
 
 function liczbaDoKlucza(liczba: number): LiczbaDzieci {
   if (liczba >= 5) return 5;
@@ -40,7 +53,7 @@ function liczbaDoKlucza(liczba: number): LiczbaDzieci {
 export function wymiarMacierzynskiegoTygodni(liczba: number, katalog: Katalog | null, dzien: DataISO): number {
   const klucz = liczbaDoKlucza(liczba);
   if (katalog !== null) {
-    const wartosc = wartoscObowiazujaca(katalog, WPIS_WYMIARU_MACIERZYNSKIEGO, dzien, String(klucz));
+    const wartosc = wartoscObowiazujaca(katalog, WPIS_WYMIARU_MACIERZYNSKIEGO, dzien, KLUCZ_LICZBY_DZIECI[klucz]);
     if (wartosc !== null && wartosc.wartosc > 0) return wartosc.wartosc;
   }
   return WYMIAR_MACIERZYNSKIEGO_TYGODNI[klucz];

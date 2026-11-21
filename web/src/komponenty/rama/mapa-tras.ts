@@ -638,7 +638,7 @@ export const mapaTras: readonly WpisTrasy[] = [
     widok: 'ViewCatalogValueEdit', wzorzec: '/panel/katalog/wartosci/[idWpisu]', folder: '(strefa)/panel/katalog/wartosci/[idWpisu]',
     grupa: 'strefa', dostep: 'zalogowany', role: ROLE_A, pozycjaMenu: 'ViewCatalogList',
     rodzic: { widok: 'ViewCatalogList' }, nastepnyZastepczy: { widok: 'ViewCatalogList' }, zapytanie: [], jednostka: 'u06',
-    przykladoweParametry: { idWpisu: 'kwota-800-plus' },
+    przykladoweParametry: { idWpisu: 'swiadczenie-wychowawcze-800-plus' },
   },
   {
     widok: 'ViewCatalogItemAdd', wzorzec: '/panel/katalog/pozycje/nowa', folder: '(strefa)/panel/katalog/pozycje/nowa',

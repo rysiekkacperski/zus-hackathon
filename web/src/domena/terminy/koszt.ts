@@ -1,8 +1,8 @@
 // Koszt spóźnienia sprawy (kontrakt, sekcja 7.2; Story 3.7.1.2.1). Właściciel: u13 (Kalendarz terminów).
 // Przed terminem liczymy koszt w dniu następującym po terminie, po terminie koszt na dzień dzisiejszy.
-// Kwoty pochodzą ze słownika kwot i progów i obowiązują w każdym miesiącu, którego dotyczy strata.
+// Kwoty w groszach pochodzą ze słownika kwot i progów i obowiązują w każdym miesiącu, którego dotyczy strata.
 import { dataZMiesiaca, dodajDni, dodajMiesiaceDoMiesiaca, miesiacZDaty } from '@/domena/daty';
-import { kwotaZeSlownika, type KluczWpisuKalendarza } from '@/domena/terminy/slowniki';
+import { kwotaWpisuSlownika, kwotaZeSlownika, type KluczWpisuKalendarza } from '@/domena/terminy/slowniki';
 import type {
   DataISO,
   Grosze,
@@ -122,7 +122,7 @@ export function kosztSprawy(
     return { rodzaj: 'kwota', kwota, moment, rozbicie: [], liczbaDzieci: n, tekst };
   }
 
-  // Pozycje dodane w panelu z kosztem w złotych.
+  // Pozycje dodane w panelu z kwotą ze słownika kwot i progów (w groszach).
   if (kosztKatalogu?.typ === 'kwota') {
     const mnoznik = kosztKatalogu.naDziecko ? n : 1;
     if (kosztKatalogu.sposob === 'za-miesiace') {
@@ -130,18 +130,14 @@ export function kosztSprawy(
       const rozbicie: { miesiac: MiesiacISO; kwotaNaDziecko: Grosze }[] = [];
       const koniec = dodajMiesiaceDoMiesiaca(miesiacZDaty(dzien), -1);
       for (let m = miesiacZDaty(termin); m <= koniec && rozbicie.length < 240; m = dodajMiesiaceDoMiesiaca(m, 1)) {
-        const wpis = katalog.slowniki.find((w) => w.id === kosztKatalogu.idWpisuKwoty);
-        const wersja = wpis?.wersje.find((v) => v.od <= dataZMiesiaca(m) && (v.do === undefined || dataZMiesiaca(m) <= v.do));
-        const wartosc = wersja ? Object.values(wersja.wartosci)[0] : undefined;
-        rozbicie.push({ miesiac: m, kwotaNaDziecko: typeof wartosc === 'number' ? Math.round(wartosc * 100) : 0 });
+        const kwotaMiesiaca = kwotaWpisuSlownika(katalog, kosztKatalogu.idWpisuKwoty, dataZMiesiaca(m));
+        rozbicie.push({ miesiac: m, kwotaNaDziecko: kwotaMiesiaca ?? 0 });
       }
       const kwota = Math.max(rozbicie.reduce((s, r) => s + r.kwotaNaDziecko, 0) * mnoznik, kosztKatalogu.minimum ?? 0);
       return { rodzaj: 'kwota', kwota, moment, rozbicie, liczbaDzieci: mnoznik, tekst: kosztKatalogu.tekst };
     }
-    const wpis = katalog.slowniki.find((w) => w.id === kosztKatalogu.idWpisuKwoty);
-    const wersja = wpis?.wersje.find((v) => v.od <= termin && (v.do === undefined || termin <= v.do));
-    const wartosc = wersja ? Object.values(wersja.wartosci)[0] : undefined;
-    const kwota = typeof wartosc === 'number' ? Math.round(wartosc * 100) * mnoznik : (kosztKatalogu.minimum ?? 0);
+    const kwotaWpisu = kwotaWpisuSlownika(katalog, kosztKatalogu.idWpisuKwoty, termin);
+    const kwota = kwotaWpisu !== null ? kwotaWpisu * mnoznik : (kosztKatalogu.minimum ?? 0);
     return { rodzaj: 'kwota', kwota, moment, rozbicie: [], liczbaDzieci: mnoznik, tekst: kosztKatalogu.tekst };
   }
 

@@ -2,10 +2,12 @@
 // Właściciel: u33 (ZAM: wniosek dla płatnika, przed porodem i przy przyjęciu dziecka).
 // Funkcje są czyste: datę „dzisiaj” dostają jako argument, wymiary czytają ze słownika wymiarów
 // i okresów z wartością domyślną z historyjki 3.9.8.1.1, gdy słownik nie zawiera wpisu.
+import { ID_WYMIAROW } from '@/dane/katalog/slownik-wymiarow';
 import { dodajDni, dodajLata, maxData, minData, porownajDaty, roznicaDni } from '@/domena/daty';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import { czyPeselZgodnyZData, walidujPesel } from '@/domena/pesel';
 import { walidujDateWZakresie, walidujLiczbeCalkowita } from '@/domena/walidacje';
+import { KLUCZ_LICZBY_DZIECI } from '@/domena/wnioski/zam-przed-porodem';
 import type {
   BledyPol,
   DataISO,
@@ -26,13 +28,13 @@ export type DanePrzyjecia = Pick<
 
 /** Identyfikatory wpisów słownika wymiarów i okresów używanych przez reguły przyjęcia dziecka. */
 export const WPISY_PRZYJECIA = {
-  wymiarWum: 'urlop-na-warunkach-urlopu-macierzynskiego',
-  wiekGraniczny: 'wiek-dziecka-urlop-na-warunkach-urlopu-macierzynskiego',
-  rodzicielski: 'urlop-rodzicielski',
+  wymiarWum: ID_WYMIAROW.urlopNaWarunkachMacierzynskiego,
+  wiekGraniczny: ID_WYMIAROW.wiekDzieckaUrlopNaWarunkach,
+  rodzicielski: ID_WYMIAROW.urlopRodzicielski,
 } as const;
 
 const WYMIAR_WUM_TYGODNI: Record<LiczbaDzieci, number> = { 1: 20, 2: 31, 3: 33, 4: 35, 5: 37 };
-const NAJKROTSZY_WUM_DNI = 63;
+const NAJKROTSZY_WUM_TYGODNI = 9;
 const TERMIN_WARIANTU_DNI = 21;
 const TYGODNIE_DRUGIEGO_RODZICA = 9;
 
@@ -61,8 +63,8 @@ export function wiekGranicznyPrzyjecia(
   if (forma === 'rodzina-zastepcza-zawodowa') return null;
   if (forma === 'przysposobienie') return zKatalogu(katalog, WPISY_PRZYJECIA.wiekGraniczny, dzien, 'przysposobienie', 14);
   return odroczenie
-    ? zKatalogu(katalog, WPISY_PRZYJECIA.wiekGraniczny, dzien, 'rodzina-zastepcza-odroczenie', 10)
-    : zKatalogu(katalog, WPISY_PRZYJECIA.wiekGraniczny, dzien, 'rodzina-zastepcza', 7);
+    ? zKatalogu(katalog, WPISY_PRZYJECIA.wiekGraniczny, dzien, 'odroczonyObowiazekSzkolny', 10)
+    : zKatalogu(katalog, WPISY_PRZYJECIA.wiekGraniczny, dzien, 'rodzinaZastepczaNiezawodowa', 7);
 }
 
 /** Dzień poprzedzający ukończenie przez dziecko wieku granicznego. */
@@ -88,16 +90,17 @@ export function sprawdzPrzyjecieDoWniosku(
 
 /**
  * Okres urlopu na warunkach urlopu macierzyńskiego: od dnia przyjęcia, wymiar dla liczby przyjętych
- * dzieci, najpóźniej do dnia poprzedzającego ukończenie wieku granicznego, co najmniej 63 dni.
+ * dzieci, najpóźniej do dnia poprzedzającego ukończenie wieku granicznego, co najmniej 9 tygodni (63 dni).
  */
 export function okresWum(p: DanePrzyjecia, katalog: Katalog | null = null): Okres | null {
   const wiek = wiekGranicznyPrzyjecia(p.forma, p.odroczenieObowiazkuSzkolnego, katalog, p.dataPrzyjecia);
   if (wiek === null) return null;
   const klucz = liczbaDoKlucza(p.liczbaPrzyjetychDzieci);
-  const tygodnie = zKatalogu(katalog, WPISY_PRZYJECIA.wymiarWum, p.dataPrzyjecia, String(klucz), WYMIAR_WUM_TYGODNI[klucz]);
+  const tygodnie = zKatalogu(katalog, WPISY_PRZYJECIA.wymiarWum, p.dataPrzyjecia, KLUCZ_LICZBY_DZIECI[klucz], WYMIAR_WUM_TYGODNI[klucz]);
+  const minimum = zKatalogu(katalog, WPISY_PRZYJECIA.wymiarWum, p.dataPrzyjecia, 'minimum', NAJKROTSZY_WUM_TYGODNI);
   const od = p.dataPrzyjecia;
   const granica = granicaWieku(p.dataUrodzeniaDziecka, wiek);
-  const koniec = maxData(dodajDni(od, NAJKROTSZY_WUM_DNI - 1), minData(dodajDni(od, tygodnie * 7 - 1), granica));
+  const koniec = maxData(dodajDni(od, minimum * 7 - 1), minData(dodajDni(od, tygodnie * 7 - 1), granica));
   return { od, do: koniec };
 }
 
@@ -125,12 +128,19 @@ export function parametryRodzicielskiegoPoPrzyjeciu(
   if (wum === null || wiek === null) return null;
   const granica = granicaWieku(p.dataUrodzeniaDziecka, wiek);
   const wiecej = p.liczbaPrzyjetychDzieci > 1;
-  const wariantPelny = `${wiecej ? 'wiecej' : 'jedno'}${zaZyciem ? '-za-zyciem' : ''}`;
+  const wariantPelny = zaZyciem
+    ? wiecej
+      ? 'wiecejDzieciZaZyciem'
+      : 'jednoDzieckoZaZyciem'
+    : wiecej
+      ? 'wiecejDzieci'
+      : 'jednoDziecko';
   const pelny = zKatalogu(katalog, WPISY_PRZYJECIA.rodzicielski, p.dataPrzyjecia, wariantPelny, zaZyciem ? (wiecej ? 67 : 65) : wiecej ? 43 : 41);
   const poczatekBezposrednio = dodajDni(wum.do, 1);
   const wykracza = porownajDaty(dodajDni(poczatekBezposrednio, pelny * 7 - 1), granica) > 0;
+  const wariantPoWum = zaZyciem ? 'poUrlopieNaWarunkachZaZyciem' : 'poUrlopieNaWarunkach';
   const wymiar = wykracza
-    ? zKatalogu(katalog, WPISY_PRZYJECIA.rodzicielski, p.dataPrzyjecia, zaZyciem ? 'po-9-tygodniach-za-zyciem' : 'po-9-tygodniach', zaZyciem ? 62 : 38)
+    ? zKatalogu(katalog, WPISY_PRZYJECIA.rodzicielski, p.dataPrzyjecia, wariantPoWum, zaZyciem ? 62 : 38)
     : pelny;
   return {
     wymiar,

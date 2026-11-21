@@ -126,8 +126,8 @@ export function SlotPorownanieZRozstrzygnieciem({ zrodlo }: PropsSlotu<'wynik'>)
               suma: formatujKwote(o.zaOkres),
             }))}
           />
-          {wynik.zastosowaneReguly.map((r) => (
-            <p key={r.opis} className="m-0 text-small text-ink-muted">
+          {wynik.zastosowaneReguly.map((r, i) => (
+            <p key={`${i}-${r.opis}`} className="m-0 text-small text-ink-muted">
               {r.opis}
             </p>
           ))}

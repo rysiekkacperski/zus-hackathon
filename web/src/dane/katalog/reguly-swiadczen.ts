@@ -1,9 +1,15 @@
 // Reguły świadczeń z ubezpieczenia chorobowego (kontrakt, sekcja 8; ANALIZY/05 sekcja 4.1).
 // Właściciel: u16. Treść reguł pochodzi dosłownie z Wspólnych wymagań epiku 3.5.2, a wpisy wskazują słowniki
 // wymiarów i okresów oraz kwot i progów, z których reguła odczytuje wartość obowiązującą we wskazanym dniu.
-import type { IdWpisuSlownika, RegulaSwiadczenia } from '@/domena/typy';
+// Plik importuje słowniki wyłącznie jako typy, bo skrypt spójności katalogu wczytuje go bez zależności.
+import type { ID_KWOT } from '@/dane/katalog/slownik-kwot';
+import type { ID_WYMIAROW } from '@/dane/katalog/slownik-wymiarow';
+import type { RegulaSwiadczenia } from '@/domena/typy';
 
-/** Identyfikatory wpisów słowników, z których korzystają reguły świadczeń. */
+/** Identyfikator wpisu słownika kwot i progów albo słownika wymiarów i okresów. */
+type IdWpisuKatalogu = (typeof ID_KWOT)[keyof typeof ID_KWOT] | (typeof ID_WYMIAROW)[keyof typeof ID_WYMIAROW];
+
+/** Identyfikatory wpisów słowników, z których korzystają reguły świadczeń; typ zgłasza identyfikator spoza słowników. */
 export const WPISY_REGUL = {
   okresWyczekiwania: 'okres-wyczekiwania-na-zasilek-chorobowy',
   wyjatkiWyczekiwania: 'wyjatki-od-okresu-wyczekiwania',
@@ -11,17 +17,17 @@ export const WPISY_REGUL = {
   wynagrodzenieWCiazy: 'wynagrodzenie-chorobowe-w-ciazy',
   zasilekChorobowyWCiazy: 'zasilek-chorobowy-w-ciazy',
   okresZasilkowy: 'okres-zasilkowy',
-  przerwaWNiezdolnosci: 'przerwa-w-niezdolnosci-do-pracy-w-jednym-okresie-zasilkowym',
+  przerwaWNiezdolnosci: 'przerwa-w-niezdolnosci-do-pracy',
   zasilekPoUstaniu: 'zasilek-chorobowy-po-ustaniu-ubezpieczenia',
   rehabilitacyjneOkres: 'swiadczenie-rehabilitacyjne-okres',
-  rehabilitacyjneStawka: 'swiadczenie-rehabilitacyjne',
+  rehabilitacyjneStawka: 'swiadczenie-rehabilitacyjne-stawki',
   zwzm: 'zasilek-w-wysokosci-zasilku-macierzynskiego',
-  minimalnaPodstawa: 'minimalna-podstawa-wymiaru-zasilku-pracownika-na-pelnym-etacie',
-  zasilekMacierzynski: 'zasilek-macierzynski',
-  progZadluzenia: 'prog-zadluzenia-z-tytulu-skladek-osoby-prowadzacej-pozarolnicza-dzialalnosc',
+  minimalnaPodstawa: 'minimalna-podstawa-wymiaru-zasilku-pelny-etat',
+  zasilekMacierzynski: 'zasilek-macierzynski-wariant-81-5',
+  progZadluzenia: 'prog-zadluzenia-z-tytulu-skladek-jdg',
   okresSplaty: 'okres-splaty-zadluzenia-z-tytulu-skladek',
-  liczbaUbezpieczonych: 'liczba-ubezpieczonych-platnika-ktory-wyplaca-zasilki',
-} as const satisfies Record<string, IdWpisuSlownika>;
+  liczbaUbezpieczonych: 'liczba-ubezpieczonych-platnika-wyplacajacego-zasilki',
+} as const satisfies Record<string, IdWpisuKatalogu>;
 
 export const regulySwiadczen: readonly RegulaSwiadczenia[] = [
   {

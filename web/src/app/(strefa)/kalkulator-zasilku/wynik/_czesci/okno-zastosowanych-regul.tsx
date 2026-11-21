@@ -4,7 +4,7 @@
 // Reguły ze słowników katalogu, które wpłynęły na wynik: nazwa, słownik, wartość i data początku obowiązywania.
 import { formatujDate } from '@/domena/daty';
 import { formatujKwote, formatujLiczbe, formatujProcent } from '@/komponenty/format';
-import type { DataISO, Katalog, WynikScenariusza } from '@/domena/typy';
+import type { DataISO, JednostkaWariantu, Katalog, WpisSlownika, WynikScenariusza } from '@/domena/typy';
 import { OknoModalne } from '@/komponenty/okno';
 import { Przycisk } from '@/komponenty/przycisk';
 import { Tabela } from '@/komponenty/tabela';
@@ -21,6 +21,12 @@ export interface OknoZastosowanychRegulProps {
   dataZdarzenia?: DataISO | null;
 }
 
+/** Jednostka wspólna dla wszystkich wariantów wpisu; undefined, gdy warianty mają różne jednostki. */
+function jednostkaWpisu(wpis: WpisSlownika | undefined): JednostkaWariantu | undefined {
+  const jednostka = wpis?.warianty[0]?.jednostka;
+  return wpis?.warianty.every((w) => w.jednostka === jednostka) ? jednostka : undefined;
+}
+
 function wartoscReguly(
   r: WynikScenariusza['zastosowaneReguly'][number],
   katalog: Katalog | undefined,
@@ -28,7 +34,7 @@ function wartoscReguly(
   const wpis = r.idWpisu ? katalog?.slowniki.find((w) => w.id === r.idWpisu) : undefined;
   const slownik = wpis ? t.slowniki[wpis.slownik] : undefined;
   if (r.wartosc === undefined) return { wartosc: teksty.ViewCalcMaternityResult.brak, slownik };
-  const jednostka = wpis?.warianty[0]?.jednostka;
+  const jednostka = r.jednostka ?? jednostkaWpisu(wpis);
   if (jednostka === 'zl') return { wartosc: formatujKwote(r.wartosc), slownik };
   if (jednostka === 'procent') return { wartosc: formatujProcent(r.wartosc), slownik };
   if (jednostka) return { wartosc: `${formatujLiczbe(r.wartosc)} ${t.jednostki[jednostka]}`, slownik };

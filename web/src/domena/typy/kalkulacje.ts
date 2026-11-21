@@ -1,6 +1,7 @@
 // Grupa danych 11 Wyniki kalkulacji (kontrakt, sekcja 5.12).
 // Element systemu: Kalkulatory decyzji.
 import type { FormaPrzyjecia, LiczbaDzieci } from '@/domena/typy/ciaza-dziecko';
+import type { JednostkaWariantu } from '@/domena/typy/katalog';
 import type { KodKomunikatu } from '@/domena/typy/komunikaty';
 import type { RodzajUrlopu } from '@/domena/typy/wnioski';
 import type {
@@ -49,7 +50,7 @@ export interface WynikScenariusza {
   sumy: Partial<Record<RodzicWRodzinie, Grosze>> & { razem: Grosze };
   datyPowrotu: Partial<Record<RodzicWRodzinie, DataISO>>; tygodniePrzepadajace: number; tygodnieNiewykorzystane: number;
   uprawnieniaPoPowrocie: IdPozycji[];                                  // K20–K23
-  zastosowaneReguly: { opis: string; idWpisu?: IdWpisuSlownika; wartosc?: number; od?: DataISO }[];
+  zastosowaneReguly: { opis: string; idWpisu?: IdWpisuSlownika; wartosc?: number; jednostka?: JednostkaWariantu; od?: DataISO }[];
   komunikaty: { kod: KodKomunikatu; parametry?: Record<string, string> }[];
 }
 export interface ScenariuszKalkulatora { numer: number; zapisano: DataISO; konto: Pesel; zakres: 'rodzina' | 'konto';

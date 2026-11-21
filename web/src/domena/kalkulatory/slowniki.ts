@@ -43,10 +43,10 @@ const KWOTY: RodzajSlownika = 'kwoty-i-progi';
 const WYMIARY: RodzajSlownika = 'wymiary-i-okresy';
 
 export const PARAMETRY = {
-  stawka100: def('zasilek-macierzynski-wariant-100-70', 'Zasiłek macierzyński, wariant 100% i 70%', KWOTY, ['macierzynski', '100'], 0, 100, 'procent'),
-  stawka70: def('zasilek-macierzynski-wariant-100-70', 'Zasiłek macierzyński, wariant 100% i 70%', KWOTY, ['rodzicielski', '70'], 1, 70, 'procent'),
-  stawka815: def('zasilek-macierzynski-wariant-81-5', 'Zasiłek macierzyński, wariant 81,5%', KWOTY, ['stawka', '81-5'], 0, 81.5, 'procent', '2026-01-01'),
-  stawka815DrugiRodzic: def('zasilek-macierzynski-wariant-81-5', 'Zasiłek macierzyński, wariant 81,5%', KWOTY, ['drugiRodzic', '70'], 1, 70, 'procent', '2026-01-01'),
+  stawka100: def('zasilek-macierzynski-wariant-100-70', 'Zasiłek macierzyński, wariant 100% i 70%', KWOTY, ['macierzynski'], 0, 100, 'procent'),
+  stawka70: def('zasilek-macierzynski-wariant-100-70', 'Zasiłek macierzyński, wariant 100% i 70%', KWOTY, ['rodzicielski'], 1, 70, 'procent'),
+  stawka815: def('zasilek-macierzynski-wariant-81-5', 'Zasiłek macierzyński, wariant 81,5%', KWOTY, ['stawka'], 0, 81.5, 'procent', '2026-01-01'),
+  stawka815DrugiRodzic: def('zasilek-macierzynski-wariant-81-5', 'Zasiłek macierzyński, wariant 81,5%', KWOTY, ['drugiRodzic'], 1, 70, 'procent', '2026-01-01'),
   swiadczenieRodzicielskie: def('swiadczenie-rodzicielskie', 'Świadczenie rodzicielskie', KWOTY, ['kwota'], 0, 100000, 'zl'),
   minimalneWynagrodzenie: def('minimalne-wynagrodzenie', 'Minimalne wynagrodzenie', KWOTY, ['kwota'], 0, 480600, 'zl'),
   pomniejszenie: def('pomniejszenie-podstawy-wymiaru-o-skladki', 'Pomniejszenie podstawy wymiaru o składki', KWOTY, ['procent'], 0, 13.71, 'procent'),
@@ -129,18 +129,23 @@ export function kwotaParametru(k: Katalog, klucz: KluczParametru, dzien: DataISO
 
 /** Rejestr parametrów użytych w wyliczeniu, z którego powstaje lista zastosowanych reguł. */
 export class RejestrRegul {
-  private readonly wpisy = new Map<string, { opis: string; idWpisu: IdWpisuSlownika; wartosc: number; od: DataISO }>();
+  private readonly wpisy = new Map<
+    string,
+    { opis: string; idWpisu: IdWpisuSlownika; wartosc: number; jednostka: JednostkaWariantu; od: DataISO }
+  >();
 
   constructor(
     private readonly katalog: Katalog,
     private readonly dzien: DataISO,
   ) {}
 
-  /** Odczytuje parametr i zapisuje go jako zastosowaną regułę. */
+  /** Odczytuje parametr i zapisuje go jako zastosowaną regułę z jednostką odczytanego wariantu. */
   wez(klucz: KluczParametru): number {
     const w = parametr(this.katalog, klucz, this.dzien);
-    const id = `${w.idWpisu}|${w.wartosc}`;
-    if (!this.wpisy.has(id)) this.wpisy.set(id, { opis: w.nazwa, idWpisu: w.idWpisu, wartosc: w.wartosc, od: w.od });
+    const id = `${w.idWpisu}|${w.wartosc}|${w.jednostka}`;
+    if (!this.wpisy.has(id)) {
+      this.wpisy.set(id, { opis: w.nazwa, idWpisu: w.idWpisu, wartosc: w.wartosc, jednostka: w.jednostka, od: w.od });
+    }
     return w.wartosc;
   }
 

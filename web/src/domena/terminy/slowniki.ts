@@ -1,41 +1,53 @@
 // Odczyt kwot, progów i wymiarów ze słowników Katalogu świadczeń na potrzeby Kalendarza terminów. Właściciel: u13.
-// Wpis odszukujemy po identyfikatorze, a gdy go brak, po nazwie wpisu. Wartość obowiązuje w dniu `dzien`
-// (od ≤ dzien ≤ do). Gdy słownik nie zawiera wpisu, stosujemy wartość z reguł terminów Story.
+// Wpis kwoty odszukujemy po identyfikatorze z ID_KWOT albo z kosztu spóźnienia pozycji katalogu. Wartość obowiązuje
+// w dniu `dzien` (od ≤ dzien ≤ do). Kwoty słownika kwot i progów (jednostka 'zl') są w groszach. Gdy słownik
+// nie zawiera wartości, stosujemy kwotę z reguł terminów Story zapisaną w polu `domyslna`.
+import { ID_KWOT } from '@/dane/katalog/slownik-kwot';
+import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import type { DataISO, Grosze, IdWpisuSlownika, Katalog, WpisSlownika } from '@/domena/typy';
 
 export interface OpisWpisu {
-  kandydaci: IdWpisuSlownika[];
-  nazwa: string[];
-  wyklucz?: string[];
-  domyslna: number; // w złotych albo w jednostce wpisu
+  id: IdWpisuSlownika;
+  domyslna: Grosze;
 }
 
 export const WPISY_KALENDARZA = {
-  swiadczenieWychowawcze: { kandydaci: ['swiadczenie-wychowawcze', 'swiadczenie-wychowawcze-800-plus', '800-plus'], nazwa: ['wychowawcze'], domyslna: 800 },
-  becikowe: { kandydaci: ['becikowe'], nazwa: ['becikowe'], wyklucz: ['próg', 'prog'], domyslna: 1000 },
-  progBecikowego: { kandydaci: ['prog-becikowego'], nazwa: ['próg becikowego'], domyslna: 1922 },
-  dodatek: { kandydaci: ['dodatek-z-tytulu-urodzenia-dziecka', 'dodatek-z-tytulu-urodzenia', 'dodatek-urodzenie'], nazwa: ['dodatek z tytułu urodzenia'], domyslna: 1000 },
-  progZasilkuRodzinnego: { kandydaci: ['prog-zasilku-rodzinnego'], nazwa: ['próg zasiłku rodzinnego'], domyslna: 674 },
-  swiadczenieRodzicielskie: { kandydaci: ['swiadczenie-rodzicielskie'], nazwa: ['świadczenie rodzicielskie'], domyslna: 1000 },
-  zaZyciem: { kandydaci: ['swiadczenie-za-zyciem', 'za-zyciem'], nazwa: ['za życiem'], domyslna: 4000 },
-  aktywnieWDomu: { kandydaci: ['aktywny-rodzic-aktywnie-w-domu', 'aktywnie-w-domu'], nazwa: ['aktywnie w domu'], domyslna: 500 },
+  swiadczenieWychowawcze: { id: ID_KWOT.swiadczenieWychowawcze, domyslna: 80000 },
+  becikowe: { id: ID_KWOT.becikowe, domyslna: 100000 },
+  progBecikowego: { id: ID_KWOT.progBecikowego, domyslna: 192200 },
+  dodatek: { id: ID_KWOT.dodatekZTytuluUrodzenia, domyslna: 100000 },
+  progZasilkuRodzinnego: { id: ID_KWOT.progZasilkuRodzinnego, domyslna: 67400 },
+  swiadczenieRodzicielskie: { id: ID_KWOT.swiadczenieRodzicielskie, domyslna: 100000 },
+  zaZyciem: { id: ID_KWOT.swiadczenieZaZyciem, domyslna: 400000 },
+  aktywnieWDomu: { id: ID_KWOT.aktywnyRodzicWDomu, domyslna: 50000 },
 } as const satisfies Record<string, OpisWpisu>;
 
 export type KluczWpisuKalendarza = keyof typeof WPISY_KALENDARZA;
 
-const WYMIAR_URLOPU_MACIERZYNSKIEGO = [20, 31, 33, 35, 37] as const;
+// Wariant kwoty we wpisach słownika kwot i progów.
+const WARIANT_KWOTY = 'kwota';
 
-function znajdzWpis(katalog: Katalog, opis: OpisWpisu, dodatkowyId?: IdWpisuSlownika): WpisSlownika | undefined {
-  const ids = dodatkowyId ? [dodatkowyId, ...opis.kandydaci] : opis.kandydaci;
-  for (const id of ids) {
-    const wpis = katalog.slowniki.find((w) => w.id === id);
-    if (wpis) return wpis;
-  }
-  return katalog.slowniki.find((w) => {
-    const nazwa = w.nazwa.toLowerCase();
-    return opis.nazwa.every((t) => nazwa.includes(t)) && !(opis.wyklucz ?? []).some((t) => nazwa.includes(t));
-  });
+/** Kwota wariantu `kwota` wpisu słownika kwot i progów w groszach obowiązująca w dniu `dzien`; null, gdy brak wartości. */
+export function kwotaWpisuSlownika(katalog: Katalog, idWpisu: IdWpisuSlownika, dzien: DataISO): Grosze | null {
+  return wartoscObowiazujaca(katalog, idWpisu, dzien, WARIANT_KWOTY)?.wartosc ?? null;
 }
+
+/**
+ * Kwota w groszach obowiązująca w dniu `dzien` z wpisu `idWpisu` (koszt spóźnienia pozycji katalogu),
+ * a gdy go brak, z wpisu kalendarza `klucz`; bez wartości w słowniku kwota z reguł terminów Story.
+ */
+export function kwotaZeSlownika(
+  katalog: Katalog,
+  klucz: KluczWpisuKalendarza,
+  dzien: DataISO,
+  idWpisu?: IdWpisuSlownika,
+): Grosze {
+  const opis: OpisWpisu = WPISY_KALENDARZA[klucz];
+  const zWpisuPozycji = idWpisu !== undefined ? kwotaWpisuSlownika(katalog, idWpisu, dzien) : null;
+  return zWpisuPozycji ?? kwotaWpisuSlownika(katalog, opis.id, dzien) ?? opis.domyslna;
+}
+
+const WYMIAR_URLOPU_MACIERZYNSKIEGO = [20, 31, 33, 35, 37] as const;
 
 /** Wartości wariantów wpisu obowiązujące w dniu `dzien` w kolejności wariantów; null, gdy brak wersji. */
 function wartosciWDniu(wpis: WpisSlownika, dzien: DataISO): number[] | null {
@@ -46,21 +58,6 @@ function wartosciWDniu(wpis: WpisSlownika, dzien: DataISO): number[] | null {
   if (!wersja) return null;
   const klucze = wpis.warianty.length > 0 ? wpis.warianty.map((w) => w.klucz) : Object.keys(wersja.wartosci);
   return klucze.map((k) => wersja.wartosci[k]).filter((v): v is number => typeof v === 'number');
-}
-
-/** Kwota wpisu słownika kwot w groszach obowiązująca w dniu `dzien` (pierwszy wariant). */
-export function kwotaZeSlownika(
-  katalog: Katalog,
-  klucz: KluczWpisuKalendarza,
-  dzien: DataISO,
-  idWpisu?: IdWpisuSlownika,
-): Grosze {
-  const opis: OpisWpisu = WPISY_KALENDARZA[klucz];
-  const wpis = znajdzWpis(katalog, opis, idWpisu);
-  const wartosc = wpis ? wartosciWDniu(wpis, dzien)?.[0] : undefined;
-  if (wartosc === undefined) return Math.round(opis.domyslna * 100);
-  // Słownik zapisuje kwoty w złotych; wartość wielokrotnie większa od kwoty z reguł traktujemy jako grosze.
-  return wartosc > opis.domyslna * 20 ? Math.round(wartosc) : Math.round(wartosc * 100);
 }
 
 /** Wymiar urlopu macierzyńskiego w tygodniach według liczby dzieci urodzonych przy jednym porodzie. */

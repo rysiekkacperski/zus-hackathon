@@ -3,6 +3,7 @@
 // Funkcje są czyste: datę dnia dostają jako argument, a wartości reguł czytają ze słowników katalogu.
 import { WPISY_REGUL } from '@/dane/katalog/reguly-swiadczen';
 import { dodajDni, porownajDaty, roznicaDni } from '@/domena/daty';
+import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import type {
   DataISO,
   IdWpisuSlownika,
@@ -21,38 +22,30 @@ export interface WartoscSlownika {
 }
 
 /**
- * Wartość wariantu wpisu słownika obowiązująca w dniu `dzien` (od ≤ dzien ≤ do). Gdy katalog nie ma wpisu
- * albo wariantu o podanym kluczu, zwraca wartość z treści reguły i datę uruchomienia katalogu.
+ * Wartość wariantu `klucz` wpisu słownika obowiązująca w dniu `dzien` (od ≤ dzien ≤ do), z wyliczeniem wariantu
+ * wyprowadzonego z wpisu źródłowego. Gdy katalog nie ma wpisu, wariantu albo wersji obowiązującej w tym dniu,
+ * zwraca wartość z treści reguły i datę uruchomienia katalogu.
  */
 export function wartoscSlownika(
   katalog: Katalog,
   idWpisu: IdWpisuSlownika,
   dzien: DataISO,
-  klucze: readonly string[],
+  klucz: string,
   domyslna: number,
 ): WartoscSlownika {
-  const wpis = katalog.slowniki.find((w) => w.id === idWpisu);
-  const wersja = wpis?.wersje.find(
-    (v) => porownajDaty(v.od, dzien) <= 0 && (v.do === undefined || porownajDaty(dzien, v.do) <= 0),
-  );
-  const od = wersja?.od ?? katalog.dataUruchomienia;
-  if (wersja !== undefined) {
-    for (const klucz of klucze) {
-      const wartosc = wersja.wartosci[klucz];
-      if (typeof wartosc === 'number') return { idWpisu, wartosc, od };
-    }
-  }
-  return { idWpisu, wartosc: domyslna, od };
+  const obowiazujaca = wartoscObowiazujaca(katalog, idWpisu, dzien, klucz);
+  if (obowiazujaca === null) return { idWpisu, wartosc: domyslna, od: katalog.dataUruchomienia };
+  return { idWpisu, wartosc: obowiazujaca.wartosc, od: obowiazujaca.od };
 }
 
 /** Wartości reguły okresu wyczekiwania w dniu `dzien`. */
 export function wartosciWyczekiwania(katalog: Katalog, dzien: DataISO) {
   return {
-    obowiazkowe: wartoscSlownika(katalog, WPISY_REGUL.okresWyczekiwania, dzien, ['obowiazkowe', 'dni-obowiazkowe', '30-dni'], 30),
-    dobrowolne: wartoscSlownika(katalog, WPISY_REGUL.okresWyczekiwania, dzien, ['dobrowolne', 'dni-dobrowolne', '90-dni'], 90),
-    przerwa: wartoscSlownika(katalog, WPISY_REGUL.okresWyczekiwania, dzien, ['przerwa', 'przerwa-dni'], 30),
-    absolwent: wartoscSlownika(katalog, WPISY_REGUL.wyjatkiWyczekiwania, dzien, ['absolwent', 'dni-od-ukonczenia'], 90),
-    lata: wartoscSlownika(katalog, WPISY_REGUL.wyjatkiWyczekiwania, dzien, ['lata', 'lata-obowiazkowego'], 10),
+    obowiazkowe: wartoscSlownika(katalog, WPISY_REGUL.okresWyczekiwania, dzien, 'obowiazkowe', 30),
+    dobrowolne: wartoscSlownika(katalog, WPISY_REGUL.okresWyczekiwania, dzien, 'dobrowolne', 90),
+    przerwa: wartoscSlownika(katalog, WPISY_REGUL.okresWyczekiwania, dzien, 'przerwa', 30),
+    absolwent: wartoscSlownika(katalog, WPISY_REGUL.wyjatkiWyczekiwania, dzien, 'dniOdUkonczeniaSzkoly', 90),
+    lata: wartoscSlownika(katalog, WPISY_REGUL.wyjatkiWyczekiwania, dzien, 'lataUbezpieczenia', 10),
   };
 }
 

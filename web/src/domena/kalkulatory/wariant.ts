@@ -6,6 +6,7 @@ import { dniWMiesiacu, czesciDaty, dodajDni, liczbaDniWlacznie, miesiacZDaty, ro
 import { formatujDate } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
+import { wymiarMacierzynskiego, wymiarRodzicielskiego } from '@/domena/kalkulatory/okresy';
 import type {
   BledyPol,
   DaneCiazyIDziecka,
@@ -72,7 +73,6 @@ export type WynikPorownaniaWariantow = ZapisPorownaniaWariantow['wynik'] & {
 
 // --- Wartości ze słowników z wartością domyślną ---------------------------------------------
 
-const TYGODNIE_MACIERZYNSKIEGO: Record<number, number> = { 1: 20, 2: 31, 3: 33, 4: 35, 5: 37 };
 const DOMYSLNE = {
   stawka100: 100,
   stawka815: 81.5,
@@ -93,18 +93,14 @@ function klasaLiczbyDzieci(liczbaDzieci: number): number {
   return Math.min(5, Math.max(1, Math.trunc(liczbaDzieci) || 1));
 }
 
-/** Wymiar urlopu macierzyńskiego w tygodniach według liczby dzieci. */
+/** Wymiar urlopu macierzyńskiego w tygodniach według liczby dzieci (20, 31, 33, 35, 37). */
 export function tygodnieUrlopuMacierzynskiego(liczbaDzieci: number, k: Katalog, dzien: DataISO): number {
-  const klasa = klasaLiczbyDzieci(liczbaDzieci);
-  return wartoscSlownika(k, 'urlop-macierzynski', String(klasa), dzien, TYGODNIE_MACIERZYNSKIEGO[klasa]);
+  return wymiarMacierzynskiego(klasaLiczbyDzieci(liczbaDzieci), k, dzien);
 }
 
 /** Wymiar urlopu rodzicielskiego obojga rodziców (41, 43, 65, 67 tygodni). */
 export function wymiarUrlopuRodzicielskiego(liczbaDzieci: number, zaZyciem: boolean, k: Katalog, dzien: DataISO): number {
-  const wiecej = klasaLiczbyDzieci(liczbaDzieci) > 1;
-  const klucz = `${wiecej ? 'wiecej-dzieci' : 'jedno-dziecko'}${zaZyciem ? '-za-zyciem' : ''}`;
-  const domyslny = zaZyciem ? (wiecej ? 67 : 65) : wiecej ? 43 : 41;
-  return wartoscSlownika(k, 'urlop-rodzicielski', klucz, dzien, domyslny);
+  return wymiarRodzicielskiego(klasaLiczbyDzieci(liczbaDzieci), zaZyciem, k, dzien);
 }
 
 /** Tygodnie urlopu rodzicielskiego przysługujące wyłącznie jednemu rodzicowi (9). */

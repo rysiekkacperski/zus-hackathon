@@ -15,6 +15,8 @@ import {
   porownajDaty,
   roznicaDni,
 } from '@/domena/daty';
+import { ID_KWOT } from '@/dane/katalog/slownik-kwot';
+import { ID_WYMIAROW } from '@/dane/katalog/slownik-wymiarow';
 import { formatujKwote, zaokraglijDoGrosza } from '@/domena/kwoty';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import type {
@@ -24,6 +26,7 @@ import type {
   DokumentSprawy,
   FormaZatrudnienia,
   Grosze,
+  IdWpisuSlownika,
   Katalog,
   KodKomunikatu,
   LiczbaDzieci,
@@ -91,46 +94,14 @@ interface WartoscZeSlownika {
   od: DataISO;
 }
 
-function normalizujNazwe(tekst: string): string {
-  return tekst.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l');
-}
-
-/** Kwota ze słownika w groszach: wpis może zapisywać złote albo grosze, wybieramy bliższą wartości domyślnej. */
-function naGrosze(wartosc: number, domyslnaGrosze: number): number {
-  const jakoZlote = Math.round(wartosc * 100);
-  return Math.abs(jakoZlote - domyslnaGrosze) <= Math.abs(wartosc - domyslnaGrosze) ? jakoZlote : Math.round(wartosc);
-}
-
 /**
- * Wartość wariantu wpisu słownika obowiązująca w dniu `dzien`. Wpis wybieramy po fragmencie nazwy,
- * wariant po fragmencie klucza albo etykiety; bez wpisu albo wersji zwracamy wartość domyślną z wymagań
- * z datą uruchomienia katalogu.
+ * Wartość wariantu `klucz` wpisu słownika `idWpisu` obowiązująca w dniu `dzien`. Kwoty (jednostka 'zl') są
+ * w groszach. Bez wpisu albo wersji zwracamy wartość domyślną z wymagań z datą uruchomienia katalogu.
  */
-function zeSlownika(
-  k: Katalog,
-  fragmentyNazwy: string[],
-  dzien: DataISO,
-  domyslna: number,
-  fragmentWariantu?: string,
-  kwotaWGroszach = false,
-): WartoscZeSlownika {
-  const wpis = k.slowniki.find((w) => {
-    const nazwa = normalizujNazwe(w.nazwa);
-    return fragmentyNazwy.every((f) => nazwa.includes(normalizujNazwe(f)));
-  });
-  const domyslnie = { wartosc: domyslna, od: k.dataUruchomienia };
-  if (wpis === undefined || wpis.warianty.length === 0) return domyslnie;
-  const wariant =
-    (fragmentWariantu === undefined
-      ? undefined
-      : wpis.warianty.find((w) => normalizujNazwe(`${w.klucz} ${w.etykieta}`).includes(normalizujNazwe(fragmentWariantu)))) ??
-    wpis.warianty[0];
-  const obowiazujaca = wartoscObowiazujaca(k, wpis.id, dzien, wariant.klucz);
-  const wersja = wpis.wersje.filter((w) => w.od <= dzien && (w.do === undefined || dzien <= w.do)).at(-1);
-  const surowa = obowiazujaca?.wartosc ?? wersja?.wartosci[wariant.klucz];
-  if (surowa === undefined || !Number.isFinite(surowa)) return domyslnie;
-  const od = obowiazujaca?.od ?? wersja?.od ?? k.dataUruchomienia;
-  return { wartosc: kwotaWGroszach ? naGrosze(surowa, domyslna) : surowa, od };
+function zeSlownika(k: Katalog, idWpisu: IdWpisuSlownika, klucz: string, dzien: DataISO, domyslna: number): WartoscZeSlownika {
+  const obowiazujaca = wartoscObowiazujaca(k, idWpisu, dzien, klucz);
+  if (obowiazujaca === null || !Number.isFinite(obowiazujaca.wartosc)) return { wartosc: domyslna, od: k.dataUruchomienia };
+  return { wartosc: obowiazujaca.wartosc, od: obowiazujaca.od };
 }
 
 /** Wartości słowników obowiązujące w dniu zdarzenia, z których korzysta epik. */
@@ -147,14 +118,14 @@ export interface WartosciSlownikowSprawy {
 
 export function wartosciSlownikow(k: Katalog, dzien: DataISO): WartosciSlownikowSprawy {
   return {
-    pomniejszenie: zeSlownika(k, ['pomniejszenie', 'skladki'], dzien, DOMYSLNE.pomniejszenieProcent),
-    minimalnaPodstawa: zeSlownika(k, ['minimalna podstawa', 'pelnym etacie'], dzien, DOMYSLNE.minimalnaPodstawaGrosze, undefined, true),
-    najnizszaPodstawaJdg: zeSlownika(k, ['najnizsza podstawa', 'dzialalnosc'], dzien, DOMYSLNE.najnizszaPodstawaJdgGrosze, undefined, true),
-    progZadluzenia: zeSlownika(k, ['prog zadluzenia'], dzien, DOMYSLNE.progZadluzeniaGrosze, undefined, true),
-    swiadczenieRodzicielskie: zeSlownika(k, ['swiadczenie rodzicielskie'], dzien, DOMYSLNE.swiadczenieRodzicielskieGrosze, undefined, true),
-    wyczekiwanieObowiazkowe: zeSlownika(k, ['okres wyczekiwania'], dzien, DOMYSLNE.wyczekiwanieObowiazkowe, 'obowiaz'),
-    wyczekiwanieDobrowolne: zeSlownika(k, ['okres wyczekiwania'], dzien, DOMYSLNE.wyczekiwanieDobrowolne, 'dobrowol'),
-    liczbaUbezpieczonych: zeSlownika(k, ['liczba ubezpieczonych'], dzien, DOMYSLNE.liczbaUbezpieczonych),
+    pomniejszenie: zeSlownika(k, ID_KWOT.pomniejszeniePodstawy, 'procent', dzien, DOMYSLNE.pomniejszenieProcent),
+    minimalnaPodstawa: zeSlownika(k, ID_KWOT.minimalnaPodstawaPelnyEtat, 'kwota', dzien, DOMYSLNE.minimalnaPodstawaGrosze),
+    najnizszaPodstawaJdg: zeSlownika(k, ID_KWOT.najnizszaPodstawaJdg, 'kwota', dzien, DOMYSLNE.najnizszaPodstawaJdgGrosze),
+    progZadluzenia: zeSlownika(k, ID_KWOT.progZadluzeniaJdg, 'kwota', dzien, DOMYSLNE.progZadluzeniaGrosze),
+    swiadczenieRodzicielskie: zeSlownika(k, ID_KWOT.swiadczenieRodzicielskie, 'kwota', dzien, DOMYSLNE.swiadczenieRodzicielskieGrosze),
+    wyczekiwanieObowiazkowe: zeSlownika(k, ID_WYMIAROW.okresWyczekiwania, 'obowiazkowe', dzien, DOMYSLNE.wyczekiwanieObowiazkowe),
+    wyczekiwanieDobrowolne: zeSlownika(k, ID_WYMIAROW.okresWyczekiwania, 'dobrowolne', dzien, DOMYSLNE.wyczekiwanieDobrowolne),
+    liczbaUbezpieczonych: zeSlownika(k, ID_WYMIAROW.liczbaUbezpieczonychPlatnika, 'osoby', dzien, DOMYSLNE.liczbaUbezpieczonych),
   };
 }
 

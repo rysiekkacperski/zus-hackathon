@@ -169,16 +169,17 @@ function* dni(od: DataISO, do_: DataISO): Generator<DataISO> {
 }
 
 function limitWynagrodzenia(katalog: Katalog, rok: number, rokUrodzenia: number | undefined, dzien: DataISO): number {
-  const po50 = rokUrodzenia !== undefined && rok > rokUrodzenia + 50;
-  return po50
-    ? wartoscSlownika(katalog, WPISY_REGUL.wynagrodzenieChorobowe, dzien, ['po-50', '14-dni', 'od-roku-po-50'], 14).wartosc
-    : wartoscSlownika(katalog, WPISY_REGUL.wynagrodzenieChorobowe, dzien, ['podstawowy', '33-dni', 'dni'], 33).wartosc;
+  const wiek = wartoscSlownika(katalog, WPISY_REGUL.wynagrodzenieChorobowe, dzien, 'wiek', 50).wartosc;
+  const poUkonczeniuWieku = rokUrodzenia !== undefined && rok > rokUrodzenia + wiek;
+  return poUkonczeniuWieku
+    ? wartoscSlownika(katalog, WPISY_REGUL.wynagrodzenieChorobowe, dzien, 'dniPoUkonczeniuWieku', 14).wartosc
+    : wartoscSlownika(katalog, WPISY_REGUL.wynagrodzenieChorobowe, dzien, 'dni', 33).wartosc;
 }
 
 /** Zaświadczenia ostatniego okresu zasiłkowego: przerwa do 60 dni łączy zaświadczenia w jeden okres. */
 function lancuchZaswiadczen(ezla: readonly ZaswiadczenieEzla[], katalog: Katalog, dzien: DataISO): ZaswiadczenieEzla[] {
   if (ezla.length === 0) return [];
-  const przerwa = wartoscSlownika(katalog, WPISY_REGUL.przerwaWNiezdolnosci, dzien, ['dni', 'przerwa'], 60).wartosc;
+  const przerwa = wartoscSlownika(katalog, WPISY_REGUL.przerwaWNiezdolnosci, dzien, 'dni', 60).wartosc;
   const lancuch = [ezla[ezla.length - 1]];
   for (let i = ezla.length - 2; i >= 0; i -= 1) {
     const poprzedni = ezla[i];
@@ -198,8 +199,8 @@ function okresZasilkowyZ(p: Przygotowanie, katalog: Katalog, dzis: DataISO): Okr
   const start = lancuch[0].od;
   const wCiazy = lancuch.some((z) => z.kodyLiterowe.includes('B'));
   const limit = wCiazy
-    ? wartoscSlownika(katalog, WPISY_REGUL.okresZasilkowy, start, ['w-ciazy', '270-dni', 'ciaza'], 270).wartosc
-    : wartoscSlownika(katalog, WPISY_REGUL.okresZasilkowy, start, ['podstawowy', '182-dni'], 182).wartosc;
+    ? wartoscSlownika(katalog, WPISY_REGUL.okresZasilkowy, start, 'ciaza', 270).wartosc
+    : wartoscSlownika(katalog, WPISY_REGUL.okresZasilkowy, start, 'podstawowy', 182).wartosc;
   const analiza = analizujUbezpieczenie(p.tytuly, start, katalog, p.koniecZProfilu);
   const nabycie = analiza?.dzienNabycia;
   let licznik = 0;
@@ -323,7 +324,7 @@ export function sprawdzZadluzenie(w: WejscieZadluzenia): ZadluzenieBlokujace | n
 
 /** Próg zadłużenia z tytułu składek w dniu `dzien` (1% minimalnego wynagrodzenia, 48,06 zł). */
 export function progZadluzenia(katalog: Katalog, dzien: DataISO): WartoscSlownika {
-  return wartoscSlownika(katalog, WPISY_REGUL.progZadluzenia, dzien, ['prog-grosze'], 4806);
+  return wartoscSlownika(katalog, WPISY_REGUL.progZadluzenia, dzien, 'kwota', 4806);
 }
 
 // --- Ustalenie prawa ---------------------------------------------------------------------------
@@ -414,7 +415,7 @@ function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): Usta
   const an = analizujUbezpieczenie(p.tytuly, D, k, p.koniecZProfilu);
   const wycz = wartosciWyczekiwania(k, D);
   const prog = progZadluzenia(k, D);
-  const stawka = wartoscSlownika(k, WPISY_REGUL.zasilekChorobowyWCiazy, D, ['stawka', 'procent'], 100);
+  const stawka = wartoscSlownika(k, WPISY_REGUL.zasilekChorobowyWCiazy, D, 'stawka', 100);
   const reguly: WynikUstaleniaPrawa['zastosowaneReguly'] = [
     regula('podleganie', []),
     regula('okres-wyczekiwania', [wycz.obowiazkowe, wycz.dobrowolne, wycz.przerwa]),
@@ -428,8 +429,8 @@ function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): Usta
     wiersz(T.wpisy.wyjatek10Lat, T.jednostki.lata({ liczba: String(wycz.lata.wartosc) }), wycz.lata),
   ];
   if (p.forma === 'umowa-o-prace') {
-    const limitW = wartoscSlownika(k, WPISY_REGUL.wynagrodzenieChorobowe, D, ['podstawowy', '33-dni', 'dni'], 33);
-    const limit50 = wartoscSlownika(k, WPISY_REGUL.wynagrodzenieChorobowe, D, ['po-50', '14-dni'], 14);
+    const limitW = wartoscSlownika(k, WPISY_REGUL.wynagrodzenieChorobowe, D, 'dni', 33);
+    const limit50 = wartoscSlownika(k, WPISY_REGUL.wynagrodzenieChorobowe, D, 'dniPoUkonczeniuWieku', 14);
     reguly.push(regula('wynagrodzenie-chorobowe', [limitW, limit50]));
     wartosci.push(wiersz(T.wpisy.wynagrodzenie, T.jednostki.dniIDni({ a: String(limitW.wartosc), b: String(limit50.wartosc) }), limitW));
   }
@@ -460,12 +461,13 @@ function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): Usta
   // 2. Ustanie ubezpieczenia (z zasiłkiem po ustaniu, gdy niezdolność trwa albo powstała do 14 dni od ustania).
   if (!an.podlega) {
     const ustanie = an.okres.do as DataISO;
-    const poUstaniu = wartoscSlownika(k, WPISY_REGUL.zasilekPoUstaniu, D, ['dni-od-ustania', '14-dni'], 14);
-    reguly.push(regula('zasilek-po-ustaniu', [poUstaniu]));
+    const poUstaniu = wartoscSlownika(k, WPISY_REGUL.zasilekPoUstaniu, D, 'dniOdUstania', 14);
+    const nieprzerwana = wartoscSlownika(k, WPISY_REGUL.zasilekPoUstaniu, D, 'nieprzerwanaNiezdolnosc', 30);
+    reguly.push(regula('zasilek-po-ustaniu', [poUstaniu, nieprzerwana]));
     const niezdolnosc = p.ezla.find((z) => porownajDaty(z.od, D) <= 0 && porownajDaty(D, z.do) <= 0) ?? p.ezla.find((z) => z.od === D);
     const trwalaWUbezpieczeniu = niezdolnosc !== undefined && porownajDaty(niezdolnosc.od, ustanie) <= 0;
     const powstalaPo = niezdolnosc !== undefined && porownajDaty(niezdolnosc.od, dodajDni(ustanie, poUstaniu.wartosc)) <= 0
-      && roznicaDni(niezdolnosc.od, niezdolnosc.do) + 1 >= 30;
+      && roznicaDni(niezdolnosc.od, niezdolnosc.do) + 1 >= nieprzerwana.wartosc;
     if (niezdolnosc && (trwalaWUbezpieczeniu || powstalaPo)) {
       return {
         wynik: {
@@ -555,10 +557,10 @@ function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): Usta
 function ustalRehabilitacyjne(w: WejscieUstaleniaPrawa, p: Przygotowanie): UstalenieSwiadczenia {
   const k = w.katalog;
   const D = w.wskazanyDzien;
-  const okres = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneOkres, D, ['miesiace', 'najwyzej'], 12);
-  const stawka = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneStawka, D, ['w-ciazy', 'ciaza'], 100);
-  const pierwsze = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneStawka, D, ['pierwsze-3-miesiace', 'pierwsze'], 90);
-  const dalej = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneStawka, D, ['pozostaly-okres', 'dalej'], 75);
+  const okres = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneOkres, D, 'miesiace', 12);
+  const stawka = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneStawka, D, 'ciaza', 100);
+  const pierwsze = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneStawka, D, 'pierwszyOkres', 90);
+  const dalej = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneStawka, D, 'pozostalyOkres', 75);
   const an = analizujUbezpieczenie(p.tytuly, w.dzis, k, p.koniecZProfilu);
   const baza = {
     swiadczenie: 'swiadczenie-rehabilitacyjne' as const,
@@ -591,8 +593,8 @@ function ustalRehabilitacyjne(w: WejscieUstaleniaPrawa, p: Przygotowanie): Ustal
 function ustalZwzm(w: WejscieUstaleniaPrawa, p: Przygotowanie): UstalenieSwiadczenia {
   const k = w.katalog;
   const D = w.wskazanyDzien;
-  const stawka = wartoscSlownika(k, WPISY_REGUL.zwzm, D, ['stawka', 'procent'], 100);
-  const minimum = wartoscSlownika(k, WPISY_REGUL.minimalnaPodstawa, D, ['kwota-grosze'], 414710);
+  const stawka = wartoscSlownika(k, WPISY_REGUL.zwzm, D, 'stawka', 100);
+  const minimum = wartoscSlownika(k, WPISY_REGUL.minimalnaPodstawa, D, 'kwota', 414710);
   const an = analizujUbezpieczenie(p.tytuly, w.dzis, k, p.koniecZProfilu);
   const baza = {
     swiadczenie: 'zwzm' as const,
@@ -627,7 +629,7 @@ function ustalMacierzynski(w: WejscieUstaleniaPrawa, p: Przygotowanie): Ustaleni
   const k = w.katalog;
   const D = w.wskazanyDzien;
   const an = analizujUbezpieczenie(p.tytuly, D, k, p.koniecZProfilu);
-  const wariant = wartoscSlownika(k, WPISY_REGUL.zasilekMacierzynski, D, ['81-5', 'wariant-81-5'], 81.5);
+  const wariant = wartoscSlownika(k, WPISY_REGUL.zasilekMacierzynski, D, 'stawka', 81.5);
   const baza = {
     swiadczenie: 'zasilek-macierzynski' as const,
     wskazanyDzien: D,
