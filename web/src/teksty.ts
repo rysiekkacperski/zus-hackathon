@@ -869,6 +869,21 @@ export const teksty = {
   },
   PowiadomieniaPrzejecieUrlopu: {
     tytul: "Przejęcie urlopu macierzyńskiego",
+    temat: "Możesz przejąć część urlopu macierzyńskiego",
+    tresc: ({
+      imieMatki,
+      dataPowrotu,
+      dataPoczatku,
+      dataKonca,
+      terminZlozeniaWniosku,
+    }: {
+      imieMatki: string;
+      dataPowrotu: string;
+      dataPoczatku: string;
+      dataKonca: string;
+      terminZlozeniaWniosku: string;
+    }) =>
+      `${imieMatki} złożyła rezygnację z dalszej części urlopu macierzyńskiego i wraca do pracy ${dataPowrotu}. Pozostała część urlopu od ${dataPoczatku} do ${dataKonca} przysługuje Tobie. Złóż wniosek o tę część urlopu w przewodniku. Jeśli pracujesz na umowie o pracę, złóż go pracodawcy do ${terminZlozeniaWniosku}.`,
     // koniec PowiadomieniaPrzejecieUrlopu
   },
   // Grupy widoków w kolejności mapy tras
@@ -1132,6 +1147,27 @@ export const teksty = {
       // koniec sekcjaAkcjaWnioskuOUrlop
     },
     sekcjaAkcjaRezygnacjiIPrzejecia: {
+      tytulRezygnacji: "Wcześniejszy powrót do pracy",
+      opisRezygnacji: ({ data }: { data: string }) =>
+        `Po wykorzystaniu co najmniej 14 tygodni urlopu macierzyńskiego możesz zrezygnować z dalszej części i wrócić do pracy. Pozostałą część urlopu przejmie ojciec dziecka. Najwcześniej wrócisz ${data}.`,
+      opisRezygnacjiZasilku:
+        "Po wykorzystaniu co najmniej 14 tygodni urlopu macierzyńskiego możesz zrezygnować z dalszej części zasiłku macierzyńskiego. Pozostałą część zasiłku przejmie ojciec dziecka.",
+      akcjaRezygnacji: "Zrezygnuj z dalszej części urlopu macierzyńskiego",
+      akcjaWznowieniaRezygnacji: "Wróć do szkicu rezygnacji",
+      tytulPrzejecia: "Przejęcie urlopu macierzyńskiego",
+      opisPrzejecia:
+        "Pozostałą część urlopu macierzyńskiego przejmujesz od dnia powrotu matki do pracy do końca urlopu macierzyńskiego. Wniosek składasz pracodawcy co najmniej 14 dni przed rozpoczęciem urlopu.",
+      opisPrzejeciaZam:
+        "Pozostałą część zasiłku macierzyńskiego otrzymasz na wniosek ZAM o zasiłek za okres urlopu macierzyńskiego przejętego od matki.",
+      akcjaPrzejecia: "Przejmij urlop macierzyński",
+      akcjaWznowieniaPrzejecia: "Wróć do szkicu wniosku",
+      kartaUrlopu: "Twój urlop",
+      urlopMacierzynski: "Urlop macierzyński",
+      drugiRodzic: "Drugi rodzic",
+      okres: ({ od, do_ }: { od: string; do_: string }) => `${od} – ${do_}`,
+      drugiRodzicZForma: ({ imieINazwisko, forma }: { imieINazwisko: string; forma: string }) =>
+        `${imieINazwisko}, ${forma}`,
+      informacjaPrzejecia: ({ temat, tresc }: { temat: string; tresc: string }) => `${temat}. ${tresc}`,
       // koniec sekcjaAkcjaRezygnacjiIPrzejecia
     },
     sekcjaAkcjaWariantu: {
@@ -1284,6 +1320,82 @@ export const teksty = {
       wniosek: "Przejęcie urlopu macierzyńskiego",
       zam: "Wniosek o zasiłek macierzyński (ZAM): przejęcie urlopu",
     },
+    powrot: "Instrukcja sprawy",
+    powrotZam: "Rodzaj urlopu",
+    wstepZWnioskow: "Uzupełniliśmy dane z profilu rodziny i z wniosków. Sprawdź je i przejdź dalej.",
+    wstepZProfilu: "Uzupełniliśmy dane z profilu rodziny. Sprawdź je i przejdź dalej.",
+    wstep: "Wskaż przyczynę przejęcia i okres urlopu, a potem przejdź dalej.",
+    kartaPrzyczyny: "Przyczyna przejęcia",
+    legendaPrzyczyny: "Dlaczego przejmujesz urlop",
+    przyczyny: {
+      rezygnacja: "Rezygnacja matki po 14 tygodniach",
+      szpital: "Pobyt matki w szpitalu",
+      orzeczenie: "Orzeczenie o niezdolności matki do samodzielnej egzystencji",
+      porzucenie: "Porzucenie dziecka przez matkę",
+      "smierc-matki": "Śmierć matki",
+    },
+    kartaOkresu: "Okres urlopu",
+    poleDatyPoczatku: "Data początku urlopu",
+    podpowiedzPoczatkuZRezygnacji: ({ kogo, od, do_ }: { kogo: string; od: string; do_: string }) =>
+      `Zaproponowaliśmy datę powrotu ${kogo} do pracy z jej rezygnacji. Od ${od} do ${do_}, w formacie DD.MM.RRRR.`,
+    podpowiedzPoczatku: ({ od, do_ }: { od: string; do_: string }) => `Od ${od} do ${do_}, w formacie DD.MM.RRRR.`,
+    poleDatyZdarzenia: "Data zdarzenia",
+    opisyZdarzenia: {
+      szpital: "Dzień przyjęcia matki do szpitala",
+      orzeczenie: "Dzień powstania niezdolności ustalony w orzeczeniu",
+      porzucenie: "Dzień porzucenia dziecka przez matkę",
+      "smierc-matki": "Dzień śmierci matki",
+    },
+    podpowiedzZdarzenia: ({ opis, zakres }: { opis: string; zakres: string }) => `${opis}. ${zakres}`,
+    podpowiedzZdarzeniaZProfilu: ({ opis, zakres }: { opis: string; zakres: string }) =>
+      `${opis}, z profilu rodziny. ${zakres}`,
+    zakresDo: ({ do_ }: { do_: string }) => `Do ${do_}, w formacie DD.MM.RRRR.`,
+    poleDniPrzed: "Dni urlopu wykorzystane przed porodem",
+    podpowiedzDniPrzed:
+      "Liczba dni urlopu macierzyńskiego, które matka wykorzystała przed porodem. Od 0 do 42, puste pole oznacza 0 dni.",
+    podpowiedzDniPrzedZWniosku: ({ liczba, kogo, data }: { liczba: string; kogo: string; data: string }) =>
+      `Zaproponowaliśmy ${liczba} z wniosku ${kogo} o część urlopu przed porodem od ${data}. Od 0 do 42, puste pole oznacza 0 dni.`,
+    przejmujesz: "Przejmujesz urlop macierzyński",
+    okresZDniami: ({ od, do_, dni }: { od: string; do_: string; dni: string }) => `${od} – ${do_}, ${dni}`,
+    okresDoWypisu: ({ od, do_ }: { od: string; do_: string }) =>
+      `Od ${od} do dnia wypisu matki ze szpitala, najdłużej do ${do_}`,
+    zasilek100: "Zasiłek 100% podstawy wymiaru",
+    zobowiazaniePracodawca: "Zobowiązuję się poinformować pracodawcę o wypisie matki ze szpitala.",
+    zobowiazaniePlatnik: "Zobowiązuję się poinformować płatnika zasiłku o wypisie matki ze szpitala.",
+    kartaZalacznikow: "Załączniki",
+    zalaczniki: {
+      "odpis-skrocony-aktu-urodzenia": "Odpis skrócony aktu urodzenia dziecka",
+      "oswiadczenie-matki-o-rezygnacji": "Oświadczenie matki o zamiarze rezygnacji z dalszej części urlopu macierzyńskiego",
+      "oswiadczenie-matki": "Oświadczenie matki",
+      "zaswiadczenie-szpitala": "Zaświadczenie szpitala o pobycie matki",
+      "oswiadczenie-ojca-z-data-zdarzenia": "Oświadczenie ojca z datą zdarzenia",
+      "kopia-orzeczenia": "Kopia prawomocnego orzeczenia o niezdolności matki do samodzielnej egzystencji",
+      "zaswiadczenie-platnika-zasilku-matki":
+        "Zaświadczenie płatnika zasiłku matki o okresie przysługującego i wypłaconego zasiłku macierzyńskiego i o jego stawce procentowej",
+      "zaswiadczenie-placowki-o-przyjeciu": "Zaświadczenie placówki leczniczej o dacie przyjęcia matki",
+      "zaswiadczenie-placowki-o-wypisie": "Zaświadczenie placówki leczniczej o dacie wypisu matki",
+      "orzeczenie-o-niezdolnosci-matki": "Orzeczenie o niezdolności matki do samodzielnej egzystencji",
+    },
+    kartaDanych: "Dane z profilu rodziny",
+    matkaDziecka: "Matka dziecka",
+    rezygnacjaMatki: "Rezygnacja matki",
+    rezygnacjaZWnioskow: ({ data }: { data: string }) => `Powrót do pracy ${data}, z wniosków`,
+    sytuacjaSzczegolna: "Sytuacja szczególna",
+    sytuacje: {
+      szpital: ({ data }: { data: string }) => `Pobyt matki w szpitalu od ${data}`,
+      orzeczenie: ({ data }: { data: string }) => `Orzeczenie o niezdolności matki do samodzielnej egzystencji, ${data}`,
+      porzucenie: ({ data }: { data: string }) => `Porzucenie dziecka przez matkę, ${data}`,
+      "smierc-matki": ({ data }: { data: string }) => `Śmierć matki, ${data}`,
+    },
+    twojaForma: "Twoja forma zatrudnienia",
+    kartaTerminu: "Termin wniosku",
+    terminZData: ({ data }: { data: string }) =>
+      `Wniosek składasz pracodawcy co najmniej 14 dni przed rozpoczęciem urlopu – do ${data}.`,
+    termin: "Wniosek składasz pracodawcy co najmniej 14 dni przed rozpoczęciem urlopu.",
+    kartaSzkicu: "Szkic wniosku",
+    brakDatyPorodu: "Wniosek przygotujesz po potwierdzeniu daty porodu w profilu rodziny.",
+    brakWniosku: "Nie znaleźliśmy szkicu wniosku o zasiłek macierzyński. Wybierz rodzaj urlopu w kreatorze wniosku.",
+    przejdzDoRodzajuUrlopu: "Przejdź do wyboru rodzaju urlopu",
     // koniec ViewFatherTakeover
   },
   ViewZamData: {
@@ -1364,6 +1476,122 @@ export const teksty = {
   ViewMaternityResignation: {
     tytulStrony: "Rezygnacja z dalszej części urlopu macierzyńskiego",
     naglowek: "Rezygnacja z dalszej części urlopu macierzyńskiego",
+    powrot: "Instrukcja sprawy",
+    wstepPracownica: "Wrócisz do pracy wcześniej, a pozostałą część urlopu przejmie ojciec dziecka.",
+    wstepZasilek: "Pozostałą część zasiłku macierzyńskiego przejmie ojciec dziecka.",
+    kartaUrlopu: "Twój urlop macierzyński",
+    dataPorodu: "Data porodu",
+    liczbaDzieci: "Liczba dzieci",
+    urlopMacierzynski: "Urlop macierzyński",
+    najwczesniejszyPowrot: "Najwcześniejsza data powrotu do pracy",
+    okres: ({ od, do_ }: { od: string; do_: string }) => `${od} – ${do_}`,
+    okresZTygodniami: ({ od, do_, tygodnie }: { od: string; do_: string; tygodnie: string }) => `${od} – ${do_}, ${tygodnie}`,
+    okresZDniamiPrzed: ({ od, do_, dni }: { od: string; do_: string; dni: string }) =>
+      `${od} – ${do_}, w tym ${dni} przed porodem`,
+    powrotPo14: ({ data }: { data: string }) => `${data}, po 14 tygodniach urlopu`,
+    powrotPo8: ({ data }: { data: string }) => `${data}, po 8 tygodniach urlopu`,
+    informacjaOrzeczenie:
+      "W profilu rodziny jest zapisane orzeczenie o niezdolności do samodzielnej egzystencji, więc możesz wrócić do pracy po 8 tygodniach urlopu.",
+    kartaPowrotu: "Powrót do pracy",
+    poleDatyPowrotu: "Data powrotu do pracy",
+    podpowiedzPowrotu: ({ od, do_ }: { od: string; do_: string }) =>
+      `Od ${od} do ${do_}, w formacie DD.MM.RRRR. Rezygnację składasz pracodawcy co najmniej 7 dni przed powrotem.`,
+    ojciecPrzejmie: ({ imieINazwisko }: { imieINazwisko: string }) => `Ojciec dziecka, ${imieINazwisko}, przejmie urlop`,
+    ojciecDzieckaPrzejmie: "Ojciec dziecka przejmie urlop",
+    przejdzDoPlanu: "Przejdź do planu rodziny",
+    przejdzDoProfilu: "Przejdź do profilu rodziny",
+    przejdzDoEzus: "Przejdź do eZUS",
+    kartaZalacznikow: "Załączniki",
+    zalaczniki: {
+      kopiaWnioskuOjca: ({ kogo }: { kogo: string }) => `Kopia wniosku ${kogo} o pozostałą część urlopu macierzyńskiego`,
+      kopiaWnioskuOjcaKogo: "ojca",
+      kopiaWnioskuOjcaZWnioskow: ({ data }: { data: string }) =>
+        `Dołączymy ją z wniosków drugiego rodzica. Wniosek wysłany ${data}.`,
+      kopiaWnioskuOjcaDoDodania: "Dołącz kopię wniosku ojca dziecka o pozostałą część urlopu macierzyńskiego.",
+      oswiadczenieOjca: "Kopia oświadczenia ojca o przerwaniu działalności zarobkowej",
+      oswiadczenieOjcaOpis: ({ kogo }: { kogo: string }) =>
+        `Oświadczenie ${kogo}, że przerwie działalność, żeby opiekować się dzieckiem do końca urlopu macierzyńskiego.`,
+      oswiadczenieOjcaKogo: "ojca dziecka",
+      kopiaOrzeczenia: "Kopia prawomocnego orzeczenia o niezdolności do samodzielnej egzystencji",
+      kopiaOrzeczeniaOpis: "Dołącz kopię orzeczenia.",
+    },
+    dodajPlik: "Dodaj plik",
+    dodajPlikDo: ({ zalacznik }: { zalacznik: string }) => `Dodaj plik: ${zalacznik}`,
+    dodanyPlik: ({ nazwa }: { nazwa: string }) => `Dodany plik: ${nazwa}`,
+    kartaDrugiegoRodzica: "Drugi rodzic",
+    imieINazwisko: "Imię i nazwisko",
+    formaZatrudnienia: "Forma zatrudnienia",
+    brakDrugiegoRodzica: "Profil rodziny nie zawiera drugiego rodzica.",
+    formy: {
+      "umowa-o-prace": "Umowa o pracę",
+      "umowa-zlecenia": "Umowa zlecenia",
+      "umowa-zlecenia-z-dobrowolnym": "Umowa zlecenia z dobrowolnym ubezpieczeniem chorobowym",
+      "umowa-zlecenia-bez-dobrowolnego": "Umowa zlecenia bez dobrowolnego ubezpieczenia chorobowego",
+      jdg: "Jednoosobowa działalność gospodarcza",
+      "jdg-z-dobrowolnym": "Jednoosobowa działalność gospodarcza z dobrowolnym ubezpieczeniem chorobowym",
+      "jdg-bez-dobrowolnego": "Jednoosobowa działalność gospodarcza bez dobrowolnego ubezpieczenia chorobowego",
+      "brak-tytulu": "Brak tytułu do ubezpieczenia",
+      "brak-drugiego-rodzica": "Brak drugiego rodzica w profilu",
+    },
+    kartaAdresata: "Adresat",
+    adresat: ({ email }: { email: string }) => `Rezygnację wyślemy do pracodawcy na adres ${email}.`,
+    adresatBezAdresu: "Rezygnację wyślemy do pracodawcy. Adres e-mail pracodawcy podasz w podsumowaniu.",
+    notatkaSzkicu: "Zapisujemy odpowiedzi jako szkic. Wrócisz do nich z instrukcji sprawy.",
+    kartaZam14: "Wniosek o zasiłek tylko za 14 tygodni",
+    zam14Opis:
+      "Nie masz jeszcze wniosku o zasiłek macierzyński. Złóż od razu wniosek tylko za 14 tygodni urlopu macierzyńskiego. Pozostałą część zasiłku drugi rodzic otrzyma na swój wniosek.",
+    okresZasilkuWeWniosku: "Okres zasiłku we wniosku",
+    okresZasilku100: ({ od, do_ }: { od: string; do_: string }) => `${od} – ${do_}, zasiłek 100% podstawy wymiaru`,
+    zlozZam14: "Złóż wniosek o zasiłek za 14 tygodni",
+    kartaRezygnacjiZasilku: "Rezygnacja z części zasiłku",
+    kartaWnioskuZam: "Twój wniosek o zasiłek",
+    wniosekZam: "Wniosek o zasiłek macierzyński (ZAM)",
+    stanyZam: {
+      wyslany: "Wysłany do ZUS",
+      przygotowany: "Przygotowany dla płatnika składek",
+    },
+    okresZasilku: "Okres zasiłku",
+    platnikZasilku: "Płatnik zasiłku",
+    platnicy: {
+      zus: "ZUS",
+      "platnik-skladek": "Zleceniodawca",
+      nieustalony: "Nieustalony",
+      "brak-platnika": "Brak płatnika",
+    },
+    kartaDanychZus: "Dane z konta ZUS",
+    wniosekOZasilek: "Wniosek o zasiłek macierzyński",
+    brakWnioskuZam: "Brak wniosku w przewodniku i w ZUS",
+    wniosekWZus: "Złożony w ZUS",
+    brakDatyPorodu:
+      "Rezygnację przygotujesz po potwierdzeniu daty porodu. Uzupełnij datę porodu w profilu rodziny.",
+    brakRodziny: "Rezygnację przygotujesz po zapisaniu profilu rodziny.",
+    odmianaTygodni: { jeden: "tydzień", kilka: "tygodnie", wiele: "tygodni" },
+    odmianaDni: { jeden: "dzień", wiele: "dni" },
+    liczbaZJednostka: ({ liczba, jednostka }: { liczba: string; jednostka: string }) => `${liczba} ${jednostka}`,
+    wiadomoscDoPracodawcy: {
+      temat: ({ imieINazwisko }: { imieINazwisko: string }) =>
+        `Rezygnacja z dalszej części urlopu macierzyńskiego, ${imieINazwisko}`,
+      tresc: ({
+        dataZlozenia,
+        dataPowrotu,
+        listaZalacznikow,
+        email,
+        imieINazwisko,
+      }: {
+        dataZlozenia: string;
+        dataPowrotu: string;
+        listaZalacznikow: string;
+        email: string;
+        imieINazwisko: string;
+      }) =>
+        `Dzień dobry, przesyłam rezygnację z dalszej części urlopu macierzyńskiego złożoną ${dataZlozenia}. Wracam do pracy ${dataPowrotu}. W załącznikach do wiadomości przesyłam dokument rezygnacji oraz ${listaZalacznikow}. Proszę o potwierdzenie otrzymania rezygnacji na adres ${email}. Z poważaniem, ${imieINazwisko}. Wiadomość została przygotowana w przewodniku dla rodziców.`,
+      zalaczniki: {
+        "kopia-wniosku-ojca": "kopię wniosku ojca o pozostałą część urlopu macierzyńskiego",
+        "oswiadczenie-ojca-o-przerwaniu-dzialalnosci":
+          "kopię oświadczenia ojca o przerwaniu działalności zarobkowej w celu sprawowania opieki nad dzieckiem",
+        "kopia-orzeczenia": "kopię prawomocnego orzeczenia o niezdolności do samodzielnej egzystencji",
+      },
+    },
     // koniec ViewMaternityResignation
   },
   ViewBirthCertificateRequest: {
