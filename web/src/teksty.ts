@@ -1126,6 +1126,13 @@ export const teksty = {
     naglowek: "Instrukcja sprawy",
     // Sekcje sprawy/[idSprawy]/instrukcja/_sekcje (u27, u28, u34, u26, u26, u20, u30, u29, u29)
     sekcjaAkcjaWnioskuZam: {
+      wypelnij: "Wypełnij wniosek",
+      wrocDoWniosku: "Wróć do wniosku",
+      opis: "Kreator wniosku otworzy się w przewodniku, nie musisz logować się do innego serwisu.",
+      szkic: ({ data }: { data: string }) =>
+        `Masz szkic wniosku zapisany ${data}. Wrócisz do ostatniego kroku z zachowanymi odpowiedziami.`,
+      wyslany: ({ data, numer }: { data: string; numer: string }) => `Wniosek wysłany ${data}, numer potwierdzenia ${numer}.`,
+      zobaczPotwierdzenie: "Zobacz potwierdzenie",
       // koniec sekcjaAkcjaWnioskuZam
     },
     sekcjaAkcjaWnioskuOUrlop: {
@@ -1265,6 +1272,123 @@ export const teksty = {
   ViewZamLeaveType: {
     tytulStrony: "Wniosek o zasiłek macierzyński (ZAM): rodzaj urlopu",
     naglowek: "Wniosek o zasiłek macierzyński (ZAM)",
+    // Teksty wspólne ekranów kreatora ZAM (u27)
+    kreator: {
+      powrot: "Instrukcja sprawy",
+      krok: ({ krok, liczbaKrokow, nazwa }: { krok: number; liczbaKrokow: number; nazwa: string }) =>
+        `Krok ${krok} z ${liczbaKrokow}: ${nazwa}`,
+      zapisujemy: "Odpowiedzi zapisujemy po każdym kroku.",
+      krokiWniosku: "Kroki wniosku",
+      numerKroku: ({ numer, nazwa }: { numer: number; nazwa: string }) => `${numer}. ${nazwa}`,
+      nazwyKrokow: {
+        ViewZamLeaveType: "Rodzaj urlopu",
+        ViewZamPrebirth: "Początek zasiłku",
+        ViewZamPeriod: "Okres zasiłku",
+        ViewZamData: "Dane",
+        ViewZamStatements: "Oświadczenia",
+        ViewZamSummary: "Podsumowanie",
+      },
+      przyciski: { wstecz: "Wstecz", zapiszDoDokonczenia: "Zapisz do dokończenia", dalej: "Dalej" },
+      etykietaBocznej: "Informacje o wniosku",
+      ladowanie: "Sprawdzamy, czy możesz złożyć wniosek.",
+      brakWniosku: "Nie znaleźliśmy tego wniosku. Rozpocznij wniosek z instrukcji sprawy w planie rodziny.",
+      przejdzDoPlanu: "Przejdź do planu rodziny",
+      rodzajeUrlopu: {
+        macierzynski: "Urlop macierzyński",
+        "czesc-przed-porodem": "Część urlopu macierzyńskiego przed porodem",
+        rodzicielski: "Urlop rodzicielski",
+        uzupelniajacy: "Uzupełniający urlop macierzyński",
+        ojcowski: "Urlop ojcowski",
+        "na-warunkach-macierzynskiego": "Urlop na warunkach urlopu macierzyńskiego",
+        "przejety-macierzynski": "Urlop macierzyński przejęty od matki",
+        "laczenie-z-praca": "Urlop łączony z pracą",
+      },
+      rodzajeUrlopuDopelniacz: {
+        macierzynski: "urlopu macierzyńskiego",
+        "czesc-przed-porodem": "części urlopu macierzyńskiego przed porodem",
+        rodzicielski: "urlopu rodzicielskiego",
+        uzupelniajacy: "uzupełniającego urlopu macierzyńskiego",
+        ojcowski: "urlopu ojcowskiego",
+        "na-warunkach-macierzynskiego": "urlopu na warunkach urlopu macierzyńskiego",
+        "przejety-macierzynski": "urlopu macierzyńskiego przejętego od matki",
+        "laczenie-z-praca": "urlopu łączonego z pracą",
+      },
+      macierzynskiZCalym: "Urlop macierzyński z całym urlopem rodzicielskim",
+      okres: ({ od, do_ }: { od: string; do_: string }) => `${od} – ${do_}`,
+      stawka: ({ stawka }: { stawka: string }) => `${stawka} podstawy`,
+      stawkaZaCalyOkres: ({ stawka }: { stawka: string }) => `${stawka} podstawy za cały okres`,
+      dni: ({ liczba }: { liczba: number }) => (liczba === 1 ? "1 dzień" : `${liczba} dni`),
+      liczbaDzieciNawias: ({ liczba }: { liczba: number }) => (liczba === 1 ? "1 dziecko" : `${liczba} dzieci`),
+      przyLiczbieDzieci: {
+        1: "przy jednym dziecku",
+        2: "przy dwojgu dzieciach",
+        3: "przy trojgu dzieciach",
+        4: "przy czworgu dzieciach",
+        5: "przy pięciorgu i więcej dzieciach",
+      },
+      formyZatrudnienia: {
+        "umowa-o-prace": "Umowa o pracę",
+        "umowa-zlecenia": "Umowa zlecenia",
+        jdg: "Jednoosobowa działalność gospodarcza",
+        "brak-tytulu": "Brak tytułu do ubezpieczenia",
+      },
+      zDobrowolnym: ({ forma }: { forma: string }) => `${forma}, dobrowolne ubezpieczenie chorobowe`,
+      platnicy: {
+        zus: "ZUS",
+        "platnik-skladek": "Płatnik składek",
+        nieustalony: "Nieustalony",
+        "brak-platnika": "Brak płatnika",
+      },
+      role: { rodzic: "Rodzic", "drugi-rodzic": "Drugi rodzic" },
+      twojWniosek: {
+        tytul: "Twój wniosek",
+        rodzajUrlopu: "Rodzaj urlopu",
+        dataPorodu: "Data porodu",
+        liczbaDzieci: "Liczba dzieci",
+        platnikZasilku: "Płatnik zasiłku",
+        urlopMacierzynski: "Urlop macierzyński",
+        okres: "Okres",
+        zasilek: "Zasiłek",
+        dziecko: "Dziecko",
+        zmienRodzaj: "Zmień rodzaj urlopu",
+        zmienOkres: "Zmień okres zasiłku",
+      },
+    },
+    tytulKarty: "Rodzaj urlopu",
+    wstepMatki:
+      "Wypełniasz tylko tę część formularza ZAM, która dotyczy wybranego urlopu. Twoje dane i dane dziecka uzupełnimy z konta ZUS i z profilu rodziny.",
+    wstepDrugiegoRodzica:
+      "Jako drugi rodzic wnioskujesz o zasiłek za okres urlopu ojcowskiego albo za swoją część urlopu rodzicielskiego. Wypełniasz tylko tę część formularza ZAM, która dotyczy wybranego urlopu.",
+    legenda: "Jakiego urlopu dotyczy wniosek?",
+    opisMacierzynski: ({ dataPorodu, tygodnie, przy }: { dataPorodu: string; tygodnie: number; przy: string }) =>
+      `Od dnia porodu ${dataPorodu}, ${tygodnie} tygodni ${przy}. Zasiłek 100% podstawy albo 81,5% za cały okres, jeśli od razu obejmiesz wnioskiem urlop rodzicielski.`,
+    opisMacierzynskiPrzedPorodem: ({ tygodnie, przy }: { tygodnie: number; przy: string }) =>
+      `Od wybranego dnia przed porodem, ${tygodnie} tygodni ${przy}. Zasiłek 100% podstawy albo 81,5% za cały okres, jeśli od razu obejmiesz wnioskiem urlop rodzicielski.`,
+    opisRodzicielski: ({ maks, data }: { maks: number; data: string }) =>
+      `Do ${maks} tygodni, bezpośrednio po urlopie macierzyńskim albo w późniejszym terminie, z początkiem najpóźniej ${data}. Zasiłek 70% podstawy.`,
+    opisRodzicielskiDrugiegoRodzica: "9 tygodni, które przysługują wyłącznie Tobie jako drugiemu rodzicowi. Zasiłek 70% podstawy.",
+    opisUzupelniajacy: ({ tygodnie, od }: { tygodnie: number; od: string }) =>
+      `Do ${tygodnie} tygodni od ${od}, dzień po końcu urlopu macierzyńskiego, zgodnie ze sprawą w Twoim planie. Zasiłek 100% podstawy.`,
+    opisOjcowski: ({ data }: { data: string }) =>
+      `14 dni, z początkiem najpóźniej ${data}, żeby wykorzystać urlop przed ukończeniem przez dziecko 12 miesięcy. Zasiłek 100% podstawy.`,
+    opisNaWarunkach: "Urlop po przyjęciu dziecka na wychowanie. Zasiłek 100% podstawy.",
+    notatka: "Cały urlop rodzicielski możesz objąć wnioskiem o urlop macierzyński. Zdecydujesz o tym w następnym kroku.",
+    profil: {
+      tytul: "Dane z profilu rodziny",
+      twojaRola: "Twoja rola",
+      dataPorodu: "Data porodu",
+      potwierdzona: ({ data }: { data: string }) => `${data} (potwierdzona)`,
+      przewidywanyTermin: "Przewidywany termin porodu",
+      liczbaDzieci: "Liczba dzieci",
+      formaZatrudnienia: "Forma zatrudnienia",
+      platnikZasilku: "Płatnik zasiłku",
+      link: "Profil rodziny",
+    },
+    kartaTerminu: {
+      tytul: "Zasiłek 81,5% za cały okres",
+      tresc: ({ data, dni }: { data: string; dni: string }) =>
+        `Wyślij wniosek o urlop macierzyński z całym urlopem rodzicielskim do ${data}. Zostało ${dni}.`,
+    },
     // koniec ViewZamLeaveType
   },
   ViewZamPrebirth: {
@@ -1275,6 +1399,77 @@ export const teksty = {
   ViewZamPeriod: {
     tytulStrony: "Wniosek o zasiłek macierzyński (ZAM): okres zasiłku",
     naglowek: "Wniosek o zasiłek macierzyński (ZAM)",
+    macierzynski: {
+      tytul: "Okres urlopu macierzyńskiego",
+      wstep: ({ przy, tygodnie }: { przy: string; tygodnie: number }) =>
+        `Urlop macierzyński zaczyna się w dniu porodu. ${przy.charAt(0).toUpperCase()}${przy.slice(1)} trwa ${tygodnie} tygodni.`,
+      wstepPrzedPorodem: ({ przy, tygodnie }: { przy: string; tygodnie: number }) =>
+        `Urlop macierzyński zaczyna się w dniu początku zasiłku. ${przy.charAt(0).toUpperCase()}${przy.slice(1)} trwa ${tygodnie} tygodni.`,
+      od: "Od",
+      do: "Do",
+      wymiar: "Wymiar",
+      wymiarWartosc: ({ tygodnie, dzieci }: { tygodnie: number; dzieci: string }) => `${tygodnie} tygodni (${dzieci})`,
+      zasilek: "Zasiłek",
+      zasilek100: "100% podstawy",
+      poTerminie: "O urlop rodzicielski złożysz osobny wniosek. Wybierz go jako rodzaj urlopu, gdy zdecydujesz o terminie.",
+    },
+    wariant: {
+      tytul: "Wariant zasiłku",
+      termin: ({ dni, data }: { dni: string; data: string }) =>
+        `Do końca terminu na wariant 81,5% zostało ${dni}. Wyślij wniosek do ${data}.`,
+      terminPrzedPorodem: "Wniosek wysyłasz przed porodem, więc możesz wybrać zasiłek 81,5% podstawy za cały okres.",
+      legenda: "Czy obejmujesz wnioskiem także urlop rodzicielski?",
+      caly: "Tak, wniosek z całym urlopem rodzicielskim",
+      opisCaly: ({ okresMacierzynski, okresRodzicielski }: { okresMacierzynski: string; okresRodzicielski: string }) =>
+        `Urlop macierzyński ${okresMacierzynski} i urlop rodzicielski ${okresRodzicielski}. Zasiłek 81,5% podstawy za cały okres, równe wypłaty przez rok.`,
+      tylko: "Nie, wniosek tylko o urlop macierzyński",
+      opisTylko:
+        "Zasiłek 100% podstawy za urlop macierzyński. O urlop rodzicielski złożysz osobny wniosek, zasiłek za ten okres wyniesie 70% podstawy.",
+      podpisTabeli: "Stawka zasiłku w obu wariantach",
+      przewijanieTabeli: "Tabela stawek zasiłku w obu wariantach",
+      kolumnaOkres: "Okres",
+      kolumnaCaly: "Z całym urlopem rodzicielskim",
+      kolumnaTylko: "Tylko urlop macierzyński",
+      osobnyWniosek: "70%, osobny wniosek",
+    },
+    uzupelniajacy: {
+      tytul: "Okres uzupełniającego urlopu macierzyńskiego",
+      wstep: "Uzupełniający urlop macierzyński zaczyna się dzień po końcu urlopu macierzyńskiego. Wymiar pochodzi ze sprawy w Twoim planie.",
+    },
+    rodzicielski: {
+      tytul: "Okres urlopu rodzicielskiego",
+      legenda: "Kiedy zaczynasz urlop rodzicielski?",
+      bezposrednio: "Bezpośrednio po urlopie macierzyńskim",
+      bezposrednioOpis: ({ od }: { od: string }) => `Od ${od}.`,
+      pozniej: "W późniejszym terminie",
+      pozniejOpis: ({ data }: { data: string }) =>
+        `Podaj datę początku, najpóźniej ${data}, czyli w roku, w którym dziecko kończy 6 lat.`,
+      dataPoczatku: "Data początku urlopu",
+      podpowiedzDaty: ({ od, do_ }: { od: string; do_: string }) => `Od ${od} do ${do_}, w formacie DD.MM.RRRR`,
+      tygodnie: "Liczba tygodni",
+      podpowiedzTygodni: ({ maks, przy }: { maks: number; przy: string }) => `Od 1 do ${maks} tygodni ${przy}`,
+      podpowiedzTygodniDrugiegoRodzica: "Od 1 do 9 tygodni",
+      okres: "Okres",
+      wyliczymy: "Wyliczymy po wypełnieniu pól",
+      zasilek70: "70% podstawy",
+    },
+    ojcowski: {
+      tytul: "Okres urlopu ojcowskiego",
+      wstep: "Urlop ojcowski trwa 14 dni. Wykorzystasz go do ukończenia przez dziecko 12 miesięcy.",
+      dataPoczatku: "Data początku urlopu",
+    },
+    boczna: {
+      terminTytul: "Termin 21 dni",
+      terminWTerminie:
+        "Termin sprawdzimy jeszcze raz w dniu wysłania wniosku. Jeśli minie, wniosek obejmie tylko urlop macierzyński z zasiłkiem 100% podstawy.",
+      terminMinal: ({ data }: { data: string }) =>
+        `Termin na wariant 81,5% minął ${data}. Wniosek obejmie tylko urlop macierzyński z zasiłkiem 100% podstawy.`,
+      wymiarTytul: "Wymiar urlopu rodzicielskiego",
+      wymiarZwykly: "Przy jednym dziecku masz do 32 tygodni, przy więcej niż jednym do 34 tygodni.",
+      wymiarZaZyciem: "Gdy dziecko ma zaświadczenie „Za życiem”, masz do 56 tygodni, a przy więcej niż jednym dziecku do 58 tygodni.",
+      wymiarDrugiegoRodzica: "Kolejne 9 tygodni przysługuje wyłącznie drugiemu rodzicowi.",
+      wymiarDlaDrugiegoRodzica: "Jako drugi rodzic masz 9 tygodni urlopu rodzicielskiego, które przysługują wyłącznie Tobie.",
+    },
     // koniec ViewZamPeriod
   },
   ViewFatherTakeover: {
@@ -1289,21 +1484,149 @@ export const teksty = {
   ViewZamData: {
     tytulStrony: "Wniosek o zasiłek macierzyński (ZAM): dane",
     naglowek: "Wniosek o zasiłek macierzyński (ZAM)",
+    wnioskodawca: {
+      tytul: "Dane wnioskodawcy",
+      wstep: "Dane pochodzą z Twojego konta ZUS, nie zmienisz ich we wniosku.",
+      imieINazwisko: "Imię i nazwisko",
+      pesel: "PESEL",
+    },
+    dziecko: {
+      tytul: "Dane dziecka",
+      tytulNumer: ({ numer }: { numer: number }) => `Dziecko ${numer}`,
+      wstep: "Uzupełniliśmy dane z profilu rodziny. Jeśli coś zmienisz, zapiszemy to także w profilu.",
+      imie: "Imię",
+      nazwisko: "Nazwisko",
+      pesel: "Numer PESEL",
+      dataUrodzenia: "Data urodzenia",
+      dataUrodzeniaWartosc: ({ data }: { data: string }) => `${data}, z profilu rodziny`,
+      miejsceUrodzenia: "Miejscowość urodzenia",
+      przedPorodem: "Dane dziecka przekażesz ZUS po porodzie. Przypomnimy Ci o tym przy sprawie w planie rodziny.",
+    },
+    rachunek: {
+      tytul: "Rachunek do wypłaty zasiłku",
+      numer: "Numer rachunku",
+      podpowiedz: "26 cyfr, możesz wpisać je ze spacjami",
+    },
+    brakPesel: {
+      tytul: "Nie masz jeszcze numeru PESEL dziecka?",
+      tresc: "Zapisz wniosek. Wrócisz do niego z instrukcji sprawy w planie rodziny, odpowiedzi z poprzednich kroków zostaną zachowane.",
+    },
     // koniec ViewZamData
   },
   ViewZamStatements: {
     tytulStrony: "Wniosek o zasiłek macierzyński (ZAM): oświadczenia",
     naglowek: "Wniosek o zasiłek macierzyński (ZAM)",
+    tytulKarty: "Oświadczenia",
+    wstep: "Składając wniosek, oświadczasz, że:",
+    punkty: {
+      prawda: "dane we wniosku są zgodne z prawdą,",
+      okresCaly:
+        "wnioskujesz o zasiłek za okres urlopu macierzyńskiego i całego urlopu rodzicielskiego bezpośrednio po nim, z zasiłkiem 81,5% podstawy za cały okres,",
+      okres: ({ rodzaj, stawka }: { rodzaj: string; stawka: string }) =>
+        `wnioskujesz o zasiłek za okres ${rodzaj} z zasiłkiem ${stawka} podstawy,`,
+      zaZyciem: "dziecko ma zaświadczenie „Za życiem”,",
+      zmiany: "poinformujesz ZUS o każdej zmianie, która wpływa na prawo do zasiłku lub jego wysokość,",
+      odpowiedzialnosc: "wiesz, że za podanie nieprawdziwych danych grozi odpowiedzialność karna i zwrot nienależnie pobranego zasiłku.",
+    },
+    pelnaTresc: "Przeczytaj pełną treść oświadczeń",
+    potwierdzam: "Potwierdzam powyższe oświadczenia",
     // koniec ViewZamStatements
   },
   ViewZamSummary: {
     tytulStrony: "Wniosek o zasiłek macierzyński (ZAM): podsumowanie",
     naglowek: "Wniosek o zasiłek macierzyński (ZAM)",
+    wstep: "Sprawdź wniosek przed wysłaniem. Każdą sekcję możesz zmienić.",
+    sekcje: {
+      rodzajUrlopu: "Rodzaj urlopu",
+      okresZasilku: "Okres zasiłku",
+      wnioskodawcaIDziecko: "Wnioskodawca i dziecko",
+      rachunek: "Rachunek do wypłaty zasiłku",
+      oswiadczenia: "Oświadczenia",
+      adresat: "Adresat wniosku",
+    },
+    zmien: "Zmień",
+    zmienSekcje: ({ sekcja }: { sekcja: string }) => `Zmień sekcję ${sekcja}`,
+    tabela: {
+      podpis: "Okresy zasiłku",
+      przewijanie: "Tabela okresów zasiłku",
+      urlop: "Urlop",
+      od: "Od",
+      do: "Do",
+      zasilek: "Zasiłek",
+    },
+    stawkaZasilku: ({ stawka }: { stawka: string }) => `Stawka zasiłku: ${stawka}`,
+    wnioskodawca: "Wnioskodawca",
+    dziecko: "Dziecko",
+    imieINazwisko: "Imię i nazwisko",
+    pesel: "PESEL",
+    dataUrodzenia: "Data urodzenia",
+    miejsceUrodzenia: "Miejscowość urodzenia",
+    przewidywanyTermin: "Przewidywany termin porodu",
+    potwierdzone: "Potwierdzone",
+    niepotwierdzone: "Niepotwierdzone",
+    trafiDo: "Wniosek trafi do",
+    adresatZus: "ZUS, płatnik Twojego zasiłku",
+    adresatPlatnik: ({ nazwa }: { nazwa: string }) => `Płatnik składek ${nazwa}, płatnik Twojego zasiłku`,
+    adresatPlatnikBezNazwy: "Płatnik składek, płatnik Twojego zasiłku",
+    bezOdpisu: "Wniosek nie wymaga skróconego odpisu aktu urodzenia. ZUS pobierze go sam na podstawie danych dziecka.",
+    dokumenty: {
+      "zaswiadczenie-szpitala": "zaświadczenie szpitala o pobycie dziecka",
+      "zaswiadczenie-lekarskie": "zaświadczenie lekarskie o przewidywanej dacie porodu",
+      "odpis-skrocony": "skrócony odpis aktu urodzenia dziecka",
+    },
+    wyslij: "Wyślij wniosek",
+    wyslijPonownie: "Wyślij ponownie",
+    przygotuj: "Przygotuj wniosek",
+    poTerminie: ({ dataSzkicu, termin }: { dataSzkicu: string; termin: string }) =>
+      `Nie wysłaliśmy wniosku. Szkic z ${dataSzkicu} obejmował cały urlop rodzicielski, ale termin na wariant 81,5% minął ${termin}. Wniosek obejmuje teraz tylko urlop macierzyński z zasiłkiem 100% podstawy. Sprawdź go i wyślij ponownie.`,
+    boczna: {
+      terminTytul: "Termin 21 dni",
+      terminTresc: ({ data, dni }: { data: string; dni: string }) =>
+        `Wyślij wniosek do ${data}, zostało ${dni}. Termin sprawdzimy jeszcze raz w chwili wysłania.`,
+      terminPoBledzie: ({ data, dni }: { data: string; dni: string }) =>
+        `Wyślij wniosek do ${data}, zostało ${dni}. Szkic jest zapisany, więc nie stracisz odpowiedzi.`,
+      terminMinal: ({ data }: { data: string }) =>
+        `Termin na wariant 81,5% minął ${data}. O urlop rodzicielski złożysz osobny wniosek, zasiłek za ten okres wyniesie 70% podstawy.`,
+      poWyslaniuTytul: "Po wysłaniu",
+      poWyslaniuTresc:
+        "Dostaniesz numer potwierdzenia, a sprawa w Twoim planie będzie miała status złożona. Przypomnienia o niej wyłączymy.",
+    },
     // koniec ViewZamSummary
   },
   ViewZamSent: {
     tytulStrony: "Wniosek o zasiłek macierzyński (ZAM) wysłany",
     naglowek: "Wniosek wysłany",
+    powrot: "Plan rodziny",
+    potwierdzenie: {
+      tytul: "Potwierdzenie wysłania",
+      numer: "Numer potwierdzenia",
+      dataWyslania: "Data wysłania",
+      adresat: "Adresat",
+      adresatZus: "ZUS",
+      rodzajUrlopu: "Rodzaj urlopu",
+      okres: "Okres",
+      zasilek: "Zasiłek",
+      flaga: "Tryb demonstracyjny, numer potwierdzenia przykładowy",
+    },
+    sprawa: {
+      tytul: "Sprawa w Twoim planie",
+      nazwa: ({ id, tytul }: { id: string; tytul: string }) => `${id} ${tytul}`,
+      tytulDomyslny: "Wniosek o zasiłek macierzyński",
+      status: "Status: złożona. Przypomnienia o tej sprawie wyłączyliśmy.",
+      przejdzDoPlanu: "Przejdź do planu rodziny",
+    },
+    coDalej: {
+      tytul: "Co dalej",
+      wyplata: "ZUS wypłaci zasiłek na rachunek:",
+      numer: "Numer potwierdzenia znajdziesz też w sprawie w planie rodziny i w menu Twoje wnioski.",
+    },
+    przekazanie: {
+      naglowek: "Dane dziecka przekazane",
+      tytul: "Przekazane dane",
+      data: "Data przekazania",
+      dziecko: "Dziecko",
+      liczbaDzieci: "Liczba urodzonych dzieci",
+    },
     // koniec ViewZamSent
   },
   ViewZamForPayer: {
@@ -1523,6 +1846,21 @@ export const teksty = {
   },
   ModalStatementsText: {
     tytul: "Pełna treść oświadczeń",
+    wnioskodawca: ({ imieINazwisko, pesel }: { imieINazwisko: string; pesel: string }) =>
+      `Wniosek o zasiłek macierzyński (ZAM). Wnioskodawca: ${imieINazwisko}, PESEL ${pesel}.`,
+    dziecko: ({ imieINazwisko, pesel }: { imieINazwisko: string; pesel: string }) =>
+      `Dziecko: ${imieINazwisko}, PESEL ${pesel}.`,
+    prawda: "Oświadczam, że dane podane we wniosku są zgodne ze stanem faktycznym.",
+    okres: ({ rodzaj, od, do_, stawka }: { rodzaj: string; od: string; do_: string; stawka: string }) =>
+      `Wnioskuję o zasiłek macierzyński za okres ${rodzaj} od ${od} do ${do_}. Wiem, że zasiłek za ten okres wyniesie ${stawka} podstawy wymiaru.`,
+    zaZyciem: "Oświadczam, że dziecko ma zaświadczenie „Za życiem”.",
+    zmiany:
+      "Zobowiązuję się niezwłocznie powiadomić ZUS o każdej zmianie, która ma wpływ na prawo do zasiłku macierzyńskiego lub jego wysokość, w szczególności o rezygnacji z urlopu lub jego części.",
+    odpowiedzialnosc:
+      "Wiem, że za zeznanie nieprawdy lub zatajenie prawdy grozi odpowiedzialność karna, a nienależnie pobrany zasiłek podlega zwrotowi.",
+    odpisZus: "Nie dołączam skróconego odpisu aktu urodzenia dziecka. ZUS pobierze go sam na podstawie danych dziecka z wniosku.",
+    odpisPlatnik: "Do wniosku dołączam skrócony odpis aktu urodzenia dziecka.",
+    zamknij: "Zamknij",
     // koniec ModalStatementsText
   },
   SheetZas53ManualCertificate: {
