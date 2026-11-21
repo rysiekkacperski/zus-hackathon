@@ -969,6 +969,32 @@ export const teksty = {
       pakiet: "Data porodu",
       profil: "Profil na start: data porodu",
     },
+    powrotDoPlanu: "Plan rodziny",
+    powrotDoSytuacji: "Twoja sytuacja",
+    leadProfil: "Profil na start",
+    wstep: "Podaj datę porodu i liczbę urodzonych dzieci. Od tej daty przeliczymy plan rodziny i terminy – zastąpi ona przewidywany termin porodu.",
+    przewidywanyTermin: "Przewidywany termin porodu w profilu:",
+    wstepProfil: "Podaj datę porodu i liczbę urodzonych dzieci. Zapiszemy je w szkicu profilu, a plan rodziny i terminy wyliczymy od daty porodu, gdy zapiszesz profil.",
+    wstepRozbieznosc: "Wpisaliśmy datę urodzenia z danych ZUS. Jeśli właściwa jest data z profilu, popraw ją w polu. Od potwierdzonej daty przeliczymy plan rodziny i terminy.",
+    rozbieznosc: {
+      dataWProfilu: "Data porodu w Twoim profilu",
+      dataWZus: "Data urodzenia w danych ZUS",
+      dzieckoWZus: "Dziecko w danych ZUS",
+    },
+    poleDaty: {
+      etykieta: "Data porodu",
+      podpowiedz: "Wpisz datę w formacie DD.MM.RRRR, np. 19.11.2026. Podaj datę z ostatnich 36 miesięcy.",
+    },
+    poleLiczby: {
+      etykieta: "Liczba urodzonych dzieci",
+      podpowiedz: "Podpowiadamy liczbę dzieci z profilu rodziny.",
+      podpowiedzProfil: "Jeśli urodziły się bliźnięta, wybierz 2.",
+      wybierz: "Wybierz",
+    },
+    notkaProfil: "W następnym kroku zapytamy, czy w czasie ciąży zmieniło się Twoje zatrudnienie.",
+    potwierdz: "Potwierdź datę porodu",
+    anuluj: "Anuluj",
+    brakRodziny: "Przewodnik nie ma jeszcze profilu rodziny. Zapisz profil na start, a potem zgłoś narodziny.",
     // koniec ViewBirthDate
   },
   ViewProfileChildAdoption: {
@@ -1000,6 +1026,32 @@ export const teksty = {
     },
     // Sloty profil-na-start/podsumowanie/_sloty (u19, u24, u23, u25)
     sekcjaDanychDziecka: {
+      tytul: "Dziecko",
+      zmien: "Zmień dane dziecka",
+      imieINazwisko: "Imię i nazwisko",
+      pesel: "Numer PESEL",
+      dataPorodu: "Data porodu",
+      liczbaDzieci: "Liczba urodzonych dzieci",
+      tydzien: "Tydzień ciąży w dniu porodu",
+      masa: "Masa urodzeniowa",
+      masaWGramach: ({ masa }: { masa: string }) => `${masa} g`,
+      dni: "Dni hospitalizacji między 5. a 28. dniem życia",
+      ciezkaChoroba: "Ciężka choroba dziecka",
+      zaZyciem: "Zaświadczenie „Za życiem”",
+      tak: "Tak",
+      nie: "Nie",
+      coZTegoWynika: "Co z tego wynika",
+      uzupelniajacy: "Uzupełniający urlop macierzyński",
+      rodzicielski: "Urlop rodzicielski",
+      wymiarRodzicielskiego: ({ tygodnie }: { tygodnie: string }) =>
+        `Do ${tygodnie} tygodni, w tym po 9 tygodni wyłącznie dla każdego z rodziców`,
+      wymiaryUzupelniajacego: {
+        brak: "Nie przysługuje",
+        "do-8": "Do 8 tygodni",
+        "do-15": "Do 15 tygodni",
+        "nie-sprawdzono": "Nie sprawdziliśmy",
+      },
+      notka: "Jeśli dziecko trafi do szpitala, liczbę dni hospitalizacji zmienisz do 28. dnia jego życia. Każda zmiana przelicza plan rodziny, kalkulator zasiłku i wniosek o zasiłek macierzyński.",
       // koniec sekcjaDanychDziecka
     },
     sekcjaPrzyjecia: {
@@ -1020,6 +1072,44 @@ export const teksty = {
       pakiet: "Dane dziecka po porodzie",
       zmiana: "Zmień dane dziecka",
     },
+    powrotDoPlanu: "Plan rodziny",
+    powrotDoProfilu: "Profil rodziny",
+    kartaPorod: "Poród",
+    kartaZdrowie: "Zdrowie dziecka",
+    dziecko: "Dziecko",
+    dataPorodu: "Data porodu",
+    liczbaDzieci: "Liczba urodzonych dzieci",
+    wstepPorod: "Od tych danych zależy, czy przysługuje Ci uzupełniający urlop macierzyński – do 8 albo do 15 tygodni.",
+    poleTygodnia: { etykieta: "Tydzień ciąży w dniu porodu", podpowiedz: "Liczba od 22 do 44, np. 39." },
+    poleMasy: { etykieta: "Masa urodzeniowa w gramach", podpowiedz: "Liczba od 300 do 7000, np. 3350." },
+    poleDni: {
+      etykieta: "Dni hospitalizacji dziecka między 5. a 28. dniem życia",
+      podpowiedz: "Liczba od 0 do 24. Jeśli dziecko jest jeszcze w szpitalu, zmienisz ją w profilu rodziny.",
+      podpowiedzZmiana: "Liczba od 0 do 24. Wpisz, ile dni dziecko było w szpitalu między 5. a 28. dniem życia.",
+    },
+    wstepZdrowie: "Pola nieobowiązkowe. Zaznacz je tylko wtedy, gdy dotyczą Twojego dziecka.",
+    ciezkaChoroba: {
+      etykieta: "U dziecka stwierdzono ciężkie i nieodwracalne upośledzenie albo nieuleczalną chorobę zagrażającą życiu",
+      opis: "Jeśli zaznaczysz, sprawdzimy, czy przysługuje Ci jednorazowe świadczenie „Za życiem”.",
+      opisZaZyciem: "Zaznaczyliśmy, bo dziecko ma zaświadczenie „Za życiem”. Sprawdzimy, czy przysługuje Ci jednorazowe świadczenie „Za życiem”.",
+    },
+    zaZyciem: {
+      etykieta: "Dziecko ma zaświadczenie lekarza „Za życiem”",
+      opis: "To zaświadczenie o ciężkim i nieodwracalnym upośledzeniu albo nieuleczalnej chorobie zagrażającej życiu, które powstały w prenatalnym okresie rozwoju dziecka lub w czasie porodu. Wydłuża urlop rodzicielski do 65 tygodni przy jednym dziecku i do 67 tygodni przy więcej niż jednym dziecku.",
+    },
+    wymiarRodzicielskiego: ({ tygodnie }: { tygodnie: string }) => `Urlop rodzicielski: do ${tygodnie} tygodni`,
+    opisWymiaru: "Po 9 tygodni z tego wymiaru przysługuje wyłącznie każdemu z rodziców. Po zapisaniu przeliczymy plan rodziny, a kalkulator zasiłku i kreator wniosku o zasiłek macierzyński wezmą ten wymiar.",
+    opisWymiaruPoOdznaczeniu: "Bez zaświadczenia „Za życiem” wrócimy do zwykłego wymiaru. Po 9 tygodni z tego wymiaru przysługuje wyłącznie każdemu z rodziców. Po zapisaniu przeliczymy plan rodziny, kalkulator zasiłku i wniosek o zasiłek macierzyński.",
+    notkaZgody: {
+      przed: "To dane dotyczące zdrowia. Zapisujemy je na podstawie Twojej zgody, którą zmienisz w ",
+      link: "ustawieniach",
+      po: ".",
+    },
+    zapisz: "Zapisz dane dziecka",
+    zapiszZmiany: "Zapisz zmiany",
+    anuluj: "Anuluj",
+    brakDaty: "Najpierw potwierdź datę porodu. Od niej zależą dane dziecka po porodzie.",
+    zglosNarodziny: "Zgłoś narodziny",
     // koniec ViewBirthDetails
   },
   ViewSecondParentPowerOfAttorney: {
@@ -1034,6 +1124,71 @@ export const teksty = {
     akcjaWnioskuOUrlop: {
       // koniec akcjaWnioskuOUrlop
     },
+    powrotDoPlanu: "Plan rodziny",
+    kartaPorod: "Poród",
+    dataPorodu: "Data porodu",
+    liczbaDzieci: "Liczba urodzonych dzieci",
+    formaZatrudnienia: "Forma zatrudnienia",
+    uzupelniajacy: "Uzupełniający urlop macierzyński",
+    wymiaryUzupelniajacego: {
+      brak: "Nie przysługuje",
+      "do-8": "Do 8 tygodni",
+      "do-15": "Do 15 tygodni",
+      "nie-sprawdzono": "Nie sprawdziliśmy",
+    },
+    formy: {
+      "umowa-o-prace": "Umowa o pracę",
+      "umowa-zlecenia-z": "Umowa zlecenia z dobrowolnym ubezpieczeniem chorobowym",
+      "umowa-zlecenia-bez": "Umowa zlecenia bez dobrowolnego ubezpieczenia chorobowego",
+      "jdg-z": "Jednoosobowa działalność gospodarcza z dobrowolnym ubezpieczeniem chorobowym",
+      "jdg-bez": "Jednoosobowa działalność gospodarcza bez dobrowolnego ubezpieczenia chorobowego",
+      "brak-tytulu": "Brak tytułu do ubezpieczenia",
+    },
+    brakFormy: "Nie podano",
+    notkaBezZgody: {
+      przed: "Bez Twojej zgody na dane dotyczące zdrowia nie pytamy o tydzień ciąży, masę urodzeniową ani pobyt dziecka w szpitalu, więc nie sprawdzimy, czy przysługuje Ci uzupełniający urlop macierzyński. Zgodę zmienisz w ",
+      link: "ustawieniach",
+      po: ".",
+    },
+    kartaSpraw: ({ liczba }: { liczba: string }) => `Sprawy na pierwsze 3 miesiące (${liczba})`,
+    wstepSpraw: ({ data }: { data: string }) => `Zacznij od najbliższego terminu. Pokazujemy sprawy z terminem do ${data}.`,
+    k05Zalatwiona: "Sprawa Zgłoszenie dziecka do ubezpieczenia zdrowotnego jest załatwiona – dziecko jest już w Twoich danych w ZUS.",
+    notkaSwiadczeniaRodzicielskiego: "Nie masz dobrowolnego ubezpieczenia chorobowego, więc zasiłek macierzyński Ci nie przysługuje. Zamiast niego rodzinie przysługuje świadczenie rodzicielskie.",
+    brakSpraw: "W pierwszych 3 miesiącach po porodzie nie masz spraw do zrobienia z terminem.",
+    termin: "Termin",
+    zaDni: ({ liczba }: { liczba: number }) => (liczba === 1 ? "za 1 dzień" : `za ${liczba} dni`),
+    dzisiaj: "dzisiaj",
+    poTerminie: ({ liczba }: { liczba: number }) => (liczba === 1 ? "1 dzień po terminie" : `${liczba} dni po terminie`),
+    skutekSpoznienia: "Skutek spóźnienia:",
+    kosztSpoznienia: "Koszt spóźnienia:",
+    opisy: {
+      K05: {
+        jdg: "Prowadzisz działalność, więc dziecko zgłaszasz sama w eZUS.",
+        "umowa-zlecenia": "Przekaż dane dziecka zleceniodawcy – to on zgłosi dziecko do ubezpieczenia zdrowotnego.",
+        "umowa-o-prace": "Przekaż dane dziecka pracodawcy – to on zgłosi dziecko do ubezpieczenia zdrowotnego.",
+      },
+      K06: "Zgłosisz je w urzędzie stanu cywilnego albo w mObywatelu. Potem dziecko dostanie akt urodzenia i numer PESEL.",
+      K07: "Pracujesz na umowie o pracę, więc wniosek o oba urlopy składasz u pracodawcy, a nie w ZUS. Pokażemy Ci, co w nim wpisać.",
+      K08: {
+        jdg: "Masz dobrowolne ubezpieczenie chorobowe, więc wniosek składasz w ZUS. Przeprowadzimy Cię przez niego krok po kroku.",
+        "umowa-zlecenia": "Masz dobrowolne ubezpieczenie chorobowe przy umowie zlecenia, więc składasz wniosek o zasiłek macierzyński. Przeprowadzimy Cię przez niego krok po kroku.",
+        inna: "Wniosek o zasiłek macierzyński składasz w ZUS. Przeprowadzimy Cię przez niego krok po kroku.",
+      },
+      K12: "Wniosek o 800+ złożysz w eZUS.",
+      K16: "Wniosek złożysz w gminie albo w MOPS, osobiście albo przez Emp@tię.",
+    },
+    akcje: {
+      instrukcja: "Zobacz instrukcję",
+      kreator: "Otwórz kreator wniosku",
+      ezus: "Złóż wniosek w eZUS",
+      nowaKarta: "Otworzy się w nowej karcie.",
+    },
+    notkaPozostale: "Pozostałe sprawy znajdziesz w planie rodziny, w etapie Pierwsze tygodnie po porodzie i w kolejnych etapach.",
+    notkaPozostaleUzupelniajacy: "Pozostałe sprawy, w tym uzupełniający urlop macierzyński, znajdziesz w planie rodziny.",
+    przejdzDoPlanu: "Przejdź do planu rodziny",
+    wszystkieTerminy: "Zobacz wszystkie terminy",
+    brakDaty: "Pakiet narodzin pokażemy po potwierdzeniu daty porodu.",
+    zglosNarodziny: "Zgłoś narodziny",
     // koniec ViewBirthPackage
   },
   ViewSpecialSituation: {
@@ -1046,6 +1201,7 @@ export const teksty = {
     naglowek: "Plan rodziny",
     // Sloty plan-rodziny/_sloty: nagłówek (u19, u25, u16), nad planem (u19, u14), przy sprawie (u13, u14, u22, u25)
     akcjaZglosNarodziny: {
+      zglos: "Zgłoś narodziny",
       // koniec akcjaZglosNarodziny
     },
     akcjaSytuacjaSzczegolna: {
@@ -1055,6 +1211,13 @@ export const teksty = {
       // koniec akcjaSwiadczeniaWCiazy
     },
     oknoNowegoDziecka: {
+      tytulKarty: "Dziecko już się urodziło?",
+      zobaczDziecko: "Zobacz dziecko z danych ZUS",
+      opis: ({ data }: { data: string }) =>
+        `Podaj datę porodu. Przeliczymy plan i terminy od prawdziwej daty zamiast od przewidywanego terminu porodu ${data}.`,
+      opisBezTerminu: "Podaj datę porodu. Przeliczymy plan i terminy od prawdziwej daty porodu.",
+      opisPierwszeTygodnie: "Po porodzie najwięcej terminów mija w pierwszych tygodniach – pokażemy Ci, od czego zacząć.",
+      zglos: "Zgłoś narodziny",
       // koniec oknoNowegoDziecka
     },
     blokEzla: {
@@ -1475,6 +1638,19 @@ export const teksty = {
   },
   ModalNewChildDetected: {
     tytul: "Nowe dziecko w danych ZUS",
+    tytulWielu: "Nowe dzieci w danych ZUS",
+    imieINazwisko: "Imię i nazwisko dziecka",
+    dataUrodzenia: "Data urodzenia",
+    listaDzieci: "Dzieci z danych ZUS",
+    opisJednego: ({ data }: { data: string }) =>
+      `Po potwierdzeniu zapiszemy w profilu rodziny datę porodu ${data}, liczbę urodzonych dzieci 1 oraz imię, nazwisko i numer PESEL dziecka.`,
+    opisDwojga: ({ data }: { data: string }) =>
+      `Po potwierdzeniu zapiszemy w profilu rodziny datę porodu ${data}, liczbę urodzonych dzieci 2 oraz imiona, nazwiska i numery PESEL obojga dzieci.`,
+    opisWielu: ({ data, liczba }: { data: string; liczba: string }) =>
+      `Po potwierdzeniu zapiszemy w profilu rodziny datę porodu ${data}, liczbę urodzonych dzieci ${liczba} oraz imiona, nazwiska i numery PESEL wszystkich dzieci.`,
+    opisSzczegolow: "Potem zapytamy Cię o kilka szczegółów porodu.",
+    potwierdz: "Potwierdź datę porodu",
+    zamknij: "Zamknij",
     // koniec ModalNewChildDetected
   },
   ModalBenefitRules: {
