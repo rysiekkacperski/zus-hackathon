@@ -1288,6 +1288,7 @@ export const teksty = {
       // koniec statusWnioskuZus
     },
     ostrzezeniaSprawy: {
+      zobaczSzczegoly: "Zobacz szczegóły ryzyka",
       // koniec ostrzezeniaSprawy
     },
     akcjaPrzejeciaUrlopu: {
@@ -1552,12 +1553,123 @@ export const teksty = {
       // koniec sekcjaStanRozliczen
     },
     sekcjaOstrzezeniaRyzyk: {
+      zobaczSzczegoly: "Zobacz szczegóły ryzyka",
       // koniec sekcjaOstrzezeniaRyzyk
     },
     sekcjaOchronaK30: {
+      przedluzenie: {
+        tytul: "Czy Twoja umowa przedłuży się do dnia porodu",
+        wstep: ({ data }: { data: string }) =>
+          `Twoja umowa o pracę kończy się ${data}, bo jest umową na czas określony albo na okres próbny. Taka umowa przedłuża się do dnia porodu, jeśli skończyłaby się po upływie trzeciego miesiąca ciąży.`,
+        wybierz: "Wybierz rodzaj umowy, a sprawdzimy to.",
+        sprawdzono: {
+          kobieta: "Sprawdziliśmy to na podstawie rodzaju umowy, który wybrałaś.",
+          mezczyzna: "Sprawdziliśmy to na podstawie rodzaju umowy, który wybrałeś.",
+        },
+        koniecUmowy: "Koniec umowy",
+        uplywTrzeciegoMiesiaca: "Upływ trzeciego miesiąca ciąży",
+        legenda: "Rodzaj umowy",
+        rodzaje: {
+          "czas-okreslony": "Umowa na czas określony",
+          zastepstwo: "Umowa na czas określony w celu zastępstwa",
+          "probna-dluzsza": "Umowa na okres próbny przekraczający miesiąc",
+          "probna-krotsza": "Umowa na okres próbny do miesiąca",
+        },
+        zapisz: "Zapisz rodzaj umowy",
+        notatka: "Rodzaj umowy zapiszemy w profilu rodziny jako Twoją odpowiedź i przeliczymy plan.",
+        rodzajUmowy: "Rodzaj umowy",
+        odpowiedz: ({ rodzaj }: { rodzaj: string }) => `${rodzaj} – Twoja odpowiedź`,
+        przewidywanyTerminPorodu: "Przewidywany termin porodu:",
+        dzienPorodu: "Dzień porodu:",
+        zachowajUbezpieczenie: "Zobacz, jak zachować ubezpieczenie",
+        zmienRodzaj: "Zmień rodzaj umowy",
+      },
+      okresy: {
+        tytul: "Okresy ochrony z Twoich wniosków",
+        wstep: {
+          kobieta: "Liczymy je z wniosków o urlop, które wysłałaś do pracodawcy.",
+          mezczyzna: "Liczymy je z wniosków o urlop, które wysłałeś do pracodawcy.",
+        },
+        wniosek: ({ rodzaj }: { rodzaj: string }) => `Wniosek o ${rodzaj}`,
+        rodzajeUrlopu: {
+          macierzynski: "urlop macierzyński",
+          "czesc-przed-porodem": "część urlopu macierzyńskiego przed porodem",
+          rodzicielski: "urlop rodzicielski",
+          uzupelniajacy: "uzupełniający urlop macierzyński",
+          ojcowski: "urlop ojcowski",
+          "na-warunkach-macierzynskiego": "urlop na warunkach urlopu macierzyńskiego",
+          "przejety-macierzynski": "pozostałą część urlopu macierzyńskiego",
+          "laczenie-z-praca": "urlop rodzicielski połączony z pracą",
+        },
+        szczegoly: ({ dataZlozenia, od, do: koniec }: { dataZlozenia: string; od: string; do: string }) =>
+          `Złożony pracodawcy ${dataZlozenia}. Urlop od ${od} do ${koniec}.`,
+        brak: "Tu zobaczysz okres ochrony dla każdego wniosku o urlop, który wyślesz do pracodawcy.",
+        twojeWnioski: "Zobacz Twoje wnioski",
+      },
+      ochrona: {
+        tytul: "Kiedy pracodawca nie może rozwiązać Twojej umowy",
+        wstep:
+          "Pracodawca nie może prowadzić przygotowań do wypowiedzenia ani do rozwiązania umowy o pracę bez wypowiedzenia ani wypowiedzieć albo rozwiązać umowy o pracę:",
+        zasady: [
+          "w okresie ciąży,",
+          "w czasie urlopu macierzyńskiego,",
+          "od dnia złożenia wniosku o urlop macierzyński albo jego część, urlop na warunkach urlopu macierzyńskiego albo jego część, uzupełniający urlop macierzyński, urlop ojcowski albo jego część i urlop rodzicielski albo jego część do dnia zakończenia tego urlopu.",
+        ],
+        wyjatkiTytul: "Wyjątki",
+        wyjatki: [
+          "przyczyny uzasadniające rozwiązanie umowy bez wypowiedzenia z winy pracownika, gdy reprezentująca go zakładowa organizacja związkowa zgodzi się na rozwiązanie umowy,",
+          "wypowiedzenie przy upadłości albo likwidacji pracodawcy.",
+        ],
+        wczesniejTytul: "Wniosek o urlop złożony wcześniej",
+        wczesniejWstep: "Gdy złożysz wniosek wcześniej, ochrona zaczyna się najwcześniej:",
+        tabelaPodpis: "Początek szczególnej ochrony według rodzaju urlopu",
+        tabelaPrzewijanie: "Tabela początku szczególnej ochrony",
+        kolumnaRodzaj: "Rodzaj urlopu",
+        kolumnaOd: "Ochrona od",
+        wiersze: [
+          { rodzaj: "Część urlopu macierzyńskiego albo urlopu na warunkach urlopu macierzyńskiego", od: "14. dnia przed rozpoczęciem urlopu" },
+          { rodzaj: "Uzupełniający urlop macierzyński albo urlop rodzicielski", od: "21. dnia przed rozpoczęciem urlopu" },
+          { rodzaj: "Urlop ojcowski", od: "7. dnia przed rozpoczęciem urlopu" },
+        ],
+        sporneTytul: "Sprawy sporne",
+        sporne: "W sprawach spornych zwróć się do Państwowej Inspekcji Pracy i do sądu pracy.",
+        pip: "Rodzicielstwo – porady prawne Państwowej Inspekcji Pracy",
+      },
+      rodzice: {
+        matka: "Matka",
+        "drugi-rodzic": "Drugi rodzic",
+      },
+      ochronaRodzica: ({ rodzic }: { rodzic: string }) => `Szczególna ochrona: ${rodzic}`,
+      notatkaDrugiegoRodzica: ({ imieINazwisko, forma }: { imieINazwisko: string; forma: string }) =>
+        `Sprawa dotyczy Ciebie, bo pracujesz na umowie o pracę. ${imieINazwisko} ${forma}, więc szczególna ochrona pracownika jej nie obejmuje.`,
+      formyMatki: {
+        jdg: "prowadzi jednoosobową działalność gospodarczą",
+        "umowa-zlecenia": "pracuje na umowie zlecenia",
+        "brak-tytulu": "nie ma tytułu do ubezpieczenia",
+      },
       // koniec sekcjaOchronaK30
     },
     sekcjaWsparcieK35: {
+      tytul: "Organizacje, które pomagają rodzicom",
+      opis: ({ sytuacja }: { sytuacja: string }) =>
+        `Organizacje charytatywne wspierają rodziców ${sytuacja}. Zobaczysz, w czym pomagają i jak się z nimi skontaktować.`,
+      opisOgolny: "Organizacje charytatywne wspierają rodziców w trudnych chwilach. Zobaczysz, w czym pomagają i jak się z nimi skontaktować.",
+      sytuacjeWOpisie: {
+        "martwe-urodzenie": "po urodzeniu martwego dziecka",
+        poronienie: "po poronieniu",
+        "zgon-dziecka": "po śmierci dziecka",
+        "przedwczesny-porod": "po przedwczesnym porodzie",
+        "choroba-dziecka": "w czasie ciężkiej choroby dziecka",
+        szpital: "w czasie pobytu matki w szpitalu",
+        orzeczenie: "po orzeczeniu o niezdolności matki do samodzielnej egzystencji",
+        porzucenie: "po porzuceniu dziecka przez matkę",
+        "smierc-matki": "po śmierci matki",
+      },
+      zobaczOrganizacje: "Zobacz organizacje",
+      sytuacjaWProfilu: "Sytuacja w profilu",
+      rodzajSytuacji: "Rodzaj sytuacji",
+      dataZdarzenia: "Data zdarzenia",
+      dataPorodu: "Data porodu",
       // koniec sekcjaWsparcieK35
     },
     sekcjaSytuacjaSzczegolnaK34: {
@@ -1969,6 +2081,26 @@ export const teksty = {
   ViewSupportOrganizations: {
     tytulStrony: "Organizacje wsparcia",
     naglowek: "Organizacje wsparcia",
+    wyborSytuacji: "Wybór sytuacji",
+    poleSytuacji: "Sytuacja, w której szukasz pomocy",
+    sytuacjeZProfilu: "Sytuacje z profilu rodziny",
+    licznik: "Organizacje:",
+    listaOrganizacji: "Lista organizacji wsparcia",
+    sytuacje: {
+      "martwe-urodzenie": "Urodzenie martwego dziecka",
+      poronienie: "Poronienie potwierdzone zaświadczeniem o martwym urodzeniu",
+      "zgon-dziecka": "Zgon dziecka",
+      "przedwczesny-porod": "Przedwczesny poród",
+      "choroba-dziecka": "Ciężka choroba dziecka",
+      szpital: "Pobyt matki w szpitalu",
+      orzeczenie: "Orzeczenie o niezdolności matki do samodzielnej egzystencji",
+      porzucenie: "Porzucenie dziecka przez matkę",
+      "smierc-matki": "Śmierć matki",
+    },
+    zadzwon: ({ numer }: { numer: string }) => `Zadzwoń: ${numer}`,
+    napisz: ({ adres }: { adres: string }) => `Napisz: ${adres}`,
+    otworzStrone: ({ adres }: { adres: string }) => `Otwórz stronę: ${adres}`,
+    wrocDoSprawy: "Wróć do sprawy",
     // koniec ViewSupportOrganizations
   },
   ViewCalcMaternityInput: {
@@ -2178,6 +2310,47 @@ export const teksty = {
       lista: "Podmioty wsparcia",
       nowa: "Dodaj organizację",
       edycja: "Zmień dane organizacji",
+    },
+    wstep:
+      "Organizacje o charakterze wyłącznie charytatywnym, które wspierają rodziców w sytuacjach szczególnych. Rodzice widzą je przy sprawie Wsparcie organizacji w sytuacji szczególnej.",
+    dodaj: "Dodaj organizację",
+    slownik: "Słownik podmiotów wsparcia",
+    licznik: "Organizacje:",
+    kolumny: {
+      organizacja: "Organizacja i zakres pomocy",
+      sytuacje: "Sytuacje szczególne",
+      kontakt: "Kontakt",
+      akcje: "Akcje",
+    },
+    przewijanie: "Tabela słownika podmiotów wsparcia",
+    telefon: ({ wartosc }: { wartosc: string }) => `Telefon: ${wartosc}`,
+    email: ({ wartosc }: { wartosc: string }) => `E-mail: ${wartosc}`,
+    strona: ({ wartosc }: { wartosc: string }) => `Strona: ${wartosc}`,
+    brakWartosci: "-",
+    zmien: "Zmień",
+    zmienDane: ({ nazwa }: { nazwa: string }) => ` dane: ${nazwa}`,
+    notatka:
+      "Każda organizacja ma potwierdzony charakter wyłącznie charytatywny. Rodzice zobaczą zmiany przy najbliższym otwarciu listy organizacji.",
+    formularz: {
+      wstepNowa: "Rodzice zobaczą organizację przy sprawie Wsparcie organizacji w sytuacji szczególnej, gdy ich sytuacja jest na liście.",
+      wstepEdycja: ({ nazwa }: { nazwa: string }) =>
+        `${nazwa}. Rodzice zobaczą zmienione dane przy najbliższym otwarciu listy organizacji.`,
+      dane: "Dane organizacji",
+      nazwa: "Nazwa organizacji",
+      sytuacje: "Sytuacje szczególne",
+      sytuacjePodpowiedz: "Wybierz sytuacje, w których organizacja pomaga. Możesz wybrać kilka.",
+      zakres: "Zakres pomocy",
+      telefon: "Numer telefonu (opcjonalnie)",
+      telefonPodpowiedz: "9 cyfr, możesz je poprzedzić prefiksem +48, np. 22 350 00 50.",
+      email: "Adres e-mail (opcjonalnie)",
+      strona: "Adres strony",
+      stronaPodpowiedz: "Adres zaczyna się od https://",
+      charytatywny: "Potwierdzam, że organizacja działa wyłącznie charytatywnie.",
+      zapisz: "Zapisz organizację",
+      anuluj: "Anuluj",
+      powrot: "Podmioty wsparcia",
+      nieZnaleziono: "Nie znaleźliśmy tej organizacji w słowniku podmiotów wsparcia.",
+      wrocDoListy: "Wróć do listy organizacji",
     },
     // koniec ViewCatalogSupportOrganizations
   },
@@ -2482,6 +2655,42 @@ export const teksty = {
   },
   SheetRiskDetails: {
     tytul: "Szczegóły ryzyka",
+    sprawa: ({ tytul }: { tytul: string }) => `Sprawa: ${tytul}`,
+    coMozeSieStac: "Co może się stać",
+    dataRyzyka: "Data, której dotyczy ryzyko",
+    coMoznaZrobic: "Co możesz zrobić",
+    poczatekTytulu: {
+      "umowa-o-prace": "początek umowy o pracę",
+      "umowa-zlecenia": "początek umowy zlecenia",
+      jdg: "początek jednoosobowej działalności gospodarczej",
+      "brak-tytulu": "początek tytułu do ubezpieczenia",
+    },
+    koniecUbezpieczenia: {
+      "umowa-o-prace": "koniec umowy o pracę",
+      "umowa-o-prace-terminowa": "koniec umowy o pracę (koniec umowy na czas określony albo na okres próbny)",
+      "umowa-zlecenia": "koniec umowy zlecenia, a z nim dobrowolnego ubezpieczenia chorobowego",
+      jdg: "koniec jednoosobowej działalności gospodarczej, a z nią dobrowolnego ubezpieczenia chorobowego",
+      "brak-tytulu": "koniec tytułu do ubezpieczenia",
+    },
+    skutki: {
+      K28: "ZUS może uznać umowę zawartą albo działalność podjętą wyłącznie w celu uzyskania zasiłku za pozorną i wydać decyzję o niepodleganiu ubezpieczeniom, a wtedy zasiłki nie przysługują.",
+      K29: "Brak zasiłku macierzyńskiego, a rodzinie przysługuje wtedy świadczenie rodzicielskie.",
+    },
+    prefiksSkutku: "Skutek bez kwoty:",
+    pytanieOpis: "Jeśli masz wątpliwości, zapytaj ZUS. Pytanie wyślesz z kontekstem tej sprawy.",
+    pytanieAkcja: "Zadaj pytanie do ZUS",
+    dzialania: {
+      "umowa-zlecenia": "Zawrzyj umowę zlecenia z dobrowolnym ubezpieczeniem chorobowym, która będzie trwać w dniu porodu.",
+      jdg: "Prowadź działalność z dobrowolnym ubezpieczeniem chorobowym do dnia porodu albo zgłoś się do dobrowolnego ubezpieczenia chorobowego w eZUS.",
+      "umowa-o-prace": "Podejmij przed porodem nowy tytuł do ubezpieczenia chorobowego.",
+      "brak-tytulu": "Podejmij przed porodem nowy tytuł do ubezpieczenia chorobowego.",
+    },
+    zobaczInstrukcje: "Zobacz instrukcję",
+    przedluzenieOpis:
+      "Nie wiemy, jaki to rodzaj umowy. Umowa na czas określony albo na okres próbny może przedłużyć się do dnia porodu. Sprawdź to w sprawie Szczególna ochrona pracownika w ciąży i w czasie urlopów.",
+    przedluzenieAkcja: "Sprawdź przedłużenie umowy",
+    swiadczenieRodzicielskieOpis: "Bez zasiłku macierzyńskiego rodzina może dostać świadczenie rodzicielskie.",
+    swiadczenieRodzicielskieAkcja: "Przejdź do sprawy Świadczenie rodzicielskie",
     // koniec SheetRiskDetails
   },
   SheetInviteSecondParent: {
