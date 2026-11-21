@@ -861,6 +861,16 @@ export const teksty = {
   },
   PowiadomieniaStatusWniosku: {
     tytul: "Zmiana statusu wniosku w ZUS",
+    temat: ({ rodzajWniosku }: { rodzajWniosku: string }) => `Wniosek: ${rodzajWniosku}`,
+    tresc: ({ status, adresPrzewodnika }: { status: string; adresPrzewodnika: string }) =>
+      `Status Twojego wniosku zmienił się na: ${status}. Szczegóły zobaczysz w przewodniku: ${adresPrzewodnika}`,
+    statusy: {
+      "do-zrobienia": "do zrobienia",
+      zlozona: "złożona",
+      zalatwiona: "załatwiona",
+      "wymaga-uzupelnienia-profilu": "wymaga uzupełnienia profilu",
+    },
+    odmowa: "odmowa",
     // koniec PowiadomieniaStatusWniosku
   },
   PowiadomieniaOdpowiedzZus: {
@@ -1058,12 +1068,34 @@ export const teksty = {
       // koniec oknoNowegoDziecka
     },
     blokEzla: {
+      tytulEzla: "Zaświadczenia lekarskie e-ZLA",
+      podsumowanie: ({ liczba, wykorzystane, limit }: { liczba: number; wykorzystane: number; limit: number }) =>
+        `Zaświadczenia z ostatnich 12 miesięcy: ${liczba}. Okres zasiłkowy w ciąży: wykorzystane ${wykorzystane} dni z ${limit}.`,
+      podsumowanieBezOkresu: ({ liczba }: { liczba: number }) => `Zaświadczenia z ostatnich 12 miesięcy: ${liczba}.`,
+      zobaczEzla: "Zobacz zaświadczenia lekarskie e-ZLA",
+      tytulRozliczen: "Stan rozliczeń składek",
+      rozliczeniaNa: ({ data, kwota }: { data: string; kwota: string }) =>
+        `Stan rozliczeń na ${data}: zadłużenie z tytułu składek ${kwota}.`,
+      zobaczRozliczenia: "Zobacz stan rozliczeń składek",
       // koniec blokEzla
     },
     terminSprawy: {
       // koniec terminSprawy
     },
     statusWnioskuZus: {
+      odmowa: "Odmowa",
+      zrodloZus: "Dane z konta ZUS",
+      zrodloRodzica: "Oznaczone przez Ciebie",
+      wniosekZKanalem: ({ data, kanal, status }: { data: string; kanal: string; status: string }) =>
+        `Wniosek z ${data} przez ${kanal} – ${status}`,
+      planowyTermin: ({ data }: { data: string }) => `Planowy termin załatwienia: ${data}`,
+      przyznane: ({ data }: { data: string }) => `Świadczenie przyznane na wniosek z ${data}`,
+      najblizszaWyplata: ({ kwota, data }: { kwota: string; data: string }) => `Najbliższa wypłata: ${kwota}, ${data}`,
+      ostatniaWyplata: ({ kwota, data }: { kwota: string; data: string }) => `Ostatnia wypłata: ${kwota}, ${data}`,
+      odmowaOpis: ({ data }: { data: string }) => `ZUS odmówił przyznania świadczenia na wniosek z ${data}`,
+      zobaczOdpowiedz: "Zobacz odpowiedź ZUS w eZUS",
+      brakWniosku: "Nie ma jeszcze wniosku w danych z konta ZUS",
+      nowaSprawa: "Nowa sprawa – 800+ jest już przyznane",
       // koniec statusWnioskuZus
     },
     ostrzezeniaSprawy: {
@@ -1087,15 +1119,80 @@ export const teksty = {
       // koniec sekcjaTerminIKoszt
     },
     sekcjaStatusWnioskuZus: {
+      tytul: "Wniosek w ZUS",
+      statusWZus: "Status wniosku w ZUS",
+      dataZlozenia: "Data złożenia",
+      kanal: "Kanał złożenia",
+      planowyTermin: "Planowy termin załatwienia",
+      brakWartosci: "-",
+      statusy: {
+        zlozony: "Złożony",
+        "w-trakcie": "W trakcie rozpatrywania",
+        przyznanie: "Przyznano świadczenie",
+        odmowa: "Odmowa",
+      },
+      kanaly: {
+        ezus: "eZUS",
+        mzus: "mZUS",
+        bankowosc: "Bankowość elektroniczna",
+        empatia: "Emp@tia",
+        przewodnik: "Przewodnik rodzica",
+      },
+      zrodloZus: "Źródło statusu: dane z konta ZUS",
+      zrodloRodzica: "Źródło statusu: oznaczone przez Ciebie",
+      brakWnioskuOpis: ({ tytul }: { tytul: string }) =>
+        `W danych z konta ZUS nie ma jeszcze wniosku: ${tytul}. Gdy ZUS go zarejestruje, status z danych ZUS zastąpi Twoje oznaczenie.`,
+      odmowaTytul: "Co możesz zrobić",
+      odmowaOpis: ({ data }: { data: string }) =>
+        `ZUS odmówił przyznania świadczenia na wniosek z ${data}, więc sprawa wróciła do spraw do zrobienia.`,
+      odmowaWskazowka: "Odpowiedź ZUS na wniosek zobaczysz w szczegółach wniosku w eZUS. Otworzymy je w nowej karcie przeglądarki.",
+      zobaczOdpowiedz: "Zobacz odpowiedź ZUS w eZUS",
+      najblizszaTytul: "Najbliższa wypłata",
+      ostatniaTytul: "Ostatnia wypłata",
+      stanNa: ({ data }: { data: string }) => `Stan na ${data}`,
+      planowanyTermin: "Planowany termin wypłaty",
+      dataWyplaty: "Data wypłaty",
+      sposobWyplaty: "Sposób wypłaty",
+      sposoby: { przelew: "Przelew na rachunek bankowy", "przekaz-pocztowy": "Przekaz pocztowy" },
+      swiadczenia: {
+        "800-plus": "Świadczenie wychowawcze 800+",
+        "aktywny-rodzic": "Świadczenie z programu Aktywny Rodzic",
+      },
+      zasilekMacierzynski: "Zasiłek macierzyński",
+      brakWyplatyNajblizszej: "Tu zobaczysz kwotę i termin najbliższej wypłaty, gdy ZUS przyzna świadczenie.",
+      brakWyplatyOstatniej: "Tu zobaczysz datę i kwotę ostatniej wypłaty zasiłku macierzyńskiego, gdy ZUS ją zrealizuje.",
       // koniec sekcjaStatusWnioskuZus
     },
     sekcjaPrawoWCiazy: {
       // koniec sekcjaPrawoWCiazy
     },
     sekcjaZaswiadczeniaEzla: {
+      tytul: "Zaświadczenia lekarskie e-ZLA",
+      stanNa: ({ data }: { data: string }) => `Stan na ${data}`,
+      liczba: "Zaświadczenia z ostatnich 12 miesięcy",
+      liczbaWartosc: ({ liczba, zKodemB }: { liczba: number; zKodemB: number }) => `${liczba}, w tym ${zKodemB} z kodem B`,
+      okres: "Okres zasiłkowy w ciąży",
+      okresWartosc: ({ wykorzystane, limit, koniec }: { wykorzystane: number; limit: number; koniec: string }) =>
+        `Wykorzystane ${wykorzystane} dni z ${limit}, koniec ${koniec}`,
+      zasilek: "Zasiłek chorobowy",
+      zasilekOd: ({ data, limit }: { data: string; limit: number }) =>
+        `Od ${data}, po ${limit} dniach wynagrodzenia chorobowego`,
+      zasilekPracodawca: ({ wykorzystane, limit }: { wykorzystane: number; limit: number }) =>
+        `Wynagrodzenie chorobowe: wykorzystane ${wykorzystane} dni z ${limit}`,
+      zasilekOdPierwszego: "Od pierwszego dnia niezdolności do pracy",
+      ostatnie: "Ostatnie zaświadczenie",
+      ostatnieWartosc: ({ numer, okres }: { numer: string; okres: string }) => `${numer}, ${okres}`,
+      brak: "Nie masz zaświadczeń lekarskich z ostatnich 12 miesięcy.",
+      zobacz: "Zobacz zaświadczenia lekarskie e-ZLA",
       // koniec sekcjaZaswiadczeniaEzla
     },
     sekcjaStanRozliczen: {
+      tytul: "Składki a zasiłek",
+      opis: "Zadłużenie z tytułu składek w dniu porodu może wstrzymać wypłatę zasiłku.",
+      opisChorobowy: "Zadłużenie z tytułu składek w dniu powstania niezdolności do pracy może wstrzymać wypłatę zasiłku.",
+      opisSkladek: "Stan rozliczeń składek pokazuje, czy opłacone składki chronią Twoje prawo do zasiłku.",
+      naDzien: ({ data, kwota }: { data: string; kwota: string }) => `Zadłużenie z tytułu składek na ${data}: ${kwota}`,
+      zobacz: "Zobacz stan rozliczeń składek",
       // koniec sekcjaStanRozliczen
     },
     sekcjaOstrzezeniaRyzyk: {
@@ -1171,16 +1268,193 @@ export const teksty = {
   ViewSickLeaveList: {
     tytulStrony: "Zaświadczenia lekarskie e-ZLA",
     naglowek: "Zaświadczenia lekarskie e-ZLA",
+    powrot: "Plan rodziny",
+    powrotDoSprawy: "Szczegóły sprawy",
+    stanNaZGodzina: ({ data }: { data: string }) => `Stan na ${data}`,
+    stanNa: ({ data }: { data: string }) => `Stan na ${data}`,
+    listaTytul: "Zaświadczenia z ostatnich 12 miesięcy",
+    listaOpis: ({ data }: { data: string }) =>
+      `Pokazujemy zaświadczenia wystawione od ${data}, od najpóźniejszego okresu niezdolności do pracy.`,
+    tylkoWlasne: "Widzisz tylko zaświadczenia z własnego konta ZUS.",
+    licznik: ({ liczba, zKodemB }: { liczba: number; zKodemB: number }) =>
+      `Zaświadczenia: ${liczba}, z kodem B: ${zKodemB}`,
+    podpisTabeli: "Zaświadczenia lekarskie e-ZLA z ostatnich 12 miesięcy",
+    przewijanieTabeli: "Tabela zaświadczeń lekarskich, przewiń w poziomie",
+    kolumny: {
+      okres: "Okres niezdolności do pracy",
+      dni: "Liczba dni",
+      kod: "Kod literowy",
+      platnik: "Płatnik składek",
+      rodzaj: "Rodzaj",
+      akcje: "Akcje",
+    },
+    brakKodu: "-",
+    znaczekCiazy: "Ciąża",
+    rodzaje: {
+      choroba: "Niezdolność do pracy z powodu choroby",
+      opieka: "Opieka nad dzieckiem lub członkiem rodziny",
+    },
+    szczegoly: "Szczegóły",
+    szczegolyEtykieta: ({ numer }: { numer: string }) => `Szczegóły zaświadczenia ${numer}`,
+    pustaListaOpis: "Tu zobaczysz zaświadczenia, które wystawi Ci lekarz, i wyliczenie okresu zasiłkowego.",
+    brakPolaczeniaOpis: "Tu zobaczysz zaświadczenia lekarskie i wyliczenie okresu zasiłkowego, gdy pobierzemy dane z ZUS.",
+    ponawianie: "Pobieramy dane z ZUS",
+    okresTytul: "Okres zasiłkowy w ciąży",
+    wykorzystane: "Wykorzystane",
+    pozostalo: "Pozostało",
+    koniecOkresu: "Koniec okresu",
+    dniZ: ({ liczba, limit }: { liczba: number; limit: number }) => `${liczba} dni z ${limit}`,
+    dni: ({ liczba }: { liczba: number }) => `${liczba} dni`,
+    postepOkresu: "Wykorzystana część okresu zasiłkowego w ciąży",
+    poczatekOkresu: "Początek okresu zasiłkowego",
+    zaswiadczeniaWOkresie: "Zaświadczenia w okresie",
+    przewidywanyTermin: "Przewidywany termin porodu",
+    notatkaOkresu:
+      "Liczymy dni z zaświadczeń z kodem B wystawionych z powodu choroby. Przerwa do 60 dni nie przerywa okresu, a dłuższa zaczyna nowy. Datę końca podajemy przy niezdolności do pracy trwającej bez przerwy.",
+    terminPrzedKoncem: ({ data }: { data: string }) =>
+      `Przewidywany termin porodu ${data} przypada przed końcem okresu zasiłkowego.`,
+    koniecPrzedTerminem: ({ data }: { data: string }) =>
+      `Okres zasiłkowy kończy się ${data}, przed terminem porodu, dlatego w planie rodziny jest sprawa Świadczenie rehabilitacyjne w ciąży.`,
+    okresNieDotyczy: "Nie dotyczy – na Twoich zaświadczeniach nie ma kodu B, który oznacza niezdolność do pracy w ciąży.",
+    bezUbezpieczeniaOpis:
+      "Prowadzisz działalność albo pracujesz na umowie zlecenia bez dobrowolnego ubezpieczenia chorobowego, dlatego nie wyliczamy okresu zasiłkowego. Sprawy, które możesz załatwić, znajdziesz w",
+    planRodzinyOdnosnik: "planie rodziny",
+    rehabilitacyjneOdnosnik: "Świadczenie rehabilitacyjne w ciąży – zobacz sprawę w planie",
+    wynagrodzenieTytul: ({ rok }: { rok: number }) => `Wynagrodzenie chorobowe w ${rok} roku`,
+    zasilekOd: "Zasiłek chorobowy od",
+    notatkaWynagrodzenia: ({ limit }: { limit: number }) =>
+      `Za pierwsze ${limit} dni niezdolności do pracy w roku kalendarzowym pracodawca wypłaca Ci wynagrodzenie chorobowe, a od kolejnego dnia przysługuje zasiłek chorobowy. W ciąży oba wynoszą 100% podstawy.`,
+    wliczoneBezB: ({ rok, numery }: { rok: number; numery: string }) =>
+      `Wliczamy wszystkie zaświadczenia z powodu choroby z ${rok} roku, także ${numery} bez kodu B.`,
+    opiekaNieWliczana: ({ numery }: { numery: string }) =>
+      `Zaświadczenie ${numery} dotyczy opieki nad dzieckiem lub członkiem rodziny, więc nie wliczamy go do dni wynagrodzenia chorobowego.`,
+    zasilekOdPierwszegoTytul: "Zasiłek chorobowy od pierwszego dnia",
+    formaZatrudnienia: "Forma zatrudnienia",
+    zasilekChorobowy: "Zasiłek chorobowy",
+    odPierwszegoDnia: "Od pierwszego dnia niezdolności do pracy",
+    formy: {
+      "umowa-zlecenia": "Umowa zlecenia z dobrowolnym ubezpieczeniem chorobowym",
+      jdg: "Jednoosobowa działalność gospodarcza z dobrowolnym ubezpieczeniem chorobowym",
+      "brak-tytulu": "Brak tytułu do ubezpieczenia",
+      "umowa-o-prace": "Umowa o pracę",
+    },
+    notatkaOdPierwszego:
+      "Wynagrodzenie chorobowe wypłaca pracodawca tylko pracownikowi. Za każdy dzień niezdolności do pracy przysługuje Ci zasiłek chorobowy, w ciąży w wysokości 100% podstawy.",
+    wyliczeniaTytul: "Wyliczenia z zaświadczeń",
+    wynagrodzenieKrotko: ({ rok }: { rok: number }) => `Wynagrodzenie chorobowe w ${rok}`,
+    wrocDoPlanu: "Wróć do planu rodziny",
     // koniec ViewSickLeaveList
   },
   ViewContributionBalance: {
     tytulStrony: "Stan rozliczeń składek",
     naglowek: "Stan rozliczeń składek",
+    powrot: "Plan rodziny",
+    stanNa: ({ data }: { data: string }) => `Stan na ${data}`,
+    wystawZaswiadczenie: "Wystaw zaświadczenie o stanie rozliczeń",
+    kartaChorobowy: "Zasiłek chorobowy",
+    kartaMacierzynski: "Zasiłek macierzyński",
+    kartaNaDzis: "Stan rozliczeń na dziś",
+    dzienPrawaEzla: ({ data, numer }: { data: string; numer: string }) =>
+      `Dzień powstania prawa: ${data} – pierwszy dzień niezdolności do pracy z zaświadczenia lekarskiego ${numer}.`,
+    dzienPrawaPorod: ({ data }: { data: string }) => `Dzień powstania prawa: ${data} – dzień porodu.`,
+    dzienPrawaTermin: ({ data }: { data: string }) =>
+      `Dzień powstania prawa: ${data} – przewidywany termin porodu. Do tego dnia pokazujemy stan rozliczeń na dziś.`,
+    zadluzenieNa: ({ data }: { data: string }) => `Zadłużenie z tytułu składek na ${data}`,
+    objetaUmowaNa: ({ data, rodzaj }: { data: string; rodzaj: string }) => `Kwota objęta ${rodzaj} na ${data}`,
+    objetaUmowaRodzaje: { "uklad-ratalny": "układem ratalnym", odroczenie: "odroczeniem terminu płatności" },
+    zadluzenieOd: ({ data }: { data: string }) => `Zadłużenie od ${data}`,
+    progZadluzenia: "Próg zadłużenia",
+    umowa: "Układ ratalny albo odroczenie",
+    umowaBrak: "Brak",
+    umowaOpis: {
+      "uklad-ratalny": "Układ ratalny",
+      odroczenie: "Odroczenie terminu płatności",
+    },
+    umowaZgodnie: "raty spłacane zgodnie z umową",
+    umowaNiezgodnie: "raty spłacane niezgodnie z umową",
+    nieobjeteUmowa: "Zadłużenie nieobjęte umową",
+    dataSplaty: "Data spłaty całego zadłużenia",
+    sprawyWPlanie: "Sprawy w planie rodziny",
+    wplywTytul: "Jak zadłużenie wpływa na zasiłek",
+    wplywProg: ({ prog, minimalne }: { prog: string; minimalne: string }) =>
+      `${prog} – 1% minimalnego wynagrodzenia ${minimalne}`,
+    wplywPonadProgEtykieta: "Zadłużenie powyżej progu",
+    wplywPonadProg:
+      "Zasiłek nie przysługuje do spłaty całego zadłużenia. Spłata w ciągu 6 miesięcy od dnia powstania prawa daje zasiłek za cały okres.",
+    wplywWyplataEtykieta: "Wypłata po spłacie",
+    wplywWyplata: "ZUS wypłaca zasiłek najpóźniej w ciągu 60 dni od dnia spłaty.",
+    notatkaOdczytu: "Stan rozliczeń pobieramy z eZUS przy każdym otwarciu przewodnika.",
+    niedostepnyTytul: "Stan rozliczeń na dzień powstania prawa",
+    niedostepnyOpis:
+      "Tu zobaczysz kwotę zadłużenia i jego skutek dla zasiłku, gdy pobierzemy stan rozliczeń z eZUS. Spróbujemy ponownie przy następnym otwarciu przewodnika.",
+    potwierdzWPlanie: "Potwierdź opłacenie składek w planie",
+    brakDzialalnosci:
+      "Stan rozliczeń składek dotyczy osoby, która prowadzi działalność i sama rozlicza składki. Twoje składki rozlicza płatnik składek.",
+    wrocDoPlanu: "Wróć do planu rodziny",
     // koniec ViewContributionBalance
   },
   ViewContributionCertificate: {
     tytulStrony: "Zaświadczenie o stanie rozliczeń",
     naglowek: "Zaświadczenie o stanie rozliczeń",
+    powrot: "Stan rozliczeń",
+    flagaDemo: "Tryb demonstracyjny – symulacja wystawienia zaświadczenia",
+    wyborTytul: "Wybierz dzień stanu rozliczeń",
+    wyborOpis:
+      "Wystawimy zaświadczenie o niezaleganiu w opłacaniu składek albo o wysokości zadłużenia na wybrany dzień. Dokument będzie oznaczony jako symulacja.",
+    poleDnia: "Dzień stanu rozliczeń",
+    podpowiedzDnia: ({ data }: { data: string }) =>
+      `Podaj datę w formacie DD.MM.RRRR – dziś albo wcześniej, nie wcześniej niż ${data}, czyli początek Twojej działalności.`,
+    podpowiedzDniaBezDzialalnosci: "Podaj datę w formacie DD.MM.RRRR – dziś albo wcześniej.",
+    podpowiedzDomyslna: "Podpowiadamy dzień porodu, a przed porodem – dzień dzisiejszy.",
+    wystaw: "Wystaw zaświadczenie",
+    wrocDoStanu: "Wróć do stanu rozliczeń",
+    coZawieraTytul: "Co znajdzie się w zaświadczeniu",
+    coZawiera: [
+      "Imię, nazwisko i numer PESEL",
+      "Dzień stanu rozliczeń i rodzaj zaświadczenia",
+      "Kwota zadłużenia i informacja o układzie ratalnym albo odroczeniu",
+      "Data i godzina wystawienia oraz oznaczenie symulacji na każdej stronie",
+    ],
+    wystawioneTytul: "Wystawione zaświadczenie",
+    rodzaj: "Rodzaj",
+    dzienStanu: "Dzień stanu rozliczeń",
+    kwotaZadluzenia: "Kwota zadłużenia",
+    umowa: "Układ ratalny albo odroczenie",
+    umowaPdf: "Układ ratalny albo odroczenie terminu płatności",
+    umowaBrak: "Brak",
+    umowaOpis: ({ rodzaj, kwota }: { rodzaj: string; kwota: string }) => `${rodzaj} – kwota objęta umową ${kwota}`,
+    umowaRodzaje: { "uklad-ratalny": "Układ ratalny", odroczenie: "Odroczenie terminu płatności" },
+    wystawiono: "Data i godzina wystawienia",
+    rodzaje: {
+      "o-niezaleganiu": "Zaświadczenie o niezaleganiu w opłacaniu składek",
+      "o-wysokosci-zadluzenia": "Zaświadczenie o wysokości zadłużenia",
+    },
+    pobierz: "Pobierz zaświadczenie (PDF)",
+    notatkaPobrania:
+      "Zaświadczenie pobierzesz do końca sesji. To symulacja z wersji demonstracyjnej przewodnika, a nie dokument wydany przez ZUS.",
+    innyDzienTytul: "Wystaw na inny dzień",
+    podpowiedzInnegoDnia: ({ data }: { data: string }) =>
+      `Podaj datę w formacie DD.MM.RRRR – dziś albo wcześniej, nie wcześniej niż ${data}.`,
+    pdfSymulacjaGora: "SYMULACJA – dokument przygotowany w wersji demonstracyjnej przewodnika",
+    pdfSymulacjaDol: "SYMULACJA – nie jest zaświadczeniem wydanym przez ZUS",
+    pdfLogo: "Przewodnik rodzica",
+    pdfWystawiono: ({ data }: { data: string }) => `Wystawiono: ${data}`,
+    pdfPodtytul: "Stan rozliczeń składek na ubezpieczenia społeczne osoby prowadzącej pozarolniczą działalność",
+    pdfImieNazwisko: "Imię i nazwisko",
+    pdfPesel: "Numer PESEL",
+    pdfRodzaj: "Rodzaj zaświadczenia",
+    pdfPodpisTabeli: "Dane zaświadczenia o stanie rozliczeń",
+    pdfPrzewijanie: "Dane zaświadczenia, przewiń w poziomie",
+    pdfKolumnaPole: "Pole",
+    pdfKolumnaWartosc: "Wartość",
+    pdfPodsumowanieNiezaleganie: ({ data }: { data: string }) =>
+      `Na dzień ${data} osoba wskazana powyżej nie ma zadłużenia z tytułu składek na ubezpieczenia społeczne.`,
+    pdfPodsumowanieUmowa: ({ data }: { data: string }) =>
+      `Na dzień ${data} osoba wskazana powyżej spłaca składki zgodnie z umową o spłacie, która obejmuje całe zadłużenie.`,
+    pdfPodsumowanieZadluzenie: ({ data, kwota }: { data: string; kwota: string }) =>
+      `Na dzień ${data} osoba wskazana powyżej ma zadłużenie z tytułu składek na ubezpieczenia społeczne w kwocie ${kwota}.`,
+    pdfStrona: "Strona 1 z 1",
+    nazwaPliku: ({ data }: { data: string }) => `zaswiadczenie-stan-rozliczen-${data}.pdf`,
     // koniec ViewContributionCertificate
   },
   ViewZusAccountData: {
@@ -1515,6 +1789,16 @@ export const teksty = {
   },
   ModalSickLeaveDetails: {
     tytul: "Szczegóły zaświadczenia",
+    tytulZNumerem: ({ numer }: { numer: string }) => `Zaświadczenie ${numer}`,
+    seriaINumer: "Seria i numer",
+    dataWystawienia: "Data wystawienia",
+    okres: "Okres niezdolności do pracy",
+    liczbaDni: "Liczba dni",
+    kod: "Kod literowy",
+    kodCiazy: "niezdolność do pracy w okresie ciąży",
+    platnik: "Płatnik składek",
+    rodzaj: "Rodzaj zaświadczenia",
+    zamknij: "Zamknij",
     // Sloty zaswiadczenia-e-zla/_sloty (u30)
     akcjaWnioskuZas53: {
       // koniec akcjaWnioskuZas53
