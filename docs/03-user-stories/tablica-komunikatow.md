@@ -238,3 +238,11 @@
 | 0222 | Pełnomocnictwo PEL ograniczone do korespondencji | WARNING | 200 | Pełnomocnictwo od [imię i nazwisko] obejmuje wyłącznie korespondencję. Poproś o pełnomocnictwo PEL do roli Ubezpieczony bez ograniczenia do korespondencji. |
 | 0223 | Brak pełnomocnictwa PEL od drugiego rodzica | INFO | 200 | Drugi rodzic nie udzielił Ci jeszcze pełnomocnictwa. Pokaż mu instrukcję udzielenia pełnomocnictwa PEL w eZUS. |
 | 0224 | Pełnomocnictwo PEL od przyszłej daty | INFO | 200 | Pełnomocnictwo od [imię i nazwisko] obowiązuje od [data]. Dane drugiego rodzica pobierzemy od tego dnia. |
+| 0225 | Rozstrzygnięcie uzupełnione ze zrzutu z systemu ZUS | INFO | 200 | Rozstrzygnięcie sprawy uzupełniliśmy świadczeniami przyznanymi w zrzucie z systemu ZUS. Sprawdź je przed weryfikacją. |
+| 0226 | Początek zasiłku wcześniej niż 6 tygodni przed terminem porodu | WARNING | 200 | Okres zasiłku we wniosku zaczyna się [data początku z wniosku], czyli wcześniej niż 6 tygodni przed przewidywanym terminem porodu [termin porodu]. Do wyliczenia przyjmujemy początek [data początku do wyliczenia]. |
+| 0227 | Brak zaświadczenia o przewidywanej dacie porodu w przykładowej sprawie | INFO | 200 | Zasiłek za okres przed porodem wymaga zaświadczenia lekarskiego o przewidywanej dacie porodu. Dodaj je do sprawy, jeśli jest w zestawie dokumentów. |
+| 0228 | Brak zaświadczenia o przewidywanej dacie porodu | ERROR | 400 | Dołącz zaświadczenie lekarskie o przewidywanej dacie porodu. |
+| 0229 | Wniosek przed porodem | INFO | 200 | Zasiłek przed porodem możesz zacząć najwcześniej [data], czyli 6 tygodni przed przewidywanym terminem porodu. Możesz też pracować do porodu i złożyć wniosek po porodzie. |
+| 0230 | Wniosek przed porodem przygotowany dla płatnika | INFO | 201 | Wniosek jest gotowy. Przekaż go płatnikowi razem z zaświadczeniem lekarskim o przewidywanej dacie porodu, a po porodzie dostarcz płatnikowi skrócony odpis aktu urodzenia dziecka. |
+| 0231 | Dane dziecka do przekazania ZUS | INFO | 200 | Przekaż ZUS dane dziecka do wniosku o zasiłek macierzyński złożonego przed porodem, żeby ZUS ustalił zasiłek za okres po porodzie. |
+| 0232 | Dane dziecka przekazane ZUS | INFO | 201 | Przekazaliśmy ZUS dane dziecka do Twojego wniosku o zasiłek macierzyński. |
