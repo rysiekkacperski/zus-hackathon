@@ -164,3 +164,6 @@
 | 0148 | Odpowiedź asystenta AI | INFO | 200 | Odpowiedź przygotował asystent oparty na sztucznej inteligencji na podstawie Twojego planu. Sprawdź szczegóły sprawy, zanim podejmiesz decyzję. |
 | 0149 | Załączniki do wniosku | INFO | 200 | Do wniosku dołącz: [lista dokumentów]. |
 | 0150 | Stan rozliczeń składek niedostępny | WARNING | 200 | Nie udało się pobrać stanu rozliczeń składek. Potwierdź sam, że składki są opłacone. |
+| 0151 | Puste pole stawki | ERROR | 400 | Podaj stawkę. |
+| 0152 | Puste pole instytucji i kanału | ERROR | 400 | Podaj instytucję i kanał, w którym rodzic załatwia sprawę. |
+| 0153 | Nieprawidłowe przesunięcie terminu | ERROR | 400 | Podaj liczbę całkowitą od -366 do 366 dni albo od -36 do 36 miesięcy. |
