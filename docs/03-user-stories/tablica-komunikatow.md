@@ -246,3 +246,18 @@
 | 0230 | Wniosek przed porodem przygotowany dla płatnika | INFO | 201 | Wniosek jest gotowy. Przekaż go płatnikowi razem z zaświadczeniem lekarskim o przewidywanej dacie porodu, a po porodzie dostarcz płatnikowi skrócony odpis aktu urodzenia dziecka. |
 | 0231 | Dane dziecka do przekazania ZUS | INFO | 200 | Przekaż ZUS dane dziecka do wniosku o zasiłek macierzyński złożonego przed porodem, żeby ZUS ustalił zasiłek za okres po porodzie. |
 | 0232 | Dane dziecka przekazane ZUS | INFO | 201 | Przekazaliśmy ZUS dane dziecka do Twojego wniosku o zasiłek macierzyński. |
+| 0233 | Wniosek ZAS-53 dla pracownika i zleceniobiorcy w okresie ubezpieczenia | INFO | 200 | Wniosek o zasiłek chorobowy składa osoba prowadząca działalność albo osoba po ustaniu ubezpieczenia. Twój zasiłek ustali płatnik składek albo ZUS na podstawie zaświadczenia lekarskiego, więc poinformuj płatnika o niezdolności do pracy. |
+| 0234 | Zaświadczenie bez kodu B | INFO | 200 | Zaświadczenie nie ma kodu B, który oznacza ciążę, więc zasiłek wyniesie 80% podstawy wymiaru. Jeśli niezdolność przypada w ciąży, skontaktuj się z lekarzem, który wystawił zaświadczenie. |
+| 0235 | Niezdolność po ustaniu ubezpieczenia powstała później niż 14 dni | INFO | 200 | Ubezpieczenie ustało [data ustania], a niezdolność do pracy zaczęła się [data], czyli później niż 14 dni po ustaniu. Zasiłek chorobowy za ten okres nie przysługuje. |
+| 0236 | Niezdolność po ustaniu ubezpieczenia krótsza niż 30 dni | INFO | 200 | Po ustaniu ubezpieczenia zasiłek przysługuje, gdy niezdolność do pracy trwa bez przerwy co najmniej 30 dni. Twoja trwa [liczba dni] dni. Złożysz wniosek, gdy lekarz przedłuży zaświadczenie. |
+| 0237 | Okoliczność wyłączająca zasiłek po ustaniu ubezpieczenia | INFO | 200 | Przy tej odpowiedzi zasiłek chorobowy po ustaniu ubezpieczenia nie przysługuje. Sprawdź odpowiedź albo zapytaj ZUS o swoją sytuację. |
+| 0238 | Puste pole informacji przy odpowiedzi tak | ERROR | 400 | Uzupełnij informacje przy odpowiedzi tak. |
+| 0239 | Puste pole daty we wniosku o zasiłek chorobowy | ERROR | 400 | Podaj datę. |
+| 0240 | Data we wniosku o zasiłek chorobowy w przyszłości | ERROR | 400 | Data nie może być późniejsza niż dzisiejsza. |
+| 0241 | Wypłata zasiłku przekazem pocztowym | INFO | 200 | Bez numeru rachunku ZUS wypłaci zasiłek przekazem pocztowym na adres [adres]. |
+| 0242 | Kolejne zaświadczenie za nieprzerwaną niezdolność do pracy | INFO | 200 | To zaświadczenie przedłuża niezdolność do pracy, za którą wniosek jest już złożony. Wnioskiem za ten okres może być ten wniosek albo wydruk zaświadczenia e-ZLA od lekarza. |
+| 0243 | Data powrotu do pracy przed najwcześniejszym dniem | ERROR | 400 | Najwcześniej możesz wrócić do pracy [data]. Wcześniejszy powrót w czasie urlopu macierzyńskiego zaplanujesz w podziale urlopów jako przejęcie urlopu przez drugiego rodzica. |
+| 0244 | Data powrotu do pracy po wyczerpaniu urlopu rodzicielskiego | ERROR | 400 | Najpóźniej możesz wrócić do pracy [data], bo wtedy kończy się urlop rodzicielski, który możesz wykorzystać. |
+| 0245 | Data powrotu do pracy dopasowana do pełnych tygodni urlopu | INFO | 200 | Urlop rodzicielski liczymy w pełnych tygodniach, dlatego wrócisz do pracy [data]. |
+| 0246 | Niższe wypłaty po wcześniejszym powrocie w wariancie 81,5% | INFO | 200 | Przy powrocie do pracy [data] w wariancie 81,5% otrzymasz łącznie o [kwota] mniej niż w wariancie 100% i 70%, bo zasiłek za urlop macierzyński wynosi 81,5% zamiast 100% podstawy. |
+| 0247 | Data podjęcia ubezpieczenia po porodzie poza zakresem | ERROR | 400 | Podaj datę po dniu porodu, najpóźniej [data], żeby zmieścić co najmniej 7 dni urlopu ojcowskiego, zanim dziecko skończy 12 miesięcy. |
