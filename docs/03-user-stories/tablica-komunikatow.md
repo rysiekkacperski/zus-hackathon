@@ -66,9 +66,9 @@
 | 0050 | Nakładający się okres obowiązywania | ERROR | 409 | W tym okresie obowiązuje już inna wartość. Zakończ jej obowiązywanie wcześniej. |
 | 0051 | Zmiana katalogu zapisana | INFO | 200 | Zmiana zapisana. Plany rodzin uwzględnią ją przy najbliższym wyliczeniu. |
 | 0052 | Nieprawidłowe wyprzedzenie przypomnienia | ERROR | 400 | Wybierz wyprzedzenie od 1 do 30 dni. |
-| 0053 | Wyłączone powiadomienia w telefonie | WARNING | 200 | Włącz powiadomienia dla mZUS w ustawieniach telefonu, żeby dostawać przypomnienia o terminach. |
-| 0054 | Brak dostępu do kalendarza telefonu | ERROR | 403 | mZUS nie ma dostępu do kalendarza. Zezwól na dostęp w ustawieniach telefonu i spróbuj ponownie. |
-| 0055 | Terminy dodane do kalendarza | INFO | 200 | Dodaliśmy terminy do kalendarza w Twoim telefonie. |
+| 0053 | Nieprawidłowy kod weryfikacyjny SMS | ERROR | 400 | Ten kod jest nieprawidłowy. Sprawdź kod z wiadomości SMS i wpisz go ponownie. |
+| 0054 | Wygasły kod weryfikacyjny SMS | ERROR | 410 | Kod stracił ważność po 10 minutach. Wyślij nowy kod. |
+| 0055 | Pobrany plik kalendarza | INFO | 200 | Pobraliśmy plik z terminami. Otwórz go, żeby dodać terminy do swojego kalendarza. |
 | 0056 | Ustawienia przypomnień zapisane | INFO | 200 | Zapisaliśmy ustawienia przypomnień. |
 | 0057 | Data porodu potwierdzona | INFO | 200 | Gratulacje! Przeliczyliśmy Twój plan i terminy. |
 | 0058 | Wniosek zapisany do dokończenia | INFO | 200 | Zapisaliśmy wniosek. Dokończysz go w dowolnej chwili w swoim planie. |
@@ -226,3 +226,15 @@
 | 0210 | Sytuacja szczególna przed upływem 8 tygodni od porodu | INFO | 200 | W pierwszych 8 tygodniach życia dziecka możesz otrzymać zasiłek opiekuńczy na czas osobistej opieki nad dzieckiem. Część urlopu macierzyńskiego przejmiesz od [data]. |
 | 0211 | PESEL dziecka niezgodny z datą urodzenia przyjętego dziecka | ERROR | 400 | Data urodzenia zapisana w numerze PESEL różni się od daty urodzenia dziecka w Twoim profilu. |
 | 0212 | Wygaśnięcie sesji | WARNING | 401 | Sesja wygasła po 15 minutach bez działania. Zaloguj się ponownie przez mObywatela, żeby wrócić do przewodnika. |
+| 0213 | Puste pole numeru telefonu | ERROR | 400 | Podaj numer telefonu, na który wyślemy przypomnienia SMS. |
+| 0214 | Brak wybranego kanału przypomnień | ERROR | 400 | Wybierz e-mail, SMS albo oba kanały przypomnień. |
+| 0215 | Wysłany kod weryfikacyjny SMS | INFO | 200 | Wysłaliśmy kod SMS na numer [numer telefonu]. Wpisz go w ciągu 10 minut. |
+| 0216 | Brak terminów do pobrania | INFO | 200 | W Twoim planie nie ma teraz spraw do zrobienia z terminem. Plik kalendarza pobierzesz, gdy pojawi się termin. |
+| 0217 | Nieprawidłowy format kodu weryfikacyjnego | ERROR | 400 | Wpisz 6 cyfr kodu z wiadomości SMS. |
+| 0218 | Brak adresu do przypomnień | WARNING | 200 | Podaj adres e-mail albo numer telefonu, żebyśmy mogli przypominać Ci o terminach. |
+| 0219 | Dane drugiego rodzica pobrane z pełnomocnictwa | INFO | 200 | Pobraliśmy dane ubezpieczenia drugiego rodzica na podstawie pełnomocnictwa i przeliczyliśmy plan rodziny. |
+| 0220 | Pełnomocnictwo PEL odwołane | WARNING | 200 | Pełnomocnictwo od [imię i nazwisko] zostało odwołane. Usunęliśmy dane pobrane na jego podstawie i przywróciliśmy Twoje odpowiedzi o drugim rodzicu. |
+| 0221 | Pełnomocnictwo PEL wygasło | WARNING | 200 | Pełnomocnictwo od [imię i nazwisko] obowiązywało do [data]. Poproś o nowe pełnomocnictwo PEL w eZUS, żeby pobrać aktualne dane. |
+| 0222 | Pełnomocnictwo PEL ograniczone do korespondencji | WARNING | 200 | Pełnomocnictwo od [imię i nazwisko] obejmuje wyłącznie korespondencję. Poproś o pełnomocnictwo PEL do roli Ubezpieczony bez ograniczenia do korespondencji. |
+| 0223 | Brak pełnomocnictwa PEL od drugiego rodzica | INFO | 200 | Drugi rodzic nie udzielił Ci jeszcze pełnomocnictwa. Pokaż mu instrukcję udzielenia pełnomocnictwa PEL w eZUS. |
+| 0224 | Pełnomocnictwo PEL od przyszłej daty | INFO | 200 | Pełnomocnictwo od [imię i nazwisko] obowiązuje od [data]. Dane drugiego rodzica pobierzemy od tego dnia. |
