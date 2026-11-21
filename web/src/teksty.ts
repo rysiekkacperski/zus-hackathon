@@ -1011,16 +1011,171 @@ export const teksty = {
     sekcjeDanychZus: {
       // koniec sekcjeDanychZus
     },
+    // Szkielet kreatora profilu-na-start/_czesci (u07), wspólny dla ekranów kreatora
+    kreator: {
+      wstep: "Odpowiedz na kilka pytań, a ułożymy z nich plan Twojej rodziny. Pytamy tylko o to, czego nie ma na Twoim koncie ZUS.",
+      krokiTytul: "Kroki profilu",
+      nazwyKrokow: {
+        pracaIZasilek: "Praca i zasiłek",
+        sytuacja: "Twoja sytuacja",
+        ciazaAlboDziecko: "Ciąża albo dziecko",
+        daneCiazy: "Dane ciąży",
+        dataPorodu: "Data porodu",
+        przyjecieDziecka: "Przyjęcie dziecka",
+        zmianaZatrudnienia: "Zmiana zatrudnienia",
+        rodzina: "Rodzina",
+        drugiRodzic: "Drugi rodzic",
+        podsumowanie: "Podsumowanie",
+      },
+      notatkaZapamietywania: "Zapamiętujemy Twoje odpowiedzi. Jeśli przerwiesz, po powrocie zaczniesz w tym samym miejscu.",
+      zrodla: {
+        "konto-zus": "Źródło: konto ZUS",
+        "odpowiedz-rodzica": "Źródło: Twoja odpowiedź",
+        "pelnomocnictwo-pel": "Źródło: pełnomocnictwo PEL",
+      },
+      formy: {
+        "umowa-o-prace": "Umowa o pracę",
+        "umowa-zlecenia": "Umowa zlecenia",
+        jdg: "Jednoosobowa działalność gospodarcza",
+        "brak-tytulu": "Brak tytułu do ubezpieczenia",
+      },
+      // koniec kreator
+    },
+    tytulKarty: "Dane z Twojego konta ZUS",
+    opisKarty: "Odczytaliśmy je z Twojego konta ZUS. Sprawdź je i potwierdź albo zmień odpowiedź.",
+    opisKartyBezDanych: "Nie mamy teraz danych z Twojego konta ZUS. Spróbuj ponownie albo wybierz formę zatrudnienia samodzielnie.",
+    etykiety: {
+      forma: "Forma zatrudnienia",
+      pozostale: "Pozostałe tytuły ubezpieczenia",
+      zakonczony: "Tytuł zakończony",
+      chorobowe: "Ubezpieczenie chorobowe",
+      platnik: "Płatnik zasiłku",
+    },
+    rodzajeTytulow: {
+      pracownik: "pracownik",
+      zleceniobiorca: "zleceniobiorca",
+      dzialalnosc: "osoba prowadząca pozarolniczą działalność",
+    },
+    tytulOd: ({ rodzaj, od }: { rodzaj: string; od: string }) => `Tytuł ubezpieczenia: ${rodzaj}, od ${od}`,
+    tytulOdDo: ({ rodzaj, od, doDnia }: { rodzaj: string; od: string; doDnia: string }) =>
+      `Tytuł ubezpieczenia: ${rodzaj}, od ${od} do ${doDnia}`,
+    brakTytuluOd: ({ data }: { data: string }) => `Od ${data} na Twoim koncie ZUS nie ma tytułu do ubezpieczenia.`,
+    brakTytulu: "Na Twoim koncie ZUS nie ma tytułu do ubezpieczenia.",
+    platnikSkladek: ({ nazwa }: { nazwa: string }) => `Płatnik składek: ${nazwa}`,
+    zakonczonaUmowa: "Umowa skończyła się w ciągu ostatnich 280 dni. Zapytamy Cię o nią w kroku Zmiana zatrudnienia.",
+    zakonczonaDzialalnosc: "Działalność skończyła się w ciągu ostatnich 280 dni. Zapytamy Cię o nią w kroku Zmiana zatrudnienia.",
+    brakPozostalych: "-",
+    choroboweObowiazkowe: "Obowiązkowe. Jako pracownik nie odpowiadasz na pytanie o dobrowolne ubezpieczenie chorobowe.",
+    zmienForme: "Zmień formę zatrudnienia",
+    wybierzForme: "Wybierz formę zatrudnienia",
+    nieWybrano: "Nie wybrano",
+    formyMiejscownik: {
+      "umowa-o-prace": "umowie o pracę",
+      "umowa-zlecenia": "umowie zlecenia",
+      jdg: "jednoosobowej działalności gospodarczej",
+      "brak-tytulu": "braku tytułu do ubezpieczenia",
+    },
+    platnicy: {
+      zus: "ZUS",
+      brak: "Brak",
+      nieWiemy: "Jeszcze nie wiemy",
+      nieustalony: "Płatnik nieustalony",
+      jdg: "Przy jednoosobowej działalności gospodarczej zasiłek wypłaca ZUS.",
+      brakTytulu: "Bez tytułu do ubezpieczenia nie masz płatnika zasiłku.",
+      niewyplaca: ({ nazwa }: { nazwa: string }) =>
+        `Twój płatnik składek ${nazwa} nie wypłaca zasiłków, bo zgłasza do ubezpieczenia chorobowego nie więcej niż 20 osób. Zasiłek wypłaci Ci ZUS.`,
+      wyplaca: "Ten płatnik składek wypłaca zasiłki, bo zgłasza do ubezpieczenia chorobowego więcej niż 20 osób. Ustaliliśmy go z tytułu, który potwierdzasz jako formę zatrudnienia.",
+      brakPlatnikaPrzy: ({ forma }: { forma: string }) =>
+        `Na Twoim koncie ZUS nie ma płatnika składek przy ${forma}. Zapytamy o niego na następnym ekranie.`,
+      brakInformacji: ({ nazwa }: { nazwa: string }) =>
+        `Na Twoim koncie ZUS nie ma informacji, czy płatnik składek ${nazwa} wypłaca zasiłki. Zapytamy o to na następnym ekranie.`,
+    },
+    dobrowolne: {
+      legenda: "Czy opłacasz dobrowolne ubezpieczenie chorobowe?",
+      tak: "Tak",
+      nie: "Nie",
+      przy: {
+        "umowa-zlecenia": "przy umowie zlecenia",
+        jdg: "przy działalności",
+      },
+      zKontaTak: ({ przy }: { przy: string }) =>
+        `Na Twoim koncie ZUS ${przy} jest dobrowolne ubezpieczenie chorobowe, więc zaznaczyliśmy „Tak”. Zmień odpowiedź, jeśli jest inna.`,
+      zKontaNie: ({ przy }: { przy: string }) =>
+        `Na Twoim koncie ZUS ${przy} nie ma ubezpieczenia chorobowego, więc zaznaczyliśmy „Nie”. Zmień odpowiedź, jeśli jest inna.`,
+      zalezy: {
+        "umowa-zlecenia": "Przy umowie zlecenia od tej odpowiedzi zależy prawo do zasiłku macierzyńskiego.",
+        jdg: "Przy jednoosobowej działalności gospodarczej od tej odpowiedzi zależy prawo do zasiłku macierzyńskiego.",
+      },
+    },
+    notatkaKilkaTytulow: "Masz kilka tytułów ubezpieczenia. Proponujemy pierwszy z kolejności: umowa o pracę, jednoosobowa działalność gospodarcza, umowa zlecenia.",
+    dzieci: {
+      tytul: "Dzieci zgłoszone do ubezpieczenia zdrowotnego",
+      brak: "Na Twoim koncie ZUS nie ma dzieci zgłoszonych do ubezpieczenia zdrowotnego.",
+      bezDanych: "Pokażemy je, gdy odczytamy dane z Twojego konta ZUS.",
+      kolumny: {
+        imieINazwisko: "Imię i nazwisko",
+        dataUrodzenia: "Data urodzenia",
+        zrodlo: "Źródło",
+      },
+      zrodloKonto: "Konto ZUS",
+      przewijanie: "Tabela dzieci zgłoszonych do ubezpieczenia zdrowotnego",
+    },
+    pozostaleDane: "Wszystkie dane z Twojego konta ZUS",
+    notatkaOdswiezania: "Dane z konta ZUS odświeżamy przy każdym otwarciu przewodnika.",
+    dalej: "Potwierdź i przejdź dalej",
     // koniec ViewProfileZusData
   },
   ViewProfilePayer: {
     tytulStrony: "Profil na start: płatnik zasiłku",
     naglowek: "Profil na start",
+    tytulKarty: "Kto wypłaci Ci zasiłek",
+    wstepZNazwa: ({ forma, nazwa }: { forma: string; nazwa: string }) =>
+      `Pracujesz na ${forma} dla płatnika składek ${nazwa}. Na Twoim koncie ZUS nie ma informacji, czy ten płatnik wypłaca zasiłki. Odpowiedz na jedno pytanie.`,
+    wstepBezNazwy: ({ forma }: { forma: string }) =>
+      `Na Twoim koncie ZUS nie ma płatnika składek przy ${forma}. Odpowiedz na jedno pytanie.`,
+    wstepOgolny: "Na Twoim koncie ZUS nie ma informacji, czy Twój płatnik składek wypłaca zasiłki. Odpowiedz na jedno pytanie.",
+    pytanieZNazwa: ({ nazwa }: { nazwa: string }) => `Czy ${nazwa} zgłasza do ubezpieczenia chorobowego więcej niż 20 osób?`,
+    pytanieBezNazwy: "Czy Twój płatnik składek zgłasza do ubezpieczenia chorobowego więcej niż 20 osób?",
+    podpowiedz: "Liczy się stan na 30 listopada poprzedniego roku. Płatnik, który zgłasza więcej niż 20 osób, sam wypłaca zasiłki.",
+    odpowiedzi: {
+      tak: "Tak",
+      nie: "Nie",
+      "nie-wiem": "Nie wiem",
+    },
+    opisTakZNazwa: ({ nazwa }: { nazwa: string }) => `Zasiłek wypłaci ${nazwa}.`,
+    opisTakBezNazwy: "Zasiłek wypłaci Twój płatnik składek.",
+    opisNie: "Zasiłek wypłaci ZUS.",
+    opisNieWiem: "Zapiszemy, że płatnika zasiłku nie udało się ustalić.",
+    notatka: "Nie znasz odpowiedzi? Zapytaj płatnika składek, ile osób zgłasza do ubezpieczenia chorobowego.",
     // koniec ViewProfilePayer
   },
   ViewProfileSituation: {
     tytulStrony: "Profil na start: Twoja sytuacja",
     naglowek: "Profil na start",
+    tytulKarty: "Twoja sytuacja",
+    opisKarty: "Od Twojej sytuacji zależy, o co zapytamy dalej.",
+    legenda: "Która sytuacja Cię dotyczy?",
+    sytuacje: {
+      oczekiwanie: {
+        etykieta: "Spodziewam się dziecka",
+        opis: "Podasz przewidywany termin porodu, liczbę dzieci i datę pierwszej wizyty u lekarza albo położnej.",
+      },
+      narodziny: {
+        etykieta: "Dziecko już się urodziło",
+        opis: "Podasz datę porodu i liczbę urodzonych dzieci.",
+      },
+      przyjecie: {
+        etykieta: "Przyjmuję dziecko na wychowanie",
+        opis: "Podasz dane przyjęcia dziecka, na przykład formę i datę przyjęcia.",
+      },
+      planowanie: {
+        etykieta: "Planuję rodzicielstwo",
+        opis: "Przejdziesz do kalkulatora zasiłku macierzyńskiego. Do profilu wrócisz przy następnym otwarciu przewodnika.",
+      },
+    },
+    notatkaZgodyPrzed: "Dane o ciąży i dziecku zapisujemy tylko wtedy, gdy masz zgodę na dane dotyczące zdrowia. Zgodę zmienisz w ",
+    notatkaZgodyLink: "ustawieniach przewodnika",
+    notatkaZgodyPo: ".",
     // koniec ViewProfileSituation
   },
   ViewProfilePregnancy: {
@@ -1627,6 +1782,10 @@ export const teksty = {
   },
   SheetEmploymentChoice: {
     tytul: "Wybierz formę zatrudnienia",
+    opis: "Wybierz formę, którą ma uwzględnić Twój plan. Zaznaczyliśmy formę odczytaną z Twojego konta ZUS.",
+    opisBezDanych: "Wybierz formę, którą ma uwzględnić Twój plan.",
+    legenda: "Forma zatrudnienia",
+    znacznikZKonta: "Z konta ZUS",
     // koniec SheetEmploymentChoice
   },
   SheetContributionPaidConfirm: {
