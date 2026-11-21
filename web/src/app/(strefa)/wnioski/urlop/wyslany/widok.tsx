@@ -5,8 +5,6 @@ import { formatujDate } from '@/domena/daty';
 import { formatujProcent } from '@/domena/kwoty';
 import type { ReactNode } from 'react';
 import { komunikatWyslania, terminOdmowyLaczenia } from '@/domena/wnioski/wysylka-do-pracodawcy';
-import { useParametry } from '@/dane/magazyn/hooki';
-import { FlagaDemo } from '@/komponenty/flaga-demo';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -21,7 +19,6 @@ const tf = teksty.ViewLeaveRequestForm;
 
 export function WidokWyslanegoWnioskuOUrlop() {
   const stan = useKreatorUrlopu();
-  const parametry = useParametry();
   if (stan === null) return null;
   const { wniosek, dane } = stan;
   if (!wniosek || wniosek.stan !== 'wyslany' || !wniosek.dataZlozenia) {
@@ -83,7 +80,6 @@ export function WidokWyslanegoWnioskuOUrlop() {
       <NaglowekStrony tytul={t.naglowek} powrot={false} />
       <div className="mt-7.5 flex flex-col gap-7.5">
         {komunikat}
-        {parametry.trybDemonstracyjny ? <FlagaDemo>{t.demo}</FlagaDemo> : null}
         <div className="flex flex-wrap items-start gap-7.5">
           <div className="flex min-w-0 grow-999 basis-140 flex-col gap-7.5">
             <Karta tytul={t.szczegolyTytul} bezLinii>

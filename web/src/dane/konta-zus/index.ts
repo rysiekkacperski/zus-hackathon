@@ -1,6 +1,6 @@
 // Rejestr danych źródłowych kont w symulowanym ZUS (kontrakt, sekcje 5.5, 5.15 i 8).
 // Rejestr składa pliki właścicieli w dane źródłowe jednego konta i nakłada na nie stan symulowanego ZUS
-// z klucza `ppm:v1:zus:<PESEL>`: nadpisania scenariuszy demonstracyjnych, dziecko z symulacji zgłoszenia,
+// z klucza `ppm:v1:zus:<PESEL>`: nadpisania scenariuszy demonstracyjnych, dziecko z symulacji narodzin,
 // wnioski wysłane z przewodnika, wystawione zaświadczenia o stanie rozliczeń i korespondencję.
 import { kontoPrzykladowe } from '@/dane/konta-demo';
 import { zaswiadczeniaEzlaKontZus } from '@/dane/konta-zus/ezla';

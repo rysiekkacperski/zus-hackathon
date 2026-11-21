@@ -1,11 +1,9 @@
 'use client';
 
 // ViewZamSent (3.9.1.1.4): potwierdzenie wysłania wniosku ZAM do ZUS (0045) i sprawa w planie ze statusem złożona.
-import { useParametry } from '@/dane/magazyn/hooki';
 import { formatujDate, formatujDateICzas } from '@/domena/daty';
 import { tytulSprawy } from '@/domena/katalog/odczyt';
 import { formatujRachunek } from '@/domena/walidacje';
-import { FlagaDemo } from '@/komponenty/flaga-demo';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -20,7 +18,6 @@ const t = teksty.ViewZamSent;
 const tk = teksty.ViewZamLeaveType.kreator;
 
 function Potwierdzenie({ dane }: { dane: DaneWnioskuZam }) {
-  const parametry = useParametry();
   const { wniosek, kontekst } = dane;
   const przekazanie = wniosek.przekazanieDanychDziecka;
   const zasilek = opisZasilkuWniosku(wniosek.okresy);
@@ -59,7 +56,6 @@ function Potwierdzenie({ dane }: { dane: DaneWnioskuZam }) {
       ) : null}
       <Karta tytul={t.potwierdzenie.tytul} bezLinii>
         <DaneBoczne pozycje={pozycje} />
-        {parametry.trybDemonstracyjny ? <FlagaDemo className="mt-6">{t.potwierdzenie.flaga}</FlagaDemo> : null}
       </Karta>
       <Karta tytul={t.sprawa.tytul} bezLinii>
         <p className="m-0 text-body-strong">{t.sprawa.nazwa({ id: idPozycji, tytul })}</p>

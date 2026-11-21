@@ -31,8 +31,10 @@ import type {
   StanSesji,
   StanSymulowanegoZus,
   StanZgody,
+  WynikiKalkulacji,
   ZnacznikCzasu,
 } from '@/domena/typy';
+import { zainstalujObslugeKartyGoscia } from '@/dane/magazyn/gosc';
 import { KLUCZ_LOGOWANIE } from '@/dane/magazyn/klucze';
 import { odczytaj, subskrybuj } from '@/dane/magazyn/rdzen';
 import {
@@ -44,7 +46,6 @@ import {
   odczytajSesje,
   odczytajStanInterfejsu,
   odczytajStanKonta,
-  odczytajStanSesji,
   odczytajStanZus,
   odczytajZalogowanego,
   osobyRodziny,
@@ -53,9 +54,20 @@ import {
   stanInterfejsuNaSerwer,
   wszystkieKontaDemo,
 } from '@/dane/magazyn/stan';
+import {
+  czyGosc,
+  odczytajStanSesjiWlasciciela,
+  odczytajWlasciciela,
+  odczytajWynikiKalkulacjiWlasciciela,
+  odczytajZakresWynikowKalkulacji,
+  wynikiKalkulacjiBrak,
+  type WlascicielDanych,
+  type ZakresWynikowKalkulacji,
+} from '@/dane/magazyn/wlasciciel';
 import { migawkaZegara, subskrybujZegar, type DokladnoscZegara } from '@/dane/magazyn/zegar';
 
 export type { DokladnoscZegara } from '@/dane/magazyn/zegar';
+export type { WlascicielDanych, ZakresWynikowKalkulacji } from '@/dane/magazyn/wlasciciel';
 
 export interface KontekstRodziny {
   konto: KontoPrzewodnika;
@@ -76,10 +88,16 @@ function brak(): null {
   return null;
 }
 
+/** Subskrypcja magazynu; pierwsza subskrypcja w karcie instaluje też obsługę zamknięcia karty gościa. */
+function subskrybujMagazyn(sluchacz: () => void): () => void {
+  zainstalujObslugeKartyGoscia();
+  return subskrybuj(sluchacz);
+}
+
 /** Wspólny początek hooków: zawieszenie podczas prerenderu i subskrypcja magazynu. */
 function useMigawkaMagazynu<T>(migawka: () => T, migawkaSerwera: () => T): T {
   use(browser(POWOD_PRZEGLADARKI));
-  return useSyncExternalStore(subskrybuj, migawka, migawkaSerwera);
+  return useSyncExternalStore(subskrybujMagazyn, migawka, migawkaSerwera);
 }
 
 // --- Migawki -----------------------------------------------------------------------------------
@@ -92,9 +110,9 @@ function migawkaParametrowSerwera(): ParametrySystemu {
   return stanGlobalnyNaSerwer().parametry;
 }
 
+/** Stan sesji konta albo stan sesji gościa (tryb gościa). */
 function migawkaStanuSesji(): StanSesji | null {
-  const sesja = odczytajSesje();
-  return sesja === null ? null : odczytajStanSesji(sesja.idSesji);
+  return odczytajStanSesjiWlasciciela();
 }
 
 function migawkaStanuKonta(): StanKonta | null {
@@ -175,6 +193,10 @@ export function useSesja(): Sesja | null {
   return useMigawkaMagazynu(odczytajSesje, brak);
 }
 
+/**
+ * Stan sesji: dane sesji zalogowanego konta albo stan sesji gościa. Null przed pierwszym zapisem gościa
+ * i bez sesji.
+ */
 export function useStanSesji(): StanSesji | null {
   return useMigawkaMagazynu(migawkaStanuSesji, brak);
 }
@@ -268,6 +290,42 @@ export function useKontekstRodziny(): KontekstRodziny | null {
       teraz,
     };
   }, [stanKonta, rodzina, stanMatki, stanDrugiegoRodzica, katalog, dzis, teraz]);
+}
+
+// --- Tryb gościa ---------------------------------------------------------------------------------
+
+function falsz(): boolean {
+  return false;
+}
+
+/** Karta bez zalogowanego konta: kalkulator zasiłku i przykładowe sprawy w trybie gościa. */
+export function useCzyGosc(): boolean {
+  return useMigawkaMagazynu(czyGosc, falsz);
+}
+
+/**
+ * Właściciel danych sesji i kalkulatora: konto (PESEL, idSesji, rola) albo gość ('gosc:<id>', idSesji gościa).
+ * Null dla gościa przed pierwszym zapisem; sesję gościa zakłada pierwsza operacja.
+ */
+export function useWlascicielDanych(): WlascicielDanych | null {
+  return useMigawkaMagazynu(odczytajWlasciciela, brak);
+}
+
+/**
+ * Wyniki kalkulacji, które pokazuje kalkulator: rodziny (Rodzic i Drugi rodzic z planem), konta (Nowy użytkownik
+ * i konto bez rodziny) albo gościa. Bez zapisów puste wyniki.
+ */
+export function useWynikiKalkulacji(): WynikiKalkulacji {
+  return useMigawkaMagazynu(odczytajWynikiKalkulacjiWlasciciela, wynikiKalkulacjiBrak);
+}
+
+function zakresGoscia(): ZakresWynikowKalkulacji {
+  return 'gosc';
+}
+
+/** Zakres wyników z useWynikiKalkulacji: 'rodzina', 'konto' albo 'gosc'. */
+export function useZakresWynikowKalkulacji(): ZakresWynikowKalkulacji {
+  return useMigawkaMagazynu(odczytajZakresWynikowKalkulacji, zakresGoscia);
 }
 
 // --- Hooki uzupełniające -----------------------------------------------------------------------

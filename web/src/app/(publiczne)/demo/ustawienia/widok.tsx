@@ -206,7 +206,7 @@ export function WidokUstawienDemo() {
 
   return (
     <>
-      <NaglowekDemo flaga={tekst.flaga} tytul={tekst.naglowek} wstep={tekst.wstep} powrot={tekst.powrot} />
+      <NaglowekDemo tytul={tekst.naglowek} wstep={tekst.wstep} powrot={tekst.powrot} />
       <div className="flex max-w-190 flex-col gap-7.5">
         {blad ? <Komunikat kod={blad} /> : null}
 

@@ -40,6 +40,7 @@ import {
   zbudujDaneWejsciowe,
 } from '../_czesci/formularz';
 import { useKontekstKalkulatora, type KontekstKalkulatora } from '../_czesci/kontekst-kalkulatora';
+import { NotatkaLogowania, useAdresLogowania } from '../_czesci/notatka-logowania';
 import { RODZICE, formaRodzica, podstawyDoWyliczenia, podstawyRodzicow } from '../_czesci/podstawy';
 import { ustawStanRoboczy, useStanRoboczy, type StanRoboczyKalkulatora } from '../_czesci/stan-roboczy';
 import { slotyWyniku } from './_sloty';
@@ -56,7 +57,7 @@ const KOMUNIKATY_W_KARTACH: readonly KodKomunikatu[] = ['0038', '0165', '0064', 
 export function WidokWynikuKalkulatora() {
   const kontekst = useKontekstKalkulatora();
   if (kontekst === null) return <SzkieletWidoku />;
-  return <Wynik key={kontekst.konto.pesel} kontekst={kontekst} />;
+  return <Wynik key={kontekst.konto?.pesel ?? 'gosc'} kontekst={kontekst} />;
 }
 
 function Wynik({ kontekst }: { kontekst: KontekstKalkulatora }) {
@@ -64,10 +65,10 @@ function Wynik({ kontekst }: { kontekst: KontekstKalkulatora }) {
   const parametryAdresu = useSearchParams();
   const idSprawy = parametryAdresu.get('sprawa');
   const zrodloAdresu = parametryAdresu.get('zrodlo');
-  const stan = useStanRoboczy(kontekst.konto.pesel);
+  const stan = useStanRoboczy(kontekst.idWlasciciela, kontekst.zGoscia);
   const { katalog, dzis } = kontekst;
 
-  // Bez stanu roboczego wynik liczy się z profilu rodziny i konta ZUS, gdy dane są kompletne.
+  // Bez stanu roboczego wynik liczy się z profilu rodziny i konta ZUS, gdy dane są kompletne; gość wraca do danych.
   const daneZProfilu = useMemo(() => {
     if (stan) return null;
     const f = uzupelnijFormularz({ konto: kontekst.konto, rodzina: kontekst.rodzina, kopiaKonta: kontekst.kopiaKonta, dzis });
@@ -113,6 +114,7 @@ function TrescWyniku({
   adresDanych: string;
 }) {
   const { katalog, dzis } = kontekst;
+  const adresLogowania = useAdresLogowania();
   const [arkuszRodzica, ustawArkuszRodzica] = useState<RodzicWRodzinie | null>(null);
   const [oknoRegul, ustawOknoRegul] = useState(false);
 
@@ -161,14 +163,12 @@ function TrescWyniku({
 
   // Każda zmiana na wyniku zapisuje stan roboczy; bez niego tworzy go z bieżących danych.
   function zmienStan(zmiana: (s: StanRoboczyKalkulatora) => StanRoboczyKalkulatora) {
-    const baza: StanRoboczyKalkulatora = stan ?? {
-      konto: kontekst.konto.pesel,
-      dane,
-      podstawy: {},
-      pelnyEtat: {},
-      parametry: null,
-    };
-    ustawStanRoboczy(zmiana(baza));
+    if (stan) {
+      ustawStanRoboczy(zmiana(stan));
+      return;
+    }
+    if (kontekst.idWlasciciela === null) return;
+    ustawStanRoboczy(zmiana({ konto: kontekst.idWlasciciela, dane, podstawy: {}, pelnyEtat: {}, parametry: null }));
   }
   function ustawParametry(p: ParametryScenariusza) {
     zmienStan((s) => ({ ...s, parametry: p }));
@@ -213,6 +213,11 @@ function TrescWyniku({
     onZmianaParametrow: ustawParametry,
   };
 
+  const adresOrganizacji = trasy.ViewSupportOrganizations({
+    ...(dane.strata ? { sytuacja: dane.strata.wartosc.rodzaj } : {}),
+    powrot: trasy.ViewCalcMaternityResult(),
+  });
+
   const podstawaArkusza = arkuszRodzica ? podstawy[arkuszRodzica] : undefined;
   const tytulArkusza =
     podstawaArkusza && podstawaArkusza.zKonta.rodzaj === 'wyliczona'
@@ -236,7 +241,15 @@ function TrescWyniku({
         }
       />
       <Stos odstep={7.5} className="max-w-tresc">
-        {kontekst.nowyUzytkownik ? <Komunikat kod="0101" tresc={trescKomunikatu('0101')} /> : null}
+        {kontekst.gosc ? (
+          <Komunikat
+            typ="INFO"
+            tresc={t.goscKomunikat}
+            akcje={<Odnosnik href={adresLogowania}>{t.goscZaloguj}</Odnosnik>}
+          />
+        ) : kontekst.nowyUzytkownik ? (
+          <Komunikat kod="0101" tresc={trescKomunikatu('0101')} />
+        ) : null}
         {dane.strata ? <Komunikat kod="0166" tresc={trescKomunikatu('0166')} /> : null}
         {komunikaty.map((k) => (
           <Komunikat key={k.kod} kod={k.kod} tresc={trescKomunikatu(k.kod, k.parametry as never)} />
@@ -252,16 +265,13 @@ function TrescWyniku({
         {poStracie ? (
           <Karta tytul={t.kartaWsparcia} bezLinii>
             <p className="m-0 mb-6 text-body">{t.wsparcieOpis}</p>
-            <PrzyciskLink
-              wariant="glowny"
-              ikona="serce"
-              href={trasy.ViewSupportOrganizations({
-                ...(dane.strata ? { sytuacja: dane.strata.wartosc.rodzaj } : {}),
-                powrot: trasy.ViewCalcMaternityResult(),
-              })}
-            >
-              {t.zobaczOrganizacje}
-            </PrzyciskLink>
+            {kontekst.gosc ? (
+              <NotatkaLogowania odnosnik={t.zalogujOrganizacje} powrot={adresOrganizacji} />
+            ) : (
+              <PrzyciskLink wariant="glowny" ikona="serce" href={adresOrganizacji}>
+                {t.zobaczOrganizacje}
+              </PrzyciskLink>
+            )}
           </Karta>
         ) : null}
 
@@ -376,6 +386,7 @@ function TrescWyniku({
         pracownik={arkuszRodzica ? formaRodzica(dane, arkuszRodzica) === 'umowa-o-prace' : false}
         opisTytulu={tytulArkusza}
         dzis={dzis}
+        gosc={kontekst.gosc}
         onZapisz={zapiszPodstawe}
       />
       <OknoZastosowanychRegul

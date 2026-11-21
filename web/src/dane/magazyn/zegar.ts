@@ -109,3 +109,11 @@ export function migawkaZegara(dokladnosc: DokladnoscZegara): KontekstOperacji {
   migawki[dokladnosc] = nowa;
   return nowa;
 }
+
+/**
+ * Chwila rzeczywista w milisekundach, bez daty demonstracyjnej. Służy do odmierzania odstępów między kartami
+ * (zamknięcie karty gościa), które nie zależą od podstawianej daty „dzisiaj”.
+ */
+export function chwilaRzeczywistaMs(): number {
+  return Date.now();
+}

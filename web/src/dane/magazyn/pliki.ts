@@ -182,3 +182,21 @@ export function usunPlikiWygasle(teraz: ZnacznikCzasu): Promise<number> {
 export function usunPlikiWlasciciela(pesel: Pesel): Promise<number> {
   return usunPasujace((magazyn) => magazyn.index(INDEKS_WLASCICIELA).getAll(pesel) as IDBRequest<RekordPliku[]>);
 }
+
+/**
+ * Przenosi pliki sesji do innego właściciela i sesji: dokumenty przykładowej sprawy gościa po zalogowaniu
+ * trafiają do konta i jego sesji, więc znikają razem z końcem sesji konta. Termin `wygasa` zostaje bez zmian.
+ */
+export async function przeniesPlikiSesji(zSesji: string, cel: { wlasciciel: Pesel; idSesji: string }): Promise<number> {
+  try {
+    return await wTransakcjiPlikow('readwrite', async (magazyn) => {
+      const rekordy = await zadanie(magazyn.index(INDEKS_SESJI).getAll(zSesji) as IDBRequest<RekordPliku[]>);
+      await Promise.all(
+        rekordy.map((r) => zadanie(magazyn.put({ ...r, wlasciciel: cel.wlasciciel, idSesji: cel.idSesji }))),
+      );
+      return rekordy.length;
+    });
+  } catch {
+    return 0;
+  }
+}

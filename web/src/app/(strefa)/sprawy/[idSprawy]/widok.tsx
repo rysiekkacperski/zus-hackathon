@@ -29,10 +29,13 @@ import {
   czyDotyczyDziecka,
   etykietaRodzica,
   kwotaSprawy,
+  nazwaEtapu,
+  numerEtapu,
   pozycjaKatalogu,
   tytulEtapuZNumerem,
   tytulSprawy,
 } from '@/app/(strefa)/plan-rodziny/_czesci/sprawy';
+import { etapZeSlugu, PARAMETR_ETAPU, sciezkaEtapu } from '@/app/(strefa)/plan-rodziny/_czesci/sciezka-etapu';
 import { daneProfiluSprawy, kanalSprawy, spelnionyWarunek } from './_czesci/opis-sprawy';
 import { sekcjeSprawy } from './_sekcje';
 
@@ -47,6 +50,8 @@ export function WidokSprawy({ params }: { params: PageProps<'/sprawy/[idSprawy]'
   const kontekst = useKontekstRodziny();
   const z = zapytanie.get('z');
   const pochodzenie = POCHODZENIA.find((p) => p === z);
+  // Wejście ze strony etapu planu (?z=plan&etap=<slug>) wraca na stronę etapu.
+  const etapPowrotu = pochodzenie === 'plan' ? etapZeSlugu(zapytanie.get(PARAMETR_ETAPU)) : null;
 
   const sprawa = kontekst?.rodzina.plan?.pozycje.find((p) => p.idSprawy === idSprawy);
 
@@ -192,7 +197,11 @@ export function WidokSprawy({ params }: { params: PageProps<'/sprawy/[idSprawy]'
           <PrzyciskLink
             wariant={wymagaUzupelnienia || sprawa.poPorodzie ? 'drugorzedny' : 'glowny'}
             szerokosc="pelna"
-            href={sciezkaWidoku('ViewCaseGuide', { idSprawy: sprawa.idSprawy, ...(pochodzenie ? { z: pochodzenie } : {}) })}
+            href={sciezkaWidoku('ViewCaseGuide', {
+              idSprawy: sprawa.idSprawy,
+              ...(pochodzenie ? { z: pochodzenie } : {}),
+              ...(etapPowrotu ? { [PARAMETR_ETAPU]: etapPowrotu } : {}),
+            })}
           >
             {t.jak.przejdz}
           </PrzyciskLink>
@@ -216,7 +225,21 @@ export function WidokSprawy({ params }: { params: PageProps<'/sprawy/[idSprawy]'
 
   return (
     <>
-      <NaglowekStrony tytul={tytulSprawy(katalog, sprawa)} stanNa={dzis} />
+      <NaglowekStrony
+        tytul={tytulSprawy(katalog, sprawa)}
+        stanNa={dzis}
+        powrot={
+          etapPowrotu
+            ? {
+                href: sciezkaEtapu(etapPowrotu),
+                etykieta: teksty.ViewFamilyPlanStage.naglowek({
+                  numer: String(numerEtapu(etapPowrotu)),
+                  nazwa: nazwaEtapu(etapPowrotu),
+                }),
+              }
+            : undefined
+        }
+      />
       <Stos odstep={7.5}>
         {wymagaUzupelnienia && kontekst.stanZgody !== 'udzielona' ? <Komunikat kod="0004" /> : null}
         <UkladDwuKolumnowy tresc={tresc} boczna={boczna} />

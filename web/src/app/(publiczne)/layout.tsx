@@ -12,7 +12,7 @@ export default function UkladPubliczny({ children }: { children: React.ReactNode
       <LinkDoTresci />
       <NaglowekPubliczny />
       <main id="tresc" className="w-full min-w-0 flex-1 px-4 pt-6 pb-16 lg:px-16">
-        <div className="max-w-tresc min-w-0">
+        <div className="mx-auto max-w-tresc min-w-0">
           <DostawcaKomunikatowChwilowych>
             <DostawcaKomunikatowPoPrzejsciu>
               <StrazPubliczna>{children}</StrazPubliczna>

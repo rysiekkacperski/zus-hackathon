@@ -29,7 +29,6 @@ export const teksty = {
     otwieraSieWNowejKarcie: "(otwiera się w nowej karcie)",
     wroc: "Wróć",
     ladowanie: "Ładujemy dane przewodnika.",
-    trybDemonstracyjny: "Tryb demonstracyjny",
     zl: "zł",
     stanNa: ({ data }: { data: string }) => `Stan na ${data}`,
     zDnia: ({ data }: { data: string }) => `z dnia ${data}`,
@@ -201,6 +200,8 @@ export const teksty = {
         return czesci.filter(Boolean).join(" ");
       },
       drukujLubZapiszPdf: "Drukuj albo zapisz jako PDF",
+      // Tekst dla czytnika przy zakładce ze wskaźnikiem błędu (komponenty/zakladki.tsx)
+      zakladkaZBledem: "zawiera błąd",
     },
   },
   rama: {
@@ -223,6 +224,17 @@ export const teksty = {
       profilNaStart: "Profil na start",
       katalog: "Katalog świadczeń",
       podmiotyWsparcia: "Podmioty wsparcia",
+      // Podsekcje pozycji „Plan rodziny” dla ról Rodzic i Drugi rodzic, w kolejności menu
+      podsekcjePlanu: {
+        ciaza: "1. Ciąża",
+        "pierwsze-tygodnie": "2. Pierwsze tygodnie po porodzie",
+        "urlopy-i-zasilek": "3. Urlopy i zasiłek macierzyński",
+        "pieniadze-na-dziecko": "4. Pieniądze na dziecko",
+        "powrot-do-pracy": "5. Powrót do pracy",
+        swiadczeniaWCiazy: "Świadczenia w ciąży",
+        zaswiadczeniaEzla: "Zaświadczenia lekarskie e-ZLA",
+        stanRozliczenSkladek: "Stan rozliczeń składek",
+      },
     },
     kontoPodpis: "Ustawienia i wylogowanie",
     kontoOtworzMenu: ({ imieINazwisko }: { imieINazwisko: string }) => `Konto: ${imieINazwisko}, otwórz menu konta`,
@@ -236,6 +248,8 @@ export const teksty = {
     },
     ustawienia: "Ustawienia",
     wyloguj: "Wyloguj",
+    // Tryb gościa: przycisk w nagłówku i pozycja menu bocznego prowadzą do logowania z powrotem na bieżący ekran.
+    zalogujSie: "Zaloguj się",
     asystent: "Asystent",
     zamknijAsystenta: "Zamknij asystenta",
     // Etykiety linku powrotu według widoku docelowego; brak wpisu daje teksty.wspolne.wroc.
@@ -944,32 +958,35 @@ export const teksty = {
     wstep: "Spodziewasz się dziecka? Przewodnik ułoży plan świadczeń Twojej rodziny, policzy terminy i pomoże przygotować wnioski.",
     logowanie: {
       tytul: "Zaloguj się do przewodnika",
-      opis: "Wybierz sposób logowania. Rozpoznamy Cię po numerze PESEL potwierdzonym przy logowaniu, więc po każdym sposobie, na komputerze i na telefonie, zobaczysz ten sam profil rodziny.",
-      opisPoWygasnieciu: "Wybierz sposób logowania. Po zalogowaniu wrócisz do ekranu, na którym była otwarta sesja.",
-      sposoby: {
-        mobywatel: { tytul: "mObywatel", opis: "Zaloguj się przez mObywatela i zeskanuj kod QR w aplikacji." },
-        ezus: { tytul: "Login i hasło eZUS", opis: "Zaloguj się loginem i hasłem do eZUS." },
-        mzus: { tytul: "Kod z aplikacji mZUS", opis: "Zaloguj się kodem, który potwierdzisz w aplikacji mZUS." },
-      },
-      notatkaDemo: "Wersja demonstracyjna: każdy sposób logowania otwiera makietę logowania, a po niej wybierasz przykładowe konto.",
+      opis: "Podaj login i hasło do eZUS albo wybierz inny sposób logowania. Po każdym sposobie zobaczysz ten sam profil rodziny.",
+      opisPoWygasnieciu: "Podaj login i hasło do eZUS albo wybierz inny sposób logowania. Po zalogowaniu wrócisz do ekranu, na którym była otwarta sesja.",
+      login: "Login",
+      haslo: "Hasło",
+      zaloguj: "Zaloguj się",
+      albo: "albo",
+      mobywatel: "Zaloguj się przez mObywatela",
+      mzus: "Zaloguj się kodem z aplikacji mZUS",
+      notatkaDemo: "Wersja demonstracyjna: nie wpisuj prawdziwego loginu ani hasła. Każdy wypełniony login i hasło prowadzą do wyboru przykładowego konta.",
       ustawieniaDemo: "Ustawienia trybu demonstracyjnego",
+    },
+    bezLogowania: {
+      tytul: "Bez logowania",
+      opis: "Sprawdź, ile wyniesie zasiłek macierzyński, i zobacz, jak przewodnik liczy go na przykładowych sprawach ZUS.",
+      kalkulator: "Policz zasiłek macierzyński",
+      przykladoweSprawy: "Przykładowe sprawy ZUS",
     },
     coZrobisz: {
       tytul: "Co zrobisz w przewodniku",
       plan: { tytul: "Plan świadczeń rodziny", opis: "Zobaczysz świadczenia, które przysługują Twojej rodzinie, i sprawy do załatwienia po kolei." },
       terminy: { tytul: "Terminy", opis: "Policzymy, do kiedy złożyć wnioski i dokumenty, i przypomnimy Ci o nich." },
       wnioski: { tytul: "Wnioski", opis: "Przygotujesz wnioski na podstawie danych z profilu rodziny." },
-      kalkulator: { tytul: "Kalkulator zasiłku", opis: "Sprawdzisz, ile wyniesie zasiłek macierzyński." },
-      twojeDane: "Twoje dane",
       zgoda: "Dane o ciąży, porodzie i stanie zdrowia dziecka zapisujemy tylko za Twoją zgodą.",
-      ustawienia: "Zgodę zmienisz, a dane rodziny usuniesz w każdej chwili w ustawieniach przewodnika.",
     },
     // koniec ViewGuideStart
   },
   ViewMobywatelLogin: {
     tytulStrony: "Logowanie przez mObywatela",
     naglowek: "Logowanie przez mObywatela",
-    flaga: "Tryb demonstracyjny: makieta logowania",
     wstep: "To makieta, która symuluje logowanie. Nie wpisuj prawdziwego loginu ani hasła i nie skanuj kodu prawdziwą aplikacją.",
     karta: "Zeskanuj kod QR w aplikacji mObywatel",
     kodQr: "Zastępczy kod QR makiety",
@@ -990,7 +1007,6 @@ export const teksty = {
   ViewEzusLogin: {
     tytulStrony: "Logowanie loginem i hasłem eZUS",
     naglowek: "Logowanie loginem i hasłem eZUS",
-    flaga: "Tryb demonstracyjny: makieta logowania",
     wstep: "To makieta, która symuluje logowanie do eZUS. Nie wpisuj prawdziwego loginu ani hasła.",
     karta: "Podaj login i hasło do eZUS",
     login: "Login",
@@ -1004,7 +1020,6 @@ export const teksty = {
   ViewMzusCodeLogin: {
     tytulStrony: "Logowanie kodem z aplikacji mZUS",
     naglowek: "Logowanie kodem z aplikacji mZUS",
-    flaga: "Tryb demonstracyjny: makieta logowania",
     wstep: "To makieta, która symuluje logowanie. Nie wpisuj prawdziwego loginu ani hasła i nie skanuj kodu prawdziwą aplikacją.",
     karta: "Potwierdź kod logowania w aplikacji mZUS",
     kodQr: "Zastępczy kod QR makiety",
@@ -1027,12 +1042,11 @@ export const teksty = {
   ViewDemoAccountPicker: {
     tytulStrony: "Wybierz konto",
     naglowek: "Wybierz konto",
-    flaga: "Tryb demonstracyjny: przykładowe konta",
     wstep: "Zaloguj się przykładowym kontem rodzica albo administratora albo załóż nowe konto bez danych w ZUS.",
     kontaPrzykladowe: ({ liczba }: { liczba: number }) => `Konta przykładowe (${liczba})`,
     notatkaDane: "Dane z konta ZUS przykładowych kont są przykładowe i nie pochodzą z prawdziwych kont w ZUS. Przewodnik odczytuje je przy każdym otwarciu.",
     notatkaSymulacji: ({ data }: { data: string }) =>
-      `Symulacja zgłoszenia dziecka dodaje do członków rodziny w danych z konta ZUS dziecko o imieniu Zofia i nazwisku konta, urodzone 2 dni przed dniem dzisiejszym, czyli ${data}, z numerem PESEL zgodnym z tą datą. Przy każdym koncie rodzica użyjesz jej raz, do czasu przywrócenia stanu początkowego konta.`,
+      `Symulacja narodzin działa przy koncie rodzica, którego profil rodziny ma termin porodu dziecka, które jeszcze się nie urodziło. Dodaje do członków rodziny w danych z konta ZUS dziecko o imieniu Zofia i nazwisku konta, urodzone dzisiaj, czyli ${data}, z numerem PESEL zgodnym z tą datą. Dziecko trafia też do danych z konta ZUS drugiego rodzica dołączonego do rodziny. Po zalogowaniu się kontem matki przewodnik pokaże nowe dziecko w planie rodziny. Przy każdym koncie użyjesz jej raz, do czasu przywrócenia stanu początkowego konta.`,
     rolaAdministrator: "Rola: Administrator",
     opisyForm: {
       "jdg-z-dobrowolnym": "Jednoosobowa działalność gospodarcza z dobrowolnym ubezpieczeniem chorobowym",
@@ -1049,17 +1063,20 @@ export const teksty = {
     zalozNoweKonto: "Załóż nowe konto",
     zaloguj: "Zaloguj się",
     zalogujKonto: ({ imieINazwisko }: { imieINazwisko: string }) => `Zaloguj się kontem ${imieINazwisko}`,
-    symuluj: "Symuluj zgłoszenie dziecka",
+    symuluj: "Symuluj narodziny dziecka",
     symulujKonto: ({ imieINazwisko }: { imieINazwisko: string }) =>
-      `Symuluj zgłoszenie dziecka przy koncie ${imieINazwisko}`,
+      `Symuluj narodziny dziecka w rodzinie ${imieINazwisko}`,
+    bezTerminuPorodu: "Narodziny zasymulujesz, gdy profil rodziny ma termin porodu dziecka, które jeszcze się nie urodziło.",
     przywroc: "Przywróć stan początkowy",
     przywrocKonto: ({ imieINazwisko }: { imieINazwisko: string }) => `Przywróć stan początkowy konta ${imieINazwisko}`,
     przywrocono: ({ imieINazwisko }: { imieINazwisko: string }) =>
       `Przywróciliśmy stan początkowy konta ${imieINazwisko}.`,
-    dzieckoDodane: "Dziecko dodane symulacją:",
+    dzieckoDodane: "Dziecko urodzone w symulacji:",
     opisDziecka: ({ imieINazwisko, data, pesel }: { imieINazwisko: string; data: string; pesel: string }) =>
       `${imieINazwisko}, urodzona ${data}, PESEL ${pesel}`,
-    podpowiedzSymulacji: "Żeby zasymulować zgłoszenie ponownie, przywróć stan początkowy konta.",
+    podpowiedzSymulacji: "Przewodnik odczyta dziecko z danych z konta ZUS po zalogowaniu się tym kontem. Żeby zasymulować narodziny ponownie, przywróć stan początkowy konta i zapisz profil rodziny z terminem porodu.",
+    zasymulowano: ({ imieINazwisko, data }: { imieINazwisko: string; data: string }) =>
+      `Zasymulowaliśmy narodziny dziecka w rodzinie ${imieINazwisko}. Dziecko urodziło się dzisiaj, ${data}.`,
     ustawieniaDemo: "Ustawienia trybu demonstracyjnego",
     trybWylaczony: "Tryb demonstracyjny jest wyłączony, więc symulacje i ustawienia trybu demonstracyjnego czekają na jego włączenie.",
     wlaczTryb: "Włącz tryb demonstracyjny",
@@ -1070,7 +1087,6 @@ export const teksty = {
     tytulStrony: "Nowe konto",
     naglowek: "Nowe konto",
     powrot: "Wybór konta",
-    flaga: "Tryb demonstracyjny: nowe konto",
     wstep: "Załóż konto bez danych w ZUS. Nadamy mu losowy numer PESEL z podaną datą urodzenia i płcią, a potem zalogujemy Cię tym kontem.",
     karta: "Dane konta",
     imie: "Imię",
@@ -1088,7 +1104,6 @@ export const teksty = {
     tytulStrony: "Ustawienia trybu demonstracyjnego",
     naglowek: "Ustawienia trybu demonstracyjnego",
     powrot: "Wybór konta",
-    flaga: "Tryb demonstracyjny: ustawienia",
     wstep: "Ustaw datę demonstracyjną, parametry systemu i symulacje błędów, a potem wczytaj scenariusz z kryteriów akceptacji. Ustawienia obowiązują w tej przeglądarce.",
     tryb: {
       tytul: "Tryb demonstracyjny",
@@ -1155,9 +1170,9 @@ export const teksty = {
       wczytajScenariusz: ({ nazwa }: { nazwa: string }) => `Wczytaj scenariusz ${nazwa}`,
       konto: ({ imieINazwisko }: { imieINazwisko: string }) => `Konto: ${imieINazwisko}`,
       wczytano: ({ nazwa }: { nazwa: string }) => `Wczytaliśmy scenariusz ${nazwa}.`,
-      u01AnnaDziecko: {
-        nazwa: "Anna Nowak po symulacji zgłoszenia dziecka",
-        opis: "Konto Anna Nowak w stanie początkowym z dzieckiem Zofia Nowak w danych z konta ZUS, urodzonym 2 dni przed dniem dzisiejszym w przewodniku.",
+      u01AnnaNarodziny: {
+        nazwa: "Anna Nowak po symulacji narodzin dziecka",
+        opis: "Profil rodziny Anny Nowak z przewidywanym terminem porodu za 7 dni i bez potwierdzonej daty porodu. W danych z konta ZUS jest Zofia Nowak urodzona dzisiaj. Po zalogowaniu się kontem Anny Nowak plan rodziny pokazuje okno nowego dziecka.",
       },
     },
     stanPoczatkowy: {
@@ -2228,6 +2243,7 @@ export const teksty = {
       daneCiazy: "Dane ciąży",
       daneRodziny: "Dane rodziny",
       drugiRodzic: "Drugi rodzic",
+      zmianaZatrudnienia: "Zmiana zatrudnienia w ciąży",
     },
     zmienSekcje: {
       formaIPlatnik: "Zmień formę zatrudnienia i płatnika zasiłku",
@@ -2343,6 +2359,22 @@ export const teksty = {
       notatkaPrzeliczenia: "Po zapisaniu zmiany przeliczymy plan rodziny. Sprawy złożone i załatwione zachowają swój status.",
       notatkaDanychZus: "Dane z konta ZUS odświeżamy przy każdym otwarciu przewodnika.",
       notatkaKalendarza: "Nowy termin porodu zmieni też terminy w kalendarzu.",
+    },
+    // Zakładki podsumowania profilu (podsumowanie/_czesci/zakladki-podsumowania.tsx)
+    zakladki: {
+      etykieta: "Sekcje profilu",
+      zatrudnienie: "Zatrudnienie",
+      daneCiazy: "Ciąża",
+      zmianaZatrudnienia: "Zmiana zatrudnienia",
+      daneRodziny: "Rodzina",
+      drugiRodzic: "Drugi rodzic",
+      dziecko: "Dziecko",
+      przyjecie: "Przyjęcie",
+      dostepDrugiegoRodzica: "Dostęp",
+      daneDrugiegoRodzica: "Twoje dane",
+      sytuacja: "Sytuacja szczególna",
+      pozostale: "Pozostałe dane",
+      // koniec zakladki
     },
     // koniec ViewProfileSummary
   },
@@ -2551,9 +2583,9 @@ export const teksty = {
     // koniec ViewBirthPackage
   },
   ViewSpecialSituation: {
-    tytulStrony: "Sytuacja szczególna",
-    naglowek: "Sytuacja szczególna",
-    wstep: "Zapisz, co się wydarzyło. Dopasujemy plan rodziny i wstrzymamy przypomnienia o sprawach, które przestaną Was dotyczyć.",
+    tytulStrony: "Zmiana w ciąży albo po porodzie",
+    naglowek: "Zmiana w ciąży albo po porodzie",
+    wstep: "Zapisz, co się wydarzyło, na przykład przedwczesny poród, ciężką chorobę dziecka, pobyt matki w szpitalu albo stratę dziecka. Dopasujemy plan rodziny i wstrzymamy przypomnienia o sprawach, które przestaną Was dotyczyć. W przewodniku nazywamy to sytuacją szczególną.",
     powrot: "Plan rodziny",
     kartaRodzaju: "Co się wydarzyło",
     legendaRodzaju: "Rodzaj sytuacji",
@@ -2630,26 +2662,25 @@ export const teksty = {
   ViewFamilyPlan: {
     tytulStrony: "Plan rodziny",
     naglowek: "Plan rodziny",
-    // Sloty plan-rodziny/_sloty: nagłówek (u19, u25, u16), nad planem (u19, u14), przy sprawie (u13, u14, u22, u25)
+    // Sloty plan-rodziny/_sloty: sekcja „Co możesz zrobić” (u19, u25), nad planem (u19), przy sprawie (u13, u14, u22, u25)
     akcjaZglosNarodziny: {
+      tytul: "Dziecko już się urodziło?",
+      opis: "Podaj datę porodu i dane dziecka. Przeliczymy plan i terminy od daty porodu i pokażemy, co załatwić w pierwszych tygodniach.",
       zglos: "Zgłoś narodziny",
       // koniec akcjaZglosNarodziny
     },
     akcjaSytuacjaSzczegolna: {
-      tytul: "Sytuacja szczególna",
-      opis: "Jeśli wydarzyło się coś, co zmienia sytuację Twojej rodziny, zapisz to tutaj. Dopasujemy plan i wstrzymamy przypomnienia o sprawach, które przestaną Was dotyczyć.",
-      akcja: "Zgłoś sytuację szczególną",
+      tytul: "Coś zmieniło się w ciąży albo po porodzie?",
+      opis: "Zapisz to w przewodniku, na przykład gdy dziecko urodziło się przedwcześnie albo jest ciężko chore, matka dziecka jest w szpitalu albo rodzina straciła dziecko. Dopasujemy plan do Waszej sytuacji i wstrzymamy przypomnienia o sprawach, które przestaną Was dotyczyć.",
+      dopowiedzenie: "W przewodniku nazywamy to sytuacją szczególną.",
+      akcja: "Zapisz, co się wydarzyło",
       tytulTrybu: "Spokojny tryb",
       wlaczonyOd: ({ data, osoba }: { data: string; osoba: string }) => `Włączony od ${data} dla Ciebie i ${osoba}.`,
       wlaczonyOdDlaRodziny: ({ data }: { data: string }) => `Włączony od ${data} dla całej rodziny.`,
       opisBezPrzypomnien: "Nie przypominamy o sprawach oznaczonych „Bez przypomnień”. Wrócisz do nich, kiedy zechcesz.",
       opisZPrzypomnieniami: "Sprawy dziecka zostają w planie. Przypominamy o nich zgodnie z ustawieniami przypomnień.",
-      akcjaTrybu: "Sytuacja szczególna",
+      akcjaTrybu: "Zobacz zapisane sytuacje",
       // koniec akcjaSytuacjaSzczegolna
-    },
-    akcjaSwiadczeniaWCiazy: {
-      etykieta: "Świadczenia z ubezpieczenia chorobowego w ciąży",
-      // koniec akcjaSwiadczeniaWCiazy
     },
     oknoNowegoDziecka: {
       tytulKarty: "Dziecko już się urodziło?",
@@ -2660,18 +2691,6 @@ export const teksty = {
       opisPierwszeTygodnie: "Po porodzie najwięcej terminów mija w pierwszych tygodniach – pokażemy Ci, od czego zacząć.",
       zglos: "Zgłoś narodziny",
       // koniec oknoNowegoDziecka
-    },
-    blokEzla: {
-      tytulEzla: "Zaświadczenia lekarskie e-ZLA",
-      podsumowanie: ({ liczba, wykorzystane, limit }: { liczba: number; wykorzystane: number; limit: number }) =>
-        `Zaświadczenia z ostatnich 12 miesięcy: ${liczba}. Okres zasiłkowy w ciąży: wykorzystane ${wykorzystane} dni z ${limit}.`,
-      podsumowanieBezOkresu: ({ liczba }: { liczba: number }) => `Zaświadczenia z ostatnich 12 miesięcy: ${liczba}.`,
-      zobaczEzla: "Zobacz zaświadczenia lekarskie e-ZLA",
-      tytulRozliczen: "Stan rozliczeń składek",
-      rozliczeniaNa: ({ data, kwota }: { data: string; kwota: string }) =>
-        `Stan rozliczeń na ${data}: zadłużenie z tytułu składek ${kwota}.`,
-      zobaczRozliczenia: "Zobacz stan rozliczeń składek",
-      // koniec blokEzla
     },
     terminSprawy: {
       brakTerminu: "-",
@@ -2750,7 +2769,7 @@ export const teksty = {
     zmienDecyzjeOZgodzie: "Zmień decyzję o zgodzie",
     sciezka: {
       tytul: "Twoja ścieżka",
-      wstep: "Widzisz tylko sprawy, które dotyczą Twojej rodziny. Każdą przypisaliśmy do etapu i do rodzica, którego dotyczy.",
+      wstep: "Widzisz tylko sprawy, które dotyczą Twojej rodziny. Każdą przypisaliśmy do etapu i do rodzica, którego dotyczy. Wybierz etap, żeby zobaczyć jego sprawy.",
       wPlanie: "Sprawy w planie",
       doZrobienia: "Do zrobienia",
       zlozone: "Złożone",
@@ -2760,7 +2779,10 @@ export const teksty = {
       licznikDoZrobienia: ({ liczba }: { liczba: string }) => `do zrobienia: ${liczba}`,
       licznikZlozonych: ({ liczba }: { liczba: string }) => `złożone: ${liczba}`,
       licznikZalatwionych: ({ liczba }: { liczba: string }) => `załatwione: ${liczba}`,
+      ostrzezeniaStraznika: ({ liczba }: { liczba: string }) =>
+        `Ostrzeżenia strażnika ubezpieczenia chorobowego: ${liczba}`,
     },
+    coMozeszZrobic: "Co możesz zrobić",
     biezacyEtap: "Bieżący etap",
     etapZakonczony: "Etap zakończony",
     etapy: {
@@ -2779,8 +2801,6 @@ export const teksty = {
       "powrot-do-pracy": "Uprawnienia rodziców po powrocie do pracy.",
     },
     terminPorodu: ({ data }: { data: string }) => `Przewidywany termin porodu: ${data}.`,
-    ukryjSprawy: ({ liczba }: { liczba: string }) => `Ukryj sprawy (${liczba})`,
-    pokazSprawy: ({ liczba }: { liczba: string }) => `Pokaż sprawy (${liczba})`,
     brakSprawWEtapie: "W tym etapie nie ma spraw Twojej rodziny.",
     kolumny: { sprawa: "Sprawa", kogo: "Kogo dotyczy", status: "Status", kwota: "Kwota" },
     podpisTabeli: ({ etap }: { etap: string }) => `Sprawy w etapie ${etap}`,
@@ -2925,8 +2945,8 @@ export const teksty = {
     },
     naSkroty: {
       tytul: "Na skróty",
-      przykladoweSprawy: "Przykładowe sprawy ZUS",
-      terminy: "Terminy",
+      daneKontaZus: "Dane z Twojego konta ZUS",
+      pytanieDoZus: "Zadaj pytanie do ZUS",
     },
     daneProfilu: {
       tytul: "Dane, z których powstał plan",
@@ -2975,6 +2995,15 @@ export const teksty = {
         "zmieniony-status": "Zmieniony status",
         "zmieniony-termin": "Zmieniony termin",
       },
+      statusZ: ({ poprzedni }: { poprzedni: string }) => `Zmieniony status, wcześniej: ${poprzedni}`,
+      statusZNa: ({ poprzedni, obecny }: { poprzedni: string; obecny: string }) =>
+        `Zmieniony status z „${poprzedni}” na „${obecny}”`,
+      statusZachowany: "Sprawa zostaje w planie z dotychczasowym statusem, bo jest już złożona albo załatwiona",
+      usunietaZeStatusem: ({ poprzedni }: { poprzedni: string }) => `Usunięta z planu, status przed usunięciem: ${poprzedni}`,
+      kwotaZ: ({ poprzednia }: { poprzednia: string }) => `Zmieniona kwota, wcześniej: ${poprzednia}`,
+      kwotaZNa: ({ poprzednia, obecna }: { poprzednia: string; obecna: string }) =>
+        `Zmieniona kwota z ${poprzednia} na ${obecna}`,
+      terminOdDatyPorodu: "Termin liczymy teraz od potwierdzonej daty porodu",
     },
     // koniec ViewFamilyPlan
   },
@@ -4287,7 +4316,6 @@ export const teksty = {
     tytulStrony: "Zaświadczenie o stanie rozliczeń",
     naglowek: "Zaświadczenie o stanie rozliczeń",
     powrot: "Stan rozliczeń",
-    flagaDemo: "Tryb demonstracyjny – symulacja wystawienia zaświadczenia",
     wyborTytul: "Wybierz dzień stanu rozliczeń",
     wyborOpis:
       "Wystawimy zaświadczenie o niezaleganiu w opłacaniu składek albo o wysokości zadłużenia na wybrany dzień. Dokument będzie oznaczony jako symulacja.",
@@ -4504,6 +4532,12 @@ export const teksty = {
         "rodzina-zastepcza-zawodowa": "Rodzina zastępcza zawodowa",
       },
     },
+    // Zakładki grup danych w karcie kontekstu
+    zakladkiKontekstu: {
+      etykieta: "Dane dołączane do pytania",
+      sprawa: "Sprawa",
+      profil: "Profil",
+    },
     // koniec ViewZusQuestion
   },
   ViewZusQuestionSent: {
@@ -4526,7 +4560,6 @@ export const teksty = {
     pustaOdpowiedz: "Tu zobaczysz odpowiedź ZUS. Gdy przyjdzie, powiadomimy Cię kanałami wybranymi w ustawieniach przypomnień.",
     ustawieniaPrzypomnien: "Ustawienia przypomnień",
     odpowiedzZ: ({ data }: { data: string }) => `Odpowiedź z ${data}`,
-    flagaOdpowiedzi: "Tryb demonstracyjny – odpowiedź symulowana",
     odpowiedzWEzus: "Tę odpowiedź znajdziesz też w korespondencji w eZUS.",
     kartaKontekstu: "Kontekst dołączony do pytania",
     stanWChwiliWyslania: ({ czas }: { czas: string }) => `Stan na ${czas} – w chwili wysłania`,
@@ -4534,6 +4567,14 @@ export const teksty = {
     przejdzDoPlanu: "Przejdź do planu rodziny",
     zadajKolejne: "Zadaj kolejne pytanie",
     brakPytania: "Nie znaleźliśmy tego pytania wśród pytań wysłanych z Twojego konta.",
+    // Zakładki grup danych wysłanego pytania
+    zakladki: {
+      etykieta: "Szczegóły pytania",
+      odpowiedz: "Odpowiedź",
+      pytanie: "Pytanie",
+      sprawa: "Sprawa",
+      profil: "Profil",
+    },
     // koniec ViewZusQuestionSent
   },
   ViewSupportOrganizations: {
@@ -4615,6 +4656,10 @@ export const teksty = {
       pobytDni: ({ dni, tydzien, masa }: { dni: string; tydzien: string; masa: string }) =>
         `${dni} dni, poród w ${tydzien}. tygodniu ciąży, masa urodzeniowa ${masa} g`,
       wrocDoWeryfikacji: "Wróć do weryfikacji sprawy",
+      // Tryb gościa: bez profilu rodziny i planu rodziny.
+      wstepGosc: ({ id }: { id: string }) =>
+        `Uzupełniliśmy dane z przykładowej sprawy ${id}. Sprawdź je, zmień, jeśli trzeba, i oblicz zasiłek.`,
+      wstepGoscBezId: "Uzupełniliśmy dane z przykładowej sprawy. Sprawdź je, zmień, jeśli trzeba, i oblicz zasiłek.",
       // koniec daneZPrzykladowejSprawy
     },
     wstepProfil:
@@ -4752,6 +4797,16 @@ export const teksty = {
     czescSprawy: "Dane z przykładowej sprawy",
     kartaDatPrzyjecia: "Daty przyjęcia i urodzenia dziecka",
     kartaDzieci: "Dzieci",
+    // Tryb gościa: kalkulator bez konta ZUS i profilu rodziny.
+    wstepGosc: "Podaj zdarzenie i formę zatrudnienia obojga rodziców. Liczymy na danych, które wpiszesz w kalkulatorze.",
+    goscKomunikat: "Liczysz bez logowania. Kalkulator korzysta z danych wpisanych tutaj i z przykładowej sprawy.",
+    goscZaloguj: "Zaloguj się, żeby uzupełnić dane z konta ZUS i profilu rodziny",
+    asideZrodlaPozycjeGosc: [
+      { tytul: "Wartość wpisana w kalkulatorze", opis: "Wartość, którą wpisujesz albo zmieniasz tutaj." },
+      { tytul: "Przykładowa sprawa", opis: "Dane z przykładowej sprawy ZUS, którą otwierasz z listy przykładowych spraw." },
+      { tytul: "Wartość domyślna", opis: "Wartość, od której kalkulator zaczyna, dopóki jej nie zmienisz." },
+    ],
+    asideZrodlaNotatkaGosc: "Podstawę wymiaru zasiłku każdego rodzica wpiszesz przy wyniku.",
     // koniec ViewCalcMaternityInput
   },
   ViewCalcMaternityResult: {
@@ -4827,6 +4882,16 @@ export const teksty = {
       matka: "matka",
       drugiRodzic: "drugi rodzic",
       warianty: { "81-5": "81,5%", "100-70": "100% i 70%" },
+      // Tryb gościa: scenariusze w tej karcie przeglądarki, plan rodziny i wnioski po zalogowaniu.
+      opisGosc: "Zapisany scenariusz zostaje w tej karcie przeglądarki do jej zamknięcia. Porównasz go z innymi scenariuszami z tej karty.",
+      zapisanyGosc: ({ data, wariant }: { data: string; wariant: string }) =>
+        `Zapisany ${data} w tej karcie przeglądarki: dane wejściowe ze źródłem każdej wartości, podstawy wymiaru, okresy urlopów obojga rodziców, wariant ${wariant}, daty powrotu do pracy i harmonogram wypłat.`,
+      komunikatGosc:
+        "Zapisaliśmy scenariusz w tej karcie przeglądarki. Po zalogowaniu w tej karcie przeniesiemy ostatni zapisany scenariusz do Twoich wyników kalkulacji.",
+      komunikatGoscSprawy:
+        "Zapisaliśmy scenariusz przykładowej sprawy w tej karcie przeglądarki. Po zalogowaniu w tej karcie przeniesiemy ostatni zapisany scenariusz do Twoich wyników kalkulacji.",
+      zalogujPlan: "Zaloguj się, żeby zapisać scenariusz w planie rodziny",
+      zalogujPlanIWniosek: "Zaloguj się, żeby zapisać scenariusz w planie rodziny i przenieść go do wniosku",
       // koniec zapisScenariusza
     },
     porownanieZRozstrzygnieciem: {
@@ -4858,6 +4923,7 @@ export const teksty = {
       wrocDoWeryfikacji: "Wróć do weryfikacji sprawy",
       wybierzInna: "Wybierz inną sprawę",
       poprawDane: "Popraw dane sprawy",
+      zapisanoGosc: "Wynik zapisaliśmy w tej karcie przeglądarki z podstawą wymiaru ze źródłem przykładowa sprawa.",
       // koniec porownanieZRozstrzygnieciem
     },
     powrot: "Dane do wyliczenia",
@@ -4987,6 +5053,10 @@ export const teksty = {
     wsparcieOpis:
       "Organizacje, które pomagają rodzicom po stracie dziecka, oferują bezpłatne wsparcie psychologiczne, porady prawne i telefon wsparcia.",
     zobaczOrganizacje: "Zobacz organizacje wsparcia",
+    // Tryb gościa: wynik bez konta ZUS i profilu rodziny.
+    goscKomunikat: "Liczysz bez logowania. Wynik opiera się na danych z kalkulatora.",
+    goscZaloguj: "Zaloguj się, żeby uzupełnić podstawę wymiaru z konta ZUS i zapisać wynik w planie rodziny",
+    zalogujOrganizacje: "Zaloguj się, żeby zobaczyć organizacje wsparcia",
     // koniec ViewCalcMaternityResult
   },
   ViewCalcScenarioCompare: {
@@ -5035,6 +5105,10 @@ export const teksty = {
     drugiRodzic: "drugi rodzic",
     warianty: { "81-5": "81,5%", "100-70": "100% i 70%" },
     dzieci: { 1: "jedno dziecko", 2: "dwoje dzieci", 3: "troje dzieci", 4: "czworo dzieci", 5: "pięcioro albo więcej dzieci" },
+    // Tryb gościa: scenariusze zapisane w tej karcie przeglądarki.
+    opisGosc: "Widzisz scenariusze zapisane w tej karcie przeglądarki.",
+    opisOpcjiGosc: ({ data }: { data: string }) => `Zapisany ${data}.`,
+    zalogujPlan: "Zaloguj się, żeby zapisać wybrany scenariusz w planie rodziny",
     // koniec ViewCalcScenarioCompare
   },
   ViewCalcMaternityVariant: {
@@ -5337,6 +5411,8 @@ export const teksty = {
       nazwa: "Przykładowe sprawy: odczyt dokumentów demonstracyjnych",
       opis: "Konto nowego użytkownika z datą 21.11.2026 i odczytem dokumentów z plików demonstracyjnych, na przykład z3-kowalczyk.pdf, zam-kowalczyk.pdf, szpital.pdf albo zrzut-pawlak.png.",
     },
+    notatkaJednaSprawaGosc:
+      "Prowadzisz jedną przykładową sprawę naraz. Wybór sprawy albo wgranie dokumentu zaczyna nową sprawę i usuwa dane poprzedniej. Dane sprawy zostają w tej karcie przeglądarki do jej zamknięcia, a zalogowanie w tej karcie przenosi sprawę do Twojego konta.",
     // koniec ViewSampleCaseList
   },
   ViewSampleCaseUpload: {
@@ -5859,6 +5935,7 @@ export const teksty = {
       wariant815: ({ dni }: { dni: string }) =>
         `Wniosek z oświadczeniem o pełnym wymiarze urlopów złożony najpóźniej ${dni} dni po porodzie daje stawkę 81,5% za cały okres.`,
     },
+    notaNiezaleznoscGosc: "Weryfikacja korzysta wyłącznie z danych tej sprawy.",
     // koniec ViewSampleCaseVerification
   },
   ViewZamLeaveType: {
@@ -6279,6 +6356,15 @@ export const teksty = {
       oswiadczenia: "Oświadczenia",
       adresat: "Adresat wniosku",
     },
+    zakladkiEtykieta: "Sekcje wniosku",
+    zakladki: {
+      rodzaj: "Rodzaj urlopu",
+      okres: "Okres zasiłku",
+      dane: "Dane osób",
+      rachunek: "Rachunek",
+      oswiadczenia: "Oświadczenia",
+      adresat: "Adresat",
+    },
     zmien: "Zmień",
     zmienSekcje: ({ sekcja }: { sekcja: string }) => `Zmień sekcję ${sekcja}`,
     tabela: {
@@ -6341,7 +6427,6 @@ export const teksty = {
       rodzajUrlopu: "Rodzaj urlopu",
       okres: "Okres",
       zasilek: "Zasiłek",
-      flaga: "Tryb demonstracyjny, numer potwierdzenia przykładowy",
     },
     sprawa: {
       tytul: "Sprawa w Twoim planie",
@@ -6739,7 +6824,6 @@ export const teksty = {
     plikOdrzucony: ({ nazwa }: { nazwa: string }) => `Wybrany plik: ${nazwa} – nie dołączono`,
     z10Zalacznik: "Oświadczenie Z-10 z odpowiedziami z przewodnika",
     z10Generowane: "Przygotujemy je z Twoich odpowiedzi.",
-    kartaOswiadczenia: "Oświadczenie",
     oswiadczenie: "Oświadczam, że dane we wniosku są zgodne z prawdą, a o ich zmianie poinformuję ZUS.",
     wyslij: "Wyślij wniosek",
     wyslijNieaktywne: ({ numer }: { numer: string }) => `Wyślesz wniosek, gdy dołączysz plik zaświadczenia ${numer}.`,
@@ -6752,6 +6836,19 @@ export const teksty = {
     sprawaPowiazanaAkcja: "Zasiłek w wysokości zasiłku macierzyńskiego po utracie pracy w ciąży",
     odLekarza: "Zaświadczenie od lekarza",
     odLekarzaTresc: "Zrób zdjęcie albo skan formularza, który lekarz wydrukował i podpisał. ZUS nie ma tego zaświadczenia w swoich danych, dlatego plik jest wymagany.",
+    zakladkiEtykieta: "Sekcje wniosku",
+    zakladki: {
+      zaswiadczenie: "Zaświadczenie",
+      prawo: "Zasiłek",
+      z10: "Z-10",
+      wnioskodawca: "Wnioskodawca",
+      wyplata: "Wypłata",
+      wypadek: "Wypadek",
+      zalaczniki: "Załączniki",
+      pliki: "Pliki",
+    },
+    kartaPrawa: "Prawo do zasiłku",
+    kartaPlikow: "Pliki załączników",
     // koniec ViewZas53Summary
   },
   ViewZas53Sent: {
@@ -6775,7 +6872,6 @@ export const teksty = {
       `${procent} podstawy wymiaru za ${od} – ${koniec}`,
     zalaczniki: "Załączniki",
     brakZalacznikow: "-",
-    flagaDemo: "Tryb demonstracyjny – wniosek nie trafił do ZUS, numer potwierdzenia jest przykładowy",
     kartaSprawy: "Sprawa w Twoim planie",
     sprawa: "Zasiłek chorobowy w ciąży",
     status: ({ status, data }: { status: string; data: string }) => `Status: ${status}, ${data}`,
@@ -7024,7 +7120,6 @@ export const teksty = {
     potwierdzone: "Potwierdzone",
     zalacznikiTytul: "Załączniki",
     zalacznikiOpcjonalne: "Pliki są opcjonalne. Możesz je dołączyć tutaj albo przekazać pracodawcy osobno.",
-    dolaczPlik: ({ nazwa }: { nazwa: string }) => `Dołącz plik: ${nazwa}`,
     dolaczPlikPodpowiedz: "PDF, JPG albo PNG, najwyżej 10 MB.",
     plikDolaczony: ({ nazwa, rozmiar }: { nazwa: string; rozmiar: string }) => `${nazwa}, ${rozmiar}`,
     usunPlik: "Usuń plik",
@@ -7037,7 +7132,6 @@ export const teksty = {
     email: "Adres e-mail pracodawcy",
     emailPodpowiedz: "Adres zapiszemy w danych rodziny, żeby podpowiedzieć go przy kolejnym wniosku.",
     zobaczWiadomosc: "Zobacz wiadomość do pracodawcy",
-    demo: "Tryb demonstracyjny: wysłanie wniosku zasymulujemy.",
     wstecz: "Wstecz",
     zapiszDoDokonczenia: "Zapisz do dokończenia",
     pobierz: "Pobierz wniosek",
@@ -7055,12 +7149,20 @@ export const teksty = {
     dokumentData: ({ data }: { data: string }) => `Data przygotowania: ${data}`,
     dokumentAdresat: "Adresat",
     dokumentZalaczniki: "Załączniki",
+    zakladkiEtykieta: "Sekcje wniosku",
+    zakladki: {
+      rodzaj: "Rodzaj",
+      okres: "Okres",
+      osoby: "Pracownik i dziecko",
+      oswiadczenia: "Oświadczenia",
+      zalaczniki: "Załączniki",
+      adresat: "Adresat",
+    },
     // koniec ViewLeaveRequestSummary
   },
   ViewLeaveRequestSent: {
     tytulStrony: "Wniosek o urlop do pracodawcy wysłany",
     naglowek: "Wniosek wysłany",
-    demo: "Tryb demonstracyjny: wysłanie zasymulowane, wiadomość nie wyszła do pracodawcy.",
     szczegolyTytul: "Szczegóły wniosku",
     rodzaj: "Rodzaj wniosku",
     okresy: "Okres urlopu",
@@ -7273,7 +7375,6 @@ export const teksty = {
         wielojezyczny: "Opłata za odpis skrócony, także wielojęzyczny, na inny cel. Wniesiesz ją w usłudze rejestru stanu cywilnego na gov.pl.",
       },
       wybierzRodzaj: "Kwotę opłaty pokażemy po wyborze rodzaju odpisu.",
-      flagaOplaty: "Tryb demonstracyjny – pokazujemy tylko kwotę opłaty",
     },
     odbior: {
       tytul: "Sposób odbioru",
@@ -7301,7 +7402,6 @@ export const teksty = {
     urzadWGminie: ({ gmina }: { gmina: string }) => `Urząd stanu cywilnego w gminie ${gmina}`,
     sprawaK06: ({ tytul, status }: { tytul: string; status: string }) => `${tytul} – ${status}`,
     sprawaWPlanie: "Sprawa w Twoim planie:",
-    flaga: "Tryb demonstracyjny – złożenie wniosku jest symulowane",
     wrocDoInstrukcji: "Wróć do instrukcji sprawy",
     zloz: "Złóż wniosek",
     brakDatyPorodu: "Podaj datę porodu",
@@ -7334,7 +7434,6 @@ export const teksty = {
     urzad: "Urząd stanu cywilnego",
     adresat: "Adresat wniosku",
     adresatRejestr: "Rejestr stanu cywilnego na gov.pl",
-    flaga: "Tryb demonstracyjny – złożenie symulowane, numer potwierdzenia przykładowy",
     kartaDanych: "Dane we wniosku",
     dziecko: "Dziecko",
     wnioskodawca: "Wnioskodawca",
@@ -7362,6 +7461,13 @@ export const teksty = {
     listaWnioskow: "Wniosek zapisaliśmy na liście Twoich wniosków.",
     twojeWnioski: "Twoje wnioski",
     brakWniosku: "Nie znaleźliśmy złożonego wniosku o odpis.",
+    // Zakładki grup danych złożonego wniosku
+    zakladki: {
+      etykieta: "Szczegóły wniosku",
+      potwierdzenie: "Potwierdzenie",
+      dane: "Dane we wniosku",
+      sprawa: "Sprawa",
+    },
     // koniec ViewBirthCertificateRequestSent
   },
   ViewInviteAccept: {
@@ -8055,6 +8161,26 @@ export const teksty = {
     },
     // koniec ViewAssistantChat
   },
+  ViewFamilyPlanStage: {
+    tytulStrony: "Etap planu rodziny",
+    naglowek: ({ numer, nazwa }: { numer: string; nazwa: string }) => `Etap ${numer}: ${nazwa}`,
+    powrot: "Plan rodziny",
+    sprawyEtapu: "Sprawy w tym etapie",
+    nawigacja: "Etapy planu rodziny",
+    poprzedniEtap: ({ nazwa }: { nazwa: string }) => `Poprzedni etap: ${nazwa}`,
+    nastepnyEtap: ({ nazwa }: { nazwa: string }) => `Następny etap: ${nazwa}`,
+    wrocDoPlanu: "Wróć do planu rodziny",
+    swiadczeniaWCiazy: {
+      opis: "Sprawdź, czy w ciąży przysługuje zasiłek chorobowy, świadczenie rehabilitacyjne albo zasiłek w wysokości zasiłku macierzyńskiego.",
+      kafelek: "Świadczenia z ubezpieczenia chorobowego w ciąży",
+    },
+    nieznanyEtap: {
+      naglowek: "Nie znaleźliśmy tego etapu",
+      opis: "Plan rodziny ma 5 etapów. Wybierz etap w planie rodziny.",
+      akcja: "Przejdź do planu rodziny",
+    },
+    // koniec ViewFamilyPlanStage
+  },
   // Arkusze i okna modalne
   SheetHealthDataConsent: {
     tytul: "Zgoda na dane dotyczące zdrowia",
@@ -8292,6 +8418,9 @@ export const teksty = {
     miesiacPrawa: ({ miesiac }: { miesiac: string }) => `Miesiąc powstania prawa: ${miesiac}`,
     zapisz: "Zapisz podstawę",
     anuluj: "Anuluj",
+    // Tryb gościa: podstawa wpisana albo z przykładowej sprawy.
+    goscOpis: "Liczysz bez logowania, więc wpisz podstawę wymiaru zasiłku sam.",
+    goscZaloguj: "Zaloguj się, żeby wyliczyć podstawę z konta ZUS",
     // koniec SheetCalcBaseSource
   },
   ModalCalcAppliedRules: {
@@ -8590,7 +8719,6 @@ export const teksty = {
   },
   ModalEmployerMessagePreview: {
     tytul: "Wiadomość do pracodawcy",
-    demo: "Tryb demonstracyjny: wiadomość nie wyjdzie do pracodawcy.",
     do: "Do",
     temat: "Temat",
     zalaczniki: "Załączniki",

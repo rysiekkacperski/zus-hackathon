@@ -2,6 +2,8 @@
 // Właściciel: u05 (Przykładowe sprawy: lista, dokumenty i odczyt AI).
 // Sprawa żyje w danych sesji (StanSesji.przykladowaSprawa) i znika z końcem sesji; pliki dokumentów żyją
 // w IndexedDB najwyżej 24 godziny. Sprawa nie zmienia profilu rodziny, planu, terminów ani kopii danych ZUS.
+// Operacje działają dla zalogowanego konta i dla gościa (wlasciciel.ts): pola `konto` sprawy i dokumentów oraz
+// właściciel plików to PESEL konta albo 'gosc:<idSesjiGoscia>'.
 import { dodajMinuty, porownajZnaczniki } from '@/domena/daty';
 import { peselZastepczy } from '@/domena/przykladowe-sprawy/dane-zastepcze';
 import { pusteDaneSprawy, scalOdczytZKomunikatami, zKorekta } from '@/domena/przykladowe-sprawy/scalanie';
@@ -23,7 +25,14 @@ import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsci
 import { losowyCiag, losuj } from '@/dane/magazyn/losowanie';
 import { usunPlik, zapiszPlik } from '@/dane/magazyn/pliki';
 import { czyWymuszonyBladZapisu } from '@/dane/magazyn/rdzen';
-import { odczytajParametry, odczytajSesje, odczytajStanSesji, wykonajOperacje, zmienStanSesji } from '@/dane/magazyn/stan';
+import { odczytajParametry, wykonajOperacje, wykonajOperacjeZWynikiem } from '@/dane/magazyn/stan';
+import {
+  odczytajStanSesjiDla,
+  odczytajWlasciciela,
+  zapewnijWlasciciela,
+  zmienStanSesjiDla,
+  type WlascicielDanych,
+} from '@/dane/magazyn/wlasciciel';
 
 /** Tryb wgrania: nowa sprawa albo dokument dodany do bieżącej sprawy. */
 export type TrybWgraniaDokumentu = 'nowa' | 'dodaj';
@@ -52,25 +61,33 @@ function usunPlikiSprawy(sprawa: SprawaPrzykladowa | undefined): void {
   }
 }
 
-function zapiszSprawe(idSesji: string, zmiana: Partial<StanSesji>): void {
-  zmienStanSesji(idSesji, (stan) => ({ ...stan, ...zmiana }));
+/** Zapis zmiany stanu sesji właściciela; 0003, gdy sesja właściciela już się skończyła. */
+function zapiszSprawe(wlasciciel: WlascicielDanych, zmiana: Partial<StanSesji>): WynikOperacji {
+  return wykonajOperacjeZWynikiem(() =>
+    zmienStanSesjiDla(wlasciciel, (stan) => ({ ...stan, ...zmiana })) === null
+      ? { ok: false, kod: '0003' }
+      : { ok: true, wartosc: undefined },
+  );
 }
 
-/** Sprawa z zestawu ZUS albo sprawa wzorcowa jako bieżąca przykładowa sprawa sesji. */
+/** Sprawa z zestawu ZUS albo sprawa wzorcowa jako bieżąca przykładowa sprawa sesji konta albo gościa. */
 export function wybierzSpraweZespolu(id: string, ctx: KontekstOperacji): WynikOperacji {
-  const sesja = odczytajSesje();
   const wzor = sprawyZespolu().find((s) => s.idSprawy === id);
-  if (sesja === null || wzor === undefined) return { ok: false, kod: '0003' };
+  if (wzor === undefined) return { ok: false, kod: '0003' };
   if (czyWymuszonyBladZapisu()) return { ok: false, kod: '0003' };
-  const poprzednia = odczytajStanSesji(sesja.idSesji)?.przykladowaSprawa;
-  const sprawa: SprawaPrzykladowa = {
-    ...structuredClone(wzor),
-    konto: sesja.pesel,
-    rozpoczeto: ctx.teraz,
-    dokumenty: wzor.dokumenty.map((d) => ({ ...d, wgrano: ctx.teraz, konto: sesja.pesel })),
-    weryfikacja: undefined,
-  };
-  const wynik = wykonajOperacje(() => zapiszSprawe(sesja.idSesji, { przykladowaSprawa: sprawa, powiazaniaZastepcze: [] }));
+  const obecny = odczytajWlasciciela();
+  const poprzednia = obecny === null ? undefined : odczytajStanSesjiDla(obecny)?.przykladowaSprawa;
+  const wynik = wykonajOperacjeZWynikiem(() => {
+    const wlasciciel = zapewnijWlasciciela(ctx);
+    const sprawa: SprawaPrzykladowa = {
+      ...structuredClone(wzor),
+      konto: wlasciciel.id,
+      rozpoczeto: ctx.teraz,
+      dokumenty: wzor.dokumenty.map((d) => ({ ...d, wgrano: ctx.teraz, konto: wlasciciel.id })),
+      weryfikacja: undefined,
+    };
+    return zapiszSprawe(wlasciciel, { przykladowaSprawa: sprawa, powiazaniaZastepcze: [] });
+  });
   if (wynik.ok) usunPlikiSprawy(poprzednia);
   return wynik;
 }
@@ -107,30 +124,38 @@ async function odczytajPrzezApi(plik: File, stan: StanSesji | null, tryb: 'model
 export async function wgrajDokument(plik: File, tryb: TrybWgraniaDokumentu, ctx: KontekstOperacji): Promise<WynikOperacji<WynikWgrania>> {
   const kodPliku = walidujPlik({ typ: plik.type, rozmiar: plik.size });
   if (kodPliku !== null) return { ok: false, kod: kodPliku, bledyPol: { plik: kodPliku } };
-  const sesja = odczytajSesje();
-  if (sesja === null) return { ok: false, kod: '0003' };
 
   const symulacja = odczytajParametry().symulacje.odczytDokumentu;
   if (symulacja === 'nierozpoznany') return { ok: false, kod: '0105' };
   if (symulacja === 'nieczytelny') return { ok: false, kod: '0106' };
   if (symulacja === 'niedostepny') return { ok: false, kod: '0108' };
 
-  const stanPrzed = odczytajStanSesji(sesja.idSesji);
+  // Gość bez sesji gościa dostaje ją przed zapisem pliku, bo plik należy do sesji.
+  const zapewniony = wykonajOperacje(() => zapewnijWlasciciela(ctx));
+  if (!zapewniony.ok) return { ok: false, kod: zapewniony.kod };
+  const wlasciciel = zapewniony.wartosc;
+
+  const stanPrzed = odczytajStanSesjiDla(wlasciciel);
   const odczyt = await odczytajPrzezApi(plik, stanPrzed, symulacja);
   if (typeof odczyt === 'string') return { ok: false, kod: odczyt };
 
   const wygasa = dodajMinuty(ctx.teraz, CZAS_PRZECHOWANIA_PLIKU_MINUTY);
   let idPliku: string;
   try {
-    idPliku = await zapiszPlik(plik, { nazwa: `dokument-${losowyCiag(8)}`, wlasciciel: sesja.pesel, idSesji: sesja.idSesji, wygasa });
+    idPliku = await zapiszPlik(plik, {
+      nazwa: `dokument-${losowyCiag(8)}`,
+      wlasciciel: wlasciciel.id,
+      idSesji: wlasciciel.idSesji,
+      wygasa,
+    });
   } catch {
     return { ok: false, kod: '0003' };
   }
 
-  const stan = odczytajStanSesji(sesja.idSesji);
+  const stan = odczytajStanSesjiDla(wlasciciel);
   const biezaca = stan?.przykladowaSprawa;
-  const zaczynaNowa = tryb === 'nowa' || biezaca === undefined || biezaca.konto !== sesja.pesel;
-  const baza = zaczynaNowa ? nowaSprawa(sesja.pesel, ctx) : biezaca;
+  const zaczynaNowa = tryb === 'nowa' || biezaca === undefined || biezaca.konto !== wlasciciel.id;
+  const baza = zaczynaNowa ? nowaSprawa(wlasciciel.id, ctx) : biezaca;
   const rodzaj = odczyt.rodzajDokumentu as DokumentSprawy['rodzaj'];
   const dokument: DokumentSprawy = {
     id: `D-${losowyCiag(10)}`,
@@ -138,18 +163,16 @@ export async function wgrajDokument(plik: File, tryb: TrybWgraniaDokumentu, ctx:
     numer: 1,
     wgrano: ctx.teraz,
     idPliku,
-    konto: sesja.pesel,
+    konto: wlasciciel.id,
   };
   const { sprawa, komunikaty } = scalOdczytZKomunikatami(baza, odczyt, dokument);
   const zastapiony = baza.dokumenty.find((d) => d.rodzaj === rodzaj);
   const powiazania = zaczynaNowa ? odczyt.nowePowiazania : [...(stan?.powiazaniaZastepcze ?? []), ...odczyt.nowePowiazania];
 
-  const wynik = wykonajOperacje(() => {
-    zapiszSprawe(sesja.idSesji, {
-      przykladowaSprawa: sprawa,
-      powiazaniaZastepcze: powiazania,
-      plikiSesji: [...(stan?.plikiSesji ?? []), idPliku],
-    });
+  const wynik = zapiszSprawe(wlasciciel, {
+    przykladowaSprawa: sprawa,
+    powiazaniaZastepcze: powiazania,
+    plikiSesji: [...(stan?.plikiSesji ?? []), idPliku],
   });
   if (!wynik.ok) {
     void usunPlik(idPliku);
@@ -161,11 +184,11 @@ export async function wgrajDokument(plik: File, tryb: TrybWgraniaDokumentu, ctx:
 }
 
 function zmienSprawe(fn: (sprawa: SprawaPrzykladowa) => SprawaPrzykladowa): WynikOperacji {
-  const sesja = odczytajSesje();
-  const sprawa = sesja === null ? undefined : odczytajStanSesji(sesja.idSesji)?.przykladowaSprawa;
-  if (sesja === null || sprawa === undefined) return { ok: false, kod: '0003' };
+  const wlasciciel = odczytajWlasciciela();
+  const sprawa = wlasciciel === null ? undefined : odczytajStanSesjiDla(wlasciciel)?.przykladowaSprawa;
+  if (wlasciciel === null || sprawa === undefined) return { ok: false, kod: '0003' };
   if (czyWymuszonyBladZapisu()) return { ok: false, kod: '0003' };
-  return wykonajOperacje(() => zapiszSprawe(sesja.idSesji, { przykladowaSprawa: fn(sprawa) }));
+  return zapiszSprawe(wlasciciel, { przykladowaSprawa: fn(sprawa) });
 }
 
 /**
@@ -200,35 +223,33 @@ export function zapiszRozstrzygniecie(rozstrzygniecie: RozstrzygniecieSprawy[], 
 
 /** Usuwa pliki dokumentów po 24 godzinach od wgrania i zapisuje datę i godzinę usunięcia. */
 export function usunPlikiPo24h(ctx: KontekstOperacji): WynikOperacji<number> {
-  const sesja = odczytajSesje();
-  const sprawa = sesja === null ? undefined : odczytajStanSesji(sesja.idSesji)?.przykladowaSprawa;
-  if (sesja === null || sprawa === undefined) return { ok: true, wartosc: 0 };
+  const wlasciciel = odczytajWlasciciela();
+  const sprawa = wlasciciel === null ? undefined : odczytajStanSesjiDla(wlasciciel)?.przykladowaSprawa;
+  if (wlasciciel === null || sprawa === undefined) return { ok: true, wartosc: 0 };
   const wygasle = sprawa.dokumenty.filter(
     (d) => d.idPliku !== undefined && d.usunietoPlik === undefined
       && porownajZnaczniki(dodajMinuty(d.wgrano, CZAS_PRZECHOWANIA_PLIKU_MINUTY), ctx.teraz) <= 0,
   );
   if (wygasle.length === 0) return { ok: true, wartosc: 0 };
   for (const d of wygasle) if (d.idPliku) void usunPlik(d.idPliku);
-  const wynik = wykonajOperacje(() =>
-    zapiszSprawe(sesja.idSesji, {
-      przykladowaSprawa: {
-        ...sprawa,
-        dokumenty: sprawa.dokumenty.map((d) =>
-          wygasle.some((w) => w.id === d.id) ? { ...d, usunietoPlik: dodajMinuty(d.wgrano, CZAS_PRZECHOWANIA_PLIKU_MINUTY) } : d,
-        ),
-      },
-    }),
-  );
+  const wynik = zapiszSprawe(wlasciciel, {
+    przykladowaSprawa: {
+      ...sprawa,
+      dokumenty: sprawa.dokumenty.map((d) =>
+        wygasle.some((w) => w.id === d.id) ? { ...d, usunietoPlik: dodajMinuty(d.wgrano, CZAS_PRZECHOWANIA_PLIKU_MINUTY) } : d,
+      ),
+    },
+  });
   return wynik.ok ? { ok: true, wartosc: wygasle.length } : wynik;
 }
 
 /** Usunięcie sprawy, jej plików i powiązań danych zastępczych; komunikat 0179 na liście spraw. */
 export async function usunSprawe(ctx: KontekstOperacji): Promise<WynikOperacji> {
   void ctx;
-  const sesja = odczytajSesje();
-  if (sesja === null) return { ok: false, kod: '0003' };
-  const sprawa = odczytajStanSesji(sesja.idSesji)?.przykladowaSprawa;
-  const wynik = wykonajOperacje(() => zapiszSprawe(sesja.idSesji, { przykladowaSprawa: undefined, powiazaniaZastepcze: [] }));
+  const wlasciciel = odczytajWlasciciela();
+  if (wlasciciel === null) return { ok: false, kod: '0003' };
+  const sprawa = odczytajStanSesjiDla(wlasciciel)?.przykladowaSprawa;
+  const wynik = zapiszSprawe(wlasciciel, { przykladowaSprawa: undefined, powiazaniaZastepcze: [] });
   if (!wynik.ok) return wynik;
   await Promise.all((sprawa?.dokumenty ?? []).filter((d) => d.idPliku).map((d) => usunPlik(d.idPliku as string)));
   ustawKomunikatPoPrzejsciu({ kod: '0179', dlaWidoku: 'ViewSampleCaseList' });

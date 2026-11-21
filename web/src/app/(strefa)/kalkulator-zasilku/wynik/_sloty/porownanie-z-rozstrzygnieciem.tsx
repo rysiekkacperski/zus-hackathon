@@ -16,7 +16,7 @@ import { formatujKwote, formatujProcent } from '@/domena/kwoty';
 import { porownajWyliczenie, type PozycjaPorownania } from '@/domena/przykladowe-sprawy/porownanie';
 import { ustalPodstaweZeSprawy, wyliczWynikSprawy } from '@/domena/przykladowe-sprawy/weryfikacja';
 import type { KodKomunikatu } from '@/domena/typy';
-import { useKatalog, useParametry, useStanSesji } from '@/dane/magazyn/hooki';
+import { useCzyGosc, useKatalog, useParametry, useStanSesji } from '@/dane/magazyn/hooki';
 import { zapiszWynikKalkulacjiSprawy } from '@/dane/magazyn/operacje/weryfikacja-sprawy';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { teksty } from '@/teksty';
@@ -39,6 +39,7 @@ export function SlotPorownanieZRozstrzygnieciem({ zrodlo }: PropsSlotu<'wynik'>)
   const stanSesji = useStanSesji();
   const katalog = useKatalog();
   const parametry = useParametry();
+  const gosc = useCzyGosc();
   const sprawa = stanSesji?.przykladowaSprawa;
   const aktywny = zrodlo === ZRODLO && sprawa?.weryfikacja !== undefined;
 
@@ -135,7 +136,7 @@ export function SlotPorownanieZRozstrzygnieciem({ zrodlo }: PropsSlotu<'wynik'>)
       </Karta>
       <Karta tytul={T.coDalej} poziomTytulu={2} bezLinii>
         <Stos odstep={4}>
-          <p className="m-0 text-body">{porownanie.wynik === 'rozne' ? T.poprawOpis : T.zapisano}</p>
+          <p className="m-0 text-body">{porownanie.wynik === 'rozne' ? T.poprawOpis : gosc ? T.zapisanoGosc : T.zapisano}</p>
           <div className="flex flex-wrap gap-4">
             {porownanie.wynik === 'rozne' ? (
               <PrzyciskLink href={trasy.ViewSampleCaseData()} wariant="glowny">

@@ -25,7 +25,7 @@ export function WidokLogowaniaMobywatel() {
 
   return (
     <>
-      <NaglowekDemo flaga={tekst.flaga} tytul={tekst.naglowek} wstep={tekst.wstep} />
+      <NaglowekDemo tytul={tekst.naglowek} wstep={tekst.wstep} />
       <KartaKoduMakiety
         tytulKarty={tekst.karta}
         opisKoduQr={tekst.kodQr}

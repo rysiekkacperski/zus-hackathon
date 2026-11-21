@@ -8,7 +8,6 @@ import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import type { IdPliku, KodKomunikatu, ZaswiadczenieOStanieRozliczen } from '@/domena/typy';
 import { domyslnyDzienZaswiadczenia, walidujDzienStanu } from '@/domena/zasilki/stan-rozliczen';
 import { drukujDokument } from '@/komponenty/dokument-do-druku';
-import { FlagaDemo } from '@/komponenty/flaga-demo';
 import { formatujDate, formatujDateICzas, formatujKwote } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
@@ -106,7 +105,6 @@ export function WidokZaswiadczeniaORozliczeniach() {
       <div className="print:hidden">
         <NaglowekStrony tytul={t.naglowek} powrot={{ etykieta: t.powrot }} />
         <div className="flex max-w-tresc flex-col gap-7.5">
-          <FlagaDemo>{t.flagaDemo}</FlagaDemo>
           {bladOgolny ? <Komunikat kod={bladOgolny} /> : null}
           {wystawione ? (
             <>

@@ -1,14 +1,39 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
-import { useKonto } from '@/dane/magazyn/hooki';
+import { useCzyGosc, useKonto } from '@/dane/magazyn/hooki';
 import { wyloguj } from '@/dane/magazyn/operacje/konto';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { Ikona } from '@/komponenty/ikona';
-import { sciezkaWidoku } from '@/komponenty/rama/trasy';
+import { PrzyciskLink } from '@/komponenty/przycisk';
+import { sciezkaLogowaniaZPowrotem, sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { teksty } from '@/teksty';
+
+/** Adres logowania z powrotem na bieżący ekran z zapytaniem (tryb gościa). */
+export function useSciezkaLogowania(): string {
+  const sciezka = usePathname();
+  const zapytanie = useSearchParams().toString();
+  return sciezkaLogowaniaZPowrotem(zapytanie ? `${sciezka}?${zapytanie}` : sciezka);
+}
+
+// Tryb gościa: przycisk „Zaloguj się” w miejscu konta prowadzi do strony startowej z powrotem na bieżący ekran.
+function ZalogujWNaglowku() {
+  const href = useSciezkaLogowania();
+  return (
+    <div className="flex items-center px-3 md:border-l md:border-line md:pr-7.5 md:pl-6">
+      <PrzyciskLink href={href} wariant="glowny" ikona="konto">
+        {teksty.rama.zalogujSie}
+      </PrzyciskLink>
+    </div>
+  );
+}
+
+/** Obszar konta w nagłówku: menu zalogowanego konta albo przycisk logowania gościa. */
+export function KontoLubLogowanie() {
+  return useCzyGosc() ? <ZalogujWNaglowku /> : <KontoWNaglowku />;
+}
 
 const klasyPozycji =
   'flex w-full items-center gap-3 px-5 py-3 text-left text-body-strong text-brand no-underline hover:bg-brand-tint hover:text-brand-deep focus-visible:-outline-offset-2';

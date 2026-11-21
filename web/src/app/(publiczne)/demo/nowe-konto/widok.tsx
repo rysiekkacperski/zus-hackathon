@@ -88,7 +88,7 @@ export function WidokNowegoKonta() {
 
   return (
     <>
-      <NaglowekDemo flaga={tekst.flaga} tytul={tekst.naglowek} wstep={tekst.wstep} powrot={tekst.powrot} />
+      <NaglowekDemo tytul={tekst.naglowek} wstep={tekst.wstep} powrot={tekst.powrot} />
       {bladOgolny ? <Komunikat kod={bladOgolny} className="mb-7.5 max-w-190" /> : null}
       <Karta tytul={tekst.karta} bezLinii className="max-w-190">
         <form noValidate onSubmit={zaloz}>

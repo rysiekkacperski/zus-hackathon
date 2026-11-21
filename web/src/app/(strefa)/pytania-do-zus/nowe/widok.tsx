@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useMemo, useState, type FormEvent } from 'react';
-import { KartaKontekstu } from '@/app/(strefa)/pytania-do-zus/_czesci/karta-kontekstu';
+import { KartaKontekstu, grupyKontekstu } from '@/app/(strefa)/pytania-do-zus/_czesci/karta-kontekstu';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { wyslijPytanieDoZus } from '@/dane/magazyn/operacje/kanaly-zus-usc';
 import { zapiszStanSesji } from '@/dane/magazyn/operacje/sesja';
@@ -14,13 +14,14 @@ import { formatujDate } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
-import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
+import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Pole, klasyRamkiPolaWpisu } from '@/komponenty/pole';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { Stos, UkladDwuKolumnowy, Wiersz } from '@/komponenty/uklad';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
+import { useZakladkaWAdresie } from '@/komponenty/zakladki';
 import { teksty } from '@/teksty';
 
 const t = teksty.ViewZusQuestion;
@@ -56,9 +57,12 @@ export function WidokPytaniaDoZus() {
     [idSprawyZAdresu, konto?.pesel, rodzina, katalog],
   );
   const sprawa = kontekst.sprawa;
+  // Grupy danych kontekstu w zakładkach karty bocznej; wybrana zakładka w ?zakladka=.
+  const [zakladka, wybierzZakladke] = useZakladkaWAdresie(grupyKontekstu(kontekst));
 
   const [tresc, setTresc] = useState('');
-  const [bladWysylki, setBladWysylki] = useState<KodKomunikatu | null>(null);
+  // Komunikat błędu wysyłki jest chwilowy: po powrocie na trasę widok zaczyna bez niego.
+  const [bladWysylki, setBladWysylki] = useStanChwilowy<KodKomunikatu | null>(null);
   const { zajety: wysylanie, ustawZajety: ustawWysylanie, przejdz } = useNawigacjaZLadowaniem();
   const wartosci = useMemo(() => ({ tresc }), [tresc]);
   const walidacja = useWalidacjaNaBiezaco({ wartosci, waliduj: walidujPytanie, pola: { tresc: ID_POLA } });
@@ -162,6 +166,7 @@ export function WidokPytaniaDoZus() {
               tytul={t.kartaKontekstu}
               stanNa={teksty.wspolne.stanNa({ data: formatujDate(dzis) })}
               notatka={sprawa ? t.notatkaKontekstu : t.notatkaOgolna}
+              zakladki={{ wybrana: zakladka, onWybor: wybierzZakladke }}
             />
           }
         />

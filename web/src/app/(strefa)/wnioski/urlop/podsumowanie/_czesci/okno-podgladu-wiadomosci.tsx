@@ -7,7 +7,6 @@ import type { DataISO, WniosekOUrlop } from '@/domena/typy';
 import type { DaneKreatora } from '@/domena/wnioski/urlopy';
 import { nazwaPlikuWniosku } from '@/domena/wnioski/urlopy';
 import { zakresWniosku } from '@/domena/wnioski/wysylka-do-pracodawcy';
-import { FlagaDemo } from '@/komponenty/flaga-demo';
 import { OknoModalne } from '@/komponenty/okno';
 import { Przycisk } from '@/komponenty/przycisk';
 import { teksty } from '@/teksty';
@@ -22,11 +21,10 @@ export interface OknoPodgladuWiadomosciProps {
   dane?: DaneKreatora;
   email?: string;
   dzis?: DataISO;
-  trybDemonstracyjny?: boolean;
   onWyslij?: () => void;
 }
 
-export function OknoPodgladuWiadomosci({ otwarte, onZamknij, wniosek, dane, email, dzis, trybDemonstracyjny, onWyslij }: OknoPodgladuWiadomosciProps) {
+export function OknoPodgladuWiadomosci({ otwarte, onZamknij, wniosek, dane, email, dzis, onWyslij }: OknoPodgladuWiadomosciProps) {
   if (!wniosek || !dane || !dzis) return null;
   const rodzaj = tf.nazwyWnioskow[wniosek.podrodzaj ?? 'macierzynski-z-rodzicielskim'];
   const zakres = zakresWniosku(wniosek);
@@ -47,7 +45,6 @@ export function OknoPodgladuWiadomosci({ otwarte, onZamknij, wniosek, dane, emai
   });
   return (
     <OknoModalne otwarte={otwarte} onZamknij={onZamknij} tytul={t.tytul}>
-      {trybDemonstracyjny ? <FlagaDemo className="mb-4">{t.demo}</FlagaDemo> : null}
       <dl className="m-0 flex flex-col gap-3">
         {pozycje.map((p) => (
           <div key={p.etykieta} className="flex flex-wrap gap-x-4">

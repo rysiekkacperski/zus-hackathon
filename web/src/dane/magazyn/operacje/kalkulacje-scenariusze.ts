@@ -2,6 +2,8 @@
 // Właściciel: u20 (Kalkulator: urlopy obojga rodziców, łączenie z pracą, powrót, scenariusze).
 // Rodzic i Drugi rodzic zapisują scenariusz w Wynikach kalkulacji rodziny i jako wybrany wariant spraw w planie (0100),
 // Nowy użytkownik w Wynikach kalkulacji konta (0101), scenariusz przykładowej sprawy bez zmiany planu (0171).
+// Gość (tryb gościa) zapisuje scenariusz w wynikach kalkulacji gościa (0101 albo 0171); logowanie przenosi ostatni
+// scenariusz gościa do konta. Pozostałe operacje wymagają konta.
 import { maxData } from '@/domena/daty';
 import type {
   DaneRodziny,
@@ -35,6 +37,12 @@ import {
   zmienStanKonta,
   zmienStanRodziny,
 } from '@/dane/magazyn/stan';
+import {
+  czyGosc,
+  odczytajWynikiKalkulacjiKonta,
+  zapewnijWlasciciela,
+  zmienWynikiKalkulacjiKonta,
+} from '@/dane/magazyn/wlasciciel';
 
 /** Scenariusz przed nadaniem numeru, daty zapisu i konta. */
 export type NowyScenariuszKalkulatora = Omit<ScenariuszKalkulatora, 'numer' | 'zapisano' | 'konto' | 'wybranyWPlanie'>;
@@ -178,7 +186,7 @@ export function zapiszScenariusz(
 ): WynikOperacji<WynikZapisuScenariusza> {
   return wykonajOperacjeZWynikiem<WynikZapisuScenariusza>(() => {
     const k = kontekstZapisu();
-    if (k === null) return { ok: false, kod: '0003' };
+    if (k === null) return czyGosc() ? zapiszScenariuszGoscia(scenariusz, ctx) : { ok: false, kod: '0003' };
     const pesel = k.stanKonta.konto.pesel;
     if (k.rodzina !== null) {
       const numer = nastepnyNumer(k.rodzina.wynikiKalkulacji);
@@ -220,6 +228,29 @@ export function zapiszScenariusz(
     if (konto === null) return { ok: false, kod: '0003' };
     return { ok: true, wartosc: { numer, kod: scenariusz.przykladowaSprawa ? '0171' : '0101' } };
   });
+}
+
+/** Scenariusz gościa w wynikach kalkulacji gościa; gość bez sesji gościa dostaje nową sesję. */
+function zapiszScenariuszGoscia(
+  scenariusz: NowyScenariuszKalkulatora,
+  ctx: KontekstOperacji,
+): WynikOperacji<WynikZapisuScenariusza> {
+  const wlasciciel = zapewnijWlasciciela(ctx);
+  const wyniki = odczytajWynikiKalkulacjiKonta(wlasciciel);
+  if (wyniki === null) return { ok: false, kod: '0003' };
+  const numer = nastepnyNumer(wyniki);
+  const zapisany: ScenariuszKalkulatora = {
+    ...scenariusz,
+    zakres: 'konto',
+    numer,
+    zapisano: ctx.dzis,
+    konto: wlasciciel.id,
+    wybranyWPlanie: false,
+  };
+  if (zmienWynikiKalkulacjiKonta(wlasciciel, (x) => dopiszScenariusz(x, zapisany)) === null) {
+    return { ok: false, kod: '0003' };
+  }
+  return { ok: true, wartosc: { numer, kod: scenariusz.przykladowaSprawa ? '0171' : '0101' } };
 }
 
 /** Wybór scenariusza w planie rodziny (wybrany wariant spraw przez zapiszWybranyWariant). */

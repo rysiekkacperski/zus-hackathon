@@ -1,14 +1,17 @@
 'use client';
 
 // Dane, z których korzystają ViewCalcMaternityInput i ViewCalcMaternityResult (u15): konto, rodzina, kopie danych ZUS
-// obojga rodziców i imiona do nagłówków sekcji („Matka – Anna Nowak”).
+// obojga rodziców i imiona do nagłówków sekcji („Matka – Anna Nowak”). W trybie gościa kontekst nie ma konta,
+// rodziny ani danych ZUS, a kalkulator liczy wyłącznie na wartościach wpisanych w kalkulatorze i z przykładowej sprawy.
 import { useMemo } from 'react';
 import {
+  useCzyGosc,
   useDzis,
   useKatalog,
   useRodzina,
   useStanKonta,
   useStanKontaOsoby,
+  useWlascicielDanych,
 } from '@/dane/magazyn/hooki';
 import { plecZPesel } from '@/domena/pesel';
 import type {
@@ -24,7 +27,13 @@ import type {
 } from '@/domena/typy';
 
 export interface KontekstKalkulatora {
-  konto: KontoPrzewodnika;
+  // Zalogowane konto; null w trybie gościa.
+  konto: KontoPrzewodnika | null;
+  gosc: boolean;
+  // Klucz stanu roboczego: PESEL konta albo 'gosc:<id>'; null dla gościa przed pierwszym zapisem.
+  idWlasciciela: string | null;
+  // Identyfikator gościa, którego stan przeniosło logowanie w tej karcie (WlascicielDanych.zGoscia).
+  zGoscia?: string;
   nowyUzytkownik: boolean;
   rodzina: StanRodziny | null;
   kopiaKonta: DaneZKontaZus | null;
@@ -51,6 +60,8 @@ function imieINazwisko(o: { imie?: string; nazwisko?: string } | null | undefine
 }
 
 export function useKontekstKalkulatora(): KontekstKalkulatora | null {
+  const gosc = useCzyGosc();
+  const wlasciciel = useWlascicielDanych();
   const stanKonta = useStanKonta();
   const rodzinaZMagazynu = useRodzina();
   const katalog = useKatalog();
@@ -63,13 +74,36 @@ export function useKontekstKalkulatora(): KontekstKalkulatora | null {
   const stanDrugiego = useStanKontaOsoby(pesele['drugi-rodzic']);
 
   return useMemo(() => {
+    if (gosc) {
+      return {
+        konto: null,
+        gosc: true,
+        idWlasciciela: wlasciciel?.rodzaj === 'gosc' ? wlasciciel.id : null,
+        nowyUzytkownik: true,
+        rodzina: null,
+        kopiaKonta: null,
+        daneZus: { matka: null, 'drugi-rodzic': null },
+        drugiRodzicZDanymi: false,
+        imiona: {},
+        katalog,
+        dzis,
+      };
+    }
     if (stanKonta === null || konto === null) return null;
     const kopiaKonta = stanKonta.kopiaDanychZus;
+    const zKonta = {
+      konto,
+      gosc: false,
+      idWlasciciela: konto.pesel,
+      ...(wlasciciel?.rodzaj === 'konto' && wlasciciel.id === konto.pesel && wlasciciel.zGoscia
+        ? { zGoscia: wlasciciel.zGoscia }
+        : {}),
+    };
     if (rodzina === null) {
       const kobieta = plecZPesel(konto.pesel) === 'kobieta';
       const imie = imieINazwisko(konto);
       return {
-        konto,
+        ...zKonta,
         nowyUzytkownik: true,
         rodzina: null,
         kopiaKonta,
@@ -87,7 +121,7 @@ export function useKontekstKalkulatora(): KontekstKalkulatora | null {
         ? kopiaKonta
         : (stanDrugiego?.kopiaDanychZus ?? drugi.daneZKontaZus ?? kopiaKonta?.daneDrugiegoRodzicaZPel ?? null);
     return {
-      konto,
+      ...zKonta,
       nowyUzytkownik: false,
       rodzina,
       kopiaKonta,
@@ -103,5 +137,5 @@ export function useKontekstKalkulatora(): KontekstKalkulatora | null {
       katalog,
       dzis,
     };
-  }, [stanKonta, konto, rodzina, pesele, stanMatki, stanDrugiego, katalog, dzis]);
+  }, [gosc, wlasciciel, stanKonta, konto, rodzina, pesele, stanMatki, stanDrugiego, katalog, dzis]);
 }

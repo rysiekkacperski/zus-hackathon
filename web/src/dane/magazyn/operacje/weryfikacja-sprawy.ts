@@ -1,7 +1,8 @@
 // Weryfikacja przykładowej sprawy i zapis wyniku kalkulacji (kontrakt, sekcja 6.5).
 // Właściciel: u21 (Przykładowe sprawy: weryfikacja i sprawdzenie wyliczeń).
 // Przykładowa sprawa żyje w danych sesji (StanSesji.przykladowaSprawa); wynik kalkulatora trafia do Wyników
-// kalkulacji konta, więc profil rodziny, plan rodziny i terminy pozostają bez zmian.
+// kalkulacji konta, więc profil rodziny, plan rodziny i terminy pozostają bez zmian. Gość (tryb gościa) ma sprawę
+// w stanie sesji gościa, a wynik kalkulatora w wynikach kalkulacji gościa (wlasciciel.ts).
 import { roznicaDni } from '@/domena/daty';
 import { komunikatyPorownaniaWeryfikacji, porownajWeryfikacje } from '@/domena/przykladowe-sprawy/porownanie';
 import { walidujDaneSprawy } from '@/domena/przykladowe-sprawy/walidacja';
@@ -21,29 +22,29 @@ import type {
   WynikOperacji,
   WynikScenariusza,
 } from '@/domena/typy';
+import { odczytajKatalog, wykonajOperacjeZWynikiem } from '@/dane/magazyn/stan';
 import {
-  odczytajKatalog,
-  odczytajStanKonta,
-  odczytajStanSesji,
-  odczytajZalogowanego,
-  wykonajOperacjeZWynikiem,
-  zmienStanKonta,
-  zmienStanSesji,
-} from '@/dane/magazyn/stan';
+  odczytajStanSesjiDla,
+  odczytajWlasciciela,
+  odczytajWynikiKalkulacjiKonta,
+  zmienStanSesjiDla,
+  zmienWynikiKalkulacjiKonta,
+  type WlascicielDanych,
+} from '@/dane/magazyn/wlasciciel';
 
-function biezacaSprawa(): { idSesji: string; pesel: string; sprawa: SprawaPrzykladowa } | null {
-  const zalogowany = odczytajZalogowanego();
-  if (zalogowany === null) return null;
-  const sprawa = odczytajStanSesji(zalogowany.sesja.idSesji)?.przykladowaSprawa;
+function biezacaSprawa(): { wlasciciel: WlascicielDanych; sprawa: SprawaPrzykladowa } | null {
+  const wlasciciel = odczytajWlasciciela();
+  if (wlasciciel === null) return null;
+  const sprawa = odczytajStanSesjiDla(wlasciciel)?.przykladowaSprawa;
   if (sprawa === undefined) return null;
-  return { idSesji: zalogowany.sesja.idSesji, pesel: zalogowany.sesja.pesel, sprawa };
+  return { wlasciciel, sprawa };
 }
 
 /** Walidacja danych sprawy i zapis wyniku weryfikacji. */
 export function zatwierdzDaneSprawy(ctx: KontekstOperacji): WynikOperacji {
   const biezaca = biezacaSprawa();
   if (biezaca === null) return { ok: false, kod: '0109' };
-  const { sprawa, idSesji } = biezaca;
+  const { sprawa, wlasciciel } = biezaca;
 
   // Kolejność kontroli: format i wartości pól, potem kompletność danych do weryfikacji.
   const bledyPol: Record<string, KodKomunikatu> = {};
@@ -57,12 +58,12 @@ export function zatwierdzDaneSprawy(ctx: KontekstOperacji): WynikOperacji {
   const porownanie = porownajWeryfikacje(wynik, sprawa.rozstrzygniecie);
   const komunikaty = [...wynik.komunikaty, ...komunikatyPorownaniaWeryfikacji(porownanie)];
   return wykonajOperacjeZWynikiem(() => {
-    zmienStanSesji(idSesji, (stan) =>
+    const zmieniony = zmienStanSesjiDla(wlasciciel, (stan) =>
       stan.przykladowaSprawa === undefined
         ? stan
         : { ...stan, przykladowaSprawa: { ...stan.przykladowaSprawa, weryfikacja: { ...wynik, porownanie, komunikaty, czas: ctx.teraz } } },
     );
-    return { ok: true, wartosc: undefined };
+    return zmieniony === null ? { ok: false, kod: '0003' } : { ok: true, wartosc: undefined };
   });
 }
 
@@ -87,17 +88,18 @@ function parametryZeSprawy(sprawa: SprawaPrzykladowa, wynik: WynikScenariusza): 
 export function zapiszWynikKalkulacjiSprawy(wynik: WynikScenariusza, ctx: KontekstOperacji): WynikOperacji {
   const biezaca = biezacaSprawa();
   if (biezaca === null) return { ok: false, kod: '0003' };
-  const { sprawa, pesel } = biezaca;
+  const { sprawa, wlasciciel } = biezaca;
+  const pesel = wlasciciel.id;
   const podstawa = ustalPodstaweZeSprawy(sprawa.dane, odczytajKatalog());
   if ('kod' in podstawa) return { ok: false, kod: podstawa.kod };
   const rodzic: RodzicWRodzinie = sprawa.dane.ubezpieczony.rola.wartosc === 'ojciec-przejmujacy' ? 'drugi-rodzic' : 'matka';
   const daneWejsciowe = daneWejscioweZeSprawy(sprawa.dane);
   const parametry = parametryZeSprawy(sprawa, wynik);
 
-  const stanKonta = odczytajStanKonta(pesel);
-  if (stanKonta === null) return { ok: false, kod: '0003' };
+  const wynikiKonta = odczytajWynikiKalkulacjiKonta(wlasciciel);
+  if (wynikiKonta === null) return { ok: false, kod: '0003' };
   const podstawy = { [rodzic]: podstawa };
-  const poprzedni = stanKonta.wynikiKalkulacji.scenariusze.find((s) => s.przykladowaSprawa && s.konto === pesel);
+  const poprzedni = wynikiKonta.scenariusze.find((s) => s.przykladowaSprawa && s.konto === pesel);
   if (
     poprzedni !== undefined &&
     JSON.stringify([poprzedni.wynik, poprzedni.podstawy, poprzedni.daneWejsciowe]) === JSON.stringify([wynik, podstawy, daneWejsciowe])
@@ -106,8 +108,7 @@ export function zapiszWynikKalkulacjiSprawy(wynik: WynikScenariusza, ctx: Kontek
   }
 
   return wykonajOperacjeZWynikiem(() => {
-    zmienStanKonta(pesel, (stan) => {
-      const wyniki = stan.wynikiKalkulacji;
+    const zmienione = zmienWynikiKalkulacjiKonta(wlasciciel, (wyniki) => {
       const dotychczasowy = wyniki.scenariusze.find((s) => s.przykladowaSprawa && s.konto === pesel);
       const scenariusz: ScenariuszKalkulatora = {
         numer: dotychczasowy?.numer ?? wyniki.nastepnyNumer,
@@ -122,14 +123,11 @@ export function zapiszWynikKalkulacjiSprawy(wynik: WynikScenariusza, ctx: Kontek
         wynik,
       };
       return {
-        ...stan,
-        wynikiKalkulacji: {
-          ...wyniki,
-          scenariusze: [...wyniki.scenariusze.filter((s) => s !== dotychczasowy), scenariusz],
-          nastepnyNumer: dotychczasowy === undefined ? wyniki.nastepnyNumer + 1 : wyniki.nastepnyNumer,
-        },
+        ...wyniki,
+        scenariusze: [...wyniki.scenariusze.filter((s) => s !== dotychczasowy), scenariusz],
+        nastepnyNumer: dotychczasowy === undefined ? wyniki.nastepnyNumer + 1 : wyniki.nastepnyNumer,
       };
     });
-    return { ok: true, wartosc: undefined };
+    return zmienione === null ? { ok: false, kod: '0003' } : { ok: true, wartosc: undefined };
   });
 }

@@ -251,7 +251,7 @@ export function WidokPakietuNarodzin() {
         </Karta>
 
         <Wiersz odstep={6} className="flex-wrap">
-          <PrzyciskLink wariant="glowny" href={`${sciezkaWidoku('ViewFamilyPlan')}#etap-2`}>
+          <PrzyciskLink wariant="glowny" href={sciezkaWidoku('ViewFamilyPlanStage', { etap: 'pierwsze-tygodnie' })}>
             {t.przejdzDoPlanu}
           </PrzyciskLink>
           <Odnosnik href={sciezkaWidoku('ViewDeadlines')}>{t.wszystkieTerminy}</Odnosnik>

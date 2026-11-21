@@ -1,13 +1,16 @@
 'use client';
 
-// ez-shell ramy po zalogowaniu (kontrakt, sekcja 3.1).
+// ez-shell ramy strefy (kontrakt, sekcja 3.1). Na trasach gościa (kalkulator zasiłku i przykładowe sprawy) rama
+// bez zalogowanego konta pokazuje nagłówek z przyciskiem „Zaloguj się”, menu gościa, bez asystenta AI, bez odczytu
+// danych ZUS i bez synchronizacji rodziny.
 // Treść strony (children) przechodzi wyłącznie przez komponenty bez use(browser()), więc segment strony
 // renderuje się podczas prerenderu i walidacji natychmiastowej nawigacji. Części ramy, które czytają
 // magazyn hookami z use(browser()), leżą w osobnych granicach <Suspense> obok treści.
 import { usePathname } from 'next/navigation';
-import { Suspense, useCallback, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { PanelAsystenta } from '@/app/(strefa)/_asystent/panel';
-import { useKonto, useStanSesji } from '@/dane/magazyn/hooki';
+import { sprzatnijPoGosciach } from '@/dane/magazyn/gosc';
+import { useCzyGosc, useKonto, useStanSesji } from '@/dane/magazyn/hooki';
 import { zapiszStanSesji } from '@/dane/magazyn/operacje/sesja';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { Ikona } from '@/komponenty/ikona';
@@ -71,6 +74,17 @@ function AsystentRamy() {
   );
 }
 
+// Odczyt danych ZUS przy otwarciu i synchronizacja rodziny dotyczą wyłącznie zalogowanego konta.
+function UslugiKonta() {
+  if (useCzyGosc()) return null;
+  return (
+    <>
+      <OdczytPrzyOtwarciu />
+      <SynchronizacjaRodziny />
+    </>
+  );
+}
+
 // Zastępstwo menu bocznego od lg na czas odczytu magazynu.
 function SzkieletMenu() {
   return <div aria-hidden="true" className="hidden w-sidebar bg-brand lg:block" />;
@@ -83,6 +97,11 @@ export function RamaAplikacji({ children }: { children: React.ReactNode }) {
 
   // Zmiana ścieżki zamyka menu mobilne.
   if (menuMobilne.sciezka !== sciezka) setMenuMobilne({ otwarte: false, sciezka });
+
+  // Pliki gości z zamkniętych kart i pliki po 24 godzinach znikają po otwarciu ramy.
+  useEffect(() => {
+    void sprzatnijPoGosciach(pobierzKontekstOperacji());
+  }, []);
 
   const zamknijMenuMobilne = useCallback(
     (zwrocFokus: boolean) => {
@@ -97,8 +116,7 @@ export function RamaAplikacji({ children }: { children: React.ReactNode }) {
       <DostawcaKomunikatowPoPrzejsciu>
         <AktywnoscSesji />
         <Suspense fallback={null}>
-          <OdczytPrzyOtwarciu />
-          <SynchronizacjaRodziny />
+          <UslugiKonta />
         </Suspense>
         <div
           ref={kontenerPrzyciskuMenu}

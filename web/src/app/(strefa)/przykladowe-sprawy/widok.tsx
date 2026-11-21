@@ -12,7 +12,7 @@ import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { Stos } from '@/komponenty/uklad';
 import { Tabela } from '@/komponenty/tabela';
-import { useDzis } from '@/dane/magazyn/hooki';
+import { useCzyGosc, useDzis } from '@/dane/magazyn/hooki';
 import { sprawyZespolu, wybierzSpraweZespolu, zapamietajZestawyZus } from '@/dane/magazyn/operacje/przykladowe-sprawy';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import type { KodKomunikatu, OdpowiedzZestawowSpraw, SprawaPrzykladowa } from '@/domena/typy';
@@ -25,6 +25,7 @@ type Kolumna = 'sprawa' | 'sytuacja' | 'forma' | 'dokumenty' | 'prawo' | 'akcja'
 
 export function WidokPrzykladowychSpraw() {
   const dzis = useDzis();
+  const gosc = useCzyGosc();
   const { przejdz } = useNawigacjaZLadowaniem();
   const [sprawy, setSprawy] = useState<SprawaPrzykladowa[]>(() => sprawyZespolu());
   const [blad, setBlad] = useState<KodKomunikatu | null>(null);
@@ -120,7 +121,7 @@ export function WidokPrzykladowychSpraw() {
           <Tabela podpis={t.tabela.podpis} kolumny={kolumny} wiersze={wiersze} etykietaPrzewijania={t.tabela.etykietaPrzewijania} />
           <Notatka className="mt-6">{t.kartaListy.notatka}</Notatka>
         </Karta>
-        <Notatka>{t.notatkaJednaSprawa}</Notatka>
+        <Notatka>{gosc ? t.notatkaJednaSprawaGosc : t.notatkaJednaSprawa}</Notatka>
       </Stos>
     </>
   );

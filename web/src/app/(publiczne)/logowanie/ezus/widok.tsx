@@ -62,7 +62,7 @@ export function WidokLogowaniaEzus() {
 
   return (
     <>
-      <NaglowekDemo flaga={tekst.flaga} tytul={tekst.naglowek} wstep={tekst.wstep} />
+      <NaglowekDemo tytul={tekst.naglowek} wstep={tekst.wstep} />
       <Karta tytul={tekst.karta} bezLinii className="max-w-190">
         <form ref={formularz} noValidate onSubmit={zaloguj}>
           <div className="flex max-w-login-column flex-col gap-6">

@@ -277,8 +277,14 @@ function SekcjaDrugiegoRodzica({ konto, kontekst }: { konto: KontoPrzewodnika; k
   if (dolaczony !== null) {
     return (
       <Karta tytul={t.tytul} bezLinii>
+        {/* Notatka pod tabelą w lewej kolumnie, żeby panel zakładki podsumowania zmieścił się w oknie bez przewijania. */}
         <div className="flex flex-wrap items-start gap-7.5">
-          <div className="min-w-0 grow-999 basis-120">{tabela}</div>
+          <div className="flex min-w-0 grow-999 basis-120 flex-col gap-6">
+            {tabela}
+            <Notatka>
+              <p>{t.notatki.dolaczyl({ imieINazwisko: nazwaDopelniacz })}</p>
+            </Notatka>
+          </div>
           <div className="flex min-w-0 grow basis-84 flex-col gap-3">
             <h3 className="m-0 text-body-strong text-ink">{t.dolaczony.naglowek({ imieINazwisko: nazwa })}</h3>
             <p className="m-0 text-body">{t.dolaczony.opis({ imie: drugi.imie ?? nazwa })}</p>
@@ -290,9 +296,6 @@ function SekcjaDrugiegoRodzica({ konto, kontekst }: { konto: KontoPrzewodnika; k
             </div>
           </div>
         </div>
-        <Notatka className="mt-6">
-          <p>{t.notatki.dolaczyl({ imieINazwisko: nazwaDopelniacz })}</p>
-        </Notatka>
         <ArkuszOdlaczenia
           otwarte={odlaczenieOtwarte}
           onZamknij={() => ustawOdlaczenieOtwarte(false)}
@@ -324,8 +327,22 @@ function SekcjaDrugiegoRodzica({ konto, kontekst }: { konto: KontoPrzewodnika; k
       {odlaczony !== null && !zPelnomocnictwa && nazwa ? (
         <p className="m-0 mb-6 text-body">{t.odlaczonyOpis({ imieINazwisko: nazwa })}</p>
       ) : null}
+      {/* Notatka pod tabelą w lewej kolumnie, żeby panel zakładki podsumowania zmieścił się w oknie bez przewijania. */}
       <div className="flex flex-wrap items-start gap-7.5">
-        <div className="min-w-0 grow-999 basis-120">{tabela}</div>
+        <div className="flex min-w-0 grow-999 basis-120 flex-col gap-6">
+          {tabela}
+          <Notatka>
+            <p>
+              {zPelnomocnictwa
+                ? zachowane
+                  ? t.notatki.zPelnomocnictwa({ odpowiedzi: zachowane })
+                  : t.notatki.zPelnomocnictwaBezOdpowiedzi
+                : odlaczony !== null
+                  ? t.notatki.poOdlaczeniu
+                  : t.notatki.nieDolaczyl}
+            </p>
+          </Notatka>
+        </div>
         <div className="flex min-w-0 grow basis-84 flex-col gap-6">
           <div className="flex flex-col gap-3">
             <h3 className="m-0 text-body-strong text-ink">
@@ -363,17 +380,6 @@ function SekcjaDrugiegoRodzica({ konto, kontekst }: { konto: KontoPrzewodnika; k
           </div>
         </div>
       </div>
-      <Notatka className="mt-6">
-        <p>
-          {zPelnomocnictwa
-            ? zachowane
-              ? t.notatki.zPelnomocnictwa({ odpowiedzi: zachowane })
-              : t.notatki.zPelnomocnictwaBezOdpowiedzi
-            : odlaczony !== null
-              ? t.notatki.poOdlaczeniu
-              : t.notatki.nieDolaczyl}
-        </p>
-      </Notatka>
       <ArkuszZaproszenia
         otwarte={zaproszenie !== null}
         onZamknij={() => ustawZaproszenie(null)}

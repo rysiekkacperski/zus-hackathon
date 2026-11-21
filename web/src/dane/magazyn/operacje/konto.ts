@@ -20,7 +20,14 @@ import type {
 } from '@/domena/typy';
 import { bezpiecznyPowrot, dopasujTrase, sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { KLUCZ_LOGOWANIE, kluczDanychSesji, kluczOdczytano } from '@/dane/magazyn/klucze';
+import { sprzatnijPoGosciach } from '@/dane/magazyn/gosc';
 import { losowyUuid } from '@/dane/magazyn/losowanie';
+import {
+  odczytajStanGoscia,
+  posprzatajPoPrzeniesieniuGoscia,
+  przeniesStanGosciaWTransakcji,
+  type SkutkiPrzeniesieniaGoscia,
+} from '@/dane/magazyn/operacje/gosc';
 import { czyPrzypomnienieRodziny, przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
 import {
   odczytajIObsluzDaneZus,
@@ -28,7 +35,7 @@ import {
   zakonczSesjeWTransakcji,
   zakonczSesje,
 } from '@/dane/magazyn/operacje/sesja';
-import { usunPlikiWlasciciela, usunPlikiWygasle } from '@/dane/magazyn/pliki';
+import { usunPlikiWlasciciela } from '@/dane/magazyn/pliki';
 import { odczytaj, usunSystemowe, zapiszSystemowe } from '@/dane/magazyn/rdzen';
 import {
   kontoDemo,
@@ -96,15 +103,21 @@ export interface DaneLogowania {
  * Nowy użytkownik albo Administrator, zapisuje sposób zalogowania i wpis historii sesji, kończy
  * wcześniejszą sesję w tej przeglądarce, startuje sesję, wyznacza cel przez wyznaczEkranStartowy
  * (ekran sprzed wygaśnięcia zużywa się przy tym logowaniu) i uruchamia odczyt Danych z konta ZUS.
+ * Stan gościa tej karty (przykładowa sprawa, ostatni scenariusz kalkulatora, pliki) przechodzi do konta.
  * Zapisy logowania są systemowe, więc logowanie działa także przy symulacji błędu zapisu.
  */
 export function zalogujKontem(dane: DaneLogowania, ctx: KontekstOperacji): WynikOperacji<{ cel: string }> {
   // Identyfikator sesji zakończonej przy tym logowaniu, do sprzątnięcia plików po zatwierdzeniu.
-  const skutki: { zakonczonaSesja: string | null } = { zakonczonaSesja: null };
+  const skutki: { zakonczonaSesja: string | null; gosc: SkutkiPrzeniesieniaGoscia | null } = {
+    zakonczonaSesja: null,
+    gosc: null,
+  };
 
   const wynik = wykonajOperacjeZWynikiem<{ cel: string }>(() => {
     const demo = kontoDemo(dane.pesel);
     if (odczytajStanKonta(dane.pesel) === null && demo === null) return { ok: false, kod: '0003' };
+    // Stan gościa czytamy przed zamknięciem poprzedniej sesji, które czyści sessionStorage tej karty.
+    const gosc = odczytajStanGoscia();
 
     const poprzednia = odczytajSesje();
     if (poprzednia !== null) {
@@ -127,19 +140,20 @@ export function zalogujKontem(dane: DaneLogowania, ctx: KontekstOperacji): Wynik
     const { ekranSprzedWygasniecia, ...konto } = stanKonta.konto;
     void ekranSprzedWygasniecia;
 
-    zapiszStanKonta(
-      {
-        ...stanKonta,
-        konto: {
-          ...konto,
-          sposobZalogowania: dane.sposob,
-          historiaSesji: [...konto.historiaSesji, { idSesji: sesja.idSesji, poczatek: ctx.teraz, sposob: dane.sposob }],
-        },
+    const zapisanyStanKonta: StanKonta = {
+      ...stanKonta,
+      konto: {
+        ...konto,
+        sposobZalogowania: dane.sposob,
+        historiaSesji: [...konto.historiaSesji, { idSesji: sesja.idSesji, poczatek: ctx.teraz, sposob: dane.sposob }],
       },
-      'systemowe',
-    );
+    };
+    zapiszStanKonta(zapisanyStanKonta, 'systemowe');
     zapiszSesje(sesja);
     zapiszSystemowe(kluczDanychSesji(sesja.idSesji), stanSesjiPoczatkowy());
+    if (gosc !== null) {
+      skutki.gosc = przeniesStanGosciaWTransakcji(gosc, { stanKonta: zapisanyStanKonta, idSesji: sesja.idSesji });
+    }
     usunSystemowe(KLUCZ_LOGOWANIE, 'sessionStorage');
     // Odczyt przy zalogowaniu zastępuje odczyt przy otwarciu tej karty.
     zapiszSystemowe(kluczOdczytano(sesja.idSesji), '1', 'sessionStorage');
@@ -148,7 +162,8 @@ export function zalogujKontem(dane: DaneLogowania, ctx: KontekstOperacji): Wynik
 
   if (wynik.ok) {
     if (skutki.zakonczonaSesja !== null) posprzatajPoSesji(skutki.zakonczonaSesja);
-    void usunPlikiWygasle(ctx.teraz);
+    if (skutki.gosc !== null) posprzatajPoPrzeniesieniuGoscia(skutki.gosc, ctx);
+    void sprzatnijPoGosciach(ctx);
     const rola = odczytajStanKonta(dane.pesel)?.konto.rola;
     if (rola !== undefined && rola !== 'administrator') void odczytajIObsluzDaneZus(dane.pesel, ctx);
   }

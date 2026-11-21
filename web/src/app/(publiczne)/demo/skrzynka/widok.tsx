@@ -4,7 +4,6 @@
 // demonstracyjnym, z doręczeniem wiadomości zaplanowanych do bieżącej chwili. Właściciel: u18.
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { FlagaDemo } from '@/komponenty/flaga-demo';
 import { formatujDateICzas } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -106,9 +105,6 @@ export function WidokSkrzynkiDemo() {
 
   return (
     <div className="flex min-w-0 flex-col gap-7.5">
-      <div>
-        <FlagaDemo />
-      </div>
       <NaglowekStrony tytul={t.naglowek} wstep={t.wstep} />
 
       <Karta tytul={t.doreczanie.tytul} bezLinii>

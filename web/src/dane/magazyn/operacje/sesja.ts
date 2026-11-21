@@ -30,8 +30,8 @@ import {
   wykonajOperacje,
   zapiszSesje,
   zmienKonto,
-  zmienStanSesji,
 } from '@/dane/magazyn/stan';
+import { zmienStanSesjiWlasciciela } from '@/dane/magazyn/wlasciciel';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 
 export type PrzyczynaKoncaSesji = NonNullable<WpisHistoriiSesji['przyczynaKonca']>;
@@ -143,12 +143,12 @@ export function zarejestrujDzialanie(sciezka: string, ctx: KontekstOperacji): St
   return stan;
 }
 
-/** Zmienia dane bieżącej sesji (przykładowa sprawa, panel asystenta, oczekujący powrót z kanału). */
+/**
+ * Zmienia dane bieżącej sesji (przykładowa sprawa, panel asystenta, oczekujący powrót z kanału): sesji konta
+ * albo sesji gościa. Gość bez sesji gościa dostaje nową sesję gościa.
+ */
 export function zapiszStanSesji(zmiana: Partial<StanSesji>, ctx: KontekstOperacji): WynikOperacji<StanSesji> {
-  void ctx;
-  const sesja = odczytajSesje();
-  if (sesja === null) return { ok: false, kod: '0003' };
-  return wykonajOperacje(() => zmienStanSesji(sesja.idSesji, (stan) => ({ ...stan, ...zmiana })));
+  return wykonajOperacje(() => zmienStanSesjiWlasciciela((stan) => ({ ...stan, ...zmiana }), ctx));
 }
 
 /**

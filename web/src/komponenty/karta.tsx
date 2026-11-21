@@ -16,8 +16,8 @@ export interface KartaProps {
 }
 
 const klasyNaglowka = {
-  zLinia: 'mb-8 flex min-h-9 flex-wrap items-center gap-2 border-b border-line pb-5',
-  bezLinii: 'mb-6 flex min-h-9 flex-wrap items-center gap-2',
+  zLinia: 'mb-4 flex min-h-9 flex-wrap items-center gap-2 border-b border-line pb-3',
+  bezLinii: 'mb-3 flex min-h-9 flex-wrap items-center gap-2',
 } as const;
 
 const klasyTytulu = {
@@ -54,7 +54,7 @@ export function Karta({
           {akcje ? <div className="flex flex-wrap items-center gap-4">{akcje}</div> : null}
         </div>
       ) : akcje ? (
-        <div className="mb-6 flex flex-wrap items-center justify-end gap-4">{akcje}</div>
+        <div className="mb-3 flex flex-wrap items-center justify-end gap-4">{akcje}</div>
       ) : null}
       {children}
     </Znacznik>

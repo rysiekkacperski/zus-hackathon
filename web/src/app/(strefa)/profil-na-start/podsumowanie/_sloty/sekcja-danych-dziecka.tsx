@@ -72,20 +72,25 @@ export function SlotSekcjaDanychDziecka({ tryb, kontekst }: PropsSlotu<'sekcja'>
         ) : undefined
       }
     >
-      <Stos odstep={6}>
-        <ListaDefinicji pozycje={pozycjeDziecka(dane, zgoda)} />
-        {wynik.length > 0 ? (
-          <Stos odstep={3}>
-            <h3 className="m-0 text-body-strong text-ink">{t.coZTegoWynika}</h3>
-            <ListaDefinicji pozycje={wynik} />
+      {/* Dane dziecka obok wyniku i notatki, żeby panel zakładki podsumowania zmieścił się w oknie bez przewijania. */}
+      <div className="flex min-w-0 flex-wrap items-start gap-7.5">
+        <ListaDefinicji pozycje={pozycjeDziecka(dane, zgoda)} className="grow-999 basis-120" />
+        {wynik.length > 0 || mozeZmienic ? (
+          <Stos odstep={6} className="grow basis-84">
+            {wynik.length > 0 ? (
+              <Stos odstep={3}>
+                <h3 className="m-0 text-body-strong text-ink">{t.coZTegoWynika}</h3>
+                <ListaDefinicji pozycje={wynik} />
+              </Stos>
+            ) : null}
+            {mozeZmienic ? (
+              <Notatka>
+                <p>{t.notka}</p>
+              </Notatka>
+            ) : null}
           </Stos>
         ) : null}
-        {mozeZmienic ? (
-          <Notatka>
-            <p>{t.notka}</p>
-          </Notatka>
-        ) : null}
-      </Stos>
+      </div>
     </Karta>
   );
 }

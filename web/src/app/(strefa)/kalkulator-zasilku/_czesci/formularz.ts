@@ -215,15 +215,20 @@ export function formaZKontaZus(kopia: DaneZKontaZus, dzien: DataISO): OpcjaFormy
 // --- Uzupełnienie danych wejściowych -----------------------------------------------------------
 
 export interface WejscieUzupelnienia {
-  konto: KontoPrzewodnika;
+  // Null w trybie gościa: formularz startuje z wartości domyślnych.
+  konto: KontoPrzewodnika | null;
   rodzina: { daneRodziny: DaneRodziny; daneCiazy: DaneCiazyIDziecka | null } | null;
   kopiaKonta: DaneZKontaZus | null;
   dzis: DataISO;
 }
 
-/** Wartości pól ViewCalcMaternityInput ze źródłami: profil rodziny dla Rodzica i Drugiego rodzica, konto ZUS dla Nowego użytkownika. */
+/**
+ * Wartości pól ViewCalcMaternityInput ze źródłami: profil rodziny dla Rodzica i Drugiego rodzica, konto ZUS dla Nowego
+ * użytkownika, wartości domyślne dla gościa.
+ */
 export function uzupelnijFormularz(w: WejscieUzupelnienia): FormularzKalkulatora {
   const f = pustyFormularz();
+  if (w.konto === null) return f;
   if (w.rodzina === null || w.konto.rola === 'nowy-uzytkownik') {
     if (w.kopiaKonta !== null) {
       const opcja = formaZKontaZus(w.kopiaKonta, w.dzis);

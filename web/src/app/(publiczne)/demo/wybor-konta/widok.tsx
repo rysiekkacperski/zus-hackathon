@@ -9,8 +9,6 @@ import { NaglowekDemo } from '@/app/(publiczne)/_czesci/naglowek-demo';
 import { useDzis, useKontaDemo, useParametry } from '@/dane/magazyn/hooki';
 import { ustawParametry } from '@/dane/magazyn/operacje/parametry';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
-import { dodajDni } from '@/domena/daty';
-import { DNI_OD_URODZENIA_DZIECKA_Z_SYMULACJI } from '@/domena/dane-zus/symulacja-dziecka';
 import type { KodKomunikatu } from '@/domena/typy';
 import { formatujDate } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
@@ -35,7 +33,8 @@ export function WidokWyboruKonta() {
 
   const przykladowe = useMemo(() => konta.filter((k) => k.rodzaj !== 'nowe-konto'), [konta]);
   const nowe = useMemo(() => konta.filter((k) => k.rodzaj === 'nowe-konto'), [konta]);
-  const dataDzieckaZSymulacji = formatujDate(dodajDni(dzis, -DNI_OD_URODZENIA_DZIECKA_Z_SYMULACJI));
+  // Symulacja narodzin daje dziecko urodzone w dniu demonstracyjnym „dzisiaj”.
+  const dataDzieckaZSymulacji = formatujDate(dzis);
 
   const wlaczTryb = () => {
     const wynik = ustawParametry({ trybDemonstracyjny: true }, pobierzKontekstOperacji());
@@ -49,7 +48,7 @@ export function WidokWyboruKonta() {
 
   return (
     <>
-      <NaglowekDemo flaga={tekst.flaga} tytul={tekst.naglowek} wstep={tekst.wstep} />
+      <NaglowekDemo tytul={tekst.naglowek} wstep={tekst.wstep} />
       <div className="flex max-w-tresc flex-col gap-7.5">
         {blad ? <Komunikat kod={blad} /> : null}
         {tryb ? null : (
@@ -64,37 +63,47 @@ export function WidokWyboruKonta() {
           />
         )}
 
-        <Karta tytul={tekst.kontaPrzykladowe({ liczba: przykladowe.length })} bezLinii>
-          <div className="flex flex-col gap-3">
-            <Notatka>
-              <p>{tekst.notatkaDane}</p>
-            </Notatka>
-            {tryb ? (
+        <div className="flex flex-wrap items-start gap-7.5">
+          <Karta
+            tytul={tekst.kontaPrzykladowe({ liczba: przykladowe.length })}
+            bezLinii
+            className="min-w-0 grow-2 basis-160"
+          >
+            <div className="flex flex-col gap-3">
               <Notatka>
-                <p>{tekst.notatkaSymulacji({ data: dataDzieckaZSymulacji })}</p>
+                <p>{tekst.notatkaDane}</p>
               </Notatka>
-            ) : null}
-          </div>
-          <ul className="mt-6 mb-0 list-none border-t border-line-row p-0">
-            {przykladowe.map((konto) => (
-              <PozycjaKonta key={konto.pesel} konto={konto} onBlad={ustawBlad} />
-            ))}
-          </ul>
-        </Karta>
-
-        <Karta tytul={tekst.noweKonta({ liczba: nowe.length })} bezLinii>
-          <p className="m-0">{tekst.noweKontaOpis}</p>
-          {nowe.length > 0 ? (
+              {tryb ? (
+                <Notatka>
+                  <p>{tekst.notatkaSymulacji({ data: dataDzieckaZSymulacji })}</p>
+                </Notatka>
+              ) : null}
+            </div>
             <ul className="mt-6 mb-0 list-none border-t border-line-row p-0">
-              {nowe.map((konto) => (
+              {przykladowe.map((konto) => (
                 <PozycjaKonta key={konto.pesel} konto={konto} onBlad={ustawBlad} />
               ))}
             </ul>
-          ) : null}
-          <PrzyciskLink href={sciezkaWidoku('ViewDemoNewAccount')} wariant="drugorzedny" ikona="plus" className="mt-6">
-            {tekst.zalozNoweKonto}
-          </PrzyciskLink>
-        </Karta>
+          </Karta>
+
+          <Karta
+            tytul={tekst.noweKonta({ liczba: nowe.length })}
+            bezLinii
+            className="min-w-0 grow basis-88 lg:max-w-112"
+          >
+            <p className="m-0">{tekst.noweKontaOpis}</p>
+            {nowe.length > 0 ? (
+              <ul className="mt-6 mb-0 list-none border-t border-line-row p-0">
+                {nowe.map((konto) => (
+                  <PozycjaKonta key={konto.pesel} konto={konto} onBlad={ustawBlad} />
+                ))}
+              </ul>
+            ) : null}
+            <PrzyciskLink href={sciezkaWidoku('ViewDemoNewAccount')} wariant="drugorzedny" ikona="plus" className="mt-6">
+              {tekst.zalozNoweKonto}
+            </PrzyciskLink>
+          </Karta>
+        </div>
 
         {tryb ? (
           <p className="m-0">

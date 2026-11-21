@@ -48,6 +48,7 @@ export const idWidokowZTrasa = [
   'ViewBirthPackage',
   'ViewSpecialSituation',
   'ViewFamilyPlan',
+  'ViewFamilyPlanStage',
   'ViewPregnancyBenefits',
   'ViewCaseDetails',
   'ViewCaseGuide',
@@ -213,6 +214,11 @@ export interface WpisTrasy {
   grupa: GrupaTras;
   dostep: DostepTrasy;
   role: readonly Rola[];
+  /**
+   * Trasa dostępna także bez logowania, w trybie gościa (kalkulator zasiłku i przykładowe sprawy). Zalogowane
+   * konto wchodzi na nią według listy `role`.
+   */
+  gosc?: true;
   warunek?: WarunekTrasy;
   pozycjaMenu?: WidokMenu;
   /** Cel linku powrotu bez parametru ?powrot=. */
@@ -382,6 +388,12 @@ export const mapaTras: readonly WpisTrasy[] = [
     nastepnyZastepczy: { widok: 'ViewCaseDetails' }, zapytanie: [], jednostka: 'u12',
   },
   {
+    widok: 'ViewFamilyPlanStage', wzorzec: '/plan-rodziny/etap/[etap]', folder: '(strefa)/plan-rodziny/etap/[etap]',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewFamilyPlan',
+    rodzic: PLAN, nastepnyZastepczy: { widok: 'ViewCaseDetails' }, zapytanie: [], jednostka: 'u12',
+    przykladoweParametry: { etap: 'ciaza' },
+  },
+  {
     widok: 'ViewPregnancyBenefits', wzorzec: '/plan-rodziny/swiadczenia-w-ciazy', folder: '(strefa)/plan-rodziny/swiadczenia-w-ciazy',
     grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewFamilyPlan',
     rodzic: PLAN, nastepnyZastepczy: { widok: 'ViewCaseDetails' }, zapytanie: [], jednostka: 'u16',
@@ -389,13 +401,13 @@ export const mapaTras: readonly WpisTrasy[] = [
   {
     widok: 'ViewCaseDetails', wzorzec: '/sprawy/[idSprawy]', folder: '(strefa)/sprawy/[idSprawy]',
     grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewFamilyPlan',
-    rodzic: PLAN, nastepnyZastepczy: { widok: 'ViewCaseGuide' }, zapytanie: ['z', 'arkusz'], jednostka: 'u12',
+    rodzic: PLAN, nastepnyZastepczy: { widok: 'ViewCaseGuide' }, zapytanie: ['z', 'arkusz', 'etap'], jednostka: 'u12',
     przykladoweParametry: { idSprawy: 'K01' },
   },
   {
     widok: 'ViewCaseGuide', wzorzec: '/sprawy/[idSprawy]/instrukcja', folder: '(strefa)/sprawy/[idSprawy]/instrukcja',
     grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewFamilyPlan',
-    rodzic: { widok: 'ViewCaseDetails' }, nastepnyZastepczy: { widok: 'ViewZamLeaveType' }, zapytanie: ['z'], jednostka: 'u17',
+    rodzic: { widok: 'ViewCaseDetails' }, nastepnyZastepczy: { widok: 'ViewZamLeaveType' }, zapytanie: ['z', 'etap'], jednostka: 'u17',
     przykladoweParametry: { idSprawy: 'K01' },
   },
   {
@@ -450,17 +462,17 @@ export const mapaTras: readonly WpisTrasy[] = [
   // Kalkulatory
   {
     widok: 'ViewCalcMaternityInput', wzorzec: '/kalkulator-zasilku', folder: '(strefa)/kalkulator-zasilku',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_NU_R_DR, pozycjaMenu: 'ViewCalcMaternityInput',
+    grupa: 'strefa', dostep: 'zalogowany', gosc: true, role: ROLE_NU_R_DR, pozycjaMenu: 'ViewCalcMaternityInput',
     nastepnyZastepczy: { widok: 'ViewCalcMaternityResult' }, zapytanie: ['sprawa', 'zrodlo'], jednostka: 'u15',
   },
   {
     widok: 'ViewCalcMaternityResult', wzorzec: '/kalkulator-zasilku/wynik', folder: '(strefa)/kalkulator-zasilku/wynik',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_NU_R_DR, pozycjaMenu: 'ViewCalcMaternityInput',
+    grupa: 'strefa', dostep: 'zalogowany', gosc: true, role: ROLE_NU_R_DR, pozycjaMenu: 'ViewCalcMaternityInput',
     rodzic: { widok: 'ViewCalcMaternityInput' }, nastepnyZastepczy: { widok: 'ViewCalcScenarioCompare' }, zapytanie: ['sprawa', 'zrodlo', 'arkusz'], jednostka: 'u15',
   },
   {
     widok: 'ViewCalcScenarioCompare', wzorzec: '/kalkulator-zasilku/porownanie', folder: '(strefa)/kalkulator-zasilku/porownanie',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_NU_R_DR, pozycjaMenu: 'ViewCalcMaternityInput',
+    grupa: 'strefa', dostep: 'zalogowany', gosc: true, role: ROLE_NU_R_DR, pozycjaMenu: 'ViewCalcMaternityInput',
     rodzic: { widok: 'ViewCalcMaternityResult' }, zapytanie: ['numery'], jednostka: 'u20',
   },
   {
@@ -477,22 +489,22 @@ export const mapaTras: readonly WpisTrasy[] = [
   // Przykładowe sprawy ZUS
   {
     widok: 'ViewSampleCaseList', wzorzec: '/przykladowe-sprawy', folder: '(strefa)/przykladowe-sprawy',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_NU_R_DR, pozycjaMenu: 'ViewSampleCaseList',
+    grupa: 'strefa', dostep: 'zalogowany', gosc: true, role: ROLE_NU_R_DR, pozycjaMenu: 'ViewSampleCaseList',
     nastepnyZastepczy: { widok: 'ViewSampleCaseUpload' }, zapytanie: [], jednostka: 'u05',
   },
   {
     widok: 'ViewSampleCaseUpload', wzorzec: '/przykladowe-sprawy/wgraj-dokument', folder: '(strefa)/przykladowe-sprawy/wgraj-dokument',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_NU_R_DR, pozycjaMenu: 'ViewSampleCaseList',
+    grupa: 'strefa', dostep: 'zalogowany', gosc: true, role: ROLE_NU_R_DR, pozycjaMenu: 'ViewSampleCaseList',
     rodzic: { widok: 'ViewSampleCaseList' }, nastepnyZastepczy: { widok: 'ViewSampleCaseData' }, zapytanie: ['tryb'], jednostka: 'u05',
   },
   {
     widok: 'ViewSampleCaseData', wzorzec: '/przykladowe-sprawy/dane-sprawy', folder: '(strefa)/przykladowe-sprawy/dane-sprawy',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_NU_R_DR, pozycjaMenu: 'ViewSampleCaseList',
+    grupa: 'strefa', dostep: 'zalogowany', gosc: true, role: ROLE_NU_R_DR, pozycjaMenu: 'ViewSampleCaseList',
     rodzic: { widok: 'ViewSampleCaseList' }, nastepnyZastepczy: { widok: 'ViewSampleCaseVerification' }, zapytanie: [], jednostka: 'u05',
   },
   {
     widok: 'ViewSampleCaseVerification', wzorzec: '/przykladowe-sprawy/weryfikacja', folder: '(strefa)/przykladowe-sprawy/weryfikacja',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_NU_R_DR, pozycjaMenu: 'ViewSampleCaseList',
+    grupa: 'strefa', dostep: 'zalogowany', gosc: true, role: ROLE_NU_R_DR, pozycjaMenu: 'ViewSampleCaseList',
     rodzic: { widok: 'ViewSampleCaseData' }, nastepnyZastepczy: { widok: 'ViewCalcMaternityInput' }, zapytanie: [], jednostka: 'u21',
   },
 
@@ -825,4 +837,9 @@ export function dopasujTrase(pathname: string): DopasowanieTrasy | null {
   }
 
   return najlepsze?.dopasowanie ?? null;
+}
+
+/** Trasa dostępna bez logowania w trybie gościa (wpis mapy tras z `gosc: true`). */
+export function czyTrasaDlaGoscia(pathname: string): boolean {
+  return dopasujTrase(pathname)?.gosc === true;
 }

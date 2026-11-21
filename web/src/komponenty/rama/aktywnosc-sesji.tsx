@@ -4,11 +4,12 @@
 // Działanie użytkownika (pointerdown, keydown, submit) w fazie przechwytywania sprawdza sesję: po 15
 // minutach bezczynności blokuje zdarzenie, zapisuje ekran sprzed wygaśnięcia, kończy sesję z komunikatem
 // 0212 i przechodzi na `/`; w przeciwnym razie odnawia sesję najwyżej raz na 30 sekund. Powrót do karty
-// (pageshow, visibilitychange) bez sesji prowadzi na `/`.
+// (pageshow, visibilitychange) bez sesji prowadzi na `/`, z wyjątkiem tras gościa, które działają bez sesji.
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { sprawdzSesje, zarejestrujDzialanie } from '@/dane/magazyn/operacje/sesja';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
+import { czyTrasaDlaGoscia } from '@/komponenty/rama/mapa-tras';
 
 const ZDARZENIA_DZIALANIA = ['pointerdown', 'keydown', 'submit'] as const;
 // Kliknięcie po pointerdown, który ujawnił wygaśnięcie, też się nie wykonuje.
@@ -39,6 +40,7 @@ export function AktywnoscSesji() {
     };
 
     const sprawdzObecnosc = () => {
+      if (czyTrasaDlaGoscia(window.location.pathname)) return;
       if (sprawdzSesje(pobierzKontekstOperacji()) === 'brak-sesji') router.replace('/');
     };
     const naWidocznosc = () => {

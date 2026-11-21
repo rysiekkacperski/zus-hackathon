@@ -32,6 +32,9 @@ import { trescKomunikatu } from '@/komponenty/typy-komunikatow';
 import { Stos, UkladDwuKolumnowy } from '@/komponenty/uklad';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useDzis } from '@/dane/magazyn/hooki';
+import { zapewnijWlascicielaDanych } from '@/dane/magazyn/operacje/gosc';
+import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
+import type { KodKomunikatu } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { slotyDanychWejsciowych, type PropsSlotu } from './_sloty';
 import { POLA_CZESCI, czesciKalkulatora, type CzescKalkulatora } from './_czesci/czesci-kalkulatora';
@@ -55,6 +58,7 @@ import {
   type Zdarzenie,
 } from './_czesci/formularz';
 import { useKontekstKalkulatora, type KontekstKalkulatora } from './_czesci/kontekst-kalkulatora';
+import { useAdresLogowania } from './_czesci/notatka-logowania';
 import { ustawStanRoboczy, useStanRoboczy } from './_czesci/stan-roboczy';
 import { ZrodloPola } from './_czesci/zrodlo-pola';
 
@@ -95,7 +99,8 @@ const NAZWY_CZESCI: Record<CzescKalkulatora, string> = {
 export function WidokKalkulatoraZasilku() {
   const kontekst = useKontekstKalkulatora();
   if (kontekst === null) return <SzkieletWidoku />;
-  return <FormularzKalkulatoraWidok key={kontekst.konto.pesel} kontekst={kontekst} />;
+  // Gość zachowuje formularz, gdy pierwszy zapis zakłada sesję gościa.
+  return <FormularzKalkulatoraWidok key={kontekst.konto?.pesel ?? 'gosc'} kontekst={kontekst} />;
 }
 
 function ListaObjasnien({ pozycje }: { pozycje: readonly { tytul: string; opis: string }[] }) {
@@ -116,7 +121,9 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
   const idSprawy = parametryAdresu.get('sprawa');
   const zrodlo = parametryAdresu.get('zrodlo');
   const dzis = useDzis();
-  const stanRoboczy = useStanRoboczy(kontekst.konto.pesel);
+  const stanRoboczy = useStanRoboczy(kontekst.idWlasciciela, kontekst.zGoscia);
+  const adresLogowania = useAdresLogowania();
+  const [bladZapisu, ustawBladZapisu] = useState<KodKomunikatu | null>(null);
   const [formularz, ustawFormularz] = useState<FormularzKalkulatora>(() =>
     stanRoboczy
       ? formularzZDanych(stanRoboczy.dane)
@@ -168,12 +175,23 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
     if (zmiana.podstawy) ustawPodstawyZeSlotu((p) => ({ ...p, ...zmiana.podstawy }));
   }
 
-  // Akcja ostatniej części: formularz jest już sprawdzony w całości.
+  // Akcja ostatniej części: formularz jest już sprawdzony w całości. Gość bez sesji gościa dostaje ją tutaj,
+  // bo stan roboczy kluczuje właściciel danych.
   function oblicz() {
     const dane = zbudujDaneWejsciowe(formularz);
     if (dane === null) return;
+    let idWlasciciela = kontekst.idWlasciciela;
+    if (idWlasciciela === null) {
+      const wlasciciel = zapewnijWlascicielaDanych(pobierzKontekstOperacji());
+      if (!wlasciciel.ok) {
+        ustawBladZapisu(wlasciciel.kod);
+        return;
+      }
+      idWlasciciela = wlasciciel.wartosc.id;
+    }
+    ustawBladZapisu(null);
     ustawStanRoboczy({
-      konto: kontekst.konto.pesel,
+      konto: idWlasciciela,
       dane,
       podstawy: { ...(stanRoboczy?.podstawy ?? {}), ...podstawyZeSlotu },
       pelnyEtat: stanRoboczy?.pelnyEtat ?? {},
@@ -212,13 +230,15 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
   const etykietaMatki = imieMatki ? t.zImieniem({ rola: rolaMatki, imie: imieMatki }) : rolaMatki;
   const etykietaDrugiego = imieDrugiego ? t.zImieniem({ rola: t.drugiRodzic, imie: imieDrugiego }) : t.drugiRodzic;
 
-  const wstep = kontekst.nowyUzytkownik
-    ? f.formaMatki.zrodlo === 'konto-zus'
-      ? t.wstepNowyMatka
-      : f.formaDrugiego.zrodlo === 'konto-zus'
-        ? t.wstepNowyDrugiRodzic
-        : t.wstepBezDanych
-    : t.wstepProfil;
+  const wstep = kontekst.gosc
+    ? t.wstepGosc
+    : kontekst.nowyUzytkownik
+      ? f.formaMatki.zrodlo === 'konto-zus'
+        ? t.wstepNowyMatka
+        : f.formaDrugiego.zrodlo === 'konto-zus'
+          ? t.wstepNowyDrugiRodzic
+          : t.wstepBezDanych
+      : t.wstepProfil;
 
   const kat = kategoriaWczesniactwa(
     /^\d+$/.test(f.tydzienCiazy.wartosc.trim()) ? Number(f.tydzienCiazy.wartosc.trim()) : null,
@@ -248,8 +268,8 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
       </Karta>
     ) : (
       <Karta tytul={t.asideZrodla} bezLinii as="div">
-        <ListaObjasnien pozycje={t.asideZrodlaPozycje} />
-        <Notatka className="mt-6">{t.asideZrodlaNotatka}</Notatka>
+        <ListaObjasnien pozycje={kontekst.gosc ? t.asideZrodlaPozycjeGosc : t.asideZrodlaPozycje} />
+        <Notatka className="mt-6">{kontekst.gosc ? t.asideZrodlaNotatkaGosc : t.asideZrodlaNotatka}</Notatka>
       </Karta>
     );
 
@@ -568,9 +588,17 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
   return (
     <>
       <NaglowekStrony tytul={t.naglowek} stanNa={dzis} wstep={czesci.czyPierwsza ? wstep : undefined} powrot={false} />
-      {kontekst.nowyUzytkownik && czesci.czyPierwsza ? (
+      {kontekst.gosc && czesci.czyPierwsza ? (
+        <Komunikat
+          typ="INFO"
+          tresc={t.goscKomunikat}
+          akcje={<Odnosnik href={adresLogowania}>{t.goscZaloguj}</Odnosnik>}
+          className="mb-7.5"
+        />
+      ) : kontekst.nowyUzytkownik && czesci.czyPierwsza ? (
         <Komunikat kod="0101" tresc={trescKomunikatu('0101')} className="mb-7.5" />
       ) : null}
+      {bladZapisu ? <Komunikat kod={bladZapisu} className="mb-7.5" /> : null}
       <form noValidate aria-label={t.etykietaFormularza} onSubmit={wyslij}>
         <Stos odstep={7.5}>
           <PostepKreatora

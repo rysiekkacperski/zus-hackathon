@@ -1,7 +1,7 @@
 'use client';
 
 // ModalSampleCaseDocument (kontrakt, tabela 2.3): okno modalne na ViewSampleCaseData. Właściciel: u05.
-// Podgląd pliku wgranego przez konto (do 24 godzin od wgrania) albo pliku sprawy zespołu; po usunięciu pliku 0113
+// Podgląd pliku wgranego przez konto albo gościa (do 24 godzin od wgrania) albo pliku sprawy zespołu; po usunięciu pliku 0113
 // i akcja ponownego wgrania (wzory P13-07, P13-08).
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { Komunikat } from '@/komponenty/komunikat';
@@ -12,7 +12,7 @@ import { StanPusty } from '@/komponenty/stan-pusty';
 import { Ikona } from '@/komponenty/ikona';
 import { dodajMinuty, formatujDateICzas } from '@/domena/daty';
 import { pobierzPlik } from '@/dane/magazyn/pliki';
-import type { DokumentSprawy, Pesel } from '@/domena/typy';
+import type { DokumentSprawy } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { nazwaDokumentu } from '../../_czesci/opisy';
 
@@ -22,7 +22,8 @@ export interface OknoPodgladuDokumentuProps {
   otwarte: boolean;
   onZamknij: () => void;
   dokument?: DokumentSprawy | null;
-  konto?: Pesel;
+  // Właściciel danych: PESEL konta albo 'gosc:<id>' w trybie gościa.
+  konto?: string;
   onWgrajPonownie?: (plik: File) => void;
 }
 

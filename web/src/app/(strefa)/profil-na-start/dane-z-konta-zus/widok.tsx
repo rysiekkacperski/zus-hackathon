@@ -169,7 +169,7 @@ function PlatnikZasilku({ forma, kopia }: { forma: DanaZeZrodla<FormaZatrudnieni
     <>
       <span className="block">{wyplaca ? (ustalenie.nazwa ?? p.zus) : p.zus}</span>
       <span className="block">{wyplaca ? p.wyplaca : p.niewyplaca({ nazwa: ustalenie.nazwa ?? '' })}</span>
-      <ZrodloDanejPola zrodlo={ustalenie.zrodlo} className="mt-1" />
+      <ZrodloDanejPola zrodlo={ustalenie.zrodlo} className="mt-3" />
     </>
   );
 }
@@ -369,7 +369,7 @@ export function WidokDanychZKontaZus() {
                         {forma.wartosc === 'brak-tytulu' && forma.zrodlo === 'konto-zus' ? (
                           <span className="block">{opisBrakuTytulu(kopia)}</span>
                         ) : null}
-                        <ZrodloDanejPola zrodlo={forma.zrodlo} className="mt-1" />
+                        <ZrodloDanejPola zrodlo={forma.zrodlo} className="mt-3" />
                         <button
                           type="button"
                           id={ID_PRZYCISKU_FORMY}
@@ -404,7 +404,7 @@ export function WidokDanychZKontaZus() {
                           {t.rodzaj === 'dzialalnosc' ? null : (
                             <span className="block">{tekst.platnikSkladek({ nazwa: t.platnik.nazwa })}</span>
                           )}
-                          <ZrodloDanejPola zrodlo="konto-zus" className="mt-1" />
+                          <ZrodloDanejPola zrodlo="konto-zus" className="mt-3" />
                           <span className="block">
                             {t.rodzaj === 'dzialalnosc' ? tekst.zakonczonaDzialalnosc : tekst.zakonczonaUmowa}
                           </span>
@@ -465,7 +465,7 @@ export function WidokDanychZKontaZus() {
                       onZmiana={wybierzDobrowolne}
                       {...walidacja.pole('dobrowolne')}
                     />
-                    {dobrowolne ? <ZrodloDanejPola zrodlo={dobrowolne.zrodlo} className="mt-2" /> : null}
+                    {dobrowolne ? <ZrodloDanejPola zrodlo={dobrowolne.zrodlo} className="mt-3" /> : null}
                   </div>
                 ) : null}
               </Karta>

@@ -29,6 +29,7 @@ export type IdWidoku =
   | 'ViewBirthPackage'
   | 'ViewSpecialSituation'
   | 'ViewFamilyPlan'
+  | 'ViewFamilyPlanStage' // P: strona etapu planu rodziny
   | 'ViewPregnancyBenefits'
   | 'ViewCaseDetails'
   | 'ViewCaseGuide'

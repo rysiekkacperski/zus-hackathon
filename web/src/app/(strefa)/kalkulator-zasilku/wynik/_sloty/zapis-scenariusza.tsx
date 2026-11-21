@@ -3,6 +3,9 @@
 // Slot ViewCalcMaternityResult „zapis-scenariusza” w liście slotyWyniku (kontrakt, sekcja 12.4). Właściciel: u20.
 // Karta „Co dalej” (historyjka 3.10.4.5.1): zapis scenariusza (0100, 0101, 0171, 0003), wybrany wariant spraw planu,
 // porównanie scenariuszy i przeniesienie scenariusza do wniosku ZAM (0037, 0101) albo do wniosku o urlop do pracodawcy.
+// Gość zapisuje scenariusz w tej karcie przeglądarki, a w miejscu zapisu w planie i przeniesienia do wniosku dostaje
+// notatkę z odnośnikiem logowania.
+import { NotatkaLogowania } from '@/app/(strefa)/kalkulator-zasilku/_czesci/notatka-logowania';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useNazwyRodzicow } from '@/app/(strefa)/kalkulator-zasilku/porownanie/_czesci/rodzice';
@@ -11,7 +14,7 @@ import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
-import { useKatalog, useKonto, useRodzina } from '@/dane/magazyn/hooki';
+import { useCzyGosc, useKatalog, useKonto, useRodzina, useWlascicielDanych } from '@/dane/magazyn/hooki';
 import {
   przeniesDoWnioskuOUrlop,
   przeniesDoZam,
@@ -77,6 +80,8 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
   const [cel, ustawCel] = useStanChwilowy<'zam' | 'urlop' | null>(null);
   const konto = useKonto();
   const rodzina = useRodzina();
+  const gosc = useCzyGosc();
+  const wlasciciel = useWlascicielDanych();
   const katalog = useKatalog();
   const nazwy = useNazwyRodzicow();
   const [zapisany, ustawZapisany] = useState<Zapisany | null>(null);
@@ -112,7 +117,7 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
         ...nowy(),
         numer: wynik.wartosc.numer,
         zapisano: ctx.dzis,
-        konto: konto?.pesel ?? '',
+        konto: konto?.pesel ?? wlasciciel?.id ?? '',
         wybranyWPlanie: wynik.wartosc.kod === '0100',
       },
     });
@@ -161,7 +166,11 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
         {blad ? <Komunikat kod={blad} /> : null}
         {zapisany ? (
           <div className="flex flex-col gap-4">
-            <Komunikat kod={zapisany.kod} />
+            {gosc ? (
+              <Komunikat typ="INFO" tresc={przykladowa ? t.komunikatGoscSprawy : t.komunikatGosc} />
+            ) : (
+              <Komunikat kod={zapisany.kod} />
+            )}
             <section aria-labelledby="scenariusz-zapisany" className="flex flex-col gap-3 rounded-sm bg-surface-sunken p-4">
               <h3 id="scenariusz-zapisany" className="m-0 text-tile-title text-ink">
                 {t.scenariusz({ numer: String(zapisany.scenariusz.numer) })}
@@ -173,7 +182,9 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
                       kto: konto ? `${konto.imie} ${konto.nazwisko}` : '',
                       wariant: t.warianty[props.parametry.wariant],
                     })
-                  : t.zapisanyKonto({ data: formatujDate(zapisany.scenariusz.zapisano), wariant: t.warianty[props.parametry.wariant] })}
+                  : gosc
+                    ? t.zapisanyGosc({ data: formatujDate(zapisany.scenariusz.zapisano), wariant: t.warianty[props.parametry.wariant] })
+                    : t.zapisanyKonto({ data: formatujDate(zapisany.scenariusz.zapisano), wariant: t.warianty[props.parametry.wariant] })}
               </p>
               {warianty.length > 0 ? (
                 <>
@@ -196,7 +207,7 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
             </section>
           </div>
         ) : null}
-        <p className="m-0 text-body">{zPlanem ? t.opis : t.opisKonta}</p>
+        <p className="m-0 text-body">{zPlanem ? t.opis : gosc ? t.opisGosc : t.opisKonta}</p>
         <div className="flex flex-wrap gap-3">
           <Przycisk wariant="glowny" type="button" ikona="zapisz" onClick={() => zapisz()}>
             {t.zapisz}
@@ -204,17 +215,18 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
           <PrzyciskLink wariant="drugorzedny" href="/kalkulator-zasilku/porownanie">
             {t.porownaj}
           </PrzyciskLink>
-          {rodzicZam ? (
+          {rodzicZam && !gosc ? (
             <Przycisk wariant="drugorzedny" type="button" onClick={naZam} zajety={zajety && cel === 'zam'} disabled={zajety && cel !== 'zam'}>
               {t.przeniesZam({ kto: nazwy[rodzicZam].mianownik })}
             </Przycisk>
           ) : null}
-          {rodzicUrlopu ? (
+          {rodzicUrlopu && !gosc ? (
             <Przycisk wariant="drugorzedny" type="button" onClick={naUrlop} zajety={zajety && cel === 'urlop'} disabled={zajety && cel !== 'urlop'}>
               {t.przeniesUrlop({ kto: nazwy[rodzicUrlopu].mianownik })}
             </Przycisk>
           ) : null}
         </div>
+        {gosc ? <NotatkaLogowania odnosnik={rodzicZam || rodzicUrlopu ? t.zalogujPlanIWniosek : t.zalogujPlan} /> : null}
       </div>
     </Karta>
   );

@@ -336,10 +336,11 @@ export function zapiszSystemowe<T>(klucz: string, wartosc: T, miejsce: MiejsceZa
   zapiszWTransakcji(miejsce, klucz, wartosc, 'systemowe');
 }
 
+/**
+ * Zapis z podanym rodzajem i miejscem. Zapis domenowy trafia do localStorage, a dane gościa (wyniki
+ * kalkulacji bez logowania) do sessionStorage karty; oba podlegają symulacji błędu zapisu.
+ */
 export function zapisz<T>(klucz: string, wartosc: T, rodzaj: RodzajZapisu, miejsce: MiejsceZapisu = 'localStorage'): void {
-  if (rodzaj === 'domenowe' && miejsce !== 'localStorage') {
-    throw new Error('Zapis domenowy trafia wyłącznie do localStorage.');
-  }
   zapiszWTransakcji(miejsce, klucz, wartosc, rodzaj);
 }
 

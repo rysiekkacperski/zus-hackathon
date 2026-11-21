@@ -2,7 +2,8 @@
 
 // ViewCalcScenarioCompare (historyjka 3.10.4.5.1, wzory P12-36 i P12-37). Właściciel: u20.
 // Lista zapisanych scenariuszy rodziny albo konta, wybór od 2 do 3 scenariuszy (0170), tabela porównania
-// i zapis scenariusza w planie rodziny (0100).
+// i zapis scenariusza w planie rodziny (0100). Gość porównuje scenariusze zapisane w tej karcie przeglądarki, a zapis
+// w planie rodziny dostaje po zalogowaniu.
 import { useSearchParams } from 'next/navigation';
 import { useMemo, useState, type FocusEvent, type ReactNode } from 'react';
 import { Karta } from '@/komponenty/karta';
@@ -16,12 +17,13 @@ import { Tabela } from '@/komponenty/tabela';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { Znaczek } from '@/komponenty/znaczek';
 import { formatujDate, formatujKwote } from '@/komponenty/format';
-import { useDzis, useKonto, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
+import { useCzyGosc, useDzis, useKonto, useRodzina, useStanKonta, useWynikiKalkulacji } from '@/dane/magazyn/hooki';
 import { zapiszScenariuszWPlanie } from '@/dane/magazyn/operacje/kalkulacje-scenariusze';
 import { osobyRodziny } from '@/dane/magazyn/stan';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import type { KodKomunikatu, Pesel, RodzicWRodzinie, ScenariuszKalkulatora } from '@/domena/typy';
 import { teksty } from '@/teksty';
+import { NotatkaLogowania } from '../_czesci/notatka-logowania';
 import {
   RODZICE,
   sortujScenariusze,
@@ -59,12 +61,17 @@ export function WidokPorownaniaScenariuszy() {
   const konto = useKonto();
   const stanKonta = useStanKonta();
   const rodzina = useRodzina();
+  const gosc = useCzyGosc();
+  const wynikiGoscia = useWynikiKalkulacji();
   const nazwy = useNazwyRodzicow();
   const zPlanem = rodzina !== null && (konto?.rola === 'rodzic' || konto?.rola === 'drugi-rodzic');
 
   const scenariusze = useMemo(
-    () => sortujScenariusze((zPlanem ? rodzina.wynikiKalkulacji : stanKonta?.wynikiKalkulacji)?.scenariusze ?? []),
-    [zPlanem, rodzina, stanKonta],
+    () =>
+      sortujScenariusze(
+        (gosc ? wynikiGoscia : zPlanem ? rodzina.wynikiKalkulacji : stanKonta?.wynikiKalkulacji)?.scenariusze ?? [],
+      ),
+    [gosc, wynikiGoscia, zPlanem, rodzina, stanKonta],
   );
   const zAdresu = numeryZAdresu(adres.get('numery'));
   const [wybrane, ustawWybrane] = useState<string[]>(zAdresu);
@@ -187,7 +194,7 @@ export function WidokPorownaniaScenariuszy() {
         <>
           <Karta tytul={t.listaTytul} bezLinii>
             <div className="flex flex-col gap-4">
-              <p className="m-0 text-body">{zPlanem ? t.opisRodziny : t.opisKonta}</p>
+              <p className="m-0 text-body">{zPlanem ? t.opisRodziny : gosc ? t.opisGosc : t.opisKonta}</p>
               <div
                 onBlur={(e: FocusEvent<HTMLDivElement>) => {
                   if (opuszczonoKontener(e)) walidacja.onOpuszczenie('wybor');
@@ -206,7 +213,9 @@ export function WidokPorownaniaScenariuszy() {
                         })
                       : t.opcja({ numer: String(s.numer), wariant: t.warianty[s.parametry.wariant] }),
                     opis: [
-                      t.opisOpcji({ data: formatujDate(s.zapisano), konto: nazwaKonta(s.konto) }),
+                      gosc
+                        ? t.opisOpcjiGosc({ data: formatujDate(s.zapisano) })
+                        : t.opisOpcji({ data: formatujDate(s.zapisano), konto: nazwaKonta(s.konto) }),
                       s.wybranyWPlanie ? t.wybranyWPlanieOpis : null,
                       s.przykladowaSprawa ? t.przykladowaSprawaOpis : null,
                     ]
@@ -239,6 +248,7 @@ export function WidokPorownaniaScenariuszy() {
                   wiersze={wiersze}
                 />
                 {zPlanem ? <p className="m-0 text-small text-ink-muted">{t.notatkaPlanu}</p> : null}
+                {gosc ? <NotatkaLogowania odnosnik={t.zalogujPlan} /> : null}
               </div>
             </Karta>
           ) : null}

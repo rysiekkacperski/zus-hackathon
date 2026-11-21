@@ -1,7 +1,8 @@
 'use client';
 
-// Blok strażnika ubezpieczenia chorobowego w etapie Ciąża na ViewFamilyPlan (historyjka 3.6.1.3.1,
-// wzory Plan-rodziny, P06-04, P06-05, P06-06, P06-08). Właściciel: u12.
+// Blok strażnika ubezpieczenia chorobowego na stronie etapu Ciąża ViewFamilyPlanStage (historyjka 3.6.1.3.1,
+// wzory Plan-rodziny, P06-04, P06-05, P06-06, P06-08). Link do sprawy Opłacenie składek niesie ?etap=ciaza,
+// więc powrót z karty sprawy wraca na stronę etapu. Właściciel: u12.
 import { dodajMiesiaceDoMiesiaca, formatujDate, formatujDateICzas } from '@/domena/daty';
 import { formatujKwote, formatujProcent } from '@/domena/kwoty';
 import { dzienUtworzeniaSprawyOplacenia, terminOplaceniaSkladek, type OcenaStraznika } from '@/domena/plan/straznik';
@@ -16,6 +17,7 @@ import { sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { Tabela } from '@/komponenty/tabela';
 import { StatusSprawy } from '@/komponenty/znaczek';
 import { teksty } from '@/teksty';
+import { PARAMETR_ETAPU } from './sciezka-etapu';
 
 const t = teksty.ViewFamilyPlan.straznik;
 const to = teksty.ViewFamilyPlan.oplacenie;
@@ -178,7 +180,10 @@ export function StraznikPlanu({ ocena, sprawaOplacenia, rola, matkaDopelniacz, o
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1">
               <p className="m-0">
-                <Odnosnik href={sciezkaWidoku('ViewCaseDetails', { idSprawy: oplacenie.idSprawy })} pochodzenie="plan">
+                <Odnosnik
+                  href={sciezkaWidoku('ViewCaseDetails', { idSprawy: oplacenie.idSprawy, [PARAMETR_ETAPU]: 'ciaza' })}
+                  pochodzenie="plan"
+                >
                   {to.tytul({ miesiac: formatujMiesiac(oplacenie.miesiac) })}
                 </Odnosnik>
               </p>

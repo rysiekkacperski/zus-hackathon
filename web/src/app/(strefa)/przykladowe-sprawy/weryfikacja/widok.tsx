@@ -16,7 +16,7 @@ import { formatujDate, formatujDateICzas } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
 import { czyZasilekMacierzynskiPrzysluguje } from '@/domena/przykladowe-sprawy/weryfikacja';
 import type { KodKomunikatu, SprawaPrzykladowa, WynikWeryfikacjiSprawy } from '@/domena/typy';
-import { useStanSesji } from '@/dane/magazyn/hooki';
+import { useCzyGosc, useStanSesji } from '@/dane/magazyn/hooki';
 import { teksty } from '@/teksty';
 import { adresCzesciDanychSprawy } from '../_czesci/czesci-danych-sprawy';
 import { LegendaWynikow, ZnacznikPorownania, ZnacznikWarunku, ZIkona } from './_czesci/znacznik-wyniku';
@@ -214,6 +214,7 @@ function KartaWarunkow({ wynik }: { wynik: WynikWeryfikacjiSprawy }) {
 
 export function WidokWeryfikacjiSprawy() {
   const stanSesji = useStanSesji();
+  const gosc = useCzyGosc();
   const sprawa = stanSesji?.przykladowaSprawa;
   const wynik = sprawa?.weryfikacja;
 
@@ -255,7 +256,7 @@ export function WidokWeryfikacjiSprawy() {
         <KomunikatyWeryfikacji sprawa={sprawa} wynik={wynik} />
         <KartaWyniku sprawa={sprawa} wynik={wynik} />
         <KartaWarunkow wynik={wynik} />
-        <Notatka>{T.notaNiezaleznosc}</Notatka>
+        <Notatka>{gosc ? T.notaNiezaleznoscGosc : T.notaNiezaleznosc}</Notatka>
       </Stos>
     </>
   );

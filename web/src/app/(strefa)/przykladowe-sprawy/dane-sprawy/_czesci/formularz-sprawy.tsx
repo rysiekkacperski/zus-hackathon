@@ -44,7 +44,7 @@ import {
 import { zapiszKorekte, zapiszRozstrzygniecie } from '@/dane/magazyn/operacje/przykladowe-sprawy';
 import { zatwierdzDaneSprawy } from '@/dane/magazyn/operacje/weryfikacja-sprawy';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
-import type { DokumentSprawy, KodKomunikatu, Pesel, SprawaPrzykladowa, WartoscOdczytana, WartoscSprawy, ZrodloWartosciSprawy } from '@/domena/typy';
+import type { DokumentSprawy, KodKomunikatu, SprawaPrzykladowa, WartoscOdczytana, WartoscSprawy, ZrodloWartosciSprawy } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { czesciDanychSprawy, type CzescDanychSprawy } from '../../_czesci/czesci-danych-sprawy';
 import { nazwaDokumentu } from '../../_czesci/opisy';
@@ -152,7 +152,8 @@ type PropsyPola = { blad: KodKomunikatu | null; onOpuszczenie: () => void };
 
 export interface FormularzSprawyProps {
   sprawa: SprawaPrzykladowa;
-  konto?: Pesel;
+  // Właściciel danych: PESEL konta albo 'gosc:<id>' w trybie gościa.
+  konto?: string;
   teraz: string;
   onDodajDokument: (plik: File) => Promise<KodKomunikatu | null>;
   dodawanie: string | null;

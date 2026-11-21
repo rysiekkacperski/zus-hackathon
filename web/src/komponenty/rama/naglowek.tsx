@@ -2,12 +2,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { PrzyciskIkona } from '@/komponenty/przycisk-ikona';
-import { KontoWNaglowku } from '@/komponenty/rama/konto-w-naglowku';
+import { KontoLubLogowanie } from '@/komponenty/rama/konto-w-naglowku';
 import { teksty } from '@/teksty';
 
 // Plik bez dyrektywy 'use client': NaglowekPubliczny i Logo renderują się na serwerze,
 // a Naglowek renderuje wyłącznie kliencka RamaAplikacji, która przekazuje mu obsługę zdarzeń.
-// KontoWNaglowku czyta magazyn, więc leży w osobnej granicy <Suspense>.
+// KontoLubLogowanie czyta magazyn, więc leży w osobnej granicy <Suspense>. Gość widzi w tym miejscu
+// przycisk „Zaloguj się”, a zalogowane konto menu konta.
 
 export interface LogoProps {
   href: string;
@@ -57,7 +58,7 @@ export interface NaglowekProps {
   className?: string;
 }
 
-// ez-header ramy po zalogowaniu: przycisk menu poniżej lg, logo i konto.
+// ez-header ramy strefy: przycisk menu poniżej lg, logo i konto albo przycisk logowania gościa.
 export function Naglowek({ logo, menuOtwarte, onPrzelaczMenu, idMenu, className }: NaglowekProps) {
   return (
     <header className={className ? `${klasyNaglowka} ${className}` : klasyNaglowka}>
@@ -74,7 +75,7 @@ export function Naglowek({ logo, menuOtwarte, onPrzelaczMenu, idMenu, className 
         {logo}
       </div>
       <Suspense fallback={null}>
-        <KontoWNaglowku />
+        <KontoLubLogowanie />
       </Suspense>
     </header>
   );

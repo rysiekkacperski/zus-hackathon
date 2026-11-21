@@ -212,7 +212,7 @@ export function WidokZamDlaPlatnika() {
         <UkladDwuKolumnowy tresc={tresc} boczna={boczna} etykietaBocznej={t.szczegoly.etykieta} />
       </div>
       <div className="hidden print:block">
-        <DokumentDoDruku tytul={wiersze[0]?.tekst ?? t.pdf.tytul} nazwaPliku={nazwaPliku} flagaDemo>
+        <DokumentDoDruku tytul={wiersze[0]?.tekst ?? t.pdf.tytul} nazwaPliku={nazwaPliku}>
           {wiersze.slice(1).map((w, i) =>
             w.rodzaj === 'naglowek' ? (
               <h3 key={i} className="m-0 mt-2 text-body-strong text-ink-strong">

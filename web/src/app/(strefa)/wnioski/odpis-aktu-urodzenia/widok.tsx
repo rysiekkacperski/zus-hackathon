@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { DanePytania } from '@/app/(strefa)/pytania-do-zus/_czesci/karta-kontekstu';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { przygotujWniosekOOdpis, zlozWniosekOOdpis } from '@/dane/magazyn/operacje/kanaly-zus-usc';
-import { useDzis, useKatalog, useKonto, useParametry, useRodzina } from '@/dane/magazyn/hooki';
+import { useDzis, useKatalog, useKonto, useRodzina } from '@/dane/magazyn/hooki';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { dodajDni } from '@/domena/daty';
 import { tytulSprawy } from '@/domena/katalog/odczyt';
@@ -30,7 +30,6 @@ import {
   type RodzajOdpisu,
 } from '@/domena/wnioski/odpis';
 import { adresCzesci, CzescFormularza, useCzesciFormularza } from '@/komponenty/czesci-formularza';
-import { FlagaDemo } from '@/komponenty/flaga-demo';
 import { formatujDate, formatujKwote } from '@/komponenty/format';
 import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
@@ -101,7 +100,6 @@ export function WidokWnioskuOOdpis() {
   const konto = useKonto();
   const rodzina = useRodzina();
   const katalog = useKatalog();
-  const parametrySystemu = useParametry();
   const dzis = useDzis();
 
   const zProfilu = useMemo(() => formularzZProfilu(rodzina?.daneCiazy ?? null), [rodzina?.daneCiazy]);
@@ -405,9 +403,6 @@ export function WidokWnioskuOOdpis() {
                       {oplata === null ? t.cel.zOplata : oplata === 0 ? t.cel.bezOplaty : formatujKwote(oplata)}
                     </p>
                     {opisOplaty ? <p className="m-0 text-small">{opisOplaty}</p> : null}
-                    {f.cel === 'inny' && parametrySystemu.trybDemonstracyjny ? (
-                      <FlagaDemo>{t.cel.flagaOplaty}</FlagaDemo>
-                    ) : null}
                   </div>
                 ) : null}
               </Stos>
@@ -501,7 +496,6 @@ export function WidokWnioskuOOdpis() {
             <Przycisk type="submit" wariant="glowny" zajety={czesci.czyOstatnia && skladanie}>
               {czesci.czyOstatnia ? t.zloz : teksty.wspolne.przyciski.dalej}
             </Przycisk>
-            {czesci.czyOstatnia && parametrySystemu.trybDemonstracyjny ? <FlagaDemo>{t.flaga}</FlagaDemo> : null}
           </Wiersz>
         </Stos>
       </form>

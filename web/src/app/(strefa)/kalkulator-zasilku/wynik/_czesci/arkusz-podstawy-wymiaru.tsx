@@ -2,6 +2,7 @@
 
 // SheetCalcBaseSource (kontrakt, tabela 2.3): arkusz na ViewCalcMaternityResult. Właściciel: u15.
 // Źródło podstawy wymiaru wybranego rodzica, wyliczenie z konta ZUS, podstawa wpisana i pełny etat (historyjka 3.10.4.1.2).
+// Gość nie ma danych z konta ZUS: wybiera podstawę wpisaną albo z przykładowej sprawy i dostaje notatkę logowania.
 import { useState } from 'react';
 import { formatujDate } from '@/domena/daty';
 import { parsujKwote } from '@/domena/kwoty';
@@ -16,6 +17,7 @@ import { trescKomunikatu } from '@/komponenty/typy-komunikatow';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA } from '../../_czesci/arkusz';
+import { NotatkaLogowania } from '../../_czesci/notatka-logowania';
 import type { PodstawaRodzica } from '../../_czesci/podstawy';
 
 const t = teksty.SheetCalcBaseSource;
@@ -44,6 +46,8 @@ export interface ArkuszPodstawyWymiaruProps {
   pracownik?: boolean;
   opisTytulu?: string;
   dzis?: string;
+  // Tryb gościa: bez źródła „Konto ZUS”.
+  gosc?: boolean;
   onZapisz?: (z: ZapisPodstawy) => void;
 }
 
@@ -60,6 +64,7 @@ function TrescArkusza({
   pracownik = false,
   opisTytulu,
   dzis,
+  gosc = false,
   onZapisz,
 }: ArkuszPodstawyWymiaruProps & { podstawa: PodstawaRodzica }) {
   const zKontaDostepne = podstawa.zKonta.rodzaj === 'wyliczona';
@@ -83,7 +88,7 @@ function TrescArkusza({
     pola: { kwota: 'podstawa-kwota' },
   });
 
-  const kodBraku = podstawa.zKonta.rodzaj === 'brak' ? podstawa.zKonta.kod : null;
+  const kodBraku = !gosc && podstawa.zKonta.rodzaj === 'brak' ? podstawa.zKonta.kod : null;
   const tytul = etykietaRodzica ? t.tytulRodzica({ rodzic: etykietaRodzica }) : t.tytul;
 
   function zapisz() {
@@ -98,16 +103,20 @@ function TrescArkusza({
   }
 
   const opcje = [
-    {
-      wartosc: 'konto-zus' as const,
-      etykieta: t.kontoZus,
-      opis: zKontaDostepne
-        ? t.kontoZusOpis
-        : kodBraku === '0173'
-          ? t.kontoZusNiedostepneDrugi
-          : t.kontoZusNiedostepneBrakSkladek,
-      wylaczona: !zKontaDostepne,
-    },
+    ...(gosc
+      ? []
+      : [
+          {
+            wartosc: 'konto-zus' as const,
+            etykieta: t.kontoZus,
+            opis: zKontaDostepne
+              ? t.kontoZusOpis
+              : kodBraku === '0173'
+                ? t.kontoZusNiedostepneDrugi
+                : t.kontoZusNiedostepneBrakSkladek,
+            wylaczona: !zKontaDostepne,
+          },
+        ]),
     ...(zSprawy ? [{ wartosc: 'przykladowa-sprawa' as const, etykieta: t.przykladowaSprawa, opis: t.przykladowaSprawaOpis }] : []),
     { wartosc: 'wpisana' as const, etykieta: t.wpisana, opis: t.wpisanaOpis },
   ];
@@ -134,6 +143,7 @@ function TrescArkusza({
       <div className="flex flex-col gap-6">
         {dzis ? <p className="m-0 text-body">{teksty.wspolne.stanNa({ data: formatujDate(dzis) })}</p> : null}
         {kodBraku ? <Komunikat kod={kodBraku} tresc={trescKomunikatu(kodBraku)} /> : null}
+        {gosc ? <NotatkaLogowania opis={t.goscOpis} odnosnik={t.goscZaloguj} /> : null}
         <GrupaOpcji<ZrodloWyboru>
           nazwa="podstawa-zrodlo"
           legenda={t.zrodloLegenda}

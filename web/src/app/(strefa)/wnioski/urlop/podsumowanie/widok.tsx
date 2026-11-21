@@ -1,15 +1,15 @@
 'use client';
 
-// ViewLeaveRequestSummary (u32): krok 3 kreatora, podsumowanie, załączniki, adres e-mail pracodawcy, pobranie i wysłanie.
+// ViewLeaveRequestSummary (u32): krok 3 kreatora, podsumowanie w zakładkach (po jednej na grupę danych), załączniki,
+// adres e-mail pracodawcy, pobranie i wysłanie. Wybrana zakładka żyje w parametrze ?zakladka=.
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { formatujDate } from '@/domena/daty';
 import { formatujProcent } from '@/domena/kwoty';
 import type { KodKomunikatu } from '@/domena/typy';
 import { poczatekOchrony } from '@/domena/wnioski/ochrona';
 import { listaZalacznikow, nazwaPlikuWniosku } from '@/domena/wnioski/urlopy';
 import { okresOchrony, walidujWysylke } from '@/domena/wnioski/wysylka-do-pracodawcy';
-import { useParametry } from '@/dane/magazyn/hooki';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { zapiszKrokWnioskuOUrlop } from '@/dane/magazyn/operacje/wnioski-urlop';
 import {
@@ -20,7 +20,6 @@ import {
 } from '@/dane/magazyn/operacje/wnioski-urlop-wysylka';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { DokumentDoDruku, drukujDokument } from '@/komponenty/dokument-do-druku';
-import { FlagaDemo } from '@/komponenty/flaga-demo';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
@@ -31,6 +30,7 @@ import { Przycisk } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
+import { useZakladkaWAdresie, Zakladki } from '@/komponenty/zakladki';
 import { teksty } from '@/teksty';
 import {
   adresCzesciFormularzaUrlopu,
@@ -45,6 +45,13 @@ import { OknoPodgladuWiadomosci } from './_czesci/okno-podgladu-wiadomosci';
 const t = teksty.ViewLeaveRequestSummary;
 const tf = teksty.ViewLeaveRequestForm;
 
+type ZakladkaUrlopu = keyof typeof t.zakladki;
+
+/** Zakładki w kolejności sekcji podsumowania. */
+const ZAKLADKI: readonly ZakladkaUrlopu[] = ['rodzaj', 'okres', 'osoby', 'oswiadczenia', 'zalaczniki', 'adresat'];
+
+const ID_PODPOWIEDZI_PLIKOW = 'urlop-pliki-podpowiedz';
+
 function rozmiar(bajty: number): string {
   if (bajty >= 1048576) return t.rozmiarMb({ mb: (bajty / 1048576).toFixed(1).replace('.', ',') });
   return t.rozmiarKb({ kb: String(Math.max(1, Math.round(bajty / 1024))) });
@@ -52,14 +59,17 @@ function rozmiar(bajty: number): string {
 
 export function WidokPodsumowaniaWnioskuOUrlop() {
   const stan = useKreatorUrlopu();
-  const parametry = useParametry();
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
-  const [bledyPlikow, setBledyPlikow] = useState<Record<string, KodKomunikatu>>({});
-  const [komunikat, setKomunikat] = useState<{ kod: KodKomunikatu; ponow?: boolean } | null>(null);
-  const [pobrano, setPobrano] = useState(false);
+  // Komunikaty, błędy plików i okno podglądu są chwilowe: po powrocie na podsumowanie widok zaczyna bez nich.
+  const [bledyPlikow, setBledyPlikow] = useStanChwilowy<Record<string, KodKomunikatu>>({});
+  const [komunikat, setKomunikat] = useStanChwilowy<{ kod: KodKomunikatu; ponow?: boolean } | null>(null);
+  const [fokusKomunikatu, setFokusKomunikatu] = useStanChwilowy(0);
+  const [pobrano, setPobrano] = useStanChwilowy(false);
   const [okno, setOkno] = useStanChwilowy(false);
+  const komunikatRef = useRef<HTMLDivElement>(null);
   const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
+  const [zakladka, wybierzZakladke] = useZakladkaWAdresie<ZakladkaUrlopu>(ZAKLADKI);
   const idWyslanego = stan?.wniosek?.stan === 'wyslany' ? stan.wniosek.idWniosku : null;
   const adres = email ?? stan?.wniosek?.emailPracodawcy ?? stan?.dane.emailPracodawcy ?? '';
   const walidacja = useWalidacjaNaBiezaco({
@@ -71,6 +81,11 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   useEffect(() => {
     if (idWyslanego) router.replace(trasy.ViewLeaveRequestSent({ wniosek: idWyslanego }));
   }, [idWyslanego, router]);
+
+  // Po nieudanej próbie fokus trafia na komunikat nad zakładkami.
+  useEffect(() => {
+    if (fokusKomunikatu > 0) komunikatRef.current?.focus();
+  }, [fokusKomunikatu]);
 
   if (stan === null || idWyslanego) return null;
   const { wniosek, dane, kontekst } = stan;
@@ -97,10 +112,17 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   const hrefWstecz = adresCzesciFormularzaUrlopu(idW, czesciFormularzaUrlopu(podrodzaj).length);
   const nazwaPliku = nazwaPlikuWniosku(podrodzaj);
 
+  function pokazKomunikat(nowy: { kod: KodKomunikatu; ponow?: boolean }) {
+    setKomunikat(nowy);
+    setFokusKomunikatu((n) => n + 1);
+  }
+
   function zapiszEmail(): boolean {
+    // Błąd adresu: zakładka Adresat, a fokus trafia na pole po jego wyrenderowaniu.
+    if (walidacja.pierwszePoleZBledem() === 'email') wybierzZakladke('adresat');
     if (!walidacja.sprobujWyslac()) return false;
     const wynik = zapiszKrokWnioskuOUrlop(idW, { emailPracodawcy: adres.trim() }, 'ViewLeaveRequestSummary', pobierzKontekstOperacji());
-    if (!wynik.ok) setKomunikat({ kod: wynik.kod });
+    if (!wynik.ok) pokazKomunikat({ kod: wynik.kod });
     return wynik.ok;
   }
 
@@ -114,14 +136,16 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
       return;
     }
     ustawZajety(false);
-    if (wynik.kod === '0134' || wynik.kod === '0060') walidacja.pokazBledy({ email: wynik.kod });
-    else setKomunikat({ kod: wynik.kod, ponow: wynik.kod === '0138' });
+    if (wynik.kod === '0134' || wynik.kod === '0060') {
+      wybierzZakladke('adresat');
+      walidacja.pokazBledy({ email: wynik.kod });
+    } else pokazKomunikat({ kod: wynik.kod, ponow: wynik.kod === '0138' });
   }
 
   function pobierz() {
     const wynik = pobierzWniosekOUrlop(idW, pobierzKontekstOperacji());
     if (!wynik.ok) {
-      setKomunikat({ kod: wynik.kod });
+      pokazKomunikat({ kod: wynik.kod });
       return;
     }
     setKomunikat(null);
@@ -132,7 +156,7 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   function zapiszDoDokonczenia() {
     const wynik = zapiszKrokWnioskuOUrlop(idW, adres.trim() ? { emailPracodawcy: adres.trim() } : {}, 'ViewLeaveRequestSummary', pobierzKontekstOperacji());
     if (!wynik.ok) {
-      setKomunikat({ kod: wynik.kod });
+      pokazKomunikat({ kod: wynik.kod });
       return;
     }
     ustawKomunikatPoPrzejsciu({ kod: '0058', dlaWidoku: 'ViewCaseGuide' });
@@ -172,14 +196,18 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   if (os.drugiRodzicBezUzupelniajacego) oswiadczenia.push({ etykieta: t.uzupelniajacyDrugi, wartosc: t.potwierdzone });
   if (os.laczenieCzesciZWydluzenia !== undefined) oswiadczenia.push({ etykieta: t.laczenieWydluzenie, wartosc: os.laczenieCzesciZWydluzenia ? tf.tak : tf.nie });
 
-  const sekcja = (tytul: string, href: string, tresc: ReactNode) => (
+  // Panel zakładki: karta bez górnego odstępu, bo panel zakładek ma własny odstęp od paska.
+  const sekcja = (tytul: string, tresc: ReactNode, href?: string) => (
     <Karta
       tytul={tytul}
       bezLinii
+      className="pt-0"
       akcje={
-        <Odnosnik href={href} aria-label={t.zmienEtykieta({ sekcja: tytul })}>
-          {t.zmien}
-        </Odnosnik>
+        href ? (
+          <Odnosnik href={href} aria-label={t.zmienEtykieta({ sekcja: tytul })}>
+            {t.zmien}
+          </Odnosnik>
+        ) : undefined
       }
     >
       {tresc}
@@ -187,6 +215,115 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   );
 
   const listaZalacznikowTekst = zalaczniki.map((z) => tf.zalaczniki[z.id] ?? z.rodzaj).join(', ');
+  const bladWPlikach = zalaczniki.some((z) => bledyPlikow[z.id]);
+  // Brak albo błędny adres e-mail blokuje wysłanie, więc zakładka Adresat pokazuje wskaźnik od razu.
+  const bladAdresu = Boolean(walidacja.bledyAktualne.email ?? walidacja.blad('email'));
+
+  function trescZakladki(): ReactNode {
+    switch (zakladka) {
+      case 'rodzaj':
+        return sekcja(t.rodzajTytul, <p className="m-0">{tf.nazwyWnioskow[podrodzaj]}</p>, trasy.ViewLeaveRequestType({ wniosek: idW }));
+      case 'okres':
+        return sekcja(t.okresTytul, <DaneNaTle poziomo={false} pozycje={okresy} />, hrefFormularza);
+      case 'osoby':
+        return sekcja(t.osobyTytul, <DaneNaTle pozycje={osoby} />, hrefOsob);
+      case 'oswiadczenia':
+        return sekcja(
+          t.oswiadczeniaTytul,
+          oswiadczenia.length === 0 ? <p className="m-0">{t.brakOswiadczen}</p> : <DaneNaTle poziomo={false} pozycje={oswiadczenia} />,
+          hrefOswiadczen,
+        );
+      case 'zalaczniki':
+        return sekcja(
+          t.zalacznikiTytul,
+          zalaczniki.length === 0 ? (
+            <p className="m-0">{tf.bezZalacznikow}</p>
+          ) : (
+            <>
+              <Komunikat kod="0149" parametry={{ listaDokumentow: listaZalacznikowTekst }} />
+              <p id={ID_PODPOWIEDZI_PLIKOW} className="m-0 mt-4">
+                {t.zalacznikiOpcjonalne} {t.dolaczPlikPodpowiedz}
+              </p>
+              <ul className="m-0 mt-2 flex list-none flex-col p-0">
+                {zalaczniki.map((z) => {
+                  const nazwa = tf.zalaczniki[z.id] ?? z.rodzaj;
+                  const idPola = `urlop-plik-${z.id}`;
+                  const blad = bledyPlikow[z.id];
+                  return (
+                    <li key={z.id} className="flex flex-col gap-1 border-b border-line-row py-2 last:border-b-0 last:pb-0">
+                      <div className="flex min-h-control flex-wrap items-center justify-between gap-x-6 gap-y-2">
+                        {z.plik ? (
+                          <>
+                            <span className="min-w-0 text-body-strong first-letter:uppercase">{nazwa}</span>
+                            <div className="flex flex-wrap items-center gap-4">
+                              <span className="min-w-0 break-words">{t.plikDolaczony({ nazwa: z.plik.nazwa, rozmiar: rozmiar(z.plik.rozmiar) })}</span>
+                              <Przycisk
+                                type="button"
+                                wariant="tlo"
+                                ikona="usun"
+                                aria-label={t.usunPlikEtykieta({ nazwa: z.plik.nazwa })}
+                                onClick={() => void usunPlikZWniosku(idW, z.id, pobierzKontekstOperacji())}
+                              >
+                                {t.usunPlik}
+                              </Przycisk>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <label htmlFor={idPola} className="min-w-0 text-body-strong first-letter:uppercase">
+                              {nazwa}
+                            </label>
+                            <input
+                              id={idPola}
+                              type="file"
+                              accept="application/pdf,image/jpeg,image/png"
+                              aria-describedby={[ID_PODPOWIEDZI_PLIKOW, blad ? `${idPola}-blad` : ''].filter(Boolean).join(' ')}
+                              aria-invalid={blad ? true : undefined}
+                              className="max-w-full text-small"
+                              onChange={(e) => {
+                                void dolacz(z.id, e.target.files?.[0]);
+                                e.target.value = '';
+                              }}
+                            />
+                          </>
+                        )}
+                      </div>
+                      {blad ? <BladPola id={`${idPola}-blad`} kod={blad} /> : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          ),
+        );
+      case 'adresat':
+        return sekcja(
+          t.adresatTytul,
+          <>
+            <p className="m-0 mb-4">{dane.pracodawca ? t.adresat({ nazwa: dane.pracodawca }) : t.adresatBezNazwy}</p>
+            <PoleTekstowe
+              id="urlop-email"
+              typ="email"
+              inputMode="email"
+              autoComplete="email"
+              etykieta={t.email}
+              podpowiedz={t.emailPodpowiedz}
+              wartosc={adres}
+              onZmiana={(w) => setEmail(w)}
+              {...walidacja.pole('email')}
+              maksDlugosc={254}
+            />
+            <div className="mt-4">
+              <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-brand underline hover:text-brand-deep" onClick={() => setOkno(true)}>
+                {t.zobaczWiadomosc}
+              </button>
+            </div>
+          </>,
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <RamaKreatora
@@ -220,112 +357,41 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
         }}
       >
         {komunikat ? (
-          komunikat.kod === '0038' || komunikat.kod === '0165' ? (
-            <Komunikat
-              kod={komunikat.kod}
-              akcje={<span>{t.stawkaZmieniona({ data: formatujDate(wniosek.zaktualizowano) })}</span>}
-            />
-          ) : (
-            <Komunikat
-              kod={komunikat.kod}
-              akcje={
-                komunikat.ponow ? (
-                  <Przycisk type="button" wariant="drugorzedny" onClick={() => void wyslij()}>
-                    {t.wyslijPonownie}
-                  </Przycisk>
-                ) : undefined
-              }
-            />
-          )
+          <div ref={komunikatRef} tabIndex={-1} className="outline-none">
+            {komunikat.kod === '0038' || komunikat.kod === '0165' ? (
+              <Komunikat
+                kod={komunikat.kod}
+                akcje={<span>{t.stawkaZmieniona({ data: formatujDate(wniosek.zaktualizowano) })}</span>}
+              />
+            ) : (
+              <Komunikat
+                kod={komunikat.kod}
+                akcje={
+                  komunikat.ponow ? (
+                    <Przycisk type="button" wariant="drugorzedny" onClick={() => void wyslij()}>
+                      {t.wyslijPonownie}
+                    </Przycisk>
+                  ) : undefined
+                }
+              />
+            )}
+          </div>
         ) : null}
         {pobrano ? <Komunikat kod="0139" akcje={<span>{t.pobrano({ nazwa: nazwaPliku })}</span>} /> : null}
-        {sekcja(t.rodzajTytul, trasy.ViewLeaveRequestType({ wniosek: idW }), <p className="m-0">{tf.nazwyWnioskow[podrodzaj]}</p>)}
-        {sekcja(t.okresTytul, hrefFormularza, <DaneNaTle poziomo={false} pozycje={okresy} />)}
-        {sekcja(t.osobyTytul, hrefOsob, <DaneNaTle pozycje={osoby} />)}
-        {sekcja(
-          t.oswiadczeniaTytul,
-          hrefOswiadczen,
-          oswiadczenia.length === 0 ? <p className="m-0">{t.brakOswiadczen}</p> : <DaneNaTle poziomo={false} pozycje={oswiadczenia} />,
-        )}
-        <Karta tytul={t.zalacznikiTytul} bezLinii>
-          {zalaczniki.length === 0 ? (
-            <p className="m-0">{tf.bezZalacznikow}</p>
-          ) : (
-            <>
-              <Komunikat kod="0149" parametry={{ listaDokumentow: listaZalacznikowTekst }} />
-              <p className="m-0 mt-4">{t.zalacznikiOpcjonalne}</p>
-              <ul className="m-0 mt-4 flex list-none flex-col gap-4 p-0">
-                {zalaczniki.map((z) => {
-                  const nazwa = tf.zalaczniki[z.id] ?? z.rodzaj;
-                  const idPola = `urlop-plik-${z.id}`;
-                  const blad = bledyPlikow[z.id];
-                  return (
-                    <li key={z.id} className="flex flex-col gap-2 rounded-sm border border-line px-4 py-3">
-                      <span className="text-body-strong first-letter:uppercase">{nazwa}</span>
-                      {z.plik ? (
-                        <div className="flex flex-wrap items-center gap-4">
-                          <span>{t.plikDolaczony({ nazwa: z.plik.nazwa, rozmiar: rozmiar(z.plik.rozmiar) })}</span>
-                          <Przycisk
-                            type="button"
-                            wariant="tlo"
-                            ikona="usun"
-                            aria-label={t.usunPlikEtykieta({ nazwa: z.plik.nazwa })}
-                            onClick={() => void usunPlikZWniosku(idW, z.id, pobierzKontekstOperacji())}
-                          >
-                            {t.usunPlik}
-                          </Przycisk>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-1">
-                          <label htmlFor={idPola} className="text-small-strong">
-                            {t.dolaczPlik({ nazwa })}
-                          </label>
-                          <p id={`${idPola}-podpowiedz`} className="m-0 text-small text-ink-muted">
-                            {t.dolaczPlikPodpowiedz}
-                          </p>
-                          <input
-                            id={idPola}
-                            type="file"
-                            accept="application/pdf,image/jpeg,image/png"
-                            aria-describedby={[`${idPola}-podpowiedz`, blad ? `${idPola}-blad` : ''].filter(Boolean).join(' ')}
-                            aria-invalid={blad ? true : undefined}
-                            className="text-small"
-                            onChange={(e) => {
-                              void dolacz(z.id, e.target.files?.[0]);
-                              e.target.value = '';
-                            }}
-                          />
-                          {blad ? <BladPola id={`${idPola}-blad`} kod={blad} /> : null}
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
-        </Karta>
-        <Karta tytul={t.adresatTytul} bezLinii>
-          <p className="m-0 mb-4">{dane.pracodawca ? t.adresat({ nazwa: dane.pracodawca }) : t.adresatBezNazwy}</p>
-          <PoleTekstowe
-            id="urlop-email"
-            typ="email"
-            inputMode="email"
-            autoComplete="email"
-            etykieta={t.email}
-            podpowiedz={t.emailPodpowiedz}
-            wartosc={adres}
-            onZmiana={(w) => setEmail(w)}
-            {...walidacja.pole('email')}
-            maksDlugosc={254}
-          />
-          <div className="mt-4">
-            <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-brand underline hover:text-brand-deep" onClick={() => setOkno(true)}>
-              {t.zobaczWiadomosc}
-            </button>
-          </div>
-          {parametry.trybDemonstracyjny ? <FlagaDemo className="mt-4">{t.demo}</FlagaDemo> : null}
-        </Karta>
+        <Zakladki<ZakladkaUrlopu>
+          id="urlop-zakladki"
+          etykieta={t.zakladkiEtykieta}
+          zakladki={ZAKLADKI.map((w) => ({
+            wartosc: w,
+            etykieta: t.zakladki[w],
+            blad: (w === 'zalaczniki' && bladWPlikach) || (w === 'adresat' && bladAdresu),
+          }))}
+          wybrana={zakladka}
+          onWybor={wybierzZakladke}
+          tloPaneli="card"
+        >
+          {trescZakladki()}
+        </Zakladki>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Przycisk type="button" wariant="drugorzedny" disabled={zajety} onClick={() => przejdz(hrefWstecz)}>
             {t.wstecz}
@@ -344,7 +410,7 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
         </div>
       </form>
       <div className="hidden print:block">
-        <DokumentDoDruku tytul={t.dokumentTytul({ nazwa: tf.nazwyWnioskow[podrodzaj] })} nazwaPliku={nazwaPliku} flagaDemo={parametry.trybDemonstracyjny}>
+        <DokumentDoDruku tytul={t.dokumentTytul({ nazwa: tf.nazwyWnioskow[podrodzaj] })} nazwaPliku={nazwaPliku}>
           <p className="m-0">{t.dokumentData({ data: formatujDate(kontekst.dzis) })}</p>
           <DaneNaTle pozycje={[...osoby, { etykieta: t.dokumentAdresat, wartosc: dane.pracodawca ?? t.adresatBezNazwy }]} />
           <DaneNaTle poziomo={false} pozycje={[...okresy, ...oswiadczenia]} />
@@ -358,7 +424,6 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
         dane={dane}
         email={adres}
         dzis={kontekst.dzis}
-        trybDemonstracyjny={parametry.trybDemonstracyjny}
         onWyslij={() => void wyslij()}
       />
     </RamaKreatora>

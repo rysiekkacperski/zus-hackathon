@@ -20,10 +20,24 @@ export const KLUCZ_SESJA = `${PRZEDROSTEK}sesja`;
 export const PRZEDROSTEK_DANYCH_SESJI = `${PRZEDROSTEK}sesja-dane:`;
 export const KLUCZ_UI = `${PRZEDROSTEK}ui`;
 
+/** Sesje gościa zamkniętych kart: identyfikator sesji gościa → chwila zamknięcia karty w ms (sprzątanie plików). */
+export const KLUCZ_GOSCIE_ZAMKNIECI = `${PRZEDROSTEK}goscie-zamknieci`;
+
 // sessionStorage
 export const KLUCZ_LOGOWANIE = `${PRZEDROSTEK}logowanie`;
 export const KLUCZ_KOMUNIKATY_PO_PRZEJSCIU = `${PRZEDROSTEK}komunikaty-po-przejsciu`;
 export const PRZEDROSTEK_ODCZYTANO = `${PRZEDROSTEK}odczytano:`;
+/** Sesja gościa tej karty (SesjaGoscia): kalkulator i przykładowe sprawy bez logowania. */
+export const KLUCZ_GOSC = `${PRZEDROSTEK}gosc`;
+/** Stan sesji gościa (StanSesji) pod identyfikatorem sesji gościa. */
+export const PRZEDROSTEK_STANU_SESJI_GOSCIA = `${PRZEDROSTEK}gosc-sesja:`;
+/** Wyniki kalkulacji gościa (WynikiKalkulacji) pod identyfikatorem sesji gościa. */
+export const PRZEDROSTEK_KALKULACJI_GOSCIA = `${PRZEDROSTEK}gosc-kalkulacje:`;
+/** Sesja gościa przeniesiona przy logowaniu do sesji konta: { zGoscia, idSesji }. */
+export const KLUCZ_PRZENIESIENIE_GOSCIA = `${PRZEDROSTEK}gosc-przeniesiony`;
+
+/** Przedrostek właściciela danych gościa (pliki w IndexedDB, pole `konto` przykładowej sprawy i scenariusza). */
+export const PRZEDROSTEK_WLASCICIELA_GOSCIA = 'gosc:';
 
 // IndexedDB
 export const NAZWA_BAZY_PLIKOW = 'ppm-pliki';
@@ -48,4 +62,21 @@ export function kluczDanychSesji(idSesji: string): string {
 
 export function kluczOdczytano(idSesji: string): string {
   return `${PRZEDROSTEK_ODCZYTANO}${idSesji}`;
+}
+
+export function kluczStanuSesjiGoscia(idSesjiGoscia: string): string {
+  return `${PRZEDROSTEK_STANU_SESJI_GOSCIA}${idSesjiGoscia}`;
+}
+
+export function kluczKalkulacjiGoscia(idSesjiGoscia: string): string {
+  return `${PRZEDROSTEK_KALKULACJI_GOSCIA}${idSesjiGoscia}`;
+}
+
+/** Identyfikator właściciela danych gościa: 'gosc:<idSesjiGoscia>'. */
+export function wlascicielGoscia(idSesjiGoscia: string): string {
+  return `${PRZEDROSTEK_WLASCICIELA_GOSCIA}${idSesjiGoscia}`;
+}
+
+export function czyWlascicielGoscia(wlasciciel: string): boolean {
+  return wlasciciel.startsWith(PRZEDROSTEK_WLASCICIELA_GOSCIA);
 }

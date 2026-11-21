@@ -36,6 +36,7 @@ import {
 } from '@/domena/przewodnik/kanaly';
 import type { KodKomunikatu, Pochodzenie, StatusSprawy } from '@/domena/typy';
 import { teksty } from '@/teksty';
+import { etapZeSlugu, PARAMETR_ETAPU } from '@/app/(strefa)/plan-rodziny/_czesci/sciezka-etapu';
 import { sekcjeInstrukcji } from './_sekcje';
 import { ArkuszOznaczeniaSprawy } from './_czesci/arkusz-oznaczenia-sprawy';
 import { KafelkiInformacji, type KafelekInformacji } from './_czesci/kafelki-informacji';
@@ -64,6 +65,8 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
   const zapytanie = useSearchParams();
   const surowePochodzenie = zapytanie.get('z');
   const pochodzenie = POCHODZENIA.find((p) => p === surowePochodzenie);
+  // Wejście ze strony etapu planu (?z=plan&etap=<slug>) zachowuje etap w powrocie do szczegółów sprawy.
+  const etapPowrotu = pochodzenie === 'plan' ? etapZeSlugu(zapytanie.get(PARAMETR_ETAPU)) : null;
 
   const [komunikat, setKomunikat] = useState<KodKomunikatu | null>(null);
   const [powrotWykryty, setPowrotWykryty] = useState(true);
@@ -74,7 +77,10 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
   const powrot =
     pochodzenie === 'terminy'
       ? { href: trasy.ViewDeadlines(), etykieta: t.powrotDoTerminow }
-      : { href: trasy.ViewCaseDetails({ idSprawy, z: pochodzenie }), etykieta: t.powrotDoSprawy };
+      : {
+          href: sciezkaWidoku('ViewCaseDetails', { idSprawy, z: pochodzenie, [PARAMETR_ETAPU]: etapPowrotu }),
+          etykieta: t.powrotDoSprawy,
+        };
 
   const sprawa = kontekst?.rodzina.plan?.pozycje.find((p) => p.idSprawy === idSprawy) ?? null;
 
@@ -151,7 +157,7 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
   }
 
   const { pozycja, idPozycji, tytul, termin, forma, wybor, dokumenty, sprawaK16, nazwaPracodawcy } = dane;
-  const sciezkaInstrukcji = trasy.ViewCaseGuide({ idSprawy, z: pochodzenie });
+  const sciezkaInstrukcji = sciezkaWidoku('ViewCaseGuide', { idSprawy, z: pochodzenie, [PARAMETR_ETAPU]: etapPowrotu });
   const informacja = sprawa.rodzaj === 'informacja';
   const swiadczenie = rodzajOznaczenia(sprawa.rodzaj) === 'zlozona';
   const terminTekst = termin?.termin ? formatujDate(termin.termin) : null;

@@ -30,7 +30,7 @@ export function WidokLogowaniaKodemMzus() {
 
   return (
     <>
-      <NaglowekDemo flaga={tekst.flaga} tytul={tekst.naglowek} wstep={tekst.wstep} />
+      <NaglowekDemo tytul={tekst.naglowek} wstep={tekst.wstep} />
       {nowyKod ? <Komunikat kod="0252" className="mb-7.5 max-w-okno-szerokie" /> : null}
       <KartaKoduMakiety
         tytulKarty={tekst.karta}

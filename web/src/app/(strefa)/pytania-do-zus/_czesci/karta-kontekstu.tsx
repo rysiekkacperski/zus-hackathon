@@ -6,6 +6,7 @@ import { formatujDate } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { Notatka } from '@/komponenty/notatka';
 import { Stos } from '@/komponenty/uklad';
+import { Zakladki } from '@/komponenty/zakladki';
 import { teksty } from '@/teksty';
 
 const t = teksty.ViewZusQuestion;
@@ -84,33 +85,69 @@ export function wierszeProfilu(kontekst: KontekstPytaniaDoZus): WierszDanych[] {
   return wiersze;
 }
 
+export type GrupaKontekstu = 'sprawa' | 'profil';
+
+/** Grupy danych kontekstu w kolejności karty: sprawa, gdy pytanie jej dotyczy, i profil rodzica. */
+export function grupyKontekstu(kontekst: KontekstPytaniaDoZus): GrupaKontekstu[] {
+  return kontekst.sprawa ? ['sprawa', 'profil'] : ['profil'];
+}
+
+function DaneGrupy({ kontekst, grupa }: { kontekst: KontekstPytaniaDoZus; grupa: GrupaKontekstu }) {
+  if (grupa === 'sprawa') return kontekst.sprawa ? <DanePytania wiersze={wierszeSprawy(kontekst.sprawa)} /> : null;
+  const profil = wierszeProfilu(kontekst);
+  return profil.length > 0 ? <DanePytania wiersze={profil} /> : <p className="m-0 text-body">{t.brakDanychProfilu}</p>;
+}
+
+function SekcjaGrupy({ kontekst, grupa }: { kontekst: KontekstPytaniaDoZus; grupa: GrupaKontekstu }) {
+  return (
+    <section className="grid gap-3">
+      <h3 className="m-0 text-body-strong text-ink">{grupa === 'sprawa' ? t.naglowekSprawy : t.naglowekProfilu}</h3>
+      <DaneGrupy kontekst={kontekst} grupa={grupa} />
+    </section>
+  );
+}
+
+export interface ZakladkiKontekstu {
+  wybrana: GrupaKontekstu;
+  onWybor: (grupa: GrupaKontekstu) => void;
+}
+
 export interface KartaKontekstuProps {
   kontekst: KontekstPytaniaDoZus;
   tytul: string;
   stanNa: string;
   notatka: string;
+  /** Jedna grupa danych w karcie, np. w zakładce ekranu wysłanego pytania. Notatkę karta pokazuje przy profilu. */
+  grupa?: GrupaKontekstu;
+  /** Zakładki „Sprawa” i „Profil” w karcie, gdy kontekst ma obie grupy danych. */
+  zakladki?: ZakladkiKontekstu;
 }
 
 /** Karta kontekstu sprawy i profilu: przed wysłaniem (ViewZusQuestion) i w chwili wysłania (ViewZusQuestionSent). */
-export function KartaKontekstu({ kontekst, tytul, stanNa, notatka }: KartaKontekstuProps) {
-  const profil = wierszeProfilu(kontekst);
+export function KartaKontekstu({ kontekst, tytul, stanNa, notatka, grupa, zakladki }: KartaKontekstuProps) {
+  const grupy = grupa ? [grupa] : grupyKontekstu(kontekst);
   return (
     <Karta tytul={tytul} bezLinii>
       <Stos odstep={4}>
         <p className="m-0 text-body">{stanNa}</p>
-        {kontekst.sprawa ? (
-          <section className="grid gap-3">
-            <h3 className="m-0 text-body-strong text-ink">{t.naglowekSprawy}</h3>
-            <DanePytania wiersze={wierszeSprawy(kontekst.sprawa)} />
-          </section>
+        {zakladki && grupy.length > 1 ? (
+          <Zakladki<GrupaKontekstu>
+            etykieta={t.zakladkiKontekstu.etykieta}
+            zakladki={grupy.map((g) => ({ wartosc: g, etykieta: t.zakladkiKontekstu[g] }))}
+            wybrana={zakladki.wybrana}
+            onWybor={zakladki.onWybor}
+            tloPaneli="card"
+          >
+            <DaneGrupy kontekst={kontekst} grupa={zakladki.wybrana} />
+          </Zakladki>
+        ) : (
+          grupy.map((g) => <SekcjaGrupy key={g} kontekst={kontekst} grupa={g} />)
+        )}
+        {grupy.includes('profil') ? (
+          <Notatka>
+            <p className="m-0">{notatka}</p>
+          </Notatka>
         ) : null}
-        <section className="grid gap-3">
-          <h3 className="m-0 text-body-strong text-ink">{t.naglowekProfilu}</h3>
-          {profil.length > 0 ? <DanePytania wiersze={profil} /> : <p className="m-0 text-body">{t.brakDanychProfilu}</p>}
-        </section>
-        <Notatka>
-          <p className="m-0">{notatka}</p>
-        </Notatka>
       </Stos>
     </Karta>
   );

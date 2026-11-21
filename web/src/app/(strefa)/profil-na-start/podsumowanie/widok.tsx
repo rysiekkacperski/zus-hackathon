@@ -5,7 +5,10 @@
 // akcją „Zmień” przy każdej sekcji i zapisem profilu (wzory cz1/P03-24 i cz1/P03-25).
 // Tryb rodziny (/profil-rodziny, Rodzic i Drugi rodzic): zapisany profil, zmiana sekcji w szkicu zmiany
 // profilu ze śladem „Zmienione, przed zmianą”, anulowanie i zapis zmian (wzory cz1/Profil-rodziny i cz1/P03-26).
-import { useEffect, useMemo, useRef, useState } from 'react';
+// Sekcje profilu i sekcje ze slotów stoją w zakładkach (ZakladkiPodsumowania), a przyciski pod panelem zakładek,
+// więc strona mieści się w oknie 1440×800 bez przewijania. Po nieudanym zapisie widok wybiera pierwszą zakładkę
+// ze wskaźnikiem błędu i przenosi fokus na komunikat.
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useDzis, useKontekstRodziny, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
 import { zapiszProfil, zapiszZmianyProfilu } from '@/dane/magazyn/operacje/profil-zapis';
 import { anulujZmianyProfilu, rozpocznijZmianeProfilu, zapiszSzkic } from '@/dane/magazyn/operacje/profil-szkic';
@@ -17,7 +20,7 @@ import type { IdWidoku, KodKomunikatu } from '@/domena/typy';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
-import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
+import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import type { TrybWidoku } from '@/komponenty/rama/mapa-tras';
@@ -30,6 +33,8 @@ import { sciezkaPowrotuProfilu } from '../_czesci/trasy-profilu';
 import { slotyPodsumowania } from './_sloty';
 import { KartaSekcjiProfilu } from './_czesci/karta-sekcji-profilu';
 import { sekcjeProfilu, wartosciWierszy, type ProfilDoPokazania, type SekcjaProfilu } from './_czesci/sekcje-profilu';
+import { ZakladkiPodsumowania, zakladkaSlotu, type PanelZakladki } from './_czesci/zakladki-podsumowania';
+import { BUDZET_PANELU, zakladkiSekcji } from './_czesci/zakladki-sekcji';
 
 const t = teksty.ViewProfileSummary;
 const EKRAN: IdWidoku = 'ViewProfileSummary';
@@ -43,14 +48,22 @@ function adresSekcji(ekran: IdWidoku): string {
   return sciezkaWidoku(ekran);
 }
 
+/** Sekcja z nagłówkiem treści „Stan na” nad wierszami (dane z konta ZUS w trybie startu). */
+function czyZeStanemNa(tryb: TrybWidoku<'ViewProfileSummary'>, sekcja: SekcjaProfilu): boolean {
+  return tryb === 'start' && sekcja.id === 'formaIPlatnik';
+}
+
 export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfileSummary'> }) {
   const stanKonta = useStanKonta();
   const rodzina = useRodzina();
   const kontekst = useKontekstRodziny();
   const dzis = useDzis();
-  const [blad, setBlad] = useState<KodKomunikatu | null>(null);
+  const [blad, setBlad] = useStanChwilowy<KodKomunikatu | null>(null);
+  const [proba, ustawProbe] = useStanChwilowy(0);
+  const [wyborPoProbie, ustawWyborPoProbie] = useStanChwilowy<{ id: string } | null>(null);
   const { zajety, ustawZajety: setZajety, przejdz } = useNawigacjaZLadowaniem();
   const zapisanoOstatniEkran = useRef(false);
+  const komunikatRef = useRef<HTMLDivElement>(null);
 
   const konto = stanKonta?.konto ?? null;
   const szkic = stanKonta?.szkicProfilu ?? null;
@@ -67,6 +80,19 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
     zapiszSzkic({ powrotNaPodsumowanie: false }, EKRAN, pobierzKontekstOperacji());
   }, [tryb, szkic]);
 
+  // Trasa ukryta po „Zmień” wraca z Activity: powrót z ekranu kroku znów kończy zmianę sekcji.
+  useLayoutEffect(
+    () => () => {
+      zapisanoOstatniEkran.current = false;
+    },
+    [],
+  );
+
+  // Po nieudanej próbie zapisu albo anulowania fokus trafia na komunikat nad zakładkami.
+  useEffect(() => {
+    if (proba > 0) komunikatRef.current?.focus();
+  }, [proba]);
+
   const zapisany: ProfilDoPokazania | null = useMemo(() => {
     if (rodzina === null) return null;
     return { daneRodziny: profilJakoSzkic(rodzina.daneRodziny, rodzina.daneCiazy).daneRodziny, daneCiazy: rodzina.daneCiazy };
@@ -79,6 +105,11 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
   }, [tryb, szkic, szkicZmiany, zapisany]);
 
   const sekcje: SekcjaProfilu[] = useMemo(() => (pokazany ? sekcjeProfilu(pokazany, zgoda) : []), [pokazany, zgoda]);
+
+  const zakladki = useMemo(
+    () => zakladkiSekcji(sekcje, BUDZET_PANELU[tryb], (s) => czyZeStanemNa(tryb, s)),
+    [sekcje, tryb],
+  );
 
   // Wartości zapisanego profilu przy wierszach, które szkic zmiany profilu zmienił.
   const przedZmiana = useMemo(() => {
@@ -109,6 +140,13 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
     zapiszSzkic({ powrotNaPodsumowanie: true }, ekran, ctx);
   }
 
+  function pokazBladProby(kod: KodKomunikatu) {
+    setBlad(kod);
+    const zBledem = zakladki.find((z) => z.blad);
+    ustawWyborPoProbie(zBledem ? { id: zBledem.id } : null);
+    ustawProbe((p) => p + 1);
+  }
+
   function zapiszPoStarcie() {
     setZajety(true);
     setBlad(null);
@@ -117,9 +155,8 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
       przejdz(trasy.ViewFamilyPlan());
       return;
     }
-    setBlad(wynik.kod);
+    pokazBladProby(wynik.kod);
     setZajety(false);
-    window.scrollTo({ top: 0 });
   }
 
   function zapiszZmiany() {
@@ -130,37 +167,49 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
       przejdz(trasy.ViewFamilyPlan());
       return;
     }
-    setBlad(wynik.kod);
+    pokazBladProby(wynik.kod);
     setZajety(false);
-    window.scrollTo({ top: 0 });
   }
 
   function anulujZmiany() {
     setBlad(null);
     const wynik = anulujZmianyProfilu(pobierzKontekstOperacji());
-    if (!wynik.ok) setBlad(wynik.kod);
+    if (!wynik.ok) pokazBladProby(wynik.kod);
   }
 
-  const karty = sekcje.map((sekcja) => (
-    <KartaSekcjiProfilu
-      key={sekcja.id}
-      sekcja={sekcja}
-      adresEkranu={adresEkranu}
-      onZmien={przygotujZmianeSekcji}
-      przedZmiana={przedZmiana}
-      naglowekTresci={
-        tryb === 'start' && sekcja.id === 'formaIPlatnik' ? (
-          <p className="m-0 mb-2 text-body-strong">{teksty.wspolne.stanNa({ data: formatujDate(stanNa) })}</p>
-        ) : undefined
-      }
-    />
-  ));
+  const panelySekcji: PanelZakladki[] = zakladki.map((z) => ({
+    id: z.id,
+    etykieta: z.etykieta,
+    blad: z.blad,
+    tresc: (
+      <KartaSekcjiProfilu
+        sekcja={z.sekcja}
+        adresEkranu={adresEkranu}
+        onZmien={przygotujZmianeSekcji}
+        przedZmiana={przedZmiana}
+        naglowekTresci={
+          czyZeStanemNa(tryb, z.sekcja) ? (
+            <p className="m-0 mb-2 text-body-strong">{teksty.wspolne.stanNa({ data: formatujDate(stanNa) })}</p>
+          ) : undefined
+        }
+      />
+    ),
+  }));
 
-  const sloty = slotyPodsumowania.map(({ id, Komponent }) => (
-    <Komponent key={id} tryb={tryb} konto={konto} szkic={szkic} kontekst={kontekst} />
-  ));
+  const panelySlotow: PanelZakladki[] = slotyPodsumowania.map(({ id, Komponent }) => ({
+    ...zakladkaSlotu(id, rola),
+    tresc: <Komponent tryb={tryb} konto={konto} szkic={szkic} kontekst={kontekst} />,
+  }));
 
-  const komunikatBledu = blad ? <Komunikat kod={blad} /> : null;
+  const zakladkiProfilu = (
+    <ZakladkiPodsumowania sekcje={panelySekcji} sloty={panelySlotow} wyborPoProbie={wyborPoProbie} />
+  );
+
+  const komunikatBledu = blad ? (
+    <div ref={komunikatRef} tabIndex={-1} className="min-w-0">
+      <Komunikat kod={blad} />
+    </div>
+  ) : null;
 
   if (tryb === 'start') {
     return (
@@ -189,8 +238,7 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
             <Notatka>
               <p>{blad ? t.notatkaPoBledzie : t.notatkaStart}</p>
             </Notatka>
-            {karty}
-            {sloty}
+            {zakladkiProfilu}
             <Notatka>
               <p>{t.notatkaPrzedZapisem}</p>
             </Notatka>
@@ -202,6 +250,11 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
 
   const maZmiany = szkicZmiany !== null && (przedZmiana.size > 0 || szkicZmiany.zmienionePola.length > 0);
   const zmianaTerminu = przedZmiana.has('daneCiazy.termin');
+  const notatkaProfilu = maZmiany
+    ? zmianaTerminu && przedZmiana.size === 1
+      ? t.rodzina.notatkaNiezapisanegoTerminu
+      : t.rodzina.notatkaNiezapisanychZmian
+    : t.rodzina.notatka;
 
   return (
     <>
@@ -218,17 +271,7 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
           tresc={
             <Stos odstep={7.5}>
               {komunikatBledu}
-              <Notatka>
-                <p>
-                  {maZmiany
-                    ? zmianaTerminu && przedZmiana.size === 1
-                      ? t.rodzina.notatkaNiezapisanegoTerminu
-                      : t.rodzina.notatkaNiezapisanychZmian
-                    : t.rodzina.notatka}
-                </p>
-              </Notatka>
-              {karty}
-              {sloty}
+              {zakladkiProfilu}
               <Wiersz odstep={4} className="justify-between">
                 {maZmiany ? (
                   <>
@@ -250,6 +293,9 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
           boczna={
             <Karta tytul={t.rodzina.tytulKartyZmiany} bezLinii>
               <Stos odstep={4}>
+                <Notatka>
+                  <p>{notatkaProfilu}</p>
+                </Notatka>
                 <Notatka>
                   <p>{t.rodzina.notatkaPrzeliczenia}</p>
                 </Notatka>

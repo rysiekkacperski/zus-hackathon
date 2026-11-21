@@ -64,22 +64,25 @@ export function SlotSekcjaPrzyjecia({ konto, szkic, kontekst }: PropsSlotu<'sekc
   const adresZmiany = trasy.ViewProfileChildAdoption({ powrot: 'podsumowanie' });
 
   if (!zgoda) {
+    // Karty obok siebie, żeby panel zakładki podsumowania zmieścił się w oknie bez przewijania.
     return (
       <Stos odstep={7.5}>
         {brakZgodyPokazany ? <Komunikat kod="0004" /> : null}
-        <Karta tytul={t.bezDanych.tytul} bezLinii>
-          <p className="mt-0 mb-6">{t.bezDanych.opis}</p>
-          <Przycisk wariant="drugorzedny" onClick={() => ustawBrakZgodyPokazany(true)}>
-            {t.bezDanych.podaj}
-          </Przycisk>
-        </Karta>
-        <Karta tytul={t.zgoda.tytul} bezLinii>
-          <p className="mt-0 mb-4">{t.zgoda.opis}</p>
-          <p className="mt-0 mb-6">{t.zgoda.ustawienia}</p>
-          <PrzyciskLink href={trasy.ViewGuideSettings()} wariant="drugorzedny" szerokosc="pelna">
-            {t.zgoda.przejdz}
-          </PrzyciskLink>
-        </Karta>
+        <div className="flex min-w-0 flex-wrap items-start gap-7.5">
+          <Karta tytul={t.bezDanych.tytul} bezLinii className="grow basis-84">
+            <p className="mt-0 mb-6">{t.bezDanych.opis}</p>
+            <Przycisk wariant="drugorzedny" onClick={() => ustawBrakZgodyPokazany(true)}>
+              {t.bezDanych.podaj}
+            </Przycisk>
+          </Karta>
+          <Karta tytul={t.zgoda.tytul} bezLinii className="grow basis-84">
+            <p className="mt-0 mb-4">{t.zgoda.opis}</p>
+            <p className="mt-0 mb-6">{t.zgoda.ustawienia}</p>
+            <PrzyciskLink href={trasy.ViewGuideSettings()} wariant="drugorzedny" szerokosc="pelna">
+              {t.zgoda.przejdz}
+            </PrzyciskLink>
+          </Karta>
+        </div>
       </Stos>
     );
   }
@@ -96,14 +99,17 @@ export function SlotSekcjaPrzyjecia({ konto, szkic, kontekst }: PropsSlotu<'sekc
           </Odnosnik>
         }
       >
-        <ListaDefinicji pozycje={pozycjePrzyjecia(przyjecie, zapisane, porownuj)} />
-        {szkic !== null ? (
-          <Notatka className="mt-6">
-            <span className="block font-semibold">{t.planOdDniaPrzyjecia.tytul}</span>
-            <span className="block">{t.planOdDniaPrzyjecia.sciezka}</span>
-            <span className="block">{t.planOdDniaPrzyjecia.przeliczenie({ data: formatujDate(przyjecie.dataPrzyjecia) })}</span>
-          </Notatka>
-        ) : null}
+        {/* Lista i notatka obok siebie, żeby panel zakładki podsumowania zmieścił się w oknie bez przewijania. */}
+        <div className="flex min-w-0 flex-wrap items-start gap-7.5">
+          <ListaDefinicji pozycje={pozycjePrzyjecia(przyjecie, zapisane, porownuj)} className="grow-999 basis-120" />
+          {szkic !== null ? (
+            <Notatka className="min-w-0 grow basis-84">
+              <span className="block font-semibold">{t.planOdDniaPrzyjecia.tytul}</span>
+              <span className="block">{t.planOdDniaPrzyjecia.sciezka}</span>
+              <span className="block">{t.planOdDniaPrzyjecia.przeliczenie({ data: formatujDate(przyjecie.dataPrzyjecia) })}</span>
+            </Notatka>
+          ) : null}
+        </div>
       </Karta>
     );
   }

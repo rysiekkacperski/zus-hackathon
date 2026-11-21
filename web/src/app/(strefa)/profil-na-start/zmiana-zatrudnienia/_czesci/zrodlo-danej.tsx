@@ -6,7 +6,7 @@ import { teksty } from '@/teksty';
 
 export function ZrodloDanejPola({ zrodlo }: { zrodlo: ZrodloDanej }) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-2 text-small-strong text-ink">
+    <span className="mt-2 inline-flex min-w-0 items-center gap-2 text-small-strong text-ink">
       <Ikona nazwa="baza-danych" rozmiar={20} className="text-brand" />
       {teksty.ViewProfileEmploymentChange.zrodla[zrodlo]}
     </span>

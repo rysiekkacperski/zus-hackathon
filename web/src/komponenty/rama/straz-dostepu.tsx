@@ -2,7 +2,8 @@
 
 // Strażnik dostępu (kontrakt, sekcje 2.2 i 3.6). StrazDostepu sprawdza sesję i rolę na trasach grupy
 // (strefa), a StrazPubliczna kieruje zalogowane konto ze strony startowej i makiet logowania na ekran
-// startowy roli. Do chwili rozstrzygnięcia obaj strażnicy renderują SzkieletWidoku.
+// startowy roli. Do chwili rozstrzygnięcia obaj strażnicy renderują SzkieletWidoku. Trasy gościa
+// (kalkulator zasiłku i przykładowe sprawy, `gosc: true` w mapie tras) wpuszczają bez sesji.
 //
 // Strażnicy owijają treść strony (children układu), więc czytają magazyn przez useSyncExternalStore
 // z migawką serwera „nieznany stan”, bez use(browser()) i bez useSearchParams. Dzięki temu segment strony
@@ -20,7 +21,7 @@ import { czyTrybDemonstracyjny, odczytajZalogowanego } from '@/dane/magazyn/stan
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { BrakUprawnien } from '@/komponenty/brak-uprawnien';
 import { dopasujTrase, type DopasowanieTrasy, type WarunekTrasy } from '@/komponenty/rama/mapa-tras';
-import { bezpiecznyPowrot, sciezkaWidoku } from '@/komponenty/rama/trasy';
+import { bezpiecznyPowrot, sciezkaLogowaniaZPowrotem, sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { SzkieletWidoku } from '@/komponenty/szkielet-widoku';
 
 /** Ekran startowy roli zalogowanego konta jako ścieżka (logo, przyciski powrotu); bez konta `/`. */
@@ -76,7 +77,7 @@ function rozstrzygnijStrefe(
   ekranStartowy: string,
 ): DecyzjaStrefy {
   if (zalogowanie === undefined) return { rodzaj: 'nieznana' };
-  if (zalogowanie === null) return { rodzaj: 'bez-sesji' };
+  if (zalogowanie === null) return trasa?.gosc ? { rodzaj: 'tresc' } : { rodzaj: 'bez-sesji' };
   const rola: Rola = zalogowanie.konto.rola;
   if (trasa === null) return { rodzaj: 'tresc' };
   if (trasa.wzorzec.startsWith('/panel/') && rola !== 'administrator') {
@@ -89,16 +90,11 @@ function rozstrzygnijStrefe(
   return { rodzaj: 'tresc' };
 }
 
-/** Adres strony startowej z parametrem powrotu do trasy otwartej bez sesji. */
-function startZPowrotem(sciezka: string): string {
-  const powrot = bezpiecznyPowrot(sciezka);
-  return powrot === null || powrot === '/' ? '/' : `/?powrot=${encodeURIComponent(powrot)}`;
-}
-
 /**
  * Strażnik tras (strefa) przy każdej zmianie ścieżki: brak sesji prowadzi na `/?powrot=<ścieżka>`
  * (a po zakończeniu sesji w tej karcie na `/`), rola spoza listy ról trasy prowadzi na ekran startowy
  * roli, a `/panel/*` przy roli innej niż Administrator pokazuje BrakUprawnien w miejscu treści.
+ * Trasa gościa bez sesji pokazuje treść w trybie gościa, także po zakończeniu sesji w innej karcie.
  */
 export function StrazDostepu({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -113,12 +109,12 @@ export function StrazDostepu({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (decyzja.rodzaj === 'nieznana') return;
     if (decyzja.rodzaj === 'bez-sesji') {
-      router.replace(bylaSesja.current ? '/' : startZPowrotem(sciezkaZZapytaniem()));
+      router.replace(bylaSesja.current ? '/' : sciezkaLogowaniaZPowrotem(sciezkaZZapytaniem()));
       return;
     }
-    bylaSesja.current = true;
+    if (zalogowanie !== null) bylaSesja.current = true;
     if (decyzja.rodzaj === 'ekran-startowy') router.replace(ekranStartowy);
-  }, [decyzja.rodzaj, ekranStartowy, router, sciezka]);
+  }, [decyzja.rodzaj, ekranStartowy, router, sciezka, zalogowanie]);
 
   if (decyzja.rodzaj === 'tresc' || decyzja.rodzaj === 'nieznana') return children;
   if (decyzja.rodzaj === 'brak-uprawnien') return <BrakUprawnien obszar={decyzja.obszar} href={ekranStartowy} />;

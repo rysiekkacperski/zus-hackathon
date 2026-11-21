@@ -4,9 +4,7 @@
 import type { WpisSlotu } from './typy';
 import { SlotAkcjaZglosNarodziny } from './akcja-zglos-narodziny';
 import { SlotAkcjaSytuacjaSzczegolna } from './akcja-sytuacja-szczegolna';
-import { SlotAkcjaSwiadczeniaWCiazy } from './akcja-swiadczenia-w-ciazy';
 import { SlotOknoNowegoDziecka } from './okno-nowego-dziecka';
-import { SlotBlokEzla } from './blok-ezla';
 import { SlotTerminSprawy } from './termin-sprawy';
 import { SlotStatusWnioskuZus } from './status-wniosku-zus';
 import { SlotOstrzezeniaSprawy } from './ostrzezenia-sprawy';
@@ -14,17 +12,15 @@ import { SlotAkcjaPrzejeciaUrlopu } from './akcja-przejecia-urlopu';
 
 export type { MiejsceSlotu, PropsSlotu, WpisSlotu } from './typy';
 
-// Lista slotów nagłówka.
-export const slotyNaglowka: WpisSlotu<'naglowek'>[] = [
+// Lista kart sekcji „Co możesz zrobić” pod najbliższymi terminami. Każdy slot renderuje Kartę z tytułem h3.
+export const slotyAkcji: WpisSlotu<'akcje'>[] = [
   { id: 'akcja-zglos-narodziny', Komponent: SlotAkcjaZglosNarodziny }, // u19
   { id: 'akcja-sytuacja-szczegolna', Komponent: SlotAkcjaSytuacjaSzczegolna }, // u25
-  { id: 'akcja-swiadczenia-w-ciazy', Komponent: SlotAkcjaSwiadczeniaWCiazy }, // u16
 ];
 
 // Lista slotów nad planem.
 export const slotyNadPlanem: WpisSlotu<'nadPlanem'>[] = [
   { id: 'okno-nowego-dziecka', Komponent: SlotOknoNowegoDziecka }, // u19
-  { id: 'blok-ezla', Komponent: SlotBlokEzla }, // u14
 ];
 
 // Lista slotów przy sprawie.

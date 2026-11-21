@@ -39,40 +39,49 @@ export function WidokPowitania() {
 
   return (
     <>
-      <NaglowekStrony tytul={t.naglowek} wstep={t.wstep} powrot={false} />
-      <Stos odstep={7.5} className="max-w-tresc">
-        <Karta tytul={t.coZrobisz.tytul} bezLinii>
-          <ul className="m-0 flex list-none flex-wrap gap-4 p-0">
-            {POZYCJE.map(({ klucz, ikona }) => (
-              <li key={klucz} className="box-border min-w-0 flex-[1_1_12.5rem] rounded-md bg-surface-page p-5">
-                <Ikona nazwa={ikona} className="text-brand" />
-                <h3 className="mt-3 mb-1 text-body-strong text-ink">{t.coZrobisz[klucz].tytul}</h3>
-                <p className="m-0 text-body">{t.coZrobisz[klucz].opis}</p>
-              </li>
-            ))}
-          </ul>
-        </Karta>
-        <Karta tytul={t.jakZaczniesz.tytul} bezLinii>
-          <div className="flex flex-wrap items-start gap-7.5">
-            <div className="min-w-0 flex-[1_1_26.25rem]">
-              <ListaKrokow kroki={[...t.jakZaczniesz.kroki]} />
-            </div>
-            <div className="flex min-w-0 flex-[1_1_18.75rem] flex-col gap-3">
-              <h3 className="m-0 mb-1 text-body-strong text-ink">{t.jakZaczniesz.twojeDane}</h3>
-              {t.jakZaczniesz.notatki.map((notatka) => (
-                <Notatka key={notatka}>
-                  <p>{notatka}</p>
-                </Notatka>
+      {/* Kolumna wyśrodkowana w obszarze treści; od lg także w pionie, gdy treść jest niższa niż okno
+          (wysokość okna minus nagłówek ramy 5rem i odstępy main pt-6 i pb-16). */}
+      <div className="mx-auto flex w-full max-w-[66rem] min-w-0 flex-col lg:min-h-[calc(100dvh-var(--spacing-header)-5.5rem)] lg:justify-center">
+        <NaglowekStrony
+          tytul={t.naglowek}
+          wstep={t.wstep}
+          powrot={false}
+          className="[&>div:first-child]:justify-center [&>div:first-child]:text-center [&>div:first-child>div]:items-center"
+        />
+        <Stos odstep={7.5}>
+          <Karta tytul={t.coZrobisz.tytul} bezLinii>
+            <ul className="m-0 flex list-none flex-wrap gap-4 p-0">
+              {POZYCJE.map(({ klucz, ikona }) => (
+                <li key={klucz} className="box-border min-w-0 flex-[1_1_12.5rem] rounded-md bg-surface-page p-5">
+                  <Ikona nazwa={ikona} className="text-brand" />
+                  <h3 className="mt-3 mb-1 text-body-strong text-ink">{t.coZrobisz[klucz].tytul}</h3>
+                  <p className="m-0 text-body">{t.coZrobisz[klucz].opis}</p>
+                </li>
               ))}
+            </ul>
+          </Karta>
+          <Karta tytul={t.jakZaczniesz.tytul} bezLinii>
+            <div className="flex flex-wrap items-start gap-7.5">
+              <div className="min-w-0 flex-[1_1_26.25rem]">
+                <ListaKrokow kroki={[...t.jakZaczniesz.kroki]} />
+              </div>
+              <div className="flex min-w-0 flex-[1_1_18.75rem] flex-col gap-3">
+                <h3 className="m-0 mb-1 text-body-strong text-ink">{t.jakZaczniesz.twojeDane}</h3>
+                {t.jakZaczniesz.notatki.map((notatka) => (
+                  <Notatka key={notatka}>
+                    <p>{notatka}</p>
+                  </Notatka>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="mt-7.5">
-            <Przycisk wariant="glowny" szerokosc="szeroka" zajety={zajety} onClick={() => ustawArkuszOtwarty(true)}>
-              {t.rozpocznij}
-            </Przycisk>
-          </div>
-        </Karta>
-      </Stos>
+            <div className="mt-7.5 flex justify-center">
+              <Przycisk wariant="glowny" szerokosc="szeroka" zajety={zajety} onClick={() => ustawArkuszOtwarty(true)}>
+                {t.rozpocznij}
+              </Przycisk>
+            </div>
+          </Karta>
+        </Stos>
+      </div>
       <ArkuszZgody
         otwarte={arkuszOtwarty}
         onZamknij={() => ustawArkuszOtwarty(false)}

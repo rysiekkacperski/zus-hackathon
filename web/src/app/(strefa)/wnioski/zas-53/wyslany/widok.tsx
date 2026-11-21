@@ -9,7 +9,6 @@ import { formatujRachunek } from '@/domena/walidacje';
 import { useKonto, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
 import { Kafelki } from '@/komponenty/kafelki';
 import { Karta } from '@/komponenty/karta';
-import { FlagaDemo } from '@/komponenty/flaga-demo';
 import { ListaDefinicji } from '@/komponenty/lista-definicji';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { Odnosnik } from '@/komponenty/odnosnik';
@@ -92,11 +91,6 @@ export function WidokWyslanegoZas53() {
                   { etykieta: t.zalaczniki, wartosc: zalaczniki.length > 0 ? zalaczniki.join(', ') : t.brakZalacznikow },
                 ]}
               />
-              {wniosek.potwierdzenie?.startsWith('ZAS53-DEMO') ? (
-                <p className="m-0 mt-4">
-                  <FlagaDemo>{t.flagaDemo}</FlagaDemo>
-                </p>
-              ) : null}
             </Karta>
             <Karta tytul={t.kartaSprawy} bezLinii as="section">
               <p className="m-0 text-body-strong">{t.sprawa}</p>

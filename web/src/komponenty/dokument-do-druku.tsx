@@ -1,7 +1,6 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { FlagaDemo } from '@/komponenty/flaga-demo';
 import { Przycisk } from '@/komponenty/przycisk';
 import { teksty } from '@/teksty';
 
@@ -9,7 +8,6 @@ export interface DokumentDoDrukuProps {
   tytul: string;
   children: ReactNode;
   nazwaPliku: string;
-  flagaDemo?: boolean;
   id?: string;
   className?: string;
 }
@@ -31,7 +29,7 @@ export function drukujDokument(nazwaPliku?: string): void {
   window.print();
 }
 
-export function DokumentDoDruku({ tytul, children, nazwaPliku, flagaDemo = false, id, className }: DokumentDoDrukuProps) {
+export function DokumentDoDruku({ tytul, children, nazwaPliku, id, className }: DokumentDoDrukuProps) {
   return (
     <article
       id={id}
@@ -43,14 +41,8 @@ export function DokumentDoDruku({ tytul, children, nazwaPliku, flagaDemo = false
         .filter(Boolean)
         .join(' ')}
     >
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        {flagaDemo ? <FlagaDemo /> : <span />}
-        <Przycisk
-          wariant="drugorzedny"
-          ikona="drukuj"
-          onClick={() => drukujDokument(nazwaPliku)}
-          className="print:hidden"
-        >
+      <div className="mb-6 flex justify-end print:hidden">
+        <Przycisk wariant="drugorzedny" ikona="drukuj" onClick={() => drukujDokument(nazwaPliku)}>
           {teksty.wspolne.zlozone.drukujLubZapiszPdf}
         </Przycisk>
       </div>

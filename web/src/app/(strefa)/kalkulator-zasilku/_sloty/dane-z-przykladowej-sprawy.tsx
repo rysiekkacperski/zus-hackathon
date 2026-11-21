@@ -21,7 +21,7 @@ import {
   ustalPodstaweZeSprawy,
 } from '@/domena/przykladowe-sprawy/weryfikacja';
 import type { RodzicWRodzinie } from '@/domena/typy';
-import { useKatalog, useStanSesji } from '@/dane/magazyn/hooki';
+import { useCzyGosc, useKatalog, useStanSesji } from '@/dane/magazyn/hooki';
 import { teksty } from '@/teksty';
 import type { PropsSlotu, ZmianaDanychKalkulatora } from './typy';
 
@@ -31,6 +31,7 @@ const ZRODLO = 'przykladowa-sprawa';
 export function SlotDaneZPrzykladowejSprawy({ zrodlo, onUzupelnij }: PropsSlotu<'daneWejsciowe'>) {
   const stanSesji = useStanSesji();
   const katalog = useKatalog();
+  const gosc = useCzyGosc();
   const sprawa = stanSesji?.przykladowaSprawa;
   const aktywny = zrodlo === ZRODLO && sprawa?.weryfikacja !== undefined;
 
@@ -94,7 +95,15 @@ export function SlotDaneZPrzykladowejSprawy({ zrodlo, onUzupelnij }: PropsSlotu<
 
   return (
     <Stos odstep={6}>
-      <p className="m-0 text-body">{sprawa.idSprawy === undefined ? T.wstepBezId : T.wstep({ id: sprawa.idSprawy })}</p>
+      <p className="m-0 text-body">
+        {gosc
+          ? sprawa.idSprawy === undefined
+            ? T.wstepGoscBezId
+            : T.wstepGosc({ id: sprawa.idSprawy })
+          : sprawa.idSprawy === undefined
+            ? T.wstepBezId
+            : T.wstep({ id: sprawa.idSprawy })}
+      </p>
       <Karta tytul={T.tytulUbezpieczonej} poziomTytulu={2} bezLinii>
         <ListaDefinicji
           szerokoscEtykiety="szeroka"

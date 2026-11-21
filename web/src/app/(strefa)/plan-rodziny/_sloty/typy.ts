@@ -11,13 +11,13 @@ export interface PropsSlotuSprawy {
   pochodzenie?: Pochodzenie;
 }
 
-// Propsy slotów nagłówka planu i bloku nad planem.
+// Propsy slotów sekcji „Co możesz zrobić” i bloku nad planem.
 export interface PropsSlotuPlanu {
   kontekst: KontekstRodziny;
 }
 
 interface PropsWMiejscach {
-  naglowek: PropsSlotuPlanu;
+  akcje: PropsSlotuPlanu;
   nadPlanem: PropsSlotuPlanu;
   przySprawie: PropsSlotuSprawy;
 }

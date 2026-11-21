@@ -30,6 +30,10 @@ export interface WierszProfilu {
   zrodlo?: ZrodloDanej;
   opis?: string;
   akcja?: AkcjaWiersza;
+  /** Wiersz bez odpowiedzi rodzica (wartość „Nie podano”); zakładka sekcji pokazuje wskaźnik błędu. */
+  brak?: boolean;
+  /** Wiersz zmiany zatrudnienia w ciąży, który zakładki podsumowania mogą przenieść do osobnej zakładki. */
+  czesc?: 'zmianaZatrudnienia';
 }
 
 export interface SekcjaProfilu {
@@ -199,7 +203,9 @@ function sekcjaDanychCiazy(p: ProfilDoPokazania, zgoda: boolean): SekcjaProfilu 
     );
   }
   if (zgoda && (sytuacja === 'oczekiwanie' || sytuacja === 'narodziny')) {
-    wiersze.push(...tekstZmianyZatrudnienia(p.daneRodziny.matka ?? {}));
+    wiersze.push(
+      ...tekstZmianyZatrudnienia(p.daneRodziny.matka ?? {}).map((w): WierszProfilu => ({ ...w, czesc: 'zmianaZatrudnienia' })),
+    );
   }
   return {
     id: 'daneCiazy',
@@ -284,14 +290,14 @@ function sekcjaDrugiegoRodzica(dr: Partial<DrugiRodzic> | undefined): SekcjaProf
   };
 }
 
-/** Cztery sekcje podsumowania profilu w kolejności ze wzoru. */
+/** Cztery sekcje podsumowania profilu w kolejności ze wzoru; wiersz z wartością „Nie podano” ma znacznik braku. */
 export function sekcjeProfilu(p: ProfilDoPokazania, zgoda: boolean): SekcjaProfilu[] {
   return [
     sekcjaFormyIPlatnika(p.daneRodziny.matka ?? {}),
     sekcjaDanychCiazy(p, zgoda),
     sekcjaDanychRodziny(p.daneRodziny),
     sekcjaDrugiegoRodzica(p.daneRodziny.drugiRodzic),
-  ];
+  ].map((s) => ({ ...s, wiersze: s.wiersze.map((w) => (w.wartosc === t.nieUstalono ? { ...w, brak: true } : w)) }));
 }
 
 /** Wartości wierszy zapisanego profilu według sekcji i klucza wiersza, do oznaczenia zmian. */

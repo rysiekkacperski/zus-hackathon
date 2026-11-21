@@ -3,7 +3,8 @@
 // ViewSampleCaseData (3.4.3.1.1–3.4.3.1.5): dane bieżącej przykładowej sprawy ze źródłem każdej wartości,
 // dokumenty sprawy z podglądem i dodawaniem, korekty, oczekiwane rozstrzygnięcie i zatwierdzenie danych
 // (wzory P13-02, P13-06, P13-09, P13-10, P13-11, P13-12). Formularz dzieli grupy danych na części (?czesc=N),
-// a komunikaty odczytu i notatka stanu stoją nad pierwszą częścią, czyli nad dokumentami sprawy.
+// a komunikaty odczytu i notatka stanu stoją nad pierwszą częścią, czyli nad dokumentami sprawy. Podgląd pliku
+// porównuje właściciela dokumentu z właścicielem danych: PESEL konta albo 'gosc:<id>' w trybie gościa.
 import { useEffect, useState } from 'react';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -15,7 +16,7 @@ import { trasy } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { Stos } from '@/komponenty/uklad';
 import { formatujDateICzas } from '@/domena/daty';
-import { useSesja, useStanSesji, useTeraz } from '@/dane/magazyn/hooki';
+import { useStanSesji, useTeraz, useWlascicielDanych } from '@/dane/magazyn/hooki';
 import { usunPlikiPo24h, usunSprawe, wgrajDokument } from '@/dane/magazyn/operacje/przykladowe-sprawy';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import type { KodKomunikatu } from '@/domena/typy';
@@ -26,7 +27,7 @@ import { FormularzDanychSprawy } from './_czesci/formularz-sprawy';
 const t = teksty.ViewSampleCaseData;
 
 export function WidokDanychPrzykladowejSprawy() {
-  const sesja = useSesja();
+  const wlasciciel = useWlascicielDanych();
   const stanSesji = useStanSesji();
   const teraz = useTeraz();
   const sprawa = stanSesji?.przykladowaSprawa;
@@ -116,7 +117,7 @@ export function WidokDanychPrzykladowejSprawy() {
         <FormularzDanychSprawy
           key={kluczFormularza}
           sprawa={sprawa}
-          konto={sesja?.pesel}
+          konto={wlasciciel?.id}
           teraz={teraz}
           onDodajDokument={dodajDokument}
           dodawanie={dodawanie}

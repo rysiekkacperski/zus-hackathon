@@ -1,7 +1,7 @@
 // Budowniczy adresów widoków. Moduły domeny zwracają IdWidoku, a interfejs zamienia go na adres
 // przez `trasy.<IdWidoku>(parametry)` albo `sciezkaWidoku(id, parametry)`.
 
-import type { IdWidoku, Pochodzenie } from '@/domena/typy';
+import type { Etap, IdWidoku, Pochodzenie } from '@/domena/typy';
 import {
   czyWidokBezTrasy,
   dopasujTrase,
@@ -14,7 +14,7 @@ import {
   type TrybyWidokow,
 } from '@/komponenty/rama/mapa-tras';
 
-export { dopasujTrase } from '@/komponenty/rama/mapa-tras';
+export { czyTrasaDlaGoscia, dopasujTrase } from '@/komponenty/rama/mapa-tras';
 
 type Wartosc = string | number | boolean | null | undefined;
 type Zapytanie<K extends string> = { readonly [P in K]?: Wartosc };
@@ -50,9 +50,10 @@ export interface ParametryWidokow {
   ViewBirthPackage: BezParametrow;
   ViewSpecialSituation: BezParametrow;
   ViewFamilyPlan: BezParametrow;
+  ViewFamilyPlanStage: { etap: Etap };
   ViewPregnancyBenefits: BezParametrow;
-  ViewCaseDetails: { idSprawy: string; z?: Pochodzenie; arkusz?: 'ryzyko' };
-  ViewCaseGuide: { idSprawy: string; z?: Pochodzenie };
+  ViewCaseDetails: { idSprawy: string; z?: Pochodzenie; arkusz?: 'ryzyko'; etap?: Etap };
+  ViewCaseGuide: { idSprawy: string; z?: Pochodzenie; etap?: Etap };
   ViewDeadlines: BezParametrow;
   ViewApplicationList: BezParametrow;
   ViewSickLeaveList: BezParametrow;
@@ -196,4 +197,10 @@ export function bezpiecznyPowrot(wartosc: string | null | undefined): string | n
   if (adres.origin !== BAZA_ADRESU) return null;
   if (dopasujTrase(adres.pathname) === null) return null;
   return `${adres.pathname}${adres.search}`;
+}
+
+/** Adres strony startowej z logowaniem i powrotem na podaną ścieżkę (przycisk „Zaloguj się” gościa). */
+export function sciezkaLogowaniaZPowrotem(sciezka: string): string {
+  const powrot = bezpiecznyPowrot(sciezka);
+  return powrot === null || powrot === '/' ? '/' : zbudujSciezke('ViewGuideStart', { powrot });
 }

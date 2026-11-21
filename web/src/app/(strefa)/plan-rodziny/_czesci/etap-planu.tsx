@@ -1,8 +1,9 @@
 'use client';
 
-// Karta etapu ścieżki na ViewFamilyPlan (historyjka 3.6.1.2.1, wzór Plan-rodziny): tytuł z numerem etapu,
-// oznaczenie bieżącego etapu, zwijanie spraw, tabela spraw z rodzicem, statusem, oznaczeniami i kwotą. Właściciel: u12.
-import { useId, useState, type ReactNode } from 'react';
+// Sprawy etapu planu na stronie etapu ViewFamilyPlanStage (historyjka 3.6.1.2.1, wzór Plan-rodziny): tabela spraw
+// z rodzicem, statusem, oznaczeniami, kwotą i slotami przy sprawie. Link do sprawy prowadzi do ViewCaseDetails
+// z ?z=plan i etapem, więc powrót z karty sprawy wraca na stronę etapu. Właściciel: u12.
+import type { ReactNode } from 'react';
 import type { KontekstRodziny } from '@/dane/magazyn/hooki';
 import type { Etap, PozycjaPlanu, TerminSprawy } from '@/domena/typy';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
@@ -11,37 +12,34 @@ import { Komunikat } from '@/komponenty/komunikat';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { Tabela } from '@/komponenty/tabela';
-import { StatusSprawy, Znaczek } from '@/komponenty/znaczek';
+import { StatusSprawy } from '@/komponenty/znaczek';
 import { teksty } from '@/teksty';
 import { slotyPrzySprawie } from '../_sloty';
-import {
-  czyDotyczyDziecka,
-  etykietaRodzica,
-  kwotaSprawy,
-  nazwaEtapu,
-  opisSprawy,
-  numerEtapu,
-  tytulEtapuZNumerem,
-  tytulSprawy,
-} from './sprawy';
+import { PARAMETR_ETAPU } from './sciezka-etapu';
+import { czyDotyczyDziecka, etykietaRodzica, kwotaSprawy, nazwaEtapu, opisSprawy, tytulSprawy } from './sprawy';
 
 const t = teksty.ViewFamilyPlan;
 
 export interface EtapPlanuProps {
   etap: Etap;
   sprawy: PozycjaPlanu[];
-  /** Liczba spraw etapu razem ze sprawami pokazanymi w bloku strażnika. */
-  liczbaSpraw: number;
   kontekst: KontekstRodziny;
   terminy: TerminSprawy[];
-  biezacy: boolean;
-  zakonczony: boolean;
-  wstep?: ReactNode;
   przedTabela?: ReactNode;
   poTabeli?: ReactNode;
 }
 
-function KomorkaSprawy({ sprawa, kontekst, termin }: { sprawa: PozycjaPlanu; kontekst: KontekstRodziny; termin?: TerminSprawy }) {
+function KomorkaSprawy({
+  sprawa,
+  kontekst,
+  termin,
+  etap,
+}: {
+  sprawa: PozycjaPlanu;
+  kontekst: KontekstRodziny;
+  termin?: TerminSprawy;
+  etap: Etap;
+}) {
   const opis = opisSprawy(sprawa, kontekst.rodzina.daneCiazy);
   const informacjaK19 = sprawa.ostrzezenia.some((o) => o.rodzaj === 'informacja-po-porodzie');
   const oznaczenia: string[] = [];
@@ -52,7 +50,10 @@ function KomorkaSprawy({ sprawa, kontekst, termin }: { sprawa: PozycjaPlanu; kon
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <span className="font-semibold">
-        <Odnosnik href={sciezkaWidoku('ViewCaseDetails', { idSprawy: sprawa.idSprawy })} pochodzenie="plan">
+        <Odnosnik
+          href={sciezkaWidoku('ViewCaseDetails', { idSprawy: sprawa.idSprawy, [PARAMETR_ETAPU]: etap })}
+          pochodzenie="plan"
+        >
           {tytulSprawy(kontekst.katalog, sprawa)}
         </Odnosnik>
       </span>
@@ -75,47 +76,13 @@ function KomorkaSprawy({ sprawa, kontekst, termin }: { sprawa: PozycjaPlanu; kon
   );
 }
 
-export function EtapPlanu({
-  etap,
-  sprawy,
-  liczbaSpraw,
-  kontekst,
-  terminy,
-  biezacy,
-  zakonczony,
-  wstep,
-  przedTabela,
-  poTabeli,
-}: EtapPlanuProps) {
-  const [ukryte, setUkryte] = useState(false);
-  const idTresci = useId();
+export function EtapPlanu({ etap, sprawy, kontekst, terminy, przedTabela, poTabeli }: EtapPlanuProps) {
   const nazwa = nazwaEtapu(etap);
   const zKwota = etap === 'pieniadze-na-dziecko';
-  const liczba = String(liczbaSpraw);
 
   return (
-    <Karta
-      id={`etap-${numerEtapu(etap)}`}
-      tytul={tytulEtapuZNumerem(etap)}
-      bezLinii
-      akcje={
-        <>
-          {biezacy ? <Znaczek>{t.biezacyEtap}</Znaczek> : null}
-          {zakonczony ? <span className="text-small-strong text-ink">{t.etapZakonczony}</span> : null}
-          <button
-            type="button"
-            aria-expanded={!ukryte}
-            aria-controls={idTresci}
-            onClick={() => setUkryte((u) => !u)}
-            className="cursor-pointer border-0 bg-transparent p-0 text-body text-brand underline-offset-2 hover:text-brand-deep hover:underline"
-          >
-            {ukryte ? t.pokazSprawy({ liczba }) : t.ukryjSprawy({ liczba })}
-          </button>
-        </>
-      }
-    >
-      <div id={idTresci} hidden={ukryte} className="flex flex-col gap-6">
-        {wstep ? <div className="text-body [&_p]:m-0">{wstep}</div> : null}
+    <Karta tytul={teksty.ViewFamilyPlanStage.sprawyEtapu} bezLinii>
+      <div className="flex flex-col gap-6">
         {przedTabela}
         {sprawy.length > 0 ? (
           <Tabela
@@ -134,6 +101,7 @@ export function EtapPlanu({
                   sprawa={sprawa}
                   kontekst={kontekst}
                   termin={terminy.find((tr) => tr.idSprawy === sprawa.idSprawy)}
+                  etap={etap}
                 />
               ),
               kogo: etykietaRodzica(sprawa, kontekst.rola),
