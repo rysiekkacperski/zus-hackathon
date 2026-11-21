@@ -35,6 +35,8 @@ Model systemu dzieli aplikację na grupy elementów systemu, czyli stałych obsz
 - `docs/` zawiera dokumentację prowadzoną według `docs/docs_blueprint.md` w trzech folderach sekcji: `01-opis-produktu`, `02-model-systemu` i `03-user-stories`. Podfoldery i pliki nazywaj numerem i nazwą strony zgodnie z przykładami w `docs/readme.md`.
 - `docs/03-user-stories/tablica-komunikatow.md` zawiera tablicę kodów komunikatów do użytkownika, do której odwołują się historyjki. Story, które wprowadza nową sytuację, dodaje do tablicy wiersz z kolejnym wolnym kodem.
 - `docs/materialy-zrodlowe/` zawiera treść zadania i research, czyli materiał wejściowy dla dokumentacji.
+- `web/` zawiera aplikację webową w Next.js 16 z App Routerem, React 19, Tailwind CSS 4 i TypeScriptem, zarządzaną przez pnpm. Trasy leżą w `web/src/app/`, a pozostały kod w sąsiednich folderach `web/src/`. Stos, polecenia i zasady pisania kodu aplikacji opisuje `web/CLAUDE.md`, a dokumentację zainstalowanej wersji Next.js zawiera `web/node_modules/next/dist/docs/`.
+- `.claude/skills/` zawiera skille dla Next.js, Reacta, Tailwinda, LangChain i LangGraph, których źródła i commity przypina `skills-lock.json`. Skille i sytuacje, w których z nich korzystać, opisuje `web/CLAUDE.md`.
 - Gałąź `main` zawiera aktualną dokumentację. Każdą zmianę, na przykład nowy Epik, nowe Story albo edycję istniejącej strony, prowadź na osobnej gałęzi scalanej do `main`.
 
 ## Jak korzystać z wiedzy projektu
@@ -79,11 +81,25 @@ Pytaj dopiero po wykorzystaniu dostępnych źródeł i tylko wtedy, gdy brak mo�
 - Edytując dokument, nie wspominaj w nim o poprzednich wersjach dokumentu ani o tym, co zmieniłeś.
 - Nie zamieszczaj w dokumencie daty jego powstania ani edycji. Pole „Data ostatniej aktualizacji” w Metadata uzupełnia zespół w chwili faktycznej edycji strony. Daty wynikające z przepisów są częścią treści.
 
+## Aplikacja
+
+Polecenia uruchamiaj w folderze `web/` przez pnpm:
+
+- `pnpm install` instaluje zależności;
+- `pnpm dev` uruchamia serwer deweloperski pod adresem http://localhost:3000;
+- `pnpm build` buduje wersję produkcyjną, a `pnpm start` ją uruchamia;
+- `pnpm add <pakiet>` dodaje pakiet;
+- `pnpm lint` i `pnpm typecheck` sprawdzają kod i typy przed oddaniem zmiany.
+
+Style pisz klasami Tailwind CSS. Motyw, czyli kolory, fonty i odstępy, definiuj w bloku `@theme` w `web/src/app/globals.css`.
+
+Wszystkie teksty interfejsu, w tym komunikaty z tablicy komunikatów, trzymaj w jednym pliku `web/src/teksty.ts`. Zasady prowadzenia tego pliku opisuje `web/CLAUDE.md`.
+
 ## Otwarte ustalenia
 
 Poniższe obszary nie są jeszcze ustalone. Zanim podejmiesz w nich decyzję, zapytaj użytkownika:
 
-- stos technologiczny i struktura kodu aplikacji w repozytorium;
+- struktura ekranów i modułów aplikacji w `web/src/` poza szablonem startowym Next.js;
 - forma i miejsce przechowywania wzorów widoków, do których odwołują się historyjki;
 - sposób symulacji w demo logowania mZUS, danych z konta ZUS i wysyłki wniosku ZAM do ZUS.
 

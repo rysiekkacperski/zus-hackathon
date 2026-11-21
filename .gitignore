@@ -3,3 +3,6 @@
 # Lokalne ustawienia i worktree Claude Code, niewersjonowane
 .claude/settings.local.json
 .claude/worktrees/
+
+# Specyfikacja wyzwania ZUS, przechowywana lokalnie
+docs/materialy-zrodlowe/wymagania-zus-zasilkowy-przewodnik.pdf
