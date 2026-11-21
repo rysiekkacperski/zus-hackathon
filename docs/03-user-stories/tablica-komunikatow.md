@@ -118,7 +118,7 @@
 | 0102 | Data zgonu dziecka przed datą porodu | ERROR | 400 | Data zgonu dziecka nie może być wcześniejsza niż data porodu. |
 | 0103 | Nieobsługiwany format pliku | ERROR | 415 | Wgraj plik w formacie PDF, JPG albo PNG. |
 | 0104 | Plik zbyt duży | ERROR | 413 | Plik może mieć najwyżej 10 MB. |
-| 0105 | Nierozpoznany rodzaj dokumentu | ERROR | 422 | Nie rozpoznaliśmy dokumentu. Wgraj wniosek ZAM, zaświadczenie Z-3, zaświadczenie Z-3a albo poświadczenie ubezpieczenia chorobowego. |
+| 0105 | Nierozpoznany rodzaj dokumentu | ERROR | 422 | Nie rozpoznaliśmy dokumentu. Wgraj dokument z zestawu przykładowych spraw ZUS, na przykład wniosek o zasiłek macierzyński, zaświadczenie płatnika składek, poświadczenie ubezpieczenia chorobowego albo zaświadczenie lekarskie. |
 | 0106 | Nieczytelny dokument | ERROR | 422 | Nie udało się odczytać danych z dokumentu. Wgraj wyraźniejszy plik albo wpisz dane sam. |
 | 0107 | Dane odczytane z pomocą AI | INFO | 200 | Dane odczytaliśmy z dokumentu z pomocą sztucznej inteligencji. Sprawdź je i popraw, zanim przejdziesz dalej. |
 | 0108 | Odczyt dokumentu niedostępny | ERROR | 503 | Odczyt dokumentu jest chwilowo niedostępny. Spróbuj ponownie za chwilę albo wybierz sprawę z listy. |
@@ -268,3 +268,6 @@
 | 0252 | Wygasły kod logowania z aplikacji mZUS | WARNING | 401 | Kod logowania stracił ważność po 2 minutach. Potwierdź w aplikacji mZUS nowy kod. |
 | 0253 | Puste pole daty urodzenia nowego konta | ERROR | 400 | Podaj datę urodzenia. |
 | 0254 | Wiek spoza zakresu nowego konta | ERROR | 400 | Nowe konto w wersji demonstracyjnej zakłada osoba w wieku od 16 do 60 lat. Podaj inną datę urodzenia. |
+| 0255 | Dane osobowe zastąpione danymi losowymi | INFO | 200 | Imię, nazwisko i numer PESEL z dokumentu zastąpiliśmy danymi losowymi z tą samą datą urodzenia i płcią. Daty, okresy i kwoty zostały takie jak w dokumencie. |
+| 0256 | Asystent bez profilu rodziny | INFO | 200 | Odpowiadam na podstawie Twoich danych z konta ZUS i katalogu świadczeń. Uzupełnij profil na start, żebym mógł odpowiadać o planie i terminach Twojej rodziny. |
+| 0257 | Pusta lista wniosków | INFO | 200 | Wnioski złożone, przygotowane i wysłane w przewodniku pojawią się na tej liście. |
