@@ -2,7 +2,8 @@
 
 // ViewCaseDetails: szczegóły sprawy planu (historyjki 3.6.1.2.1, 3.6.1.4.1; wzory Sprawa, P06-14, P06-15, P06-16).
 // Tytuł, rodzaj, etap, rodzic, status, warunek spełniany przez rodzinę, instytucja i kanał, przejście do instrukcji,
-// akcje e-ZLA i stanu rozliczeń składek, sekcje innych jednostek. Właściciel: u12.
+// akcje e-ZLA i stanu rozliczeń składek, sekcje innych jednostek. Arkusz SheetRiskDetails (?arkusz=ryzyko) otwiera
+// sekcja ostrzezenia-ryzyk (u22). Właściciel: u12.
 import { useSearchParams } from 'next/navigation';
 import { use } from 'react';
 import { useKontekstRodziny } from '@/dane/magazyn/hooki';
@@ -32,7 +33,6 @@ import {
   tytulEtapuZNumerem,
   tytulSprawy,
 } from '@/app/(strefa)/plan-rodziny/_czesci/sprawy';
-import { ArkuszRyzyka } from './_czesci/arkusz-ryzyka';
 import { daneProfiluSprawy, kanalSprawy, spelnionyWarunek } from './_czesci/opis-sprawy';
 import { sekcjeSprawy } from './_sekcje';
 
@@ -47,7 +47,6 @@ export function WidokSprawy({ params }: { params: PageProps<'/sprawy/[idSprawy]'
   const kontekst = useKontekstRodziny();
   const z = zapytanie.get('z');
   const pochodzenie = POCHODZENIA.find((p) => p === z);
-  const arkuszRyzyka = zapytanie.get('arkusz') === 'ryzyko';
 
   const sprawa = kontekst?.rodzina.plan?.pozycje.find((p) => p.idSprawy === idSprawy);
 
@@ -115,12 +114,6 @@ export function WidokSprawy({ params }: { params: PageProps<'/sprawy/[idSprawy]'
   const pokazSkladki =
     matkaJdg && sprawa.rodzic === 'matka' && (oplacenie || SPRAWY_ZE_STANEM_ROZLICZEN.includes(sprawa.idPozycji ?? ''));
   const pokazEzla = sprawa.idPozycji === 'K24';
-
-  const zamknijArkuszRyzyka = () => {
-    const adres = new URL(window.location.href);
-    adres.searchParams.delete('arkusz');
-    window.history.replaceState(null, '', `${adres.pathname}${adres.search}${adres.hash}`);
-  };
 
   const kartaWarunku = wymagaUzupelnienia ? (
     <Karta tytul={t.brakuje.tytul} bezLinii>
@@ -228,7 +221,6 @@ export function WidokSprawy({ params }: { params: PageProps<'/sprawy/[idSprawy]'
         {wymagaUzupelnienia && kontekst.stanZgody !== 'udzielona' ? <Komunikat kod="0004" /> : null}
         <UkladDwuKolumnowy tresc={tresc} boczna={boczna} />
       </Stos>
-      <ArkuszRyzyka otwarte={arkuszRyzyka} onZamknij={zamknijArkuszRyzyka} />
     </>
   );
 }

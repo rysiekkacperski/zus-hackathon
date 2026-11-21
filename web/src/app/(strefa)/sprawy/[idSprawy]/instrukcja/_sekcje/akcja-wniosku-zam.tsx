@@ -1,8 +1,9 @@
 'use client';
 
 // Sekcja ViewCaseGuide „akcja-wniosku-zam” w liście sekcjeInstrukcji (kontrakt, sekcja 12.4). Właściciel: u27.
-// Start wniosku ZAM („Wypełnij wniosek”), powrót do szkicu i potwierdzenie wysłanego wniosku dla spraw K08
-// (matka) oraz K09 i K10 (drugi rodzic z JDG albo umową zlecenia z dobrowolnym ubezpieczeniem chorobowym).
+// Powrót do szkicu i potwierdzenie wysłanego wniosku ZAM dla spraw K08 (matka) oraz K09 i K10 (drugi rodzic
+// z JDG albo umową zlecenia z dobrowolnym ubezpieczeniem chorobowym). Start wniosku („Wypełnij wniosek”)
+// renderuje gospodarz ViewCaseGuide (u17) w akcjach karty „Najważniejsze informacje”, gdy konto nie ma szkicu.
 // Teksty: teksty.ViewCaseGuide.sekcjaAkcjaWnioskuZam.
 import { dataZeZnacznika, formatujDate } from '@/domena/daty';
 import type { WniosekZam } from '@/domena/typy';
@@ -48,16 +49,16 @@ export function SekcjaAkcjaWnioskuZam({ sprawa, kontekst }: PropsSlotu<'akcja'>)
     );
   }
 
+  if (!szkic) return null;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-4">
         <PrzyciskLink href={trasy.ViewZamLeaveType({ sprawa: sprawa.idSprawy })} wariant="glowny">
-          {szkic ? t.wrocDoWniosku : t.wypelnij}
+          {t.wrocDoWniosku}
         </PrzyciskLink>
       </div>
-      <p className="m-0 text-small">
-        {szkic ? t.szkic({ data: formatujDate(dataZeZnacznika(szkic.zaktualizowano)) }) : t.opis}
-      </p>
+      <p className="m-0 text-small">{t.szkic({ data: formatujDate(dataZeZnacznika(szkic.zaktualizowano)) })}</p>
     </div>
   );
 }

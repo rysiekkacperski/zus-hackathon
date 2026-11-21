@@ -1805,9 +1805,7 @@ export const teksty = {
     naglowek: "Instrukcja sprawy",
     // Sekcje sprawy/[idSprawy]/instrukcja/_sekcje (u27, u28, u34, u26, u26, u20, u30, u29, u29)
     sekcjaAkcjaWnioskuZam: {
-      wypelnij: "Wypełnij wniosek",
       wrocDoWniosku: "Wróć do wniosku",
-      opis: "Kreator wniosku otworzy się w przewodniku, nie musisz logować się do innego serwisu.",
       szkic: ({ data }: { data: string }) =>
         `Masz szkic wniosku zapisany ${data}. Wrócisz do ostatniego kroku z zachowanymi odpowiedziami.`,
       wyslany: ({ data, numer }: { data: string; numer: string }) => `Wniosek wysłany ${data}, numer potwierdzenia ${numer}.`,

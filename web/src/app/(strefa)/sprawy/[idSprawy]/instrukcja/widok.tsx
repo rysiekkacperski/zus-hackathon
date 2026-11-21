@@ -24,6 +24,7 @@ import {
   porzucPowrotZKanalu,
   przejdzDoKanalu,
 } from '@/dane/magazyn/operacje/kanaly';
+import { szkicZamSprawy } from '@/dane/magazyn/operacje/wnioski-zam';
 import { tytulSprawy } from '@/domena/katalog/odczyt';
 import {
   daneRodzicaSprawy,
@@ -154,6 +155,11 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
   const informacja = sprawa.rodzaj === 'informacja';
   const swiadczenie = rodzajOznaczenia(sprawa.rodzaj) === 'zlozona';
   const terminTekst = termin?.termin ? formatujDate(termin.termin) : null;
+  // Szkic wniosku ZAM konta: powrót do szkicu pokazuje sekcja akcja-wniosku-zam (u27), więc start wniosku znika z akcji.
+  const maSzkicZam =
+    wybor.typ === 'kreator' &&
+    wybor.idWidoku === 'ViewZamLeaveType' &&
+    szkicZamSprawy(kontekst.rodzina, idSprawy, kontekst.konto.pesel) !== null;
 
   function przejdz() {
     if (wybor.typ !== 'zewnetrzny') return;
@@ -329,7 +335,7 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
                 </>
               ) : (
                 <>
-                  {wybor.typ === 'kreator' ? (
+                  {wybor.typ === 'kreator' && !maSzkicZam ? (
                     <PrzyciskLink href={sciezkaWidoku(wybor.idWidoku, { sprawa: idSprawy })} wariant="glowny">
                       {wybor.idWidoku === 'ViewZamLeaveType' ? t.akcjaKreatorZam : t.akcjaKreatorZas53}
                     </PrzyciskLink>
