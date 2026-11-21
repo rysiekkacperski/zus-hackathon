@@ -1147,6 +1147,11 @@ export const teksty = {
       // koniec sekcjaDrugiegoRodzica
     },
     sekcjaSytuacji: {
+      tytul: "Sytuacja szczególna",
+      opis: "Jeśli wydarzyło się coś, co zmienia sytuację Twojej rodziny, zapisz to tutaj. Dopasujemy plan i wstrzymamy przypomnienia o sprawach, które przestaną Was dotyczyć.",
+      zapisane: ({ liczba }: { liczba: number }) => `Zapisane sytuacje szczególne: ${liczba}.`,
+      akcja: "Zgłoś sytuację szczególną",
+      akcjaZapisane: "Sytuacja szczególna",
       // koniec sekcjaSytuacji
     },
     // koniec ViewProfileSummary
@@ -1177,6 +1182,78 @@ export const teksty = {
   ViewSpecialSituation: {
     tytulStrony: "Sytuacja szczególna",
     naglowek: "Sytuacja szczególna",
+    wstep: "Zapisz, co się wydarzyło. Dopasujemy plan rodziny i wstrzymamy przypomnienia o sprawach, które przestaną Was dotyczyć.",
+    powrot: "Plan rodziny",
+    kartaRodzaju: "Co się wydarzyło",
+    legendaRodzaju: "Rodzaj sytuacji",
+    dotyczyDziecka: "Dotyczy dziecka",
+    dotyczyMatki: "Dotyczy matki",
+    // Etykiety rodzajów sytuacji szczególnych (do przeniesienia do teksty.wspolne.etykiety)
+    rodzaje: {
+      "martwe-urodzenie": "Urodzenie martwego dziecka",
+      poronienie: "Poronienie potwierdzone zaświadczeniem o martwym urodzeniu",
+      "zgon-dziecka": "Zgon dziecka",
+      "przedwczesny-porod": "Przedwczesny poród",
+      "choroba-dziecka": "Ciężka choroba dziecka",
+      szpital: "Pobyt matki w szpitalu",
+      orzeczenie: "Orzeczenie o niezdolności matki do samodzielnej egzystencji",
+      porzucenie: "Porzucenie dziecka przez matkę",
+      "smierc-matki": "Śmierć matki",
+    },
+    potwierdzDatePorodu: "Potwierdź datę porodu",
+    kartaDaty: "Kiedy",
+    etykietaDaty: "Data zdarzenia",
+    podpowiedziDaty: {
+      "martwe-urodzenie": "Dzień porodu, w formacie DD.MM.RRRR.",
+      poronienie: "Dzień poronienia, w formacie DD.MM.RRRR.",
+      "zgon-dziecka": "Dzień zgonu dziecka, w formacie DD.MM.RRRR.",
+      "przedwczesny-porod": "Dzień porodu z profilu rodziny. Tę datę wpisujemy za Ciebie.",
+      "choroba-dziecka": "Dzień rozpoznania choroby, w formacie DD.MM.RRRR.",
+      szpital: "Dzień przyjęcia matki do szpitala, w formacie DD.MM.RRRR.",
+      orzeczenie: "Dzień wydania orzeczenia, w formacie DD.MM.RRRR.",
+      porzucenie: "Dzień porzucenia dziecka, w formacie DD.MM.RRRR.",
+      "smierc-matki": "Dzień śmierci matki, w formacie DD.MM.RRRR.",
+    },
+    podpowiedzDatyBezRodzaju: "Dzień zdarzenia, w formacie DD.MM.RRRR.",
+    dopisekDatyPorodu: "Tę datę zapiszemy w profilu rodziny jako datę porodu.",
+    etykietaLiczby: "Liczba dzieci, których dotyczy sytuacja",
+    podpowiedzLiczby: ({ liczba }: { liczba: number }) =>
+      liczba === 2
+        ? "W profilu rodziny są bliźnięta. Wybierz 1 albo 2."
+        : `Liczba dzieci z ciąży w profilu rodziny: ${liczba}. Wybierz liczbę od 1 do ${liczba}.`,
+    pustaOpcjaLiczby: "Wybierz",
+    jednoDziecko: "Sytuacja dotyczy 1 dziecka – tyle dzieci jest w profilu rodziny.",
+    kartaProfilu: "Dane z profilu rodziny",
+    dataPorodu: "Data porodu",
+    dataPotwierdzona: ({ data }: { data: string }) => `${data}, potwierdzona`,
+    dataNiepotwierdzona: ({ termin }: { termin: string }) => `Niepotwierdzona, przewidywany termin ${termin}`,
+    dataBrak: "Niepotwierdzona",
+    liczbaDzieciZCiazy: "Liczba dzieci z ciąży",
+    wartoscLiczbyDzieci: ({ liczba }: { liczba: number }) => (liczba === 2 ? "2, bliźnięta" : String(liczba)),
+    drugiRodzic: "Drugi rodzic",
+    brakDrugiegoRodzica: "Brak w profilu rodziny",
+    kartaZmian: "Co się zmieni",
+    zmiany: [
+      "Plan pokaże sprawy, które teraz dotyczą Twojej rodziny.",
+      "Nie będziemy przypominać o sprawach, które przestały Was dotyczyć.",
+      "Zmiana obejmuje Ciebie i drugiego rodzica.",
+      "Sprawy złożone i załatwione zostaną w planie.",
+    ],
+    kartaZapisanych: "Zapisane sytuacje",
+    podpisTabeli: "Zapisane sytuacje szczególne",
+    przewijanieTabeli: "Tabela zapisanych sytuacji szczególnych",
+    kolumny: { rodzaj: "Rodzaj sytuacji", data: "Data zdarzenia", liczba: "Liczba dzieci", zrodlo: "Źródło" },
+    zapiszKolejna: "Zapisz kolejną sytuację",
+    kartaTrybu: "Spokojny tryb",
+    trybWlaczony: "Włączony dla całej rodziny",
+    opisTrybuWlaczonego:
+      "Nie przypominamy o sprawach, które przestały Was dotyczyć. Jeśli chcesz znowu dostawać przypomnienia o wszystkich sprawach z planu, wyłącz spokojny tryb. Zapisane sytuacje i plan zostaną bez zmian.",
+    wylaczTryb: "Wyłącz spokojny tryb",
+    trybWylaczony: "Wyłączony dla całej rodziny",
+    opisTrybuWylaczonego:
+      "Przypominamy o sprawach z planu, które mają status do zrobienia, zgodnie z ustawieniami przypomnień. Zapisane sytuacje i plan zostały bez zmian.",
+    ustawieniaPrzypomnien: "Ustawienia przypomnień",
+    wrocDoPlanu: "Wróć do planu rodziny",
     // koniec ViewSpecialSituation
   },
   ViewFamilyPlan: {
@@ -1187,6 +1264,15 @@ export const teksty = {
       // koniec akcjaZglosNarodziny
     },
     akcjaSytuacjaSzczegolna: {
+      tytul: "Sytuacja szczególna",
+      opis: "Jeśli wydarzyło się coś, co zmienia sytuację Twojej rodziny, zapisz to tutaj. Dopasujemy plan i wstrzymamy przypomnienia o sprawach, które przestaną Was dotyczyć.",
+      akcja: "Zgłoś sytuację szczególną",
+      tytulTrybu: "Spokojny tryb",
+      wlaczonyOd: ({ data, osoba }: { data: string; osoba: string }) => `Włączony od ${data} dla Ciebie i ${osoba}.`,
+      wlaczonyOdDlaRodziny: ({ data }: { data: string }) => `Włączony od ${data} dla całej rodziny.`,
+      opisBezPrzypomnien: "Nie przypominamy o sprawach oznaczonych „Bez przypomnień”. Wrócisz do nich, kiedy zechcesz.",
+      opisZPrzypomnieniami: "Sprawy dziecka zostają w planie. Przypominamy o nich zgodnie z ustawieniami przypomnień.",
+      akcjaTrybu: "Sytuacja szczególna",
       // koniec akcjaSytuacjaSzczegolna
     },
     akcjaSwiadczeniaWCiazy: {
@@ -1208,6 +1294,38 @@ export const teksty = {
       // koniec ostrzezeniaSprawy
     },
     akcjaPrzejeciaUrlopu: {
+      tytul: "Przejęcie urlopu macierzyńskiego",
+      sytuacjaMatki: {
+        szpital: ({ matka, data }: { matka: string; data: string }) => `${matka} jest w szpitalu od ${data}.`,
+        orzeczenie: ({ matka, data }: { matka: string; data: string }) =>
+          `${matka} ma od ${data} orzeczenie o niezdolności do samodzielnej egzystencji.`,
+        porzucenie: ({ data }: { matka: string; data: string }) =>
+          `W profilu rodziny jest zapisane porzucenie dziecka przez matkę z dnia ${data}.`,
+        "smierc-matki": ({ data }: { matka: string; data: string }) =>
+          `W profilu rodziny jest zapisana śmierć matki z dnia ${data}.`,
+      },
+      sytuacjaWlasna: {
+        szpital: ({ data }: { data: string }) => `Jesteś w szpitalu od ${data}.`,
+        orzeczenie: ({ data }: { data: string }) => `Masz od ${data} orzeczenie o niezdolności do samodzielnej egzystencji.`,
+      },
+      matkaDomyslnie: "Matka dziecka",
+      opisDlaDrugiegoRodzica:
+        "Możesz przejąć część jej urlopu macierzyńskiego, żeby opiekować się dzieckiem. Sprawdzimy, od kiedy i na jakich zasadach.",
+      opisDlaMatki:
+        "Drugi rodzic może przejąć część Twojego urlopu macierzyńskiego, żeby opiekować się dzieckiem. Sprawdzimy, od kiedy i na jakich zasadach.",
+      akcja: "Przejmij urlop macierzyński",
+      bezPrzypomnien: "Bez przypomnień",
+      okresK34: ({ od, doDnia }: { od: string; doDnia: string }) => `Okres zasiłku: ${od} – ${doDnia}.`,
+      kanalPracodawca: "Załatwiasz u pracodawcy.",
+      kanalZus: "Składasz do ZUS wniosek ZAM w eZUS.",
+      zachowanaZlozona: "Wniosek jest złożony, więc sprawa zostaje w planie.",
+      zachowanaZalatwiona: "Sprawa jest załatwiona, więc zostaje w planie.",
+      organizacjeOpis: "Organizacje, które bezpłatnie wspierają rodziców.",
+      organizacjeAkcja: "Zobacz organizacje",
+      wymiarMacierzynskiego: ({ tygodnie }: { tygodnie: number }) => {
+        const koncowka = tygodnie % 10 >= 2 && tygodnie % 10 <= 4 && (tygodnie % 100 < 12 || tygodnie % 100 > 14);
+        return `Wymiar urlopu macierzyńskiego: ${tygodnie} ${tygodnie === 1 ? "tydzień" : koncowka ? "tygodnie" : "tygodni"}.`;
+      },
       // koniec akcjaPrzejeciaUrlopu
     },
     // koniec ViewFamilyPlan
@@ -1246,6 +1364,25 @@ export const teksty = {
       // koniec sekcjaWsparcieK35
     },
     sekcjaSytuacjaSzczegolnaK34: {
+      kartaOkresu: "Okres zasiłku",
+      wstepOsmiuTygodni: "Od dnia porodu do końca 8. tygodnia",
+      wstepPoZgonie: "Od dnia porodu do 7. dnia po dniu zgonu dziecka",
+      okres: ({ od, doDnia }: { od: string; doDnia: string }) => `${od} – ${doDnia}`,
+      opisMartweUrodzenie:
+        "Po urodzeniu martwego dziecka zasiłek przysługuje przez 8 tygodni od dnia porodu. W tym czasie masz urlop macierzyński.",
+      opisPoronienie:
+        "Po poronieniu potwierdzonym zaświadczeniem o martwym urodzeniu zasiłek przysługuje przez 8 tygodni od dnia poronienia. W tym czasie masz urlop macierzyński.",
+      opisZgonPrzedOsmiomaTygodniami:
+        "Po zgonie dziecka przed upływem 8 tygodni życia zasiłek przysługuje przez 8 tygodni od dnia porodu, nie krócej niż do 7. dnia po dniu zgonu dziecka. W tym czasie masz urlop macierzyński.",
+      opisZgonPoOsmiuTygodniach:
+        "Po zgonie dziecka po upływie 8 tygodni życia zasiłek przysługuje do 7. dnia po dniu zgonu dziecka. W tym czasie masz urlop macierzyński.",
+      kartaJakZalatwic: "Jak załatwić",
+      jakPracodawca: "Pracujesz na umowie o pracę, więc sprawę załatwiasz u pracodawcy.",
+      wyplacaPracodawca: "Pracodawca wypłaca zasiłek za cały okres.",
+      wyplacaZus: "Zasiłek za cały okres wypłaca ZUS.",
+      jakZus:
+        "Składasz do ZUS wniosek ZAM w eZUS z zaświadczeniem o martwym urodzeniu albo z odpisem skróconym aktu urodzenia z adnotacją o martwym urodzeniu. Zasiłek wypłaca ZUS.",
+      zobaczInstrukcje: "Zobacz instrukcję",
       // koniec sekcjaSytuacjaSzczegolnaK34
     },
     sekcjaPrzyjecieK31K33: {
@@ -2591,6 +2728,10 @@ export const teksty = {
   },
   SheetSpecialSituationConfirm: {
     tytul: "Sprawdź i zapisz",
+    rodzaj: "Rodzaj sytuacji",
+    data: "Data zdarzenia",
+    liczba: "Liczba dzieci",
+    opis: "Po zapisaniu przeliczymy plan rodziny i włączymy spokojny tryb dla Ciebie i drugiego rodzica. Zapis możesz uzupełnić później o kolejną sytuację.",
     // koniec SheetSpecialSituationConfirm
   },
   SheetAssistantActionConfirm: {
