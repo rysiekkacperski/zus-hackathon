@@ -16,7 +16,7 @@
 
 | Nr | Grupa | Element systemu | Opis | Epiki |
 | --- | --- | --- | --- | --- |
-| 1 | Zarządzanie użytkownikiem | Konto i uwierzytelnianie | Logowanie użytkownika przez mObywatela, w prototypie symulowane z wyborem przykładowego konta rodzica albo konta administratora, tożsamość użytkownika potrzebna do odczytu danych z konta ZUS oraz zgody na przetwarzanie danych dotyczących zdrowia. | 3.1.1 Logowanie i zgody |
+| 1 | Zarządzanie użytkownikiem | Konto i uwierzytelnianie | Logowanie użytkownika przez mObywatela, loginem i hasłem eZUS albo kodem z aplikacji mZUS, w prototypie symulowane makietami z wyborem przykładowego konta rodzica, konta administratora albo nowego konta, wylogowanie, tożsamość użytkownika potrzebna do odczytu danych z konta ZUS oraz zgody na przetwarzanie danych dotyczących zdrowia. | 3.1.1 Logowanie i zgody |
 | 2 | Zarządzanie użytkownikiem | Ustawienia i powiadomienia | Preferencje kanałów przypomnień, czyli e-maila i SMS-a, i wyprzedzenia przypomnień, dane kontaktowe użytkownika, doręczanie przypomnień i komunikatów tworzonych przez pozostałe elementy systemu oraz pobranie terminów jako pliku kalendarza. | 3.2.1 Przypomnienia o terminach |
 | 3 | Rodzina i dane ZUS | Profil rodziny | Operuje danymi matki i drugiego rodzica, w tym zmianą i ustaniem zatrudnienia w ciąży, danymi ciąży, porodu i dziecka, danymi przyjęcia dziecka na wychowanie, sytuacją szczególną rodziny oraz dostępem kont do rodziny, w tym pełnomocnictwem PEL drugiego rodzica, uzupełnianymi danymi z konta ZUS i odpowiedziami rodzica. | 3.3.1 Profil na start, 3.3.2 Pakiet narodzin, 3.3.3 Dołączenie drugiego rodzica, 3.3.4 Przyjęcie dziecka na wychowanie, 3.3.5 Sytuacje szczególne |
 | 4 | Rodzina i dane ZUS | Odczyt danych ZUS | Odczyt danych, które ZUS zgromadził na koncie zalogowanego ubezpieczonego, a na podstawie pełnomocnictwa PEL także na koncie drugiego rodzica: statusu ubezpieczenia z okresami ubezpieczenia, podstaw składek, informacji, czy płatnik składek wypłaca zasiłki, członków rodziny zgłoszonych do ubezpieczenia zdrowotnego, zasiłków z ostatnich 6 miesięcy, zaświadczeń lekarskich e-ZLA, stanu rozliczeń składek, korespondencji w PUE/eZUS i statusu wniosków złożonych w ZUS, oraz dane przykładowych spraw ZUS odczytane z dokumentów, z weryfikacją ubezpieczenia chorobowego. | 3.4.1 Dane z konta ZUS w profilu rodziny, 3.4.2 Status wniosków ZUS w planie rodziny, 3.4.3 Przykładowe sprawy ZUS, 3.4.4 Zaświadczenia lekarskie e-ZLA, 3.4.5 Rozliczenie składek i zaświadczenie |
@@ -30,7 +30,7 @@
 
 ## 2.2 Relacje
 
-**Element *Konto i uwierzytelnianie* jest punktem wejścia do aplikacji.** Element loguje użytkownika przez mObywatela, a w prototypie symuluje to logowanie z wyborem przykładowego konta rodzica albo konta administratora, które otwiera panel administracyjny *Katalogu świadczeń*. Element udostępnia pozostałym elementom tożsamość zalogowanego ubezpieczonego, na podstawie której *Odczyt danych ZUS* odczytuje dane jego konta, i zapisuje zgodę na przetwarzanie danych dotyczących zdrowia, która warunkuje zapisanie danych ciąży, dziecka i sytuacji szczególnej w *Profilu rodziny*.
+**Element *Konto i uwierzytelnianie* jest punktem wejścia do aplikacji.** Element loguje użytkownika przez mObywatela, loginem i hasłem eZUS albo kodem z aplikacji mZUS, a w prototypie symuluje te sposoby makietami z wyborem przykładowego konta rodzica, nowego konta bez danych w ZUS albo konta administratora, które otwiera panel administracyjny *Katalogu świadczeń*. Element udostępnia pozostałym elementom tożsamość zalogowanego ubezpieczonego, na podstawie której *Odczyt danych ZUS* odczytuje dane jego konta, i zapisuje zgodę na przetwarzanie danych dotyczących zdrowia, która warunkuje zapisanie danych ciąży, dziecka i sytuacji szczególnej w *Profilu rodziny*.
 
 **Element *Odczyt danych ZUS* odczytuje dane, które ZUS zgromadził na koncie zalogowanego ubezpieczonego, i udostępnia je *Profilowi rodziny*, *Planowi rodzica*, *Kreatorom wniosków* i *Kalkulatorom decyzji*.** Status ubezpieczenia wskazuje tytuły ubezpieczenia z datą początku i końca okresów ubezpieczenia, z których *Profil rodziny* proponuje formę zatrudnienia i opłacanie dobrowolnego ubezpieczenia chorobowego. Podstawy składek są podstawą wyliczeń w *Kalkulatorach decyzji*, a członkowie rodziny zgłoszeni do ubezpieczenia zdrowotnego wskazują dzieci. Dla każdego płatnika składek, który zgłasza rodzica do ubezpieczenia chorobowego, *Odczyt danych ZUS* odczytuje informację, czy płatnik wypłaca zasiłki, ponieważ zgłaszał do ubezpieczenia chorobowego więcej niż 20 osób według stanu na 30 listopada poprzedniego roku, a płatnik, który na ten dzień nikogo nie zgłaszał do ubezpieczenia chorobowego, według stanu na pierwszy miesiąc, w którym dokonał takiego zgłoszenia. Z tej informacji *Profil rodziny* ustala płatnika zasiłku, a dla rodzica prowadzącego jednoosobową działalność gospodarczą wskazuje ZUS. Gdy Dane z konta ZUS nie zawierają tej informacji, *Profil rodziny* pyta rodzica, czy płatnik zgłasza do ubezpieczenia chorobowego więcej niż 20 osób. Wynik *Profil rodziny* zapisuje w Danych rodziny jako płatnika zasiłku ze źródłem danej. Status wniosków złożonych w ZUS przez eZUS, mZUS, bankowość elektroniczną albo Emp@tię, z planowym terminem załatwienia sprawy, aktualizuje status spraw w *Planie rodzica*. Zasiłki z ostatnich 6 miesięcy oraz świadczenia rodzinne z kwotą i planowanym terminem wypłaty *Odczyt danych ZUS* przekazuje do *Planu rodzica*, który pokazuje przy sprawach ZUS ostatnią i planowaną wypłatę. Dane drugiego rodzica *Odczyt danych ZUS* odczytuje z jego konta ZUS, gdy drugi rodzic dołączy do rodziny albo udzieli rodzicowi pełnomocnictwa PEL do roli Ubezpieczony w eZUS. Na podstawie pełnomocnictwa *Odczyt danych ZUS* odczytuje tytuły i okresy ubezpieczenia, ubezpieczenie chorobowe, podstawy składek, informację o płatniku zasiłku i wypłacone zasiłki drugiego rodzica, wyłącznie w okresie obowiązywania pełnomocnictwa.
 
@@ -98,7 +98,7 @@
 
 | Nr | Grupa danych | Zawartość |
 | --- | --- | --- |
-| 1 | Dane konta użytkownika | Identyfikator użytkownika z logowania przez mObywatela, sposób zalogowania, historia sesji w aplikacji, zgody na przetwarzanie danych wraz z wersją treści zgody oraz datą i godziną jej udzielenia. |
+| 1 | Dane konta użytkownika | Identyfikator użytkownika, czyli numer PESEL potwierdzony przy logowaniu, sposób zalogowania, czyli mObywatel, login i hasło eZUS albo kod z aplikacji mZUS, historia sesji w aplikacji, zgody na przetwarzanie danych wraz z wersją treści zgody oraz datą i godziną jej udzielenia. |
 | 2 | Ustawienia | Kanały przypomnień, czyli e-mail i SMS, wyprzedzenie przypomnienia o terminie, dane kontaktowe używane do komunikacji z użytkownikiem, czyli adres e-mail odczytany z konta eZUS albo podany przez użytkownika i numer telefonu komórkowego podany przez użytkownika. |
 | 3 | Powiadomienia | Przypomnienia i komunikaty kierowane do użytkownika, wraz z elementem systemu, który je utworzył, terminem, kanałem doręczenia oraz statusem doręczenia i odczytu. |
 | 4 | Dane z konta ZUS | Status ubezpieczenia z tytułami ubezpieczenia i okresami ubezpieczenia chorobowego z datą początku i końca, podstawy składek, członkowie rodziny zgłoszeni do ubezpieczenia zdrowotnego, zasiłki z ostatnich 6 miesięcy z datą i kwotą wypłaty, świadczenia rodzinne z kwotą i planowanym terminem wypłaty, zaświadczenia lekarskie e-ZLA z ostatnich 12 miesięcy z okresem niezdolności, kodem literowym i płatnikiem, stan rozliczeń składek z kwotą zadłużenia na wskazany dzień, układem ratalnym albo odroczeniem i datą spłaty zadłużenia oraz zaświadczenie o stanie rozliczeń, korespondencja w PUE/eZUS z pytaniem i odpowiedzią ZUS, wnioski złożone w ZUS ze statusem i planowym terminem załatwienia sprawy, informacja o opłacaniu składek na dobrowolne ubezpieczenie chorobowe, informacja, czy płatnik składek wypłaca zasiłki według stanu na 30 listopada poprzedniego roku, adres e-mail konta eZUS, adres ubezpieczonego, NIP i REGON płatnika składek przy każdym tytule ubezpieczenia, pełnomocnictwa PEL udzielone zalogowanemu ubezpieczonemu przez drugiego rodzica z rolą, zakresem i okresem obowiązywania, dane konta drugiego rodzica odczytane na podstawie pełnomocnictwa, data odczytu. |
@@ -116,10 +116,10 @@
 
 | Rola | Opis | Nadanie roli |
 | --- | --- | --- |
-| Nowy użytkownik | Konto bez Profilu rodziny. Ma dostęp do profilu na start, do Odczytu danych ZUS w zakresie własnego konta i przykładowych spraw ZUS, do zintegrowanego kalkulatora w Kalkulatorach decyzji oraz do Ustawień i powiadomień. | Pierwsze logowanie użytkownika przez mObywatela, a w prototypie wybór przykładowego konta rodzica w symulacji logowania. |
+| Nowy użytkownik | Konto bez Profilu rodziny. Ma dostęp do profilu na start, do Odczytu danych ZUS w zakresie własnego konta i przykładowych spraw ZUS, do zintegrowanego kalkulatora w Kalkulatorach decyzji oraz do Ustawień i powiadomień. | Pierwsze logowanie użytkownika, a w prototypie wybór przykładowego konta rodzica albo założenie nowego konta po makiecie logowania. |
 | Rodzic | Konto, które utworzyło Profil rodziny. Ma dostęp do wszystkich elementów systemu w zakresie swojej rodziny, zmienia dane rodziny oraz dane ciąży i dziecka, składa wnioski w kreatorach, wysyła pytania do ZUS, zaprasza drugiego rodzica i odczytuje dane drugiego rodzica na podstawie pełnomocnictwa PEL. | Zapisanie profilu na start przez konto z rolą Nowy użytkownik. |
 | Drugi rodzic | Konto dołączone do Profilu rodziny zaproszeniem. Ma dostęp do Planu rodzica, Kalendarza terminów, Przewodnika po formalnościach, Kreatorów wniosków w zakresie własnych wniosków, Kalkulatorów decyzji i Asystenta AI w zakresie rodziny oraz zmienia własne dane w Profilu rodziny. | Przyjęcie zaproszenia od konta z rolą Rodzic. |
-| Administrator | Konto pracownika ZUS, które prowadzi Katalog świadczeń, w tym kwoty, stawki, wymiary urlopów, progi dochodowe, reguły terminów, instrukcje, podmioty wsparcia i nowe pozycje katalogu. Ma dostęp wyłącznie do Katalogu świadczeń. | Nadanie roli przez konto z rolą Administrator albo przez zespół przy uruchomieniu aplikacji, a w prototypie wybór konta administratora w symulacji logowania. |
+| Administrator | Konto pracownika ZUS, które prowadzi Katalog świadczeń, w tym kwoty, stawki, wymiary urlopów, progi dochodowe, reguły terminów, instrukcje, podmioty wsparcia i nowe pozycje katalogu. Ma dostęp wyłącznie do Katalogu świadczeń. | Nadanie roli przez konto z rolą Administrator albo przez zespół przy uruchomieniu aplikacji, a w prototypie wybór konta administratora po makiecie logowania. |
 
 ## 2.5 Diagram
 
@@ -176,7 +176,8 @@ flowchart LR
         direction TB
         MOB[mObywatel<br/>logowanie i zgłoszenie urodzenia]
         SZUS[Systemy ZUS<br/>dane konta i wnioski]
-        PUE[PUE/eZUS<br/>wnioski, pytania, pełnomocnictwa PEL]
+        PUE[PUE/eZUS<br/>logowanie, wnioski, pytania, pełnomocnictwa PEL]
+        MZA[Aplikacja mZUS<br/>potwierdzenie logowania]
         EMP[Emp@tia]
         RSC[Rejestr stanu cywilnego<br/>na gov.pl]
         PRAC[Pracodawca<br/>albo zleceniodawca]
@@ -186,6 +187,8 @@ flowchart LR
     end
 
     MOB -->|logowanie| KONTO
+    PUE -->|logowanie| KONTO
+    MZA -->|logowanie| KONTO
     KONTO -->|Dane konta użytkownika| ODCZ
     KONTO -->|Dane konta użytkownika| PR
     SZUS -->|Dane z konta ZUS| ODCZ
@@ -227,5 +230,5 @@ flowchart LR
     class KAT,PLAN,KAL,PRZ core
     class KRE,KALK output
     class AI support
-    class MOB,SZUS,PUE,EMP,RSC,PRAC,INFO,ORG,POCZ external
+    class MOB,SZUS,PUE,MZA,EMP,RSC,PRAC,INFO,ORG,POCZ external
 ```

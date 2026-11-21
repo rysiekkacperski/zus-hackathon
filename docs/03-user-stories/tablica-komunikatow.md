@@ -261,3 +261,10 @@
 | 0245 | Data powrotu do pracy dopasowana do pełnych tygodni urlopu | INFO | 200 | Urlop rodzicielski liczymy w pełnych tygodniach, dlatego wrócisz do pracy [data]. |
 | 0246 | Niższe wypłaty po wcześniejszym powrocie w wariancie 81,5% | INFO | 200 | Przy powrocie do pracy [data] w wariancie 81,5% otrzymasz łącznie o [kwota] mniej niż w wariancie 100% i 70%, bo zasiłek za urlop macierzyński wynosi 81,5% zamiast 100% podstawy. |
 | 0247 | Data podjęcia ubezpieczenia po porodzie poza zakresem | ERROR | 400 | Podaj datę po dniu porodu, najpóźniej [data], żeby zmieścić co najmniej 7 dni urlopu ojcowskiego, zanim dziecko skończy 12 miesięcy. |
+| 0248 | Puste pole loginu eZUS | ERROR | 400 | Podaj login do eZUS. |
+| 0249 | Puste pole hasła eZUS | ERROR | 400 | Podaj hasło do eZUS. |
+| 0250 | Przerwane logowanie do eZUS | WARNING | 401 | Logowanie do eZUS zostało przerwane. Zaloguj się ponownie, żeby otworzyć przewodnik. |
+| 0251 | Przerwane logowanie kodem z aplikacji mZUS | WARNING | 401 | Logowanie kodem z aplikacji mZUS zostało przerwane. Zaloguj się ponownie, żeby otworzyć przewodnik. |
+| 0252 | Wygasły kod logowania z aplikacji mZUS | WARNING | 401 | Kod logowania stracił ważność po 2 minutach. Potwierdź w aplikacji mZUS nowy kod. |
+| 0253 | Puste pole daty urodzenia nowego konta | ERROR | 400 | Podaj datę urodzenia. |
+| 0254 | Wiek spoza zakresu nowego konta | ERROR | 400 | Nowe konto w wersji demonstracyjnej zakłada osoba w wieku od 16 do 60 lat. Podaj inną datę urodzenia. |
