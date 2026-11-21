@@ -915,6 +915,41 @@ export const teksty = {
   ViewGuideWelcome: {
     tytulStrony: "Witaj w przewodniku rodzica",
     naglowek: "Witaj w przewodniku rodzica",
+    wstep: "Spodziewasz się dziecka? Przewodnik ułoży plan świadczeń Twojej rodziny, policzy terminy i pomoże przygotować wnioski.",
+    coZrobisz: {
+      tytul: "Co zrobisz w przewodniku",
+      plan: {
+        tytul: "Plan świadczeń",
+        opis: "Zobaczysz świadczenia, które przysługują Twojej rodzinie, i sprawy do załatwienia po kolei.",
+      },
+      terminy: {
+        tytul: "Terminy",
+        opis: "Policzymy, do kiedy złożyć wnioski i dokumenty, i przypomnimy Ci o nich.",
+      },
+      wnioski: {
+        tytul: "Wnioski",
+        opis: "Przygotujesz wnioski na podstawie danych z profilu rodziny.",
+      },
+      kalkulator: {
+        tytul: "Kalkulator zasiłku",
+        opis: "Sprawdzisz, ile wyniesie zasiłek macierzyński.",
+      },
+    },
+    jakZaczniesz: {
+      tytul: "Jak zaczniesz",
+      kroki: [
+        "Zdecydujesz, czy zgadzasz się na przetwarzanie danych o ciąży, porodzie i stanie zdrowia dziecka.",
+        "Sprawdzisz dane z konta ZUS i uzupełnisz profil na start.",
+        "Zobaczysz plan świadczeń swojej rodziny.",
+      ],
+      twojeDane: "Twoje dane",
+      notatki: [
+        "Rozpoznajemy Cię po numerze PESEL potwierdzonym przy logowaniu. Po każdym sposobie logowania zobaczysz ten sam profil rodziny.",
+        "Dane o ciąży, porodzie i stanie zdrowia dziecka zapisujemy tylko za Twoją zgodą.",
+        "Zgodę zmienisz, a dane rodziny usuniesz w każdej chwili w ustawieniach przewodnika.",
+      ],
+    },
+    rozpocznij: "Rozpocznij",
     // koniec ViewGuideWelcome
   },
   ViewGuideSettings: {
@@ -922,6 +957,27 @@ export const teksty = {
     naglowek: "Ustawienia",
     // Sloty ustawienia/_sloty (u02, u18, u18, u02)
     sekcjaZgody: {
+      tytul: "Zgoda na dane dotyczące zdrowia",
+      opis: "Zgoda dotyczy danych o ciąży, porodzie i stanie zdrowia dziecka, które podajesz w przewodniku. Wykorzystujemy je wyłącznie do wyliczenia planu rodziny, terminów i wniosków.",
+      opisBezZgody: "Bez zgody nie zapisujemy tych danych. Gdy udzielisz zgody, przewodnik uwzględni je w planie rodziny, terminach i wnioskach.",
+      opisWycofanej: ({ terminUsuniecia }: { terminUsuniecia: string }) =>
+        `Nie wykorzystujemy już tych danych. Usuniemy je do ${terminUsuniecia}.`,
+      opisWycofanejZTerminemPorodu: ({ terminPorodu, terminUsuniecia }: { terminPorodu: string; terminUsuniecia: string }) =>
+        `Nie wykorzystujemy już tych danych, także przewidywanego terminu porodu ${terminPorodu}. Usuniemy je do ${terminUsuniecia}.`,
+      stanZgody: "Stan zgody",
+      dataOstatniejDecyzji: "Data ostatniej decyzji",
+      wersjaTresci: "Wersja treści zgody",
+      stany: {
+        "brak-decyzji": "Nieudzielona",
+        udzielona: "Udzielona",
+        odmowa: "Nieudzielona – odmowa",
+        wycofana: "Wycofana",
+      },
+      wycofaj: "Wycofaj zgodę",
+      udziel: "Udziel zgody",
+      notatkaUdzielonej: "Po wycofaniu zgody od razu przestaniemy wykorzystywać te dane i usuniemy je w ciągu 30 dni.",
+      notatkaBezZgody: "Zgodę wycofasz w każdej chwili w tym miejscu.",
+      notatkaWycofanej: "Gdy udzielisz zgody ponownie, przewodnik znów uwzględni te dane w planie rodziny, terminach i wnioskach.",
       // koniec sekcjaZgody
     },
     sekcjaPrzypomnien: {
@@ -931,6 +987,16 @@ export const teksty = {
       // koniec kartaPlikuKalendarza
     },
     sekcjaDanychRodziny: {
+      tytul: "Dane rodziny",
+      wstep: "Jednym działaniem usuniesz wszystkie dane rodziny zapisane w przewodniku:",
+      zakres: [
+        "profil rodziny,",
+        "plan rodziny,",
+        "terminy i przypomnienia,",
+        "wnioski przygotowane w przewodniku, których nie wysłano.",
+      ],
+      termin: "Usuniemy je w ciągu 30 dni. Wnioski wysłane do ZUS pozostają w ZUS.",
+      usun: "Usuń dane rodziny",
       // koniec sekcjaDanychRodziny
     },
     // koniec ViewGuideSettings
@@ -1451,18 +1517,112 @@ export const teksty = {
   // Arkusze i okna modalne
   SheetHealthDataConsent: {
     tytul: "Zgoda na dane dotyczące zdrowia",
+    wstep: "Żeby wyliczyć plan rodziny, terminy i wnioski, przewodnik potrzebuje danych o ciąży, porodzie i stanie zdrowia dziecka. To dane dotyczące zdrowia, dlatego prosimy Cię o zgodę na ich przetwarzanie.",
+    zakresTytul: "Zgoda obejmuje dane, które podajesz w przewodniku:",
+    zakres: [
+      "o ciąży, np. przewidywany termin porodu,",
+      "o porodzie, np. datę porodu i tydzień ciąży w dniu porodu,",
+      "o stanie zdrowia dziecka, np. masę urodzeniową i liczbę dni hospitalizacji.",
+    ],
+    cel: "Wykorzystamy je wyłącznie do wyliczenia planu rodziny, terminów i wniosków.",
+    bezZgody: "Bez zgody przewodnik nadal działa, ale nie zapisze tych danych. Plan pokaże wtedy sprawy, które od nich nie zależą.",
+    wycofanie: "Zgodę wycofasz w każdej chwili w ustawieniach przewodnika.",
+    pelnaTresc: ({ wersja }: { wersja: string }) => `Przeczytaj pełną treść zgody (wersja ${wersja})`,
+    udziel: "Udziel zgody",
+    kontynuujBezZgody: "Kontynuuj bez zgody",
     // koniec SheetHealthDataConsent
   },
   ModalConsentText: {
     tytul: "Pełna treść zgody",
+    opis: ({ wersja }: { wersja: string }) =>
+      `Zgoda na przetwarzanie danych dotyczących zdrowia w przewodniku rodzica, wersja ${wersja}`,
+    etykietaTresci: ({ wersja }: { wersja: string }) => `Treść zgody, wersja ${wersja}`,
+    punkty: [
+      {
+        tytul: "1. Kto przetwarza Twoje dane",
+        tresc: "[Administrator danych i jego dane kontaktowe, z dokumentu zgody w wersji 1.0]",
+      },
+      {
+        tytul: "2. Jakie dane obejmuje zgoda",
+        tresc: "Zgoda obejmuje dane dotyczące zdrowia, które podajesz w przewodniku rodzica: dane o ciąży, porodzie i stanie zdrowia dziecka, na przykład przewidywany termin porodu, datę porodu, tydzień ciąży w dniu porodu, masę urodzeniową dziecka i liczbę dni hospitalizacji.",
+      },
+      {
+        tytul: "3. W jakim celu wykorzystujemy dane",
+        tresc: "Dane wykorzystujemy wyłącznie do wyliczenia planu rodziny, terminów i wniosków w przewodniku.",
+      },
+      {
+        tytul: "4. Co się stanie, jeśli nie udzielisz zgody",
+        tresc: "Przewodnik działa dalej, ale nie zapisuje danych o ciąży, porodzie i stanie zdrowia dziecka. Plan rodziny pokazuje wtedy sprawy, które od tych danych nie zależą.",
+      },
+      {
+        tytul: "5. Jak zapisujemy Twoją decyzję",
+        tresc: "Przy każdej decyzji zapisujemy jej rodzaj, czyli udzielenie, odmowę albo wycofanie zgody, wersję treści zgody oraz datę i godzinę.",
+      },
+      {
+        tytul: "6. Jak wycofać zgodę",
+        tresc: "Zgodę wycofasz w każdej chwili w ustawieniach przewodnika. Od razu przestaniemy wykorzystywać dane o ciąży, porodzie i stanie zdrowia dziecka, a usuniemy je w ciągu 30 dni.",
+      },
+      {
+        tytul: "7. Usunięcie danych rodziny",
+        tresc: "W ustawieniach przewodnika możesz też jednym działaniem usunąć wszystkie dane rodziny: profil rodziny, plan rodziny, terminy, przypomnienia i wnioski przygotowane w przewodniku, których nie wysłano. Usuniemy je w ciągu 30 dni. Wnioski wysłane do ZUS pozostają w ZUS.",
+      },
+      {
+        tytul: "8. Twoje prawa",
+        tresc: "[Podstawa prawna, prawa osoby, której dane dotyczą, i kontakt z inspektorem ochrony danych, z dokumentu zgody w wersji 1.0]",
+      },
+    ],
+    zamknij: "Zamknij",
     // koniec ModalConsentText
   },
   SheetConsentWithdrawConfirm: {
     tytul: "Wycofać zgodę na dane dotyczące zdrowia?",
+    skutkiTytul: "Po wycofaniu zgody:",
+    skutekDane: "od razu przestaniemy wykorzystywać dane o ciąży, porodzie i stanie zdrowia dziecka,",
+    skutekDaneZTerminemPorodu: ({ terminPorodu }: { terminPorodu: string }) =>
+      `od razu przestaniemy wykorzystywać dane o ciąży, porodzie i stanie zdrowia dziecka, także przewidywany termin porodu ${terminPorodu},`,
+    skutekUsuniecie: "usuniemy te dane w ciągu 30 dni,",
+    skutekPlan: "plan rodziny pokaże sprawy, które od tych danych nie zależą.",
+    ponownaZgoda: "Zgody możesz udzielić ponownie w ustawieniach przewodnika.",
+    potwierdz: "Wycofaj zgodę",
+    anuluj: "Anuluj",
     // koniec SheetConsentWithdrawConfirm
   },
   SheetFamilyDataDeleteConfirm: {
     tytul: "Usunąć dane rodziny?",
+    wstep: "Usuniemy wszystkie dane rodziny zapisane w przewodniku:",
+    profil: "profil rodziny,",
+    plan: "plan rodziny,",
+    planZLiczbaSpraw: ({ liczba }: { liczba: number }) => {
+      const reszta10 = liczba % 10;
+      const reszta100 = liczba % 100;
+      const odmiana =
+        liczba === 1
+          ? "sprawa"
+          : reszta10 >= 2 && reszta10 <= 4 && (reszta100 < 12 || reszta100 > 14)
+            ? "sprawy"
+            : "spraw";
+      return `plan rodziny – ${liczba} ${odmiana},`;
+    },
+    terminy: "terminy i przypomnienia,",
+    wnioski: "wnioski przygotowane w przewodniku, których nie wysłano.",
+    wnioskiZLista: ({ lista }: { lista: string }) => `wnioski, których nie wysłano – ${lista}.`,
+    rodzajeWnioskow: {
+      zam: "wniosek o zasiłek macierzyński (ZAM)",
+      "zas-53": "wniosek o zasiłek chorobowy (ZAS-53)",
+      "urlop-do-pracodawcy": "wniosek o urlop do pracodawcy",
+      "rezygnacja-z-czesci-zasilku": "wniosek o rezygnację z części zasiłku macierzyńskiego",
+      "wniosek-ojca-o-urlop": "wniosek ojca o urlop",
+      "odpis-aktu-urodzenia": "wniosek o odpis aktu urodzenia",
+    },
+    stanyWnioskow: {
+      szkic: "nieukończony",
+      przygotowany: "przygotowany",
+    },
+    wniosekZeStanem: ({ wniosek, stan }: { wniosek: string; stan: string }) => `${wniosek}, ${stan}`,
+    widocznosc: "Przestaniesz widzieć te dane od razu, a usuniemy je w ciągu 30 dni. Wnioski wysłane do ZUS pozostają w ZUS.",
+    odPoczatku: "Po usunięciu danych zaczniesz korzystanie z przewodnika od początku, od ekranu powitalnego.",
+    potwierdz: "Usuń dane rodziny",
+    anuluj: "Anuluj",
     // koniec SheetFamilyDataDeleteConfirm
   },
   SheetEmploymentChoice: {
