@@ -1,14 +1,124 @@
 // Rodzaj umowy o pracę i podmioty wsparcia (kontrakt, sekcja 6.5). Właściciel: u22 (Ryzyka, szczególna ochrona i podmioty wsparcia).
-// Zaślepka fundamentu: implementuje u22. Właściciel zastępuje treść z zachowaniem nazw eksportów i podpisów. Zaślepka zwraca 0003.
-/* eslint-disable @typescript-eslint/no-unused-vars -- parametry zaślepki; właściciel usuwa ten wiersz */
-import type { FormularzPodmiotu } from '@/domena/przewodnik/ryzyka';
-import type { KontekstOperacji, RodzajUmowyOPrace, RodzicWRodzinie, WynikOperacji } from '@/domena/typy';
+import {
+  podmiotZFormularza,
+  ustalPrzedluzenieUmowy,
+  walidujPodmiot,
+  POLA_PODMIOTU,
+  type FormularzPodmiotu,
+} from '@/domena/przewodnik/ryzyka';
+import type {
+  DaneRodzica,
+  KodKomunikatu,
+  KontekstOperacji,
+  PodmiotWsparcia,
+  RodzajUmowyOPrace,
+  RodzicWRodzinie,
+  StanRodziny,
+  WynikOperacji,
+} from '@/domena/typy';
+import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
+import {
+  odczytajKatalog,
+  odczytajZalogowanego,
+  rodzinaKonta,
+  wykonajOperacjeZWynikiem,
+  zmienGlobalne,
+  zmienStanRodziny,
+} from '@/dane/magazyn/stan';
 
-export function zapiszRodzajUmowy(rodzic: RodzicWRodzinie, rodzaj: RodzajUmowyOPrace, ctx: KontekstOperacji): WynikOperacji {
-  return { ok: false, kod: '0003' };
+/** Dane rodzica z rodzajem umowy ze źródłem odpowiedź rodzica i wynikiem reguły przedłużenia do dnia porodu. */
+function zRodzajemUmowy<R extends Pick<DaneRodzica, 'zmianaZatrudnienia' | 'rodzajUmowy'>>(
+  dane: R,
+  rodzaj: RodzajUmowyOPrace,
+  rodzina: StanRodziny,
+): R {
+  const zmiana = dane.zmianaZatrudnienia;
+  const ptp = rodzina.daneCiazy?.przewidywanyTerminPorodu;
+  const nowaZmiana =
+    zmiana?.rodzaj.wartosc === 'ustanie' && zmiana.data !== undefined && zmiana.przyczyna !== undefined && ptp !== undefined
+      ? {
+          ...zmiana,
+          umowaPrzedluzonaDoPorodu: ustalPrzedluzenieUmowy(ptp, zmiana.data.wartosc, zmiana.przyczyna.wartosc, rodzaj)
+            .przedluzonaDoPorodu,
+        }
+      : zmiana;
+  return {
+    ...dane,
+    rodzajUmowy: { wartosc: rodzaj, zrodlo: 'odpowiedz-rodzica' },
+    ...(nowaZmiana === undefined ? {} : { zmianaZatrudnienia: nowaZmiana }),
+  };
 }
 
-/** Nowy albo zmieniony podmiot wsparcia w edycjach katalogu. */
+/**
+ * Zapis rodzaju umowy o pracę rodzica w Danych rodziny ze źródłem odpowiedź rodzica i ponowne wyliczenie planu
+ * rodziny. Brak wyboru daje 0006, nieudany zapis 0003.
+ */
+export function zapiszRodzajUmowy(
+  rodzic: RodzicWRodzinie,
+  rodzaj: RodzajUmowyOPrace | null,
+  ctx: KontekstOperacji,
+): WynikOperacji {
+  if (rodzaj === null) return { ok: false, kod: '0006', bledyPol: { rodzajUmowy: '0006' } };
+  return wykonajOperacjeZWynikiem<void>(() => {
+    const zalogowany = odczytajZalogowanego();
+    const rodzina = rodzinaKonta(zalogowany?.stanKonta.konto ?? null);
+    if (rodzina === null) return { ok: false, kod: '0003' };
+    zmienStanRodziny(rodzina.idRodziny, (s) => ({
+      ...s,
+      daneRodziny: {
+        ...s.daneRodziny,
+        ...(rodzic === 'matka'
+          ? { matka: zRodzajemUmowy(s.daneRodziny.matka, rodzaj, s) }
+          : { drugiRodzic: zRodzajemUmowy(s.daneRodziny.drugiRodzic, rodzaj, s) }),
+        zapisano: ctx.teraz,
+      },
+    }));
+    return przeliczRodzine(rodzina.idRodziny, ctx);
+  });
+}
+
+function kolejnyIdentyfikator(podmioty: readonly PodmiotWsparcia[]): { id: string; kolejnosc: number } {
+  const kolejnosc = podmioty.reduce((maks, p) => Math.max(maks, p.kolejnosc), 0) + 1;
+  let id = `podmiot-${kolejnosc}`;
+  for (let n = kolejnosc; podmioty.some((p) => p.id === id); n += 1) id = `podmiot-${n + 1}`;
+  return { id, kolejnosc };
+}
+
+/**
+ * Nowy albo zmieniony podmiot wsparcia w edycjach katalogu (zwiększa edycjeKatalogu.wersja). Zapisuje wyłącznie konto
+ * z rolą Administrator (0047); błędy pól zwraca w `bledyPol`, nieudany zapis daje 0003.
+ */
 export function zapiszPodmiotWsparcia(dane: FormularzPodmiotu, ctx: KontekstOperacji): WynikOperacji {
-  return { ok: false, kod: '0003' };
+  void ctx;
+  const zalogowany = odczytajZalogowanego();
+  if (zalogowany?.stanKonta.konto.rola !== 'administrator') return { ok: false, kod: '0047' };
+
+  const katalog = odczytajKatalog();
+  const bledy = walidujPodmiot(dane, katalog);
+  const pierwszy = POLA_PODMIOTU.find((p) => bledy[p] !== undefined);
+  if (pierwszy !== undefined) {
+    return { ok: false, kod: bledy[pierwszy] as KodKomunikatu, bledyPol: bledy as Record<string, KodKomunikatu> };
+  }
+
+  const istniejacy = dane.id === undefined ? undefined : katalog.podmiotyWsparcia.find((p) => p.id === dane.id);
+  if (dane.id !== undefined && istniejacy === undefined) return { ok: false, kod: '0003' };
+
+  return wykonajOperacjeZWynikiem<void>(() => {
+    zmienGlobalne((g) => {
+      const edycje = g.edycjeKatalogu;
+      const { dodane, zmienione } = edycje.podmioty;
+      let podmioty = edycje.podmioty;
+      if (istniejacy === undefined) {
+        const { id, kolejnosc } = kolejnyIdentyfikator(katalog.podmiotyWsparcia);
+        podmioty = { dodane: [...dodane, podmiotZFormularza(dane, id, kolejnosc)], zmienione };
+      } else {
+        const podmiot = podmiotZFormularza(dane, istniejacy.id, istniejacy.kolejnosc);
+        podmioty = dodane.some((p) => p.id === podmiot.id)
+          ? { dodane: dodane.map((p) => (p.id === podmiot.id ? podmiot : p)), zmienione }
+          : { dodane, zmienione: [...zmienione.filter((p) => p.id !== podmiot.id), podmiot] };
+      }
+      return { ...g, edycjeKatalogu: { ...edycje, wersja: edycje.wersja + 1, podmioty } };
+    }, 'domenowe');
+    return { ok: true, wartosc: undefined };
+  });
 }
