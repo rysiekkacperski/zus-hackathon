@@ -940,9 +940,192 @@ export const teksty = {
     naglowek: "Profil na start",
     // Części dane-z-konta-zus/_czesci (u03)
     stanOdczytuZus: {
+      wstepBezKopii: "Zaczynamy od danych, które ZUS ma na Twoim koncie.",
+      stanNa: ({ dataICzas }: { dataICzas: string }) => `Stan na ${dataICzas}`,
+      tytulOdczytu: "Pobieramy Twoje dane z ZUS",
+      opisOdczytu: "Sprawdzamy dane z Twojego konta ZUS, żeby nie trzeba było ich wpisywać. To potrwa kilka sekund.",
+      tekstPostepu: ({ pobrano, zKolei }: { pobrano: string; zKolei: string }) =>
+        `Pobrano ${pobrano} z ${zKolei} rodzajów danych`,
+      licznik: ({ pobrano, zKolei }: { pobrano: string; zKolei: string }) => `Pobrano: ${pobrano} z ${zKolei}`,
+      czesci: {
+        tytuly: "Tytuły ubezpieczenia i ubezpieczenie chorobowe",
+        podstawy: "Podstawy składek z ostatnich 12 miesięcy",
+        platnicy: "Płatnicy składek i wypłata zasiłków",
+        czlonkowie: "Członkowie rodziny zgłoszeni do ubezpieczenia zdrowotnego",
+        zasilki: "Zasiłki z ostatnich 6 miesięcy",
+        kontakt: "Adres i adres e-mail konta eZUS",
+      },
+      stanyCzesci: {
+        pobrano: "Pobrano",
+        pobieramy: "Pobieramy",
+        wKolejce: "W kolejce",
+      },
+      listaCzesci: "Części danych z konta ZUS",
+      tylkoOdczyt: "Przewodnik tylko odczytuje dane z Twojego konta ZUS i niczego w nim nie zmienia.",
+      tytulBrakuDanych: "Twoje dane z ZUS",
+      opisBrakuDanych:
+        "Tu zobaczysz dane z Twojego konta ZUS: tytuły ubezpieczenia, podstawy składek, płatników, członków rodziny i zasiłki.",
+      pobierzPonownie: "Pobierz dane ponownie",
+      pobierz: "Pobierz dane z ZUS",
       // koniec stanOdczytuZus
     },
     sekcjeDanychZus: {
+      brakWartosci: "-",
+      okresOd: ({ dataOd }: { dataOd: string }) => `od ${dataOd}`,
+      okresOdDo: ({ dataOd, dataDo }: { dataOd: string; dataDo: string }) => `od ${dataOd} do ${dataDo}`,
+      tytuly: {
+        tytul: "Tytuły ubezpieczenia i podstawy składek",
+        wstep: "Te dane pobraliśmy z Twojego konta ZUS, więc nie musisz ich wpisywać.",
+        podpis: "Tytuły ubezpieczenia z okresem, ubezpieczeniem chorobowym i podstawą składek",
+        przewijanie: "Tabela tytułów ubezpieczenia",
+        kolumny: {
+          tytul: "Tytuł ubezpieczenia",
+          okres: "Okres tytułu",
+          chorobowe: "Ubezpieczenie chorobowe",
+          podstawa: "Podstawa składek z ostatnich 12 miesięcy",
+        },
+        brakTytulu: "Brak tytułu ubezpieczenia",
+        brakDanych: "Brak tytułu ubezpieczenia w danych z konta ZUS",
+        brakDanychNotatka:
+          "Formę zatrudnienia, ubezpieczenie chorobowe i podstawę wymiaru zasiłku podasz sam na kolejnych ekranach profilu i w kalkulatorze zasiłku.",
+        koniecTytulu: ({ tytul, dataKonca, dataBraku }: { tytul: string; dataKonca: string; dataBraku: string }) =>
+          `Tytuł ${tytul} zakończył się ${dataKonca}. Od ${dataBraku} dane z ZUS nie pokazują żadnego tytułu ubezpieczenia.`,
+      },
+      rodzajeTytulu: {
+        pracownik: "Pracownik",
+        zleceniobiorca: "Zleceniobiorca",
+        dzialalnosc: "Osoba prowadząca pozarolniczą działalność",
+      },
+      rodzajeTytuluDopelniacz: {
+        pracownik: "pracownika",
+        zleceniobiorca: "zleceniobiorcy",
+        dzialalnosc: "osoby prowadzącej pozarolniczą działalność",
+      },
+      tytulDo: ({ tytul, dataDo }: { tytul: string; dataDo: string }) => `${tytul}, do ${dataDo}`,
+      rodzajeChorobowego: {
+        obowiazkowe: "Obowiązkowe",
+        dobrowolne: "Dobrowolne",
+        brak: "Brak",
+      },
+      chorobowe: ({ rodzaj, okres }: { rodzaj: string; okres: string }) => `${rodzaj} ${okres}`,
+      podstawy: {
+        wKazdymMiesiacu: ({ kwota }: { kwota: string }) => `${kwota} w każdym miesiącu`,
+        wKazdymMiesiacuOdDo: ({ kwota, miesiacOd, miesiacDo }: { kwota: string; miesiacOd: string; miesiacDo: string }) =>
+          `${kwota} w każdym miesiącu od ${miesiacOd} do ${miesiacDo}`,
+        wDwochMiesiacach: ({ kwota, miesiacPierwszy, miesiacDrugi }: { kwota: string; miesiacPierwszy: string; miesiacDrugi: string }) =>
+          `${kwota} w ${miesiacPierwszy} i ${miesiacDrugi}`,
+        wMiesiacu: ({ kwota, miesiac }: { kwota: string; miesiac: string }) => `${kwota} w ${miesiac}`,
+      },
+      // Odmiana nazw miesięcy do opisu podstaw składek (od listopada 2025, w październiku 2026).
+      miesiaceDopelniacz: [
+        "stycznia",
+        "lutego",
+        "marca",
+        "kwietnia",
+        "maja",
+        "czerwca",
+        "lipca",
+        "sierpnia",
+        "września",
+        "października",
+        "listopada",
+        "grudnia",
+      ],
+      miesiaceMiejscownik: [
+        "styczniu",
+        "lutym",
+        "marcu",
+        "kwietniu",
+        "maju",
+        "czerwcu",
+        "lipcu",
+        "sierpniu",
+        "wrześniu",
+        "październiku",
+        "listopadzie",
+        "grudniu",
+      ],
+      platnicy: {
+        tytul: "Płatnicy składek",
+        podpis: "Płatnicy składek przy tytułach ubezpieczenia z informacją o wypłacie zasiłków",
+        przewijanie: "Tabela płatników składek",
+        kolumny: {
+          tytul: "Tytuł ubezpieczenia",
+          platnik: "Płatnik składek",
+          nip: "NIP",
+          regon: "REGON",
+          wyplaca: "Płatnik wypłaca zasiłki",
+        },
+        wyplaca: {
+          tak: "Tak",
+          nie: "Nie",
+          "brak-informacji": "Brak informacji w danych ZUS",
+          "nie-dotyczy": "-",
+        },
+        zasada:
+          "Płatnik wypłaca zasiłki, gdy według stanu na 30 listopada poprzedniego roku zgłaszał do ubezpieczenia chorobowego więcej niż 20 osób.",
+        brakInformacji: ({ platnicy }: { platnicy: string }) =>
+          `Dane z ZUS nie mówią tego o ${platnicy}, więc zapytamy Cię o to na następnym ekranie.`,
+        spojnikPlatnikow: " i ",
+        dzialalnosc: "Przy działalności gospodarczej płatnikiem składek jesteś Ty, a zasiłki wypłaca ZUS.",
+      },
+      czlonkowie: {
+        tytul: "Członkowie rodziny zgłoszeni do ubezpieczenia zdrowotnego",
+        tytulZLiczba: ({ liczba }: { liczba: string }) =>
+          `Członkowie rodziny zgłoszeni do ubezpieczenia zdrowotnego (${liczba})`,
+        brak: "Brak zgłoszonych członków rodziny",
+        podpis: "Członkowie rodziny zgłoszeni do ubezpieczenia zdrowotnego z oznaczeniem nowego dziecka",
+        przewijanie: "Tabela członków rodziny",
+        kolumny: {
+          imieINazwisko: "Imię i nazwisko",
+          pesel: "Numer PESEL",
+          dataUrodzenia: "Data urodzenia",
+          oznaczenie: "Oznaczenie",
+        },
+        noweDziecko: "Nowe dziecko",
+        spojnikImion: " i ",
+        noweDzieckoPoOdczycie: ({ imieINazwisko, dataOdczytu }: { imieINazwisko: string; dataOdczytu: string }) =>
+          `${imieINazwisko} to nowe dziecko, którego nie było w danych z ${dataOdczytu}. Przekażemy to do Twojego profilu rodziny.`,
+        noweDzieciPoOdczycie: ({ imieINazwisko, dataOdczytu }: { imieINazwisko: string; dataOdczytu: string }) =>
+          `${imieINazwisko} to nowe dzieci, których nie było w danych z ${dataOdczytu}. Przekażemy to do Twojego profilu rodziny.`,
+        noweDzieckoPierwszyOdczyt: ({ imieINazwisko }: { imieINazwisko: string }) =>
+          `${imieINazwisko} to nowe dziecko urodzone w ciągu ostatnich 30 dni. Przekażemy to do Twojego profilu rodziny.`,
+        noweDzieciPierwszyOdczyt: ({ imieINazwisko }: { imieINazwisko: string }) =>
+          `${imieINazwisko} to nowe dzieci urodzone w ciągu ostatnich 30 dni. Przekażemy to do Twojego profilu rodziny.`,
+      },
+      zasilki: {
+        tytul: "Zasiłki z ostatnich 6 miesięcy",
+        brak: "Brak zasiłków wypłaconych przez ZUS",
+        podpis: "Zasiłki wypłacone przez ZUS w ostatnich 6 miesiącach",
+        przewijanie: "Tabela zasiłków",
+        kolumny: {
+          rodzaj: "Rodzaj zasiłku",
+          data: "Data wypłaty",
+          kwota: "Kwota",
+          sposob: "Sposób wypłaty",
+          wyplacil: "Wypłacił",
+        },
+        wyplacil: "ZUS",
+        notatka: "Pokazujemy zasiłki, które wypłacił Ci ZUS.",
+        rodzaje: {
+          "zasilek-chorobowy": "Zasiłek chorobowy",
+          "zasilek-macierzynski": "Zasiłek macierzyński",
+          "zasilek-opiekunczy": "Zasiłek opiekuńczy",
+          "zasilek-wyrownawczy": "Zasiłek wyrównawczy",
+          "swiadczenie-rehabilitacyjne": "Świadczenie rehabilitacyjne",
+        } as Readonly<Record<string, string>>,
+        sposoby: {
+          przelew: "Przelew",
+          "przekaz-pocztowy": "Przekaz pocztowy",
+        },
+      },
+      kontakt: {
+        tytul: "Adres i kontakt",
+        adres: "Adres",
+        email: "Adres e-mail konta eZUS",
+      },
+      tylkoOdczyt:
+        "Przewodnik tylko odczytuje dane z Twojego konta ZUS i niczego w nim nie zmienia. Odświeżamy je przy każdym otwarciu przewodnika.",
       // koniec sekcjeDanychZus
     },
     // koniec ViewProfileZusData
