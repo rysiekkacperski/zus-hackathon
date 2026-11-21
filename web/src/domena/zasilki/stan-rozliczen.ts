@@ -2,7 +2,7 @@
 // Właściciel: u14 (Dane ZUS: e-ZLA, rozliczenia składek, statusy wniosków).
 import { dataZeZnacznika, dodajDni, dodajMiesiace, formatujDate, parsujDate, porownajDaty } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
-import { wartosciWpisuWgNazwy, zaswiadczeniaOdNajnowszych } from '@/domena/zasilki/okres-zasilkowy';
+import { wartoscZKatalogu, zaswiadczeniaOdNajnowszych } from '@/domena/zasilki/okres-zasilkowy';
 import type {
   DaneCiazyIDziecka,
   DaneZKontaZus,
@@ -121,19 +121,28 @@ export function dniPowstaniaPrawa(daneCiazy: DaneCiazyIDziecka | null, ezla: Zas
   return dniPowstaniaPrawaZPodstawa(daneCiazy, ezla).map((d) => d.dzien);
 }
 
-/** Próg zadłużenia obowiązujący w dniu `dzien`: 1% minimalnego wynagrodzenia (48,06 zł przy 4806 zł). */
+/** Próg zadłużenia obowiązujący w dniu `dzien`: 1% minimalnego wynagrodzenia (48,06 zł przy 4806 zł). Kwoty słownika są w groszach. */
 export function progZadluzenia(katalog: Katalog, dzien: DataISO): { prog: Grosze; minimalne: Grosze } {
-  const minimalneWartosci = wartosciWpisuWgNazwy(katalog, 'Minimalne wynagrodzenie', dzien);
-  const surowe = minimalneWartosci.length > 0 ? Math.max(...minimalneWartosci) : DOMYSLNE_ROZLICZENIA.minimalneWynagrodzenie;
-  // Słownik zapisuje kwotę w złotych albo w groszach; wartość poniżej 100 000 traktujemy jako złote.
-  const minimalne = surowe < 100_000 ? Math.round(surowe * 100) : Math.round(surowe);
-  return { prog: Math.round((minimalne * DOMYSLNE_ROZLICZENIA.progProcent) / 100), minimalne };
+  const minimalne = Math.round(
+    wartoscZKatalogu(katalog, { id: 'minimalne-wynagrodzenie', nazwa: 'Minimalne wynagrodzenie', klucz: 'kwota' }, dzien) ??
+      DOMYSLNE_ROZLICZENIA.minimalneWynagrodzenie,
+  );
+  const prog = wartoscZKatalogu(
+    katalog,
+    { id: 'prog-zadluzenia-z-tytulu-skladek-jdg', nazwa: 'Próg zadłużenia z tytułu składek', klucz: 'kwota' },
+    dzien,
+  );
+  return { prog: prog !== null ? Math.round(prog) : Math.round((minimalne * DOMYSLNE_ROZLICZENIA.progProcent) / 100), minimalne };
 }
 
 /** Okres spłaty zadłużenia w miesiącach ze słownika wymiarów i okresów. */
 export function okresSplatyZKatalogu(katalog: Katalog, dzien: DataISO): number {
-  const wartosci = wartosciWpisuWgNazwy(katalog, 'Okres spłaty zadłużenia', dzien);
-  return wartosci.length > 0 ? wartosci[0] : DOMYSLNE_ROZLICZENIA.okresSplatyMiesiace;
+  const wartosc = wartoscZKatalogu(
+    katalog,
+    { id: 'okres-splaty-zadluzenia-z-tytulu-skladek', nazwa: 'Okres spłaty zadłużenia', klucz: 'miesiace' },
+    dzien,
+  );
+  return wartosc ?? DOMYSLNE_ROZLICZENIA.okresSplatyMiesiace;
 }
 
 /**

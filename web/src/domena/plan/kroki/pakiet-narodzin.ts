@@ -45,7 +45,8 @@ export const pakietNarodzin: KrokPlanu = (pozycje, w) => {
   const tygodnieK11 = tygodnieUzupelniajacegoUrlopu(wymiar);
   if (wymiar === 'brak') {
     wynik = wynik.filter((p) => p.idPozycji !== 'K11' || p.status !== 'do-zrobienia');
-  } else if (tygodnieK11 !== null) {
+  } else if (tygodnieK11 !== null && dane.przyjecie === undefined) {
+    // Po przyjęciu dziecka K11 rozstrzyga krok przyjecieDziecka (u24), więc pakiet nie dodaje jej do planu.
     const istnieje = wynik.some((p) => p.idPozycji === 'K11');
     const katalogowa = w.katalog.pozycje.find((p) => p.id === 'K11');
     if (!istnieje && katalogowa) {

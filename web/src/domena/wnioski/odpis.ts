@@ -1,5 +1,6 @@
 // Wniosek o odpis aktu urodzenia (kontrakt, sekcja 7.2). Właściciel: u29 (Pytanie do ZUS, dane konta i odpis aktu urodzenia).
 import { dataZeZnacznika, dodajDni, parsujDate, porownajDaty } from '@/domena/daty';
+import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import { cyfraKontrolnaPesel, czyPeselZgodnyZData } from '@/domena/pesel';
 import type {
   BledyPol,
@@ -70,27 +71,31 @@ function normalizuj(tekst: string): string {
   return tekst.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 }
 
+// Wpis „Opłata skarbowa za odpis aktu urodzenia” (u04) z wariantami skrocony i zupelny; bez wpisu szukamy po nazwie.
+const ID_WPISU_OPLATY = 'oplata-skarbowa-odpis-aktu-urodzenia';
+
 function wpisOplatySkarbowej(katalog: Katalog): WpisSlownika | undefined {
-  return katalog.slowniki.find((w) => {
-    const nazwa = normalizuj(w.nazwa);
-    return nazwa.includes('oplata skarbowa') && nazwa.includes('odpis');
-  });
+  return (
+    katalog.slowniki.find((w) => w.id === ID_WPISU_OPLATY) ??
+    katalog.slowniki.find((w) => {
+      const nazwa = normalizuj(w.nazwa);
+      return nazwa.includes('oplata skarbowa') && nazwa.includes('odpis');
+    })
+  );
 }
 
-function wartoscWGroszach(wartosc: number): Grosze {
-  // Kwoty katalogu w groszach są liczbami całkowitymi od 1000 wzwyż; mniejsze wartości są złotymi.
-  return Number.isInteger(wartosc) && wartosc >= 1000 ? wartosc : Math.round(wartosc * 100);
-}
-
+// Kwoty słownika kwot i progów (jednostka 'zl') są w groszach.
 function kwotaZKatalogu(katalog: Katalog, rodzaj: RodzajOdpisu, dzien: DataISO): Grosze | null {
   const wpis = wpisOplatySkarbowej(katalog);
   if (wpis === undefined) return null;
-  const wersja = wpis.wersje.find((w) => porownajDaty(w.od, dzien) <= 0 && (w.do === undefined || porownajDaty(dzien, w.do) <= 0));
-  if (wersja === undefined) return null;
+  const klucz = rodzaj === 'zupelny' ? 'zupelny' : 'skrocony';
   const szukany = rodzaj === 'zupelny' ? 'zup' : 'skr';
-  const wariant = wpis.warianty.find((w) => normalizuj(`${w.klucz} ${w.etykieta}`).includes(szukany));
-  const wartosc = wariant ? wersja.wartosci[wariant.klucz] : undefined;
-  return wartosc === undefined ? null : wartoscWGroszach(wartosc);
+  const wariant =
+    wpis.warianty.find((w) => w.klucz === klucz) ??
+    wpis.warianty.find((w) => normalizuj(`${w.klucz} ${w.etykieta}`).includes(szukany));
+  if (wariant === undefined) return null;
+  const wynik = wartoscObowiazujaca(katalog, wpis.id, dzien, wariant.klucz);
+  return wynik === null ? null : Math.round(wynik.wartosc);
 }
 
 /** Opłata skarbowa za odpis w dniu `dzien`: bez opłaty dla celów zwolnionych, kwota ze słownika dla celu „inny cel”. */

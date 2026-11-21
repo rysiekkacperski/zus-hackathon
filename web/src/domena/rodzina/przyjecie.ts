@@ -154,14 +154,25 @@ export function zbudujPrzyjecie(f: FormularzPrzyjecia, dzis: DataISO): Przyjecie
 /** Wartości ze słownika wymiarów i okresów obowiązujące przy uruchomieniu katalogu. */
 const WIEK_DOMYSLNY = { przysposobienie: 14, odroczenie: 10, rodzinaZastepcza: 7 } as const;
 
-// Wpis słownika wymiarów „Wiek dziecka uprawniający do urlopu na warunkach urlopu macierzyńskiego”
-// odnajdujemy po nazwie, bo identyfikator wpisu nadaje katalog (u04).
-function wiekZKatalogu(katalog: Katalog, klucz: 'przysposob' | 'odrocz' | 'zastepcz'): number | null {
-  const wpis = katalog.slowniki.find((s) => s.slownik === 'wymiary-i-okresy' && /wiek dziecka uprawniaj/i.test(s.nazwa));
+// Wpis słownika wymiarów „Wiek dziecka uprawniający do urlopu na warunkach urlopu macierzyńskiego” (u04)
+// z wariantami rodzinaZastepczaNiezawodowa, odroczonyObowiazekSzkolny i przysposobienie. Bez wpisu szukamy po nazwie.
+const ID_WPISU_WIEKU = 'wiek-dziecka-urlop-na-warunkach-urlopu-macierzynskiego';
+const KLUCZ_WIEKU = {
+  przysposob: 'przysposobienie',
+  odrocz: 'odroczonyObowiazekSzkolny',
+  zastepcz: 'rodzinaZastepczaNiezawodowa',
+} as const;
+
+function wiekZKatalogu(katalog: Katalog, klucz: keyof typeof KLUCZ_WIEKU): number | null {
+  const wpis =
+    katalog.slowniki.find((s) => s.id === ID_WPISU_WIEKU) ??
+    katalog.slowniki.find((s) => s.slownik === 'wymiary-i-okresy' && /wiek dziecka uprawniaj/i.test(s.nazwa));
   if (wpis === undefined) return null;
   const wersja = wpis.wersje[wpis.wersje.length - 1];
   if (wersja === undefined) return null;
-  const wariant = wpis.warianty.find((w) => w.klucz.includes(klucz) || w.etykieta.toLowerCase().includes(klucz));
+  const wariant =
+    wpis.warianty.find((w) => w.klucz === KLUCZ_WIEKU[klucz]) ??
+    wpis.warianty.find((w) => w.klucz.toLowerCase().includes(klucz) || w.etykieta.toLowerCase().includes(klucz));
   const wartosc = wariant ? wersja.wartosci[wariant.klucz] : undefined;
   return typeof wartosc === 'number' && wartosc > 0 ? wartosc : null;
 }

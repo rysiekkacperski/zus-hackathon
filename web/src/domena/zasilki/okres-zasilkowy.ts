@@ -1,11 +1,13 @@
 // Okres zasiłkowy i wynagrodzenie chorobowe z zaświadczeń e-ZLA (kontrakt, sekcja 7.2; ANALIZY/16 R2–R9).
 // Właściciel: u14 (Dane ZUS: e-ZLA, rozliczenia składek, statusy wniosków).
 import { czesciDaty, dodajDni, formatujDate, liczbaDniWlacznie, porownajDaty, roznicaDni } from '@/domena/daty';
+import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import { dataUrodzeniaZPesel } from '@/domena/pesel';
 import type {
   DaneZKontaZus,
   DataISO,
   FormaZatrudnienia,
+  IdWpisuSlownika,
   Katalog,
   KodKomunikatu,
   Pesel,
@@ -56,23 +58,47 @@ export function wartosciWpisuWgNazwy(katalog: Katalog, nazwa: string, dzien: Dat
   return Object.values(wersja.wartosci).filter((w) => Number.isFinite(w));
 }
 
+/**
+ * Wartość wariantu `klucz` wpisu słownika obowiązująca w dniu `dzien`. Wpis szukamy po identyfikatorze z katalogu (u04),
+ * a gdy go brak, po początku nazwy wpisu; null, gdy katalog nie ma wpisu albo wartości w tym dniu.
+ */
+export function wartoscZKatalogu(
+  katalog: Katalog,
+  wpis: { id: IdWpisuSlownika; nazwa: string; klucz: string },
+  dzien: DataISO,
+): number | null {
+  const szukana = wpis.nazwa.toLowerCase();
+  const id =
+    katalog.slowniki.find((w) => w.id === wpis.id)?.id ??
+    katalog.slowniki.find((w) => w.nazwa.toLowerCase().startsWith(szukana))?.id;
+  if (id === undefined) return null;
+  const wynik = wartoscObowiazujaca(katalog, id, dzien, wpis.klucz);
+  return wynik !== null && Number.isFinite(wynik.wartosc) ? wynik.wartosc : null;
+}
+
 /** Limit okresu zasiłkowego w ciąży i przerwa łącząca okresy niezdolności, ze słownika wymiarów i okresów. */
 export function okresyZKatalogu(katalog: Katalog, dzien: DataISO): { limit: number; przerwa: number } {
-  const okres = wartosciWpisuWgNazwy(katalog, 'Okres zasiłkowy', dzien);
-  const przerwa = wartosciWpisuWgNazwy(katalog, 'Przerwa w niezdolności', dzien);
+  const limit = wartoscZKatalogu(katalog, { id: 'okres-zasilkowy', nazwa: 'Okres zasiłkowy', klucz: 'ciaza' }, dzien);
+  const przerwa = wartoscZKatalogu(
+    katalog,
+    { id: 'przerwa-w-niezdolnosci-do-pracy', nazwa: 'Przerwa w niezdolności', klucz: 'dni' },
+    dzien,
+  );
   return {
-    limit: okres.length > 0 ? Math.max(...okres) : DOMYSLNE_OKRESY.okresZasilkowyWCiazy,
-    przerwa: przerwa.length > 0 ? przerwa[0] : DOMYSLNE_OKRESY.przerwaWOkresie,
+    limit: limit ?? DOMYSLNE_OKRESY.okresZasilkowyWCiazy,
+    przerwa: przerwa ?? DOMYSLNE_OKRESY.przerwaWOkresie,
   };
 }
 
 /** Limity wynagrodzenia chorobowego (33 i 14 dni) ze słownika wymiarów i okresów. */
 export function limityZKatalogu(katalog: Katalog, dzien: DataISO): LimityWynagrodzeniaChorobowego {
-  const wartosci = wartosciWpisuWgNazwy(katalog, 'Wynagrodzenie chorobowe pracownika', dzien);
-  if (wartosci.length === 0) {
-    return { podstawowy: DOMYSLNE_OKRESY.wynagrodzeniePodstawowe, po50Roku: DOMYSLNE_OKRESY.wynagrodzeniePo50 };
-  }
-  return { podstawowy: Math.max(...wartosci), po50Roku: Math.min(...wartosci) };
+  const wpis = { id: 'wynagrodzenie-chorobowe-pracownika', nazwa: 'Wynagrodzenie chorobowe pracownika' };
+  const podstawowy = wartoscZKatalogu(katalog, { ...wpis, klucz: 'dni' }, dzien);
+  const po50Roku = wartoscZKatalogu(katalog, { ...wpis, klucz: 'dniPoUkonczeniuWieku' }, dzien);
+  return {
+    podstawowy: podstawowy ?? DOMYSLNE_OKRESY.wynagrodzeniePodstawowe,
+    po50Roku: po50Roku ?? DOMYSLNE_OKRESY.wynagrodzeniePo50,
+  };
 }
 
 /** Liczba dni niezdolności z zaświadczenia, obie daty włącznie. */

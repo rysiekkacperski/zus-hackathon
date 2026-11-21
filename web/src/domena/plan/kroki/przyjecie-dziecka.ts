@@ -2,6 +2,7 @@
 // Przy danych przyjęcia dziecka krok usuwa sprawy ciąży i porodu (bez złożonych i załatwionych),
 // wylicza sprawy K31, K32, K33, K09, K10, K05 i K12–K18 według formy przyjęcia, wieku dziecka
 // i ubezpieczenia chorobowego rodziców oraz przyjmuje liczbę dzieci z liczby przyjętych dzieci.
+import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import type { KrokPlanu } from '@/domena/plan/kroki/typ';
 import type { WejsciePlanu } from '@/domena/przeliczenie';
 import {
@@ -11,6 +12,7 @@ import {
 } from '@/domena/rodzina/przyjecie';
 import type {
   DaneRodzica,
+  DataISO,
   DrugiRodzic,
   Etap,
   FormaZatrudnienia,
@@ -76,14 +78,15 @@ function czyZlozonaAlboZalatwiona(p: PozycjaPlanu | undefined): boolean {
   return p !== undefined && (p.status === 'zlozona' || p.status === 'zalatwiona');
 }
 
-// Wartość progu ze słownika kwot i progów odnajdywana po nazwie wpisu; katalog może trzymać złote albo grosze.
-function progZKatalogu(katalog: Katalog, wzorzec: RegExp, domyslny: number): number {
-  const wpis = katalog.slowniki.find((s) => s.slownik === 'kwoty-i-progi' && wzorzec.test(s.nazwa));
-  const wersja = wpis?.wersje[wpis.wersje.length - 1];
-  const pierwszy = wpis?.warianty[0];
-  const wartosc = wersja && pierwszy ? wersja.wartosci[pierwszy.klucz] : undefined;
-  if (typeof wartosc !== 'number' || wartosc <= 0) return domyslny;
-  return wartosc < 100000 ? Math.round(wartosc * 100) : wartosc;
+// Wartość progu w groszach ze słownika kwot i progów (u04): wpis po identyfikatorze, a bez niego po nazwie,
+// wariant „kwota” obowiązujący w dniu `dzien`.
+function progZKatalogu(katalog: Katalog, idWpisu: string, wzorzec: RegExp, domyslny: number, dzien: DataISO): number {
+  const wpis =
+    katalog.slowniki.find((s) => s.id === idWpisu) ??
+    katalog.slowniki.find((s) => s.slownik === 'kwoty-i-progi' && wzorzec.test(s.nazwa));
+  const klucz = wpis?.warianty.find((v) => v.klucz === 'kwota')?.klucz ?? wpis?.warianty[0]?.klucz;
+  const wartosc = wpis && klucz ? wartoscObowiazujaca(katalog, wpis.id, dzien, klucz)?.wartosc : undefined;
+  return typeof wartosc === 'number' && wartosc > 0 ? Math.round(wartosc) : domyslny;
 }
 
 function dochodWProgu(w: WejsciePlanu, prog: number): boolean {
@@ -122,13 +125,13 @@ export function sprawyPoPrzyjeciu(p: PrzyjecieDziecka, w: WejsciePlanu): Wyliczo
   if (przysposobienie && przedUkonczeniemLat(p, 14) && podlegaChorobowemu(ojciec)) dodaj('K09', rodzicOjca);
   if (wWieku && podlegaChorobowemu(drugi)) dodaj('K10', rodzicDrugiego);
   dodaj('K12', 'rodzic-przyjmujacy');
-  if (przysposobienie && dochodWProgu(w, progZKatalogu(w.katalog, /próg becikowego/i, PROG_BECIKOWEGO_DOMYSLNY))) {
+  if (przysposobienie && dochodWProgu(w, progZKatalogu(w.katalog, 'prog-becikowego', /próg becikowego/i, PROG_BECIKOWEGO_DOMYSLNY, w.dzis))) {
     dodaj('K14', 'rodzic-przyjmujacy', true);
   }
   if (
     przysposobienie &&
     przedUkonczeniemLat(p, 1) &&
-    dochodWProgu(w, progZKatalogu(w.katalog, /próg zasiłku rodzinnego/i, PROG_ZASILKU_RODZINNEGO_DOMYSLNY))
+    dochodWProgu(w, progZKatalogu(w.katalog, 'prog-zasilku-rodzinnego', /próg zasiłku rodzinnego/i, PROG_ZASILKU_RODZINNEGO_DOMYSLNY, w.dzis))
   ) {
     dodaj('K15', 'rodzic-przyjmujacy', true);
   }
