@@ -1,120 +1,109 @@
 'use client';
 
-// Ekran zastępczy ViewDemoAccountPicker z podstawowym działaniem (kontrakt 2.4 i 3.5). Właściciel: u01.
-// Lista kont przykładowych i nowych kont z akcjami „Zaloguj się” (zalogujKontem ze sposobem z logowania
-// w toku) i „Przywróć stan początkowy” (przywrocStanPoczatkowy).
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { useKontaDemo, useLogowanieWToku, useStanKontaWTrybieDemo } from '@/dane/magazyn/hooki';
-import { przywrocStanPoczatkowy, zalogujKontem } from '@/dane/magazyn/operacje/konto';
+// ViewDemoAccountPicker: wybór konta po makiecie logowania (Story 3.1.1.1.3, KA-01–KA-07, KA-11, KA-12;
+// Story 3.4.1.2.1, KA-03–KA-05; wzory P02-01, P02-02 i Wybor-konta, układ p02 według kontraktu 13.2
+// pkt 10). Lista: 7 kont rodziców i Administrator ZUS w kolejności rejestru, potem nowe konta w kolejności
+// założenia i akcja „Załóż nowe konto”. Właściciel: u01.
+import { useMemo, useState } from 'react';
+import { NaglowekDemo } from '@/app/(publiczne)/_czesci/naglowek-demo';
+import { useDzis, useKontaDemo, useParametry } from '@/dane/magazyn/hooki';
+import { ustawParametry } from '@/dane/magazyn/operacje/parametry';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
-import type { KodKomunikatu, KontoDemo } from '@/domena/typy';
-import { FlagaDemo } from '@/komponenty/flaga-demo';
+import { dodajDni } from '@/domena/daty';
+import { DNI_OD_URODZENIA_DZIECKA_Z_SYMULACJI } from '@/domena/dane-zus/symulacja-dziecka';
+import type { KodKomunikatu } from '@/domena/typy';
+import { formatujDate } from '@/komponenty/format';
+import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { useKomunikatChwilowy } from '@/komponenty/komunikat-chwilowy';
-import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
-import { Przycisk } from '@/komponenty/przycisk';
+import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
-import { Tabela } from '@/komponenty/tabela';
-import { Stos, Wiersz } from '@/komponenty/uklad';
 import { teksty } from '@/teksty';
+import { PozycjaKonta } from './_czesci/pozycja-konta';
 
-const tekst = teksty.wspolne.ekranZastepczy.wyborKonta;
-
-type Kolumna = 'konto' | 'opis' | 'stan' | 'akcje';
-
-function opisKonta(konto: KontoDemo): string {
-  return konto.kluczOpisuFormy ? tekst.opisyForm[konto.kluczOpisuFormy] : tekst.rodzajeKont[konto.rodzaj];
-}
-
-function StanKontaDemo({ konto }: { konto: KontoDemo }) {
-  const stan = useStanKontaWTrybieDemo(konto.pesel);
-  return <>{stan ? teksty.rama.etykietyRol[stan.konto.rola] : tekst.pierwszeLogowanie}</>;
-}
-
-function AkcjeKontaDemo({ konto, onBlad }: { konto: KontoDemo; onBlad: (kod: KodKomunikatu | null) => void }) {
-  const router = useRouter();
-  const logowanie = useLogowanieWToku();
-  const { pokaz } = useKomunikatChwilowy();
-  const imieINazwisko = `${konto.imie} ${konto.nazwisko}`;
-
-  const zaloguj = () => {
-    const wynik = zalogujKontem(
-      { pesel: konto.pesel, sposob: logowanie?.sposob ?? 'mobywatel', powrot: logowanie?.powrot },
-      pobierzKontekstOperacji(),
-    );
-    if (!wynik.ok) {
-      onBlad(wynik.kod);
-      return;
-    }
-    onBlad(null);
-    router.push(wynik.wartosc.cel);
-  };
-
-  const przywroc = () => {
-    const wynik = przywrocStanPoczatkowy(konto.pesel, pobierzKontekstOperacji());
-    if (!wynik.ok) {
-      onBlad(wynik.kod);
-      return;
-    }
-    onBlad(null);
-    pokaz(tekst.przywrocono({ imieINazwisko }));
-  };
-
-  return (
-    <Wiersz odstep={3} className="flex-wrap">
-      <Przycisk wariant="glowny" onClick={zaloguj} aria-label={tekst.zalogujKonto({ imieINazwisko })}>
-        {tekst.zaloguj}
-      </Przycisk>
-      {konto.rodzaj === 'konto-administratora' ? null : (
-        <Przycisk wariant="drugorzedny" onClick={przywroc} aria-label={tekst.przywrocKonto({ imieINazwisko })}>
-          {tekst.przywroc}
-        </Przycisk>
-      )}
-    </Wiersz>
-  );
-}
+const tekst = teksty.ViewDemoAccountPicker;
 
 export function WidokWyboruKonta() {
   const konta = useKontaDemo();
+  const parametry = useParametry();
+  const dzis = useDzis();
+  const { pokaz } = useKomunikatChwilowy();
   const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
+  const tryb = parametry.trybDemonstracyjny;
+
+  const przykladowe = useMemo(() => konta.filter((k) => k.rodzaj !== 'nowe-konto'), [konta]);
+  const nowe = useMemo(() => konta.filter((k) => k.rodzaj === 'nowe-konto'), [konta]);
+  const dataDzieckaZSymulacji = formatujDate(dodajDni(dzis, -DNI_OD_URODZENIA_DZIECKA_Z_SYMULACJI));
+
+  const wlaczTryb = () => {
+    const wynik = ustawParametry({ trybDemonstracyjny: true }, pobierzKontekstOperacji());
+    if (!wynik.ok) {
+      ustawBlad(wynik.kod);
+      return;
+    }
+    ustawBlad(null);
+    pokaz(tekst.trybWlaczony);
+  };
 
   return (
     <>
-      <NaglowekStrony tytul={teksty.ViewDemoAccountPicker.naglowek} wstep={tekst.wstep} akcje={<FlagaDemo />} />
-      <Stos odstep={6}>
-        <Notatka>
-          <p>{teksty.wspolne.ekranZastepczy.dzialajacy({ jednostka: 'u01' })}</p>
-        </Notatka>
+      <NaglowekDemo flaga={tekst.flaga} tytul={tekst.naglowek} wstep={tekst.wstep} />
+      <div className="flex max-w-tresc flex-col gap-7.5">
         {blad ? <Komunikat kod={blad} /> : null}
-        <Tabela<Kolumna>
-          podpis={tekst.podpis}
-          etykietaPrzewijania={tekst.przewijanie}
-          kolumny={[
-            { klucz: 'konto', naglowek: tekst.kolumny.konto, tytulowa: true },
-            { klucz: 'opis', naglowek: tekst.kolumny.opis },
-            { klucz: 'stan', naglowek: tekst.kolumny.stan },
-            { klucz: 'akcje', naglowek: tekst.kolumny.akcje },
-          ]}
-          wiersze={konta.map((konto) => ({
-            id: konto.pesel,
-            konto: `${konto.imie} ${konto.nazwisko}`,
-            opis: opisKonta(konto),
-            stan: <StanKontaDemo konto={konto} />,
-            akcje: <AkcjeKontaDemo konto={konto} onBlad={ustawBlad} />,
-          }))}
-        />
-        <Wiersz odstep={6} className="flex-wrap">
-          <Odnosnik href={sciezkaWidoku('ViewDemoNewAccount')} ikonaPo="w-prawo">
-            {tekst.noweKonto}
-          </Odnosnik>
-          <Odnosnik href={sciezkaWidoku('ViewDemoSettings')} ikonaPo="w-prawo">
-            {tekst.ustawieniaDemo}
-          </Odnosnik>
-        </Wiersz>
-      </Stos>
+        {tryb ? null : (
+          <Komunikat
+            typ="INFO"
+            tresc={tekst.trybWylaczony}
+            akcje={
+              <Przycisk wariant="drugorzedny" onClick={wlaczTryb}>
+                {tekst.wlaczTryb}
+              </Przycisk>
+            }
+          />
+        )}
+
+        <Karta tytul={tekst.kontaPrzykladowe({ liczba: przykladowe.length })} bezLinii>
+          <div className="flex flex-col gap-3">
+            <Notatka>
+              <p>{tekst.notatkaDane}</p>
+            </Notatka>
+            {tryb ? (
+              <Notatka>
+                <p>{tekst.notatkaSymulacji({ data: dataDzieckaZSymulacji })}</p>
+              </Notatka>
+            ) : null}
+          </div>
+          <ul className="mt-6 mb-0 list-none border-t border-line-row p-0">
+            {przykladowe.map((konto) => (
+              <PozycjaKonta key={konto.pesel} konto={konto} onBlad={ustawBlad} />
+            ))}
+          </ul>
+        </Karta>
+
+        <Karta tytul={tekst.noweKonta({ liczba: nowe.length })} bezLinii>
+          <p className="m-0">{tekst.noweKontaOpis}</p>
+          {nowe.length > 0 ? (
+            <ul className="mt-6 mb-0 list-none border-t border-line-row p-0">
+              {nowe.map((konto) => (
+                <PozycjaKonta key={konto.pesel} konto={konto} onBlad={ustawBlad} />
+              ))}
+            </ul>
+          ) : null}
+          <PrzyciskLink href={sciezkaWidoku('ViewDemoNewAccount')} wariant="drugorzedny" ikona="plus" className="mt-6">
+            {tekst.zalozNoweKonto}
+          </PrzyciskLink>
+        </Karta>
+
+        {tryb ? (
+          <p className="m-0">
+            <Odnosnik href={sciezkaWidoku('ViewDemoSettings')} ikonaPo="w-prawo">
+              {tekst.ustawieniaDemo}
+            </Odnosnik>
+          </p>
+        ) : null}
+      </div>
     </>
   );
 }
