@@ -225,3 +225,4 @@
 | 0209 | Rezygnacja z orzeczeniem przed upływem 8 tygodni | ERROR | 400 | Przy orzeczeniu o niezdolności do samodzielnej egzystencji rezygnujesz z dalszej części urlopu macierzyńskiego po wykorzystaniu co najmniej 8 tygodni po porodzie. |
 | 0210 | Sytuacja szczególna przed upływem 8 tygodni od porodu | INFO | 200 | W pierwszych 8 tygodniach życia dziecka możesz otrzymać zasiłek opiekuńczy na czas osobistej opieki nad dzieckiem. Część urlopu macierzyńskiego przejmiesz od [data]. |
 | 0211 | PESEL dziecka niezgodny z datą urodzenia przyjętego dziecka | ERROR | 400 | Data urodzenia zapisana w numerze PESEL różni się od daty urodzenia dziecka w Twoim profilu. |
+| 0212 | Wygaśnięcie sesji | WARNING | 401 | Sesja wygasła po 15 minutach bez działania. Zaloguj się ponownie przez mObywatela, żeby wrócić do przewodnika. |
