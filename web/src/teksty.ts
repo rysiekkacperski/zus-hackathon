@@ -1208,6 +1208,55 @@ export const teksty = {
     naglowek: "Kalkulator zasiłku macierzyńskiego",
     // Sloty kalkulator-zasilku/_sloty (u21)
     daneZPrzykladowejSprawy: {
+      wstep: ({ id }: { id: string }) =>
+        `Uzupełniliśmy dane z przykładowej sprawy ${id}. Zastępują one w tym wyliczeniu dane Twojego profilu rodziny, a plan rodziny pozostaje bez zmian.`,
+      wstepBezId: "Uzupełniliśmy dane z przykładowej sprawy. Zastępują one w tym wyliczeniu dane Twojego profilu rodziny, a plan rodziny pozostaje bez zmian.",
+      brakSprawy: "Przykładowa sprawa nie ma wyniku weryfikacji. Zatwierdź dane sprawy, żeby przenieść je do kalkulatora.",
+      tytulUbezpieczonej: "Ubezpieczona z przykładowej sprawy",
+      tytulUrlopu: "Urlop z wniosku",
+      zrodlo: "Źródło: przykładowa sprawa",
+      formaZatrudnienia: "Forma zatrudnienia",
+      formy: {
+        "umowa-o-prace": "Umowa o pracę",
+        "umowa-zlecenia": "Umowa zlecenia z dobrowolnym ubezpieczeniem chorobowym",
+        jdg: "Jednoosobowa działalność gospodarcza z dobrowolnym ubezpieczeniem chorobowym",
+        "brak-tytulu": "Brak tytułu do ubezpieczenia",
+      },
+      rola: "Rola",
+      role: { matka: "Matka", "ojciec-przejmujacy": "Ojciec, który przejmuje część urlopu macierzyńskiego" },
+      zdarzenie: "Zdarzenie",
+      zdarzeniePorod: ({ data, liczba }: { data: string; liczba: string }) => `Poród ${data}, liczba dzieci: ${liczba}`,
+      zdarzenieTermin: ({ data, liczba }: { data: string; liczba: string }) =>
+        `Przewidywany poród ${data}, liczba dzieci: ${liczba}`,
+      zdarzenieMartwe: ({ data }: { data: string }) => `Urodzenie martwego dziecka ${data}`,
+      zaZyciem: "Zaświadczenie „Za życiem”",
+      zaZyciemZDnia: ({ data }: { data: string }) => `Tak, wystawione ${data}`,
+      podstawa: "Podstawa wymiaru zasiłku",
+      zrodloPodstawy: ({ opis }: { opis: string }) => `Źródło: przykładowa sprawa. ${opis}`,
+      rodzajUrlopu: "Rodzaj urlopu",
+      rodzajeUrlopu: {
+        macierzynski: "Urlop macierzyński",
+        "czesc-przed-porodem": "Urlop macierzyński przed porodem",
+        rodzicielski: "Urlop rodzicielski",
+        uzupelniajacy: "Uzupełniający urlop macierzyński",
+        ojcowski: "Urlop ojcowski",
+        "na-warunkach-macierzynskiego": "Urlop na warunkach urlopu macierzyńskiego",
+        "przejety-macierzynski": "Urlop macierzyński przejęty przez ojca",
+        "laczenie-z-praca": "Urlop rodzicielski łączony z pracą",
+        "wydluzenie-rodzicielskiego": "Wydłużenie urlopu rodzicielskiego",
+      },
+      poczatek: "Początek okresu zasiłku",
+      poczatekOpis: "Źródło: przykładowa sprawa. Koniec wyliczy kalkulator.",
+      okresMatki: "Okres wykorzystany przez matkę",
+      okresOdDo: ({ od, do: koniec }: { od: string; do: string }) => `od ${od} do ${koniec}`,
+      oswiadczenie: "Oświadczenie o pełnym wymiarze urlopów",
+      dataZlozenia: "Data złożenia wniosku",
+      tak: "Tak",
+      nie: "Nie",
+      pobyt: "Pobyt dziecka w szpitalu w okresie liczenia",
+      pobytDni: ({ dni, tydzien, masa }: { dni: string; tydzien: string; masa: string }) =>
+        `${dni} dni, poród w ${tydzien}. tygodniu ciąży, masa urodzeniowa ${masa} g`,
+      wrocDoWeryfikacji: "Wróć do weryfikacji sprawy",
       // koniec daneZPrzykladowejSprawy
     },
     // koniec ViewCalcMaternityInput
@@ -1223,6 +1272,34 @@ export const teksty = {
       // koniec zapisScenariusza
     },
     porownanieZRozstrzygnieciem: {
+      tytul: ({ id }: { id: string }) => `Porównanie z rozstrzygnięciem sprawy ${id}`,
+      tytulBezId: "Porównanie z rozstrzygnięciem sprawy",
+      brakSprawy: "Przykładowa sprawa nie ma wyniku weryfikacji, więc wyliczenia nie porównamy z rozstrzygnięciem.",
+      podpis: "Porównanie wyliczenia zasiłku macierzyńskiego z rozstrzygnięciem sprawy",
+      przewijanie: "Tabela porównania z rozstrzygnięciem, przewiń w poziomie",
+      kolumny: { pole: "Zasiłek macierzyński", wyliczenie: "Wyliczenie", rozstrzygniecie: "Rozstrzygnięcie sprawy", porownanie: "Porównanie" },
+      pola: { poczatek: "Początek okresu", koniec: "Koniec okresu", kwota: "Miesięczna kwota" },
+      zgodne: "Zgodne",
+      rozne: "Różne",
+      zgodneRoznica: ({ roznica }: { roznica: string }) => `Zgodne, różnica ${roznica}`,
+      rozneRoznica: ({ roznica }: { roznica: string }) => `Różne, różnica ${roznica}`,
+      brakWRozstrzygnieciu: "Brak w rozstrzygnięciu",
+      brakWartosci: "-",
+      notaTolerancji: ({ tolerancja }: { tolerancja: string }) =>
+        `Daty początku i końca muszą być równe. Kwoty uznajemy za zgodne, gdy różnią się najwyżej o tolerancję porównania kwoty: ${tolerancja}.`,
+      notaRoznicy: ({ tolerancja }: { tolerancja: string }) =>
+        `Różnica przekracza tolerancję porównania kwoty: ${tolerancja}. Sprawdź dane sprawy i zastosowane reguły.`,
+      okresyTytul: "Okres zasiłku i wypłaty według danych sprawy",
+      podpisOkresow: "Okresy zasiłku, stawki i wypłaty wyliczone z danych sprawy",
+      przewijanieOkresow: "Tabela okresów zasiłku, przewiń w poziomie",
+      kolumnyOkresow: { urlop: "Urlop", od: "Od", do: "Do", dni: "Dni", stawka: "Stawka", miesiecznie: "Miesięcznie", suma: "Suma" },
+      podstawa: ({ kwota }: { kwota: string }) => `Podstawa wymiaru ${kwota}, źródło: przykładowa sprawa.`,
+      coDalej: "Co dalej",
+      zapisano: "Wynik zapisaliśmy w wynikach kalkulacji z podstawą wymiaru ze źródłem przykładowa sprawa. Twój plan rodziny, w tym wariant zasiłku wybrany przy sprawie Wniosek o zasiłek macierzyński, pozostaje bez zmian.",
+      poprawOpis: "Sprawdź dane sprawy, które wpływają na podstawę wymiaru i okres zasiłku, i popraw je na ekranie danych sprawy.",
+      wrocDoWeryfikacji: "Wróć do weryfikacji sprawy",
+      wybierzInna: "Wybierz inną sprawę",
+      poprawDane: "Popraw dane sprawy",
       // koniec porownanieZRozstrzygnieciem
     },
     // koniec ViewCalcMaternityResult
@@ -1260,6 +1337,277 @@ export const teksty = {
   ViewSampleCaseVerification: {
     tytulStrony: "Weryfikacja ubezpieczenia chorobowego",
     naglowek: "Weryfikacja ubezpieczenia chorobowego",
+    // Treści ekranu ViewSampleCaseVerification (wzory P13-13 do P13-16)
+    wrocDoDanychSprawy: ({ id }: { id: string }) => `Dane sprawy ${id}`,
+    wrocDoDanych: "Dane sprawy",
+    wstepWzorcowa: ({ id, sytuacja }: { id: string; sytuacja: string }) => `Sprawa wzorcowa ${id}: ${sytuacja}.`,
+    wstepZestaw: ({ id, sytuacja }: { id: string; sytuacja: string }) => `Sprawa z zestawu ZUS ${id}: ${sytuacja}.`,
+    wstepWgrane: ({ dokumenty }: { dokumenty: string }) => `Sprawa z wgranych dokumentów: ${dokumenty}.`,
+    stanNa: ({ czas }: { czas: string }) => `Stan na ${czas}.`,
+    spojnikI: " i ",
+    nazwyDokumentow: {
+      zam: "Wniosek ZAM",
+      "z-3": "Zaświadczenie Z-3",
+      "z-3a": "Zaświadczenie Z-3a",
+      "z-3b": "Zaświadczenie Z-3b",
+      "zas-12": "Zaświadczenie ZAS-12",
+      poswiadczenie: "Poświadczenie ubezpieczenia chorobowego",
+      "zrzut-zus": "Zrzut z systemu wewnętrznego ZUS",
+      "e-zla": "Wydruk zaświadczenia lekarskiego e-ZLA",
+      "zaswiadczenie-o-terminie-porodu": "Zaświadczenie lekarskie o przewidywanej dacie porodu",
+      "zaswiadczenie-szpitala": "Zaświadczenie szpitala",
+      "zaswiadczenie-o-martwym-urodzeniu": "Zaświadczenie o urodzeniu martwego dziecka",
+      "zaswiadczenie-za-zyciem": "Zaświadczenie „Za życiem”",
+    },
+    dokumentZNumerem: ({ nazwa, numer }: { nazwa: string; numer: string }) => `${nazwa} nr ${numer}`,
+    brakSprawy: "Nie masz otwartej przykładowej sprawy. Wybierz sprawę z listy albo wgraj dokument z zestawu ZUS.",
+    przejdzDoListy: "Przejdź do listy spraw",
+    brakWeryfikacji: "Zatwierdź dane sprawy, żeby zobaczyć wynik weryfikacji ubezpieczenia chorobowego.",
+    podajRozstrzygniecie: "Podaj rozstrzygnięcie w danych sprawy",
+    wynikTytul: "Wynik weryfikacji",
+    wynikTytulWiele: ({ liczba }: { liczba: string }) => `Wynik weryfikacji (${liczba} świadczenia)`,
+    dataZdarzenia: ({ rodzaj, data }: { rodzaj: string; data: string }) => `Data zdarzenia: ${rodzaj} ${data}.`,
+    dataZdarzeniaTermin: ({ data }: { data: string }) =>
+      `Data zdarzenia: przewidywany termin porodu ${data}, bo sprawa nie zawiera daty porodu.`,
+    rodzajeZdarzenia: {
+      porod: "poród",
+      "przewidywany-termin": "przewidywany termin porodu",
+      niezdolnosc: "pierwszy dzień niezdolności do pracy",
+      "okres-ojca": "pierwszy dzień okresu zasiłku ojca",
+    },
+    okresCiazy: ({ od, do: koniec }: { od: string; do: string }) => `Okres ciąży: od ${od} do ${koniec}.`,
+    ustanieUbezpieczenia: ({ data }: { data: string }) => `Ubezpieczenie chorobowe ustało ${data}.`,
+    podpisWynikow: "Wynik weryfikacji dla każdego świadczenia z wniosku",
+    przewijanieWynikow: "Tabela wyników weryfikacji, przewiń w poziomie",
+    kolumnyWynikow: {
+      swiadczenie: "Świadczenie",
+      wynik: "Wynik weryfikacji",
+      platnik: "Płatnik zasiłku",
+      oczekiwane: "Oczekiwane rozstrzygnięcie",
+      porownanie: "Porównanie",
+    },
+    swiadczenia: {
+      "zasilek-macierzynski": "Zasiłek macierzyński",
+      zwzm: "Zasiłek w wysokości zasiłku macierzyńskiego",
+      "zasilek-chorobowy": "Zasiłek chorobowy",
+    },
+    przysluguje: "Przysługuje",
+    nieprzysluguje: "Nie przysługuje",
+    przyslugujeOd: ({ od }: { od: string }) => `Przysługuje od ${od}`,
+    przyslugujeOdDo: ({ od, do: koniec }: { od: string; do: string }) => `Przysługuje od ${od} do ${koniec}`,
+    nieprzyslugujeZPrzyczyna: ({ przyczyna }: { przyczyna: string }) => `Nie przysługuje – ${przyczyna}`,
+    platnicy: { zus: "ZUS", "platnik-skladek": "Płatnik składek", nieustalony: "Płatnik nieustalony" },
+    porownania: { zgodne: "Zgodne", rozne: "Różne", "bez-porownania": "Bez porównania" },
+    brakRozstrzygniecia: "-",
+    korektaUzytkownika: "Korekta użytkownika",
+    swiadczenieRodzicielskie: ({ kwota }: { kwota: string }) =>
+      `Rodzinie przysługuje świadczenie rodzicielskie ${kwota} miesięcznie`,
+    swiadczenieRodzicielskieOpis:
+      "Kwota ze słownika kwot i progów obowiązującego w dniu porodu. Świadczenie przysługuje, gdy zasiłek macierzyński nie przysługuje z powodu tytułu, rodzaju ubezpieczenia albo podlegania ubezpieczeniu w dniu porodu.",
+    sprawdzWyliczenia: "Sprawdź wyliczenia",
+    wrocDoDanychSprawyPrzycisk: "Wróć do danych sprawy",
+    opisSprawdzenia: "Kalkulator przyjmie podstawę wymiaru, datę porodu i okres urlopu z tej sprawy.",
+    opisSprawdzeniaZwzm: "Podstawą zasiłku macierzyńskiego będzie podstawa ustalona dla zasiłku w wysokości zasiłku macierzyńskiego.",
+    opisBezSprawdzenia: "Wyliczenia sprawdzisz w kalkulatorze, gdy weryfikacja potwierdzi prawo do zasiłku macierzyńskiego.",
+    okresDoWyliczenia: ({ od }: { od: string }) => `Okres zasiłku do wyliczenia: urlop macierzyński od ${od}`,
+    okresDoWyliczeniaOpis: ({ odZWniosku, od }: { odZWniosku: string; od: string }) =>
+      `We wniosku okres zaczyna się ${odZWniosku}. Część urlopu macierzyńskiego przed porodem zaczyna się najwcześniej 42 dni przed przewidywanym terminem porodu, dlatego kalkulator przyjmie ${od}.`,
+    zaswiadczenieOTerminieJest: "Sprawa zawiera zaświadczenie lekarskie o przewidywanej dacie porodu, wymagane dla zasiłku przed porodem.",
+    zaswiadczenieOTerminieBrak: "Zasiłek przed porodem wymaga zaświadczenia lekarskiego o przewidywanej dacie porodu, którego sprawa jeszcze nie zawiera.",
+    warunkiTytul: ({ liczba }: { liczba: string }) => `Warunki prawa do zasiłku (${liczba})`,
+    podpisWarunkow: "Warunki prawa do zasiłku z wynikiem i uzasadnieniem",
+    przewijanieWarunkow: "Tabela warunków prawa do zasiłku, przewiń w poziomie",
+    kolumnyWarunkow: { warunek: "Warunek", wynik: "Wynik", uzasadnienie: "Uzasadnienie" },
+    warunekZNumerem: ({ numer, nazwa }: { numer: string; nazwa: string }) => `${numer}. ${nazwa}`,
+    wynikiWarunku: {
+      spelniony: "Spełniony",
+      niespelniony: "Niespełniony",
+      ostrzezenie: "Ostrzeżenie",
+      "nie-dotyczy": "Nie dotyczy",
+      "brak-danych": "Brak danych",
+    },
+    legenda: "Możliwe wyniki warunku",
+    regulaZwzm: "Zasiłek macierzyński przysługuje, gdy spełniony jest warunek 5 albo warunek 6. Zasiłek w wysokości zasiłku macierzyńskiego wymaga spełnionego warunku 6.",
+    notaReguly: "Reguły korzystają z wartości słownika wymiarów i okresów oraz słownika kwot i progów obowiązujących w dniu zdarzenia. Wynik i uzasadnienie zapisaliśmy w dokumentach przykładowej sprawy.",
+    notaNiezaleznosc: "Weryfikacja korzysta wyłącznie z danych tej sprawy. Twój profil rodziny, plan rodziny i terminy pozostają bez zmian.",
+    // Uzasadnienia warunków, płatnika i podstawy (domena/przykladowe-sprawy/weryfikacja.ts)
+    reguly: {
+      okresOd: ({ od }: { od: string }) => `od ${od}`,
+      okresDo: ({ do: koniec }: { do: string }) => `do ${koniec}`,
+      okresOdDo: ({ od, do: koniec }: { od: string; do: string }) => `od ${od} do ${koniec}`,
+      nazwyWarunkow: [
+        "Tytuł ubezpieczenia",
+        "Rodzaj ubezpieczenia chorobowego",
+        "Okresy podlegania",
+        "Okres wyczekiwania",
+        "Podleganie w dniu zdarzenia",
+        "Ustanie ubezpieczenia w ciąży",
+        "Zadłużenie osoby prowadzącej pozarolniczą działalność",
+        "Tytuł rozpoczęty w ciąży",
+      ],
+      zdarzenia: {
+        porod: "Poród",
+        "przewidywany-termin": "Przewidywany termin porodu",
+        niezdolnosc: "Pierwszy dzień niezdolności do pracy",
+        "okres-ojca": "Pierwszy dzień okresu zasiłku ojca",
+      },
+      zdarzeniaDopelniacz: {
+        porod: "porodu",
+        "przewidywany-termin": "zdarzenia",
+        niezdolnosc: "powstania niezdolności do pracy",
+        "okres-ojca": "zdarzenia",
+      },
+      tytuly: {
+        pracownik: "Pracownik",
+        zleceniobiorca: "Zleceniobiorca",
+        dzialalnosc: "Osoba prowadząca pozarolniczą działalność",
+        "brak-tytulu": "Brak tytułu do ubezpieczenia",
+      },
+      tytulyDopelniacz: {
+        pracownik: "tytuł pracownika",
+        zleceniobiorca: "tytuł zleceniobiorcy",
+        dzialalnosc: "tytuł osoby prowadzącej pozarolniczą działalność",
+        "brak-tytulu": "brak tytułu do ubezpieczenia",
+      },
+      rodzajeUbezpieczenia: { obowiazkowe: "Obowiązkowe", dobrowolne: "Dobrowolne", brak: "Brak" },
+      rodzajeUbezpieczeniaMale: { obowiazkowe: "obowiązkowym", dobrowolne: "dobrowolnym", brak: "brak" },
+      przyczynyUstania: {
+        upadlosc: "upadłości pracodawcy",
+        likwidacja: "likwidacji pracodawcy",
+        "smierc-pracodawcy": "śmierci pracodawcy",
+        "naruszenie-z-wyrokiem": "rozwiązania umowy z naruszeniem przepisów stwierdzonym prawomocnym wyrokiem sądu",
+        "naruszenie-bez-wyroku": "rozwiązania umowy z naruszeniem przepisów",
+        "koniec-umowy-terminowej": "końca umowy terminowej",
+        inna: "innej przyczyny",
+      },
+      w1: {
+        niespelniony: "Sprawa wskazuje brak tytułu do ubezpieczenia. Zasiłki z ubezpieczenia chorobowego wymagają tytułu do ubezpieczenia.",
+        trwa: {
+          pracownik: "Tytuł pracownika daje ubezpieczenie chorobowe.",
+          zleceniobiorca: "Tytuł zleceniobiorcy pozwala przystąpić do dobrowolnego ubezpieczenia chorobowego.",
+          dzialalnosc: "Tytuł osoby prowadzącej pozarolniczą działalność pozwala przystąpić do dobrowolnego ubezpieczenia chorobowego.",
+        },
+        ustal: "Warunek obejmuje także tytuł, który ustał.",
+      },
+      w2: {
+        brakTytulu: "Zasiłki z ubezpieczenia chorobowego wymagają tytułu do ubezpieczenia i ubezpieczenia chorobowego, a sprawa wskazuje brak tytułu.",
+        spelniony: {
+          pracownik: "Pracownik podlega ubezpieczeniu chorobowemu obowiązkowo.",
+          zleceniobiorca: "Zleceniobiorca ma prawo do zasiłków przy dobrowolnym ubezpieczeniu chorobowym.",
+          dzialalnosc: "Osoba prowadząca pozarolniczą działalność ma prawo do zasiłków przy dobrowolnym ubezpieczeniu chorobowym.",
+        },
+        niespelniony: ({ rodzaj, tytul, wymagany }: { rodzaj: string; tytul: string; wymagany: string }) =>
+          rodzaj === "brak"
+            ? `Rodzaj ubezpieczenia chorobowego: brak. ${tytul} ma prawo do zasiłków wyłącznie przy ubezpieczeniu chorobowym ${wymagany}.`
+            : `Rodzaj ubezpieczenia chorobowego: ubezpieczenie ${rodzaj}. ${tytul} ma prawo do zasiłków przy ubezpieczeniu chorobowym ${wymagany}.`,
+      },
+      w3: {
+        nieDotyczy: "Rodzaj ubezpieczenia chorobowego to brak, więc warunek okresów podlegania nie ma zastosowania.",
+        niespelniony: ({ data }: { data: string }) =>
+          `Okresy podlegania ubezpieczeniu chorobowemu w sprawie zaczynają się od dnia zdarzenia ${data} albo później.`,
+        jeden: ({ okres, dni, od, doDnia }: { okres: string; dni: string; od: string; doDnia: string; przerwa: string }) =>
+          `Okres ${okres} zaczął się przed datą zdarzenia: ${dni} dni ubezpieczenia od ${od} do ${doDnia}.`,
+        polaczone: ({ liczba, dni, od, doDnia, przerwa }: { liczba: string; dni: string; od: string; doDnia: string; przerwa: string }) =>
+          `Łączymy ${liczba} okresy z przerwą do ${przerwa} dni: ${dni} dni połączonych okresów od ${od} do ${doDnia}, bez dni przerwy.`,
+        pominiety: ({ koniec, przerwa }: { koniec: string; przerwa: string }) =>
+          `Wcześniejszy okres zakończony ${koniec} liczymy osobno, bo przerwa wynosi ${przerwa} dni.`,
+      },
+      w4: {
+        nieDotyczy: "Zasiłek macierzyński przysługuje bez okresu wyczekiwania.",
+        nieDotyczyZwzm: "Zasiłek macierzyński i zasiłek w wysokości zasiłku macierzyńskiego przysługują bez okresu wyczekiwania.",
+        brakOkresow: "Okres wyczekiwania liczymy z okresów podlegania rozpoczętych przed niezdolnością do pracy, a sprawa ich nie zawiera.",
+        obowiazkowego: "obowiązkowego",
+        dobrowolnego: "dobrowolnego",
+        spelniony: ({ n, rodzaj, uplyw, niezdolnoscOd, odSlownika }: { n: string; rodzaj: string; uplyw: string; prawoOd: string; niezdolnoscOd: string; odSlownika: string }) =>
+          `Okres wyczekiwania ${n} dni ubezpieczenia ${rodzaj} upłynął ${uplyw}, przed pierwszym dniem niezdolności do pracy ${niezdolnoscOd}. Wartość ze słownika wymiarów i okresów obowiązuje od ${odSlownika}.`,
+        niespelniony: ({ n, rodzaj, uplyw, prawoOd, niezdolnoscOd, odSlownika }: { n: string; rodzaj: string; uplyw: string; prawoOd: string; niezdolnoscOd: string; odSlownika: string }) =>
+          `Okres wyczekiwania ${n} dni ubezpieczenia ${rodzaj} upływa ${uplyw}, a niezdolność do pracy zaczęła się ${niezdolnoscOd}. Zasiłek chorobowy przysługuje od ${prawoOd}. Wartość ze słownika wymiarów i okresów obowiązuje od ${odSlownika}.`,
+      },
+      w5: {
+        brak: ({ data }: { data: string }) =>
+          `Rodzaj ubezpieczenia chorobowego to brak, więc w dniu zdarzenia ${data} osoba nie podlega ubezpieczeniu chorobowemu.`,
+        spelniony: ({ zdarzenie, okres }: { zdarzenie: string; okres: string }) => `${zdarzenie} przypada w okresie podlegania ${okres}.`,
+        poKoncu: ({ zdarzenie, koniec }: { zdarzenie: string; koniec: string }) =>
+          `${zdarzenie} przypada po końcu ostatniego okresu podlegania ${koniec}.`,
+        przedPoczatkiem: ({ zdarzenie }: { zdarzenie: string }) => `${zdarzenie} przypada przed początkiem okresu podlegania.`,
+      },
+      w6: {
+        nieDotyczy: ({ zdarzenia }: { zdarzenia: string }) => `Ubezpieczenie chorobowe trwa w dniu ${zdarzenia}.`,
+        nieDotyczyBrak: "Rodzaj ubezpieczenia chorobowego to brak, więc sprawa nie zawiera ustania ubezpieczenia chorobowego.",
+        ustaloWCiazy: ({ data, przyczyna }: { data: string; przyczyna: string }) =>
+          `Zatrudnienie ustało ${data}, w okresie ciąży, z powodu ${przyczyna}, bez zapewnienia innego zatrudnienia.`,
+        zwzmOkres: ({ od, do: koniec }: { od: string; do: string }) =>
+          `Zasiłek w wysokości zasiłku macierzyńskiego przysługuje od ${od} do ${koniec} w wysokości 100% podstawy.`,
+        zmOdPorodu: "Zasiłek macierzyński przysługuje od dnia porodu.",
+        ustaloPrzed: ({ data, zdarzenia }: { data: string; zdarzenia: string }) => `Ubezpieczenie ustało ${data}, przed dniem ${zdarzenia}.`,
+        zmTylkoPracownica:
+          "Zasiłek macierzyński po ustaniu ubezpieczenia przysługuje wyłącznie pracownicy, której ubezpieczenie ustało w ciąży wskutek upadłości, likwidacji albo śmierci pracodawcy albo z naruszeniem przepisów stwierdzonym prawomocnym wyrokiem sądu.",
+        zchWCzasie: ({ ustanie }: { dniPo: string; trwa: string; ustanie: string; limit: string; min: string }) =>
+          `Niezdolność do pracy powstała w czasie ubezpieczenia i trwa po jego ustaniu ${ustanie}, więc zasiłek chorobowy przysługuje także po ustaniu ubezpieczenia.`,
+        zchPo: ({ dniPo, trwa, limit, min }: { dniPo: string; trwa: string; ustanie: string; limit: string; min: string }) =>
+          `Niezdolność do pracy powstała ${dniPo} dni po ustaniu ubezpieczenia i trwała ${trwa} dni. Zasiłek chorobowy po ustaniu ubezpieczenia przysługuje, gdy niezdolność powstała najpóźniej ${limit} dni od ustania i trwała bez przerwy co najmniej ${min} dni.`,
+        zchNiespelniony: ({ dniPo, trwa, limit, min }: { dniPo: string; trwa: string; ustanie: string; limit: string; min: string }) =>
+          `Niezdolność do pracy powstała ${dniPo} dni po ustaniu ubezpieczenia i trwała ${trwa} dni. Zasiłek chorobowy po ustaniu ubezpieczenia wymaga niezdolności powstałej najpóźniej ${limit} dni od ustania i trwającej co najmniej ${min} dni, odpowiedzi nie w polu pracy zarobkowej, emerytury, renty albo zasiłku dla bezrobotnych i upływu okresu wyczekiwania.`,
+      },
+      w7: {
+        nieDotyczy: ({ tytul }: { tytul: string }) =>
+          `Warunek dotyczy osoby prowadzącej pozarolniczą działalność, a w sprawie jest ${tytul}.`,
+        brakDanych: "Dokumenty sprawy pomijają kwotę zadłużenia z tytułu składek. Prawo do zasiłku zależy od stanu rozliczeń składek na dzień zdarzenia.",
+        spelniony: ({ kwota, data, prog, odSlownika }: { kwota: string; data: string; prog: string; odSlownika: string; terminSplaty: string }) =>
+          `Zadłużenie z tytułu składek ${kwota} na ${data} jest równe progowi zadłużenia ${prog} albo od niego niższe. Próg ze słownika kwot i progów obowiązuje od ${odSlownika}.`,
+        niespelniony: ({ kwota, data, prog, odSlownika, terminSplaty }: { kwota: string; data: string; prog: string; odSlownika: string; terminSplaty: string }) =>
+          `Zadłużenie z tytułu składek ${kwota} na ${data} przekracza próg zadłużenia ${prog} ze słownika kwot i progów, obowiązujący od ${odSlownika}. Zasiłek chorobowy i zasiłek macierzyński przysługują po spłacie całości zadłużenia. Spłata całości do ${terminSplaty} daje zasiłek za cały okres, a po spłacie późniejszej zasiłek przysługuje od dnia spłaty.`,
+      },
+      w8: {
+        nieDotyczy: "Warunek dotyczy matki, a wniosek składa ojciec, który przejmuje część urlopu macierzyńskiego.",
+        brakDanych: "Okres ciąży ustalamy z daty porodu albo przewidywanego terminu porodu, a sprawa zawiera wyłącznie inne daty zdarzenia.",
+        ostrzezenie: ({ od, ciazaOd }: { od: string; ciazaOd: string }) =>
+          `Tytuł od ${od} zaczął się w okresie ciąży trwającym od ${ciazaOd}. ZUS może sprawdzić, czy zgłoszenie do ubezpieczenia służyło wyłącznie uzyskaniu zasiłku, i uznać umowę albo działalność za pozorną.`,
+        spelniony: ({ od, ciazaOd }: { od: string; ciazaOd: string }) =>
+          `Tytuł od ${od} zaczął się przed okresem ciąży trwającym od ${ciazaOd}.`,
+      },
+      platnik: {
+        jdg: "Płatnik zasiłku: ZUS, bo zasiłek osoby prowadzącej pozarolniczą działalność wypłaca ZUS.",
+        poUstaniu: "Płatnik zasiłku: ZUS, bo zasiłek za okres po ustaniu ubezpieczenia wypłaca ZUS.",
+        brakTytulu: "Płatnik zasiłku pozostaje nieustalony, bo sprawa wskazuje brak tytułu do ubezpieczenia.",
+        powyzej: ({ liczba, odSlownika }: { liczba: string; odSlownika: string }) =>
+          `Płatnik zasiłku: płatnik składek, bo zgłasza do ubezpieczenia chorobowego więcej niż ${liczba} ubezpieczonych (słownik wymiarów i okresów, obowiązuje od ${odSlownika}).`,
+        doLiczby: ({ liczba, odSlownika }: { liczba: string; odSlownika: string }) =>
+          `Płatnik zasiłku: ZUS, bo płatnik składek zgłasza do ubezpieczenia chorobowego do ${liczba} ubezpieczonych. Zasiłek wypłaca płatnik, który zgłasza więcej niż ${liczba} osób (słownik wymiarów i okresów, obowiązuje od ${odSlownika}).`,
+        nieustalony: "Płatnik zasiłku pozostaje nieustalony, bo dane sprawy pomijają liczbę ubezpieczonych zgłoszonych przez płatnika składek.",
+      },
+      przyczyny: {
+        wyczekiwanie: ({ od, do: koniec, prawoOd }: { od: string; do: string; prawoOd: string }) =>
+          `za okres od ${od} do ${koniec}, przysługuje od ${prawoOd}`,
+        zadluzenie: "do czasu spłaty całości zadłużenia",
+        warunek: ({ numer, nazwa }: { numer: string; nazwa: string }) => `warunek ${numer}. ${nazwa}`,
+      },
+    },
+    podstawa: {
+      poprzedniZasilek: "Podstawa wymiaru poprzedniego zasiłku, bo zasiłek następuje bezpośrednio po nim albo po przerwie krótszej niż miesiąc kalendarzowy.",
+      jdgPrzedPelnymMiesiacem: ({ najnizsza }: { najnizsza: string }) =>
+        `Najniższa podstawa wymiaru składek ${najnizsza} pomniejszona o 13,71%, bo zdarzenie następuje przed upływem pełnego miesiąca ubezpieczenia.`,
+      jdgKrotko: ({ najnizsza, bazowa, dodatek }: { najnizsza: string; bazowa: string; dodatek: string }) =>
+        `Najniższa podstawa wymiaru składek ${najnizsza} pomniejszona o 13,71%, czyli ${bazowa}, powiększona o 1/12 nadwyżek podstaw wymiaru składek pomniejszonych o 13,71%, czyli ${dodatek}.`,
+      miesiacZdarzenia: "Przychód z umowy za miesiąc zdarzenia pomniejszony o 13,71%.",
+      zPoswiadczenia: "Przeciętna podstawa wymiaru składek z poświadczenia ubezpieczenia chorobowego pomniejszona o 13,71%.",
+      zZ3a: "Przeciętny przychód z zaświadczenia Z-3a pomniejszony o 13,71%.",
+      zZ3: "Przeciętne wynagrodzenie z zaświadczenia Z-3 pomniejszone o 13,71%.",
+      minimalna: ({ wyliczona, minimalna }: { wyliczona: string; minimalna: string }) =>
+        `Minimalna podstawa wymiaru zasiłku pracownika na pełnym etacie ${minimalna}, bo przeciętne wynagrodzenie pomniejszone o 13,71% wynosi ${wyliczona}.`,
+    },
+    wyliczenie: {
+      macierzynski: ({ tygodnie, dni }: { tygodnie: string; dni: string }) =>
+        `Okres liczymy od dnia początku z wniosku. Urlop macierzyński wynosi ${tygodnie} tygodni, czyli ${dni} dni.`,
+      martweUrodzenie: ({ dni }: { dni: string }) => `Po urodzeniu martwego dziecka okres zasiłku za urlop macierzyński wynosi ${dni} dni od dnia porodu.`,
+      ojciec: ({ dni }: { dni: string }) =>
+        `Okres zasiłku ojca to wymiar urlopu macierzyńskiego pomniejszony o okres wykorzystany przez matkę, czyli ${dni} dni.`,
+      uzupelniajacy: ({ dni, tygodnie }: { dni: string; tygodnie: string }) =>
+        `Pobyt dziecka w szpitalu w okresie liczenia trwa ${dni} dni, więc uzupełniający urlop macierzyński wynosi ${tygodnie} tygodni.`,
+      rodzicielski: ({ tygodnie }: { tygodnie: string }) => `Okres zasiłku za urlop rodzicielski matki wynosi ${tygodnie} tygodni.`,
+      wariant815: ({ dni }: { dni: string }) =>
+        `Wniosek z oświadczeniem o pełnym wymiarze urlopów złożony najpóźniej ${dni} dni po porodzie daje stawkę 81,5% za cały okres.`,
+    },
     // koniec ViewSampleCaseVerification
   },
   ViewZamLeaveType: {
