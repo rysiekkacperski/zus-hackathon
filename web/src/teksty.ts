@@ -1010,6 +1010,84 @@ export const teksty = {
   ViewProfileChildAdoption: {
     tytulStrony: "Profil na start: przyjęcie dziecka",
     naglowek: "Profil na start",
+    wstep: "Kilka pytań, z których ułożymy plan Twojej rodziny.",
+    naglowekZmiany: "Dane przyjęcia dziecka",
+    powrotDoProfilu: "Profil rodziny",
+    nazwaKroku: "Przyjęcie dziecka",
+    tytulKarty: "Przyjęcie dziecka na wychowanie",
+    opisKarty:
+      "Plan Twojej rodziny policzymy od dnia przyjęcia dziecka. Od tej daty biegną terminy wniosków o urlop i o zasiłek.",
+    opisKartyZmiany: "Zmień dane i przejdź dalej. Zmianę zapiszesz w podsumowaniu profilu.",
+    rola: {
+      legenda: "Kim jesteś dla przyjętego dziecka?",
+      podpowiedz: "Odpowiedź zaproponowaliśmy na podstawie Twojego numeru PESEL. Możesz ją zmienić.",
+      matka: "Matką",
+      ojciec: "Ojcem",
+    },
+    forma: {
+      legenda: "Forma przyjęcia dziecka",
+      przysposobienie: "Przysposobienie z wnioskiem do sądu",
+      opisPrzysposobienia: "Dziecko jest u Ciebie na wychowaniu, a do sądu trafił wniosek o przysposobienie.",
+      niezawodowa: "Rodzina zastępcza niezawodowa",
+      zawodowa: "Rodzina zastępcza zawodowa",
+    },
+    dataPrzyjecia: {
+      etykieta: "Data przyjęcia dziecka",
+      podpowiedz: ({ data }: { data: string }) => `DD.MM.RRRR, najpóźniej ${data}`,
+      zapisana: ({ data }: { data: string }) => `Zapisana data: ${data}`,
+    },
+    dataUrodzenia: {
+      etykieta: "Data urodzenia dziecka",
+      podpowiedz: "DD.MM.RRRR",
+    },
+    odroczenie: {
+      legenda: "Czy wobec dziecka podjęto decyzję o odroczeniu obowiązku szkolnego?",
+      tak: "Tak",
+      nie: "Nie",
+    },
+    dataUprawomocnienia: {
+      etykieta: "Data uprawomocnienia się orzeczenia o przysposobieniu (nieobowiązkowo)",
+      podpowiedz:
+        "Podaj ją, gdy ją poznasz. Od tej daty policzymy termin urlopu ojcowskiego i zgłoszenia dziecka do ubezpieczenia zdrowotnego.",
+    },
+    liczbaDzieci: {
+      legenda: "Ile dzieci przyjmujesz jednocześnie?",
+      opcje: {
+        1: "Jedno dziecko",
+        2: "Dwoje",
+        3: "Troje",
+        4: "Czworo",
+        5: "Pięcioro i więcej",
+      },
+    },
+    notatkaSciezki:
+      "Profil prowadzi jedną ścieżkę: ciążę i poród albo przyjęcie dziecka. Gdy przejdziesz dalej, dane przyjęcia zastąpią w profilu dane ciąży. Gdy wrócisz do poprzedniego kroku, dane ciąży zostaną bez zmian.",
+    wstecz: "Wstecz",
+    dalej: "Dalej",
+    krokiProfilu: {
+      tytul: "Kroki profilu",
+      etykietaBocznej: "Postęp profilu",
+      daneZKontaZus: "Dane z konta ZUS",
+      sytuacja: "Twoja sytuacja",
+      przyjecie: "Przyjęcie dziecka",
+      rodzina: "Rodzina",
+      drugiRodzic: "Drugi rodzic",
+      podsumowanie: "Podsumowanie",
+      notatka: "Zapamiętujemy Twoje odpowiedzi. Jeśli przerwiesz, po powrocie zaczniesz w tym samym miejscu.",
+    },
+    poZapisie: {
+      tytul: "Po zapisaniu profilu",
+      etykietaBocznej: "Informacje o zmianie",
+      punkty: [
+        "Przeliczymy plan rodziny i terminy od nowej daty przyjęcia dziecka.",
+        "Sprawy złożone i załatwione zachowają swój status.",
+        "Terminy urlopu ojcowskiego i zgłoszenia do ubezpieczenia zdrowotnego policzymy, gdy dopiszesz datę uprawomocnienia się orzeczenia.",
+      ],
+    },
+    bezZgody: {
+      przejdzDalej: "Przejdź dalej",
+      wrocDoProfilu: "Wróć do profilu rodziny",
+    },
     // koniec ViewProfileChildAdoption
   },
   ViewProfileEmploymentChange: {
@@ -1065,6 +1143,56 @@ export const teksty = {
       // koniec sekcjaDanychDziecka
     },
     sekcjaPrzyjecia: {
+      tytul: "Dane przyjęcia dziecka",
+      zmien: "Zmień",
+      zmienEtykieta: "Zmień dane przyjęcia dziecka",
+      kimJestes: "Kim jesteś dla dziecka",
+      formaPrzyjecia: "Forma przyjęcia",
+      dataPrzyjecia: "Data przyjęcia dziecka",
+      dataUrodzenia: "Data urodzenia dziecka",
+      liczbaDzieci: "Liczba jednocześnie przyjętych dzieci",
+      odroczenie: "Odroczenie obowiązku szkolnego",
+      dataUprawomocnienia: "Data uprawomocnienia się orzeczenia o przysposobieniu",
+      niePodano: "Nie podano",
+      zmienionoPoprzednio: ({ wartosc }: { wartosc: string }) => `Zmieniono – poprzednio ${wartosc}`,
+      role: { matka: "Matką", ojciec: "Ojcem" },
+      formy: {
+        przysposobienie: "Przysposobienie z wnioskiem do sądu",
+        "rodzina-zastepcza-niezawodowa": "Rodzina zastępcza niezawodowa",
+        "rodzina-zastepcza-zawodowa": "Rodzina zastępcza zawodowa",
+      },
+      liczby: {
+        1: "Jedno dziecko",
+        2: "Dwoje",
+        3: "Troje",
+        4: "Czworo",
+        5: "Pięcioro i więcej",
+      },
+      tak: "Tak",
+      nie: "Nie",
+      planOdDniaPrzyjecia: {
+        tytul: "Plan od dnia przyjęcia",
+        sciezka:
+          "Twój profil prowadzi ścieżkę przyjęcia dziecka na wychowanie, dlatego zamiast danych ciąży widzisz dane przyjęcia dziecka.",
+        przeliczenie: ({ data }: { data: string }) =>
+          `Po zapisaniu przeliczymy plan i terminy od daty przyjęcia ${data}. Sprawy złożone i załatwione zachowają status.`,
+      },
+      bezDanych: {
+        tytul: "Ciąża albo przyjęcie dziecka",
+        opis: "Nie masz zapisanych danych ciąży ani przyjęcia dziecka.",
+        podaj: "Podaj dane przyjęcia dziecka",
+      },
+      akcjaPrzyjecia: {
+        tytul: "Przyjęcie dziecka na wychowanie",
+        opis: "Jeśli przyjmujesz dziecko na wychowanie, podaj dane przyjęcia. Zastąpią w profilu dane ciąży.",
+        podaj: "Podaj dane przyjęcia dziecka",
+      },
+      zgoda: {
+        tytul: "Zgoda na dane zdrowia",
+        opis: "Zapisaliśmy, że nie udzielasz zgody na przetwarzanie danych dotyczących zdrowia. Dane przyjęcia dziecka należą do danych o ciąży i dziecku.",
+        ustawienia: "Zgody możesz udzielić w każdej chwili w ustawieniach przewodnika.",
+        przejdz: "Przejdź do ustawień",
+      },
       // koniec sekcjaPrzyjecia
     },
     sekcjaDrugiegoRodzica: {
@@ -1371,6 +1499,42 @@ export const teksty = {
       // koniec sekcjaSytuacjaSzczegolnaK34
     },
     sekcjaPrzyjecieK31K33: {
+      terminy: {
+        tytul: "Terminy",
+        opisK31: ({ data }: { data: string }) =>
+          `Oba terminy liczymy od daty przyjęcia dziecka na wychowanie: ${data}.`,
+        opisK32: ({ data }: { data: string }) => `Termin liczymy od daty przyjęcia dziecka na wychowanie: ${data}.`,
+        wniosekOUrlop: "Termin wniosku o urlop",
+        opisWnioskuOUrlop:
+          "Data przyjęcia dziecka powiększona o 7 dni. Do tego dnia złóż pracodawcy wniosek o urlop na warunkach urlopu macierzyńskiego.",
+        wariant815: "Ostatni dzień rozpoczęcia urlopu i wniosku w wariancie 81,5%",
+        opisWariantu815:
+          "Data przyjęcia dziecka powiększona o 21 dni. Wniosek o urlop na warunkach urlopu macierzyńskiego i urlop rodzicielski złożony do tego dnia daje zasiłek 81,5% za cały okres.",
+        wniosekOZasilek: "Termin wniosku o zasiłek macierzyński",
+        opisWnioskuOZasilek:
+          "Data przyjęcia dziecka powiększona o 21 dni. Wniosek o zasiłek za okres obu urlopów złożony do tego dnia daje zasiłek 81,5% za cały okres.",
+        skutek: "Skutek spóźnienia",
+        trescSkutku: "Utrata możliwości wyboru równych wypłat w wysokości 81,5%.",
+        notatka: "Jeśli zmienisz datę przyjęcia dziecka, przeliczymy oba terminy.",
+        zmien: "Zmień dane przyjęcia dziecka",
+        dzisiaj: "dzisiaj",
+        poTerminie: "Po terminie",
+        zaDni: ({ liczba }: { liczba: number }) => (liczba === 1 ? "za 1 dzień" : `za ${liczba} dni`),
+      },
+      dane: {
+        tytul: "Dane przyjęcia dziecka",
+        formaPrzyjecia: "Forma przyjęcia",
+        dataPrzyjecia: "Data przyjęcia",
+        dataUrodzenia: "Data urodzenia dziecka",
+        liczbaDzieci: "Liczba dzieci",
+        dataUprawomocnienia: "Data uprawomocnienia się orzeczenia",
+        zmien: "Zmień dane przyjęcia",
+      },
+      formy: {
+        przysposobienie: "Przysposobienie z wnioskiem do sądu",
+        "rodzina-zastepcza-niezawodowa": "Rodzina zastępcza niezawodowa",
+        "rodzina-zastepcza-zawodowa": "Rodzina zastępcza zawodowa",
+      },
       // koniec sekcjaPrzyjecieK31K33
     },
     sekcjaWniosekZas53: {
