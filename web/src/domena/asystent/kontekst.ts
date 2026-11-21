@@ -48,8 +48,9 @@ function wartoscWpisu(k: Katalog, wpis: WpisSlownika, dzien: DataISO): { wartosc
   return wersja === undefined || wartosc === undefined ? null : { wartosc, od: wersja.od };
 }
 
+/** Wariant 'zl' w wersji wpisu przechowuje kwotę w groszach (kontrakt 1.3). */
 function kwotaZl(wartosc: number): string {
-  return formatujKwote(Math.round(wartosc * 100));
+  return formatujKwote(Math.round(wartosc));
 }
 
 function kwotaWpisu(k: Katalog, wzorzec: RegExp, dzien: DataISO): string | undefined {

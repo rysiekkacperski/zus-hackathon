@@ -119,7 +119,8 @@ export function tygodnieRodzicielskiegoJednegoRodzica(liczbaDzieci: number, zaZy
 
 /** Kwota świadczenia rodzicielskiego za pełny miesiąc (1000,00 zł). */
 export function kwotaSwiadczeniaRodzicielskiego(k: Katalog, dzien: DataISO): Grosze {
-  return Math.round(wartoscSlownika(k, 'swiadczenie-rodzicielskie', 'kwota', dzien, DOMYSLNE.swiadczenieRodzicielskie / 100) * 100);
+  // Wariant 'zl' w wersji wpisu przechowuje kwotę w groszach (kontrakt 1.3).
+  return Math.round(wartoscSlownika(k, 'swiadczenie-rodzicielskie', 'kwota', dzien, DOMYSLNE.swiadczenieRodzicielskie));
 }
 
 export interface StawkiZasilku { s100: Procent; s815: Procent; s70: Procent }

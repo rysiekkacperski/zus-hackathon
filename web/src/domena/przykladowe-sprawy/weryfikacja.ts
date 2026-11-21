@@ -35,47 +35,26 @@ import type {
   Procent,
   RodzajTytulu,
   RodzajUrlopu,
-  RozstrzygniecieSprawy,
   WynikScenariusza,
   WynikWeryfikacjiSprawy,
 } from '@/domena/typy';
 import { teksty } from '@/teksty';
+import type {
+  OkresDoWyliczenia,
+  RodzajZdarzeniaSprawy,
+  RozszerzenieWeryfikacji,
+  SwiadczenieSprawy,
+  SzczegolWynikuSwiadczenia,
+} from './rozszerzenia-typow';
 
-// --- Rozszerzenie typu wyniku weryfikacji (pola opcjonalne, kontrakt 12.3) ---------------------
-
-export type SwiadczenieSprawy = RozstrzygniecieSprawy['swiadczenie'];
-
-/** Szczegóły wyniku świadczenia, których nie zawiera typ wspólny. */
-export interface SzczegolWynikuSwiadczenia {
-  swiadczenie: SwiadczenieSprawy;
-  do?: DataISO;
-  okresBezPrawa?: Okres;
-  numerWarunkuPrzyczyny?: number;
-  swiadczenieRodzicielskie?: Grosze;
-}
-
-/** Okres zasiłku za urlop macierzyński przyjęty do wyliczenia (po korekcie początku przed porodem). */
-export interface OkresDoWyliczenia {
-  rodzajUrlopu: RodzajUrlopu;
-  odZWniosku: DataISO;
-  od: DataISO;
-  skorygowany: boolean;
-  zaswiadczenieOTerminie: boolean;
-}
-
-export interface RozszerzenieWeryfikacji {
-  szczegoly: SzczegolWynikuSwiadczenia[];
-  uzasadnieniePlatnika: string;
-  okresDoWyliczenia?: OkresDoWyliczenia;
-  parametryKomunikatow?: Partial<Record<KodKomunikatu, Record<string, string>>>;
-  rodzajZdarzenia: RodzajZdarzeniaSprawy;
-}
-
-declare module '@/domena/typy/przykladowe-sprawy' {
-  interface WynikWeryfikacjiSprawy {
-    rozszerzenie?: RozszerzenieWeryfikacji;
-  }
-}
+// Typy rozszerzenia wyniku weryfikacji (kontrakt 12.3) leżą w ./rozszerzenia-typow.ts.
+export type {
+  OkresDoWyliczenia,
+  RodzajZdarzeniaSprawy,
+  RozszerzenieWeryfikacji,
+  SwiadczenieSprawy,
+  SzczegolWynikuSwiadczenia,
+} from './rozszerzenia-typow';
 
 // --- Stałe z wymagań epiku (wartości domyślne, gdy katalog nie zawiera wpisu) -------------------
 
@@ -180,8 +159,6 @@ export function wartosciSlownikow(k: Katalog, dzien: DataISO): WartosciSlownikow
 }
 
 // --- Pomocnicze odczyty danych sprawy -----------------------------------------------------------
-
-export type RodzajZdarzeniaSprawy = 'porod' | 'przewidywany-termin' | 'niezdolnosc' | 'okres-ojca';
 
 export interface ZdarzenieSprawy {
   data: DataISO;
