@@ -54,17 +54,21 @@ export function SlotAkcjeUrlopow(props: PropsSlotu<'wynik'>) {
   };
 
   const rodziceZPowrotem = RODZICE.filter((r) => wynik.datyPowrotu[r] !== undefined);
+  // 3.10.4.2.3: gdy żadne dziecko nie pozostało przy życiu, kalkulator nie umieszcza urlopu rodzicielskiego ani ojcowskiego.
+  const bezUrlopuRodzicielskiego = Boolean(d.strata && d.strata.wartosc.liczbaDzieci >= d.liczbaDzieci.wartosc);
 
   return (
     <>
-      <div role="group" aria-label={t.etykietaAkcji} className="flex flex-wrap gap-3">
-        <Przycisk wariant="drugorzedny" type="button" onClick={() => ustawArkuszWAdresie('podzial-urlopow')}>
-          {t.podzielUrlopy}
-        </Przycisk>
-        <Przycisk wariant="drugorzedny" type="button" onClick={() => ustawArkuszWAdresie('laczenie-z-praca')}>
-          {t.polaczZPraca}
-        </Przycisk>
-      </div>
+      {bezUrlopuRodzicielskiego ? null : (
+        <div role="group" aria-label={t.etykietaAkcji} className="flex flex-wrap gap-3">
+          <Przycisk wariant="drugorzedny" type="button" onClick={() => ustawArkuszWAdresie('podzial-urlopow')}>
+            {t.podzielUrlopy}
+          </Przycisk>
+          <Przycisk wariant="drugorzedny" type="button" onClick={() => ustawArkuszWAdresie('laczenie-z-praca')}>
+            {t.polaczZPraca}
+          </Przycisk>
+        </div>
+      )}
 
       {rodziceZPowrotem.length > 0 ? (
         <Karta tytul={t.powrotTytul} bezLinii>
@@ -145,8 +149,8 @@ export function SlotAkcjeUrlopow(props: PropsSlotu<'wynik'>) {
         </Karta>
       ) : null}
 
-      <ArkuszPodzialuUrlopow {...props} otwarte={arkusz === 'podzial-urlopow'} onZamknij={zamknij} />
-      <ArkuszLaczeniaZPraca {...props} otwarte={arkusz === 'laczenie-z-praca'} onZamknij={zamknij} />
+      <ArkuszPodzialuUrlopow {...props} otwarte={!bezUrlopuRodzicielskiego && arkusz === 'podzial-urlopow'} onZamknij={zamknij} />
+      <ArkuszLaczeniaZPraca {...props} otwarte={!bezUrlopuRodzicielskiego && arkusz === 'laczenie-z-praca'} onZamknij={zamknij} />
       <ArkuszPowrotuDoPracy {...props} otwarte={arkusz === 'powrot-do-pracy'} onZamknij={zamknij} />
     </>
   );
