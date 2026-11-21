@@ -960,6 +960,43 @@ export const teksty = {
   ViewProfilePregnancy: {
     tytulStrony: "Profil na start: dane ciąży",
     naglowek: "Profil na start",
+    wstep: "Odpowiedz na kilka pytań, a ułożymy z nich plan Twojej rodziny. Pytamy tylko o to, czego nie ma na Twoim koncie ZUS.",
+    tytulKarty: "Dane ciąży",
+    opisKarty: "Na podstawie tych dat policzymy Twoje terminy.",
+    etykietaTerminu: "Przewidywany termin porodu",
+    podpowiedzTerminu: "Wpisz datę w formacie DD.MM.RRRR.",
+    etykietaLiczbyDzieci: "Liczba dzieci",
+    liczbyDzieci: {
+      1: "Jedno dziecko",
+      2: "Bliźnięta",
+      3: "Trojaczki",
+      4: "Czworaczki",
+      5: "Pięcioraczki",
+    },
+    przyLiczbieDzieci: {
+      1: "jednym dziecku",
+      2: "bliźniętach",
+      3: "trojaczkach",
+      4: "czworaczkach",
+      5: "pięcioraczkach",
+    },
+    podpowiedzLiczbyDzieci: ({ przy, macierzynski, rodzicielski }: { przy: string; macierzynski: string; rodzicielski: string }) =>
+      `Przy ${przy} urlop macierzyński trwa ${macierzynski}, a urlop rodzicielski ${rodzicielski}.`,
+    tygodnie: ({ liczba }: { liczba: number }) => {
+      const reszta10 = liczba % 10;
+      const reszta100 = liczba % 100;
+      if (liczba === 1) return "1 tydzień";
+      if (reszta10 >= 2 && reszta10 <= 4 && (reszta100 < 12 || reszta100 > 14)) return `${liczba} tygodnie`;
+      return `${liczba} tygodni`;
+    },
+    etykietaWizyty: "Data pierwszej wizyty u lekarza albo położnej",
+    podpowiedzWizyty: "Wpisz datę pierwszej wizyty w tej ciąży w formacie DD.MM.RRRR.",
+    brakWizyty: "Wizyta jeszcze się nie odbyła",
+    notatkaZgody: {
+      przed: "Dane o ciąży zapisujemy, bo masz zgodę na dane dotyczące zdrowia. Zgodę zmienisz w ",
+      odnosnik: "ustawieniach przewodnika",
+      po: ".",
+    },
     // koniec ViewProfilePregnancy
   },
   ViewBirthDate: {
@@ -979,11 +1016,112 @@ export const teksty = {
   ViewProfileEmploymentChange: {
     tytulStrony: "Profil na start: zmiana zatrudnienia w ciąży",
     naglowek: "Profil na start",
+    wstep: "Odpowiedz na kilka pytań, a ułożymy z nich plan Twojej rodziny. Pytamy tylko o to, czego nie ma na Twoim koncie ZUS.",
+    tytulKarty: "Zmiana zatrudnienia w ciąży",
+    opisOkresuTermin: ({ od, termin }: { od: string; termin: string }) =>
+      `Pytamy o zmiany od ${od} do przewidywanego terminu porodu ${termin}. Od nich zależą świadczenia, które przysługują Ci w ciąży i po porodzie.`,
+    opisOkresuPorod: ({ od, porod }: { od: string; porod: string }) =>
+      `Pytamy o zmiany od ${od} do dnia porodu ${porod}. Od nich zależą świadczenia, które przysługują Ci po porodzie.`,
+    brakDatyOdniesienia: "Najpierw podaj przewidywany termin porodu albo datę porodu. Od tej daty liczymy okres ciąży.",
+    przejdzDoPoprzedniegoKroku: "Przejdź do poprzedniego kroku",
+    legendaRodzaju: "Czy w czasie ciąży Twoje zatrudnienie się zmieniło?",
+    rodzaje: {
+      "bez-zmian": { etykieta: "Bez zmian", opis: "Praca albo działalność trwa bez przerwy." },
+      rozpoczecie: { etykieta: "Rozpoczęcie", opis: "Praca albo działalność zaczęła się w czasie ciąży." },
+      ustanie: { etykieta: "Ustanie", opis: "Praca albo działalność skończyła się albo skończy przed porodem." },
+    },
+    formyWZdaniu: {
+      "umowa-o-prace": "umowa o pracę",
+      "umowa-zlecenia": "umowa zlecenia",
+      jdg: "działalność",
+    },
+    opisTytulu: {
+      trwa: ({ forma, od }: { forma: string; od: string }) => `Na Twoim koncie ZUS ${forma} trwa od ${od} bez daty końca`,
+      trwala: ({ forma, od, do: koniec }: { forma: string; od: string; do: string }) =>
+        `Na Twoim koncie ZUS ${forma} trwała od ${od} do ${koniec}`,
+      skonczylaSie: ({ forma, data }: { forma: string; data: string }) => `Na Twoim koncie ZUS ${forma} skończyła się ${data}`,
+      zaczelaSie: ({ forma, data }: { forma: string; data: string }) => `Na Twoim koncie ZUS ${forma} zaczęła się ${data}`,
+    },
+    zaznaczylismy: ({ opis, odpowiedz }: { opis: string; odpowiedz: string }) => `${opis}, więc zaznaczyliśmy „${odpowiedz}”.`,
+    zaznaczylismyBezZmian: ({ opis }: { opis: string }) =>
+      `${opis}, więc zaznaczyliśmy „Bez zmian”. Zmień odpowiedź, jeśli jest inna.`,
+    odpowiedzRozna: ({ opis }: { opis: string }) => `${opis}. Twoja odpowiedź różni się od tych danych.`,
+    legendaFormy: "Której formy zatrudnienia dotyczy zmiana?",
+    formy: {
+      "umowa-o-prace": "Umowa o pracę",
+      "umowa-zlecenia": "Umowa zlecenia",
+      jdg: "Jednoosobowa działalność gospodarcza",
+    },
+    etykietaDatyRozpoczecia: "Data rozpoczęcia",
+    etykietaDatyUstania: "Data ustania",
+    podpowiedzDaty: "Wpisz datę w formacie DD.MM.RRRR.",
+    etykietaPrzyczyny: "Przyczyna ustania umowy o pracę",
+    pustaPrzyczyna: "Wybierz przyczynę",
+    przyczyny: {
+      upadlosc: "Upadłość pracodawcy",
+      likwidacja: "Likwidacja pracodawcy",
+      "smierc-pracodawcy": "Śmierć pracodawcy",
+      "naruszenie-z-wyrokiem": "Rozwiązanie umowy z naruszeniem przepisów potwierdzone prawomocnym wyrokiem sądu",
+      "naruszenie-bez-wyroku": "Rozwiązanie umowy z naruszeniem przepisów bez prawomocnego wyroku",
+      "koniec-umowy-terminowej": "Koniec umowy na czas określony albo na okres próbny",
+      inna: "Inna przyczyna",
+    },
+    przyczynyWDopelniaczu: {
+      upadlosc: "upadłości pracodawcy",
+      likwidacja: "likwidacji pracodawcy",
+      "smierc-pracodawcy": "śmierci pracodawcy",
+    },
+    legendaInnegoZatrudnienia: "Czy zapewniono Ci inne zatrudnienie?",
+    podpowiedzInnegoZatrudnienia: ({ przyczyna }: { przyczyna: string }) => `Pytamy, bo umowa ustała z powodu ${przyczyna}.`,
+    tak: "Tak",
+    nie: "Nie",
+    notatkaPrzyczynyPrzyUmowieOPrace: "O przyczynę zapytamy, gdy wybierzesz umowę o pracę.",
+    rozpoczecieWZdaniu: {
+      "umowa-o-prace": "rozpoczęcie pracy na umowie o pracę",
+      "umowa-zlecenia": "rozpoczęcie umowy zlecenia",
+      jdg: "rozpoczęcie działalności",
+    },
+    notatkaRozpoczecia: ({ coZmienia }: { coZmienia: string }) =>
+      `O przyczynę pytamy tylko przy ustaniu umowy o pracę. W planie zobaczysz, co zmienia ${coZmienia} w ciąży.`,
+    zrodla: {
+      "konto-zus": "Źródło: konto ZUS",
+      "pelnomocnictwo-pel": "Źródło: pełnomocnictwo PEL",
+      "odpowiedz-rodzica": "Źródło: Twoja odpowiedź",
+    },
     // koniec ViewProfileEmploymentChange
   },
   ViewProfileFamily: {
     tytulStrony: "Profil na start: dane rodziny",
     naglowek: "Profil na start",
+    wstep: "Odpowiedz na kilka pytań, a ułożymy z nich plan Twojej rodziny. Pytamy tylko o to, czego nie ma na Twoim koncie ZUS.",
+    tytulKarty: "Dane rodziny",
+    opisKarty: "Od sytuacji Twojej rodziny zależą niektóre świadczenia. Odpowiedz na kilka pytań.",
+    legendaStanuCywilnego: "Czy rodzice dziecka są małżeństwem?",
+    stanyCywilne: {
+      malzenstwo: "Rodzice są małżeństwem",
+      "nie-malzenstwo": "Rodzice nie są małżeństwem",
+    },
+    legendaOjcostwa: "Czy ojcostwo dziecka jest uznane?",
+    podpowiedzOjcostwa: "Pytamy, bo rodzice nie są małżeństwem.",
+    uznaniaOjcostwa: {
+      uznane: "Ojcostwo uznane",
+      nieuznane: "Ojcostwo nieuznane",
+    },
+    etykietaGminy: "Gmina, w której mieszkasz",
+    podpowiedzGminy: "Wpisz nazwę gminy i wybierz ją z listy podpowiedzi.",
+    podpowiedzGminyNaLiscie: ({ nazwa, powiat, wojewodztwo }: { nazwa: string; powiat: string; wojewodztwo: string }) =>
+      `${nazwa} (powiat ${powiat}, województwo ${wojewodztwo})`,
+    wybranaGmina: ({ nazwa, powiat, wojewodztwo }: { nazwa: string; powiat: string; wojewodztwo: string }) =>
+      `Wybrana gmina: ${nazwa}, powiat ${powiat}, województwo ${wojewodztwo}`,
+    etykietaDochodu: "Miesięczny dochód netto na osobę w rodzinie",
+    podpowiedzDochodu: "Podaj kwotę w złotych. Przyjmiemy ją tak, jak ją wpiszesz.",
+    pominDochod: "Pomiń dochód",
+    podpowiedzPominieciaDochodu: "Zapiszemy dochód jako nieznany. Podasz go później w profilu rodziny.",
+    zgoda: {
+      przed: "Zgodę możesz wyrazić w ",
+      odnosnik: "ustawieniach przewodnika",
+      po: ".",
+    },
     // koniec ViewProfileFamily
   },
   ViewProfileSecondParent: {
