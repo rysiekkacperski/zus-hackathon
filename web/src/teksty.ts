@@ -857,6 +857,40 @@ export const teksty = {
   // Grupy powiadomień (właściciele: u18, u14, u29, u34)
   PowiadomieniaPrzypomnienia: {
     tytul: "Przypomnienia o terminach",
+    nadawca: "Przewodnik rodzica",
+    // Liczba dni w treści przypomnienia
+    zostaloDni: ({ liczbaDni }: { liczbaDni: number }) =>
+      liczbaDni === 1 ? "został 1 dzień" : `zostało ${liczbaDni} dni`,
+    // Koszt albo skutek spóźnienia w wiadomości e-mail i w opisie wydarzenia pliku kalendarza
+    kosztEmail: ({ kwota }: { kwota: string }) => `Spóźnienie kosztuje ${kwota}.`,
+    skutekEmail: ({ skutek }: { skutek: string }) => `Skutek spóźnienia: ${skutek}.`,
+    // Informacja o spóźnieniu w SMS
+    kosztSms: ({ kwota }: { kwota: string }) => `Spóźnienie kosztuje ${kwota} zł.`,
+    skutekSms: "Sprawdź skutek spóźnienia w przewodniku.",
+    // Przypomnienie przed terminem e-mailem
+    emailPrzedTerminem: {
+      temat: ({ tytul, termin }: { tytul: string; termin: string }) => `Przypomnienie: ${tytul} do ${termin}`,
+      tresc: ({ termin, zostalo, tytul, spoznienie, adres }: { termin: string; zostalo: string; tytul: string; spoznienie: string; adres: string }) =>
+        `Dzień dobry, do ${termin} ${zostalo} na sprawę: ${tytul}.${spoznienie ? ` ${spoznienie}` : ""} Instrukcję znajdziesz w przewodniku dla rodziców: ${adres}. Ta wiadomość została wysłana automatycznie, nie odpowiadaj na nią.`,
+    },
+    // Przypomnienie w dniu terminu e-mailem
+    emailWDniuTerminu: {
+      temat: ({ tytul }: { tytul: string }) => `Dziś mija termin: ${tytul}`,
+      tresc: ({ tytul, spoznienie, adres }: { tytul: string; spoznienie: string; adres: string }) =>
+        `Dzień dobry, dziś mija termin sprawy: ${tytul}.${spoznienie ? ` ${spoznienie}` : ""} Jeśli sprawa jest już załatwiona, oznacz ją w przewodniku dla rodziców: ${adres}. Ta wiadomość została wysłana automatycznie, nie odpowiadaj na nią.`,
+    },
+    // Przypomnienie przed terminem SMS-em
+    smsPrzedTerminem: ({ tytul, termin, zostalo, informacja, adres }: { tytul: string; termin: string; zostalo: string; informacja: string; adres: string }) =>
+      `Przewodnik ZUS: ${tytul} do ${termin}, ${zostalo}.${informacja ? ` ${informacja}` : ""} Szczegóły: ${adres}`,
+    // Przypomnienie w dniu terminu SMS-em
+    smsWDniuTerminu: ({ tytul, informacja, adres }: { tytul: string; informacja: string; adres: string }) =>
+      `Przewodnik ZUS: dziś mija termin: ${tytul}.${informacja ? ` ${informacja}` : ""} Załatwione? Oznacz w przewodniku: ${adres}`,
+    // Kod weryfikacyjny SMS
+    smsKodWeryfikacyjny: ({ kod }: { kod: string }) =>
+      `Przewodnik ZUS: Twój kod do włączenia przypomnień SMS to ${kod}. Kod jest ważny 10 minut. Jeśli to nie Ty, zignoruj tę wiadomość.`,
+    // Plik kalendarza
+    nazwaKalendarza: "Terminy z przewodnika rodzica",
+    nazwaPliku: ({ data }: { data: string }) => `terminy-przewodnika-rodzica-${data}.ics`,
     // koniec PowiadomieniaPrzypomnienia
   },
   PowiadomieniaStatusWniosku: {
@@ -910,6 +944,60 @@ export const teksty = {
   ViewDemoInbox: {
     tytulStrony: "Skrzynka wiadomości",
     naglowek: "Skrzynka wiadomości",
+    wstep: "Tu widzisz wiadomości e-mail i SMS, które przewodnik wysłał na konta w trybie demonstracyjnym, oraz wiadomości zaplanowane do wysłania.",
+    tylkoDemo: "Skrzynka wiadomości działa wyłącznie w trybie demonstracyjnym.",
+    konto: "Konto",
+    kontoPodpowiedz: "Wybierz konto, którego wiadomości chcesz zobaczyć.",
+    brakKonta: "To konto nie ma jeszcze wiadomości, bo nikt się na nie nie zalogował.",
+    doreczanie: {
+      tytul: "Wysyłka zaplanowanych wiadomości",
+      opis: ({ teraz }: { teraz: string }) =>
+        `Przewodnik wysyła zaplanowane wiadomości o ustalonej godzinie. Bieżąca chwila w trybie demonstracyjnym: ${teraz}.`,
+      przycisk: "Doręcz zaplanowane do dzisiaj",
+      wynik: ({ liczba }: { liczba: number }) =>
+        liczba === 0 ? "Nie ma wiadomości zaplanowanych do tej chwili." : `Doręczyliśmy zaplanowane wiadomości: ${liczba}.`,
+      zmienDate: "Zmień datę w ustawieniach trybu demonstracyjnego",
+    },
+    wyslane: {
+      tytul: ({ liczba }: { liczba: number }) => `Wysłane wiadomości (${liczba})`,
+      pusto: "Na to konto nie wysłaliśmy jeszcze żadnej wiadomości.",
+    },
+    zaplanowane: {
+      tytul: ({ liczba }: { liczba: number }) => `Zaplanowane wiadomości (${liczba})`,
+      pusto: "Na to konto nie ma zaplanowanych wiadomości.",
+      podpis: "Wiadomości zaplanowane do wysłania",
+      przewijanie: "Tabela wiadomości zaplanowanych do wysłania",
+      kolumny: { data: "Data wysyłki", kanal: "Kanał", adresat: "Adresat", tresc: "Temat albo treść" },
+    },
+    pominiete: {
+      tytul: ({ liczba }: { liczba: number }) => `Niewysłane wiadomości (${liczba})`,
+      podpis: "Wiadomości, których przewodnik nie wysłał",
+      przewijanie: "Tabela wiadomości, których przewodnik nie wysłał",
+      kolumny: { data: "Planowana data", kanal: "Kanał", tresc: "Temat albo treść", powod: "Powód" },
+      powody: {
+        "brak-adresu": "Brak adresu e-mail albo potwierdzonego numeru telefonu",
+        "sprawa-zalatwiona": "Sprawa jest złożona albo załatwiona",
+        "brak-konta-przewodnika": "Adresat nie ma konta w przewodniku",
+        inny: "Wiadomość nie została wysłana",
+      },
+    },
+    kanaly: { email: "E-mail", sms: "SMS" },
+    rodzaje: {
+      "przypomnienie-przed-terminem": "Przypomnienie przed terminem",
+      "przypomnienie-w-dniu-terminu": "Przypomnienie w dniu terminu",
+      "kod-sms": "Kod weryfikacyjny SMS",
+      "zmiana-statusu-wniosku": "Zmiana statusu wniosku",
+      "odpowiedz-zus": "Odpowiedź ZUS",
+      "mozliwosc-przejecia-urlopu": "Możliwość przejęcia urlopu",
+      "pakiet-narodzin": "Pakiet narodzin",
+    },
+    od: "Od",
+    do: "Do",
+    data: "Data",
+    nieodczytana: "Nieodczytana",
+    oznaczOdczytana: "Oznacz jako odczytaną",
+    liczbaZnakow: ({ liczba }: { liczba: number }) => `Długość wiadomości: ${liczba} znaków.`,
+    adresZKontaZus: "Adres e-mail z danych konta ZUS",
     // koniec ViewDemoInbox
   },
   ViewGuideWelcome: {
@@ -925,9 +1013,44 @@ export const teksty = {
       // koniec sekcjaZgody
     },
     sekcjaPrzypomnien: {
+      tytul: "Przypomnienia o terminach",
+      wstep: "Przypomnimy Ci o każdej sprawie do zrobienia przed jej terminem i w dniu terminu, zawsze o 9:00. Gdy oznaczysz sprawę jako złożoną albo załatwioną, przestaniemy o niej przypominać.",
+      wlacz: "Wysyłaj mi przypomnienia o terminach",
+      wylaczone: {
+        przed: "Przypomnienia są wyłączone. Nie wyślemy Ci przypomnień o żadnej sprawie, także o tej z najbliższym terminem. Terminy sprawdzisz na stronie",
+        link: "Terminy",
+        po: ".",
+      },
+      wyprzedzenie: "Wyprzedzenie przypomnienia w dniach",
+      wyprzedzeniePodpowiedz: "Wpisz liczbę od 1 do 30. Gdy wpiszesz mniej niż 7, przypomnimy też 7 dni przed terminem. W dniu terminu przypominamy zawsze.",
+      kanaly: "Kanały przypomnień",
+      kanalyPodpowiedz: "Włącz jeden kanał albo oba.",
+      email: "E-mail",
+      emailWylaczonyPodpowiedz: "Po włączeniu wpiszemy adres z danych Twojego konta ZUS. Możesz go zmienić.",
+      adresEmail: "Adres e-mail",
+      adresEmailZKonta: "Wpisaliśmy adres z danych Twojego konta ZUS. Możesz go zmienić.",
+      adresEmailBrakWKoncie: "W danych Twojego konta ZUS nie ma adresu e-mail. Wpisz adres, na który mamy wysyłać przypomnienia.",
+      adresEmailWlasny: "Na ten adres wyślemy przypomnienia. Możesz go zmienić.",
+      sms: "SMS",
+      smsWylaczonyPodpowiedz: "Po włączeniu podasz numer telefonu i potwierdzisz go kodem z SMS-a.",
+      numerTelefonu: "Numer telefonu",
+      numerPodpowiedz: "Wpisz 9 cyfr, na początku możesz dodać +48. Wyślemy na ten numer kod ważny 10 minut.",
+      numerPotwierdzony: "Numer potwierdzony",
+      numerPotwierdzonyPodpowiedz: "Gdy zmienisz numer, potwierdzisz go nowym kodem z SMS-a.",
+      nowyNumerCzeka: "Nowy numer czeka na potwierdzenie kodem. Do tego czasu nie wyślemy przypomnień SMS-em.",
+      numerCzeka: "Numer czeka na potwierdzenie kodem. Do tego czasu nie wyślemy przypomnień SMS-em.",
+      wyslijKod: "Wyślij kod",
+      wyslijNowyKod: "Wyślij nowy kod",
+      wyslijKodNaNumer: ({ numer }: { numer: string }) => `Wyślij kod na numer ${numer}`,
+      kod: "Kod weryfikacyjny z SMS-a",
+      kodPodpowiedz: "Wpisz 6 cyfr i zapisz ustawienia, żeby włączyć przypomnienia SMS-em.",
+      zapisz: "Zapisz ustawienia",
       // koniec sekcjaPrzypomnien
     },
     kartaPlikuKalendarza: {
+      tytul: "Terminy w Twoim kalendarzu",
+      wstep: "Pobierz terminy spraw do zrobienia jako plik kalendarza i otwórz go w kalendarzu na komputerze albo na telefonie.",
+      przycisk: "Pobierz plik kalendarza",
       // koniec kartaPlikuKalendarza
     },
     sekcjaDanychRodziny: {
@@ -1159,6 +1282,7 @@ export const teksty = {
     naglowek: "Terminy",
     // Sloty terminy/_sloty (u18)
     akcjaPlikuKalendarza: {
+      przycisk: "Pobierz plik kalendarza",
       // koniec akcjaPlikuKalendarza
     },
     // koniec ViewDeadlines
@@ -1487,6 +1611,15 @@ export const teksty = {
   },
   SheetCalendarDownload: {
     tytul: "Pobierz terminy jako plik kalendarza",
+    opis: "Plik zawiera terminy spraw do zrobienia według stanu Twojego planu w chwili pobrania. Sprawy złożone i załatwione do niego nie trafiają.",
+    liczbaTerminow: ({ liczba }: { liczba: number }) => `Terminy w pliku: ${liczba}`,
+    podpisTabeli: "Sprawy z terminem w pliku kalendarza",
+    przewijanie: "Tabela spraw z terminem w pliku kalendarza",
+    kolumny: { sprawa: "Sprawa", termin: "Termin" },
+    szacowany: "termin szacowany",
+    notatka: "Każdy termin to w pliku wydarzenie całodniowe w dniu terminu, z tytułem sprawy w nazwie oraz kosztem albo skutkiem spóźnienia w opisie. Otwórz plik (.ics) w kalendarzu na komputerze albo na telefonie. Gdy plan się zmieni, pobierz nowy plik.",
+    pobierz: "Pobierz plik",
+    anuluj: "Anuluj",
     // koniec SheetCalendarDownload
   },
   SheetCalcBaseSource: {
