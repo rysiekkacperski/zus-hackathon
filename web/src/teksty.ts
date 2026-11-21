@@ -1152,6 +1152,161 @@ export const teksty = {
     sekcjaPytaniaDoZus: {
       // koniec sekcjaPytaniaDoZus
     },
+    // u17: treść instrukcji sprawy
+    powrotDoSprawy: "Szczegóły sprawy",
+    powrotDoTerminow: "Terminy",
+    brakSprawy: "Nie znaleźliśmy tej sprawy w Twoim planie rodziny.",
+    przejdzDoPlanu: "Przejdź do planu rodziny",
+    kartaNajwazniejsze: "Najważniejsze informacje",
+    kartaKroki: "Krok po kroku",
+    kartaCoPrzygotowac: "Co przygotować",
+    kartaWiecejInformacji: "Więcej informacji",
+    etykietaKolumnyBocznej: "Co przygotować do sprawy",
+    brakKrokow: "Kroki tej sprawy pokażemy, gdy pojawią się w katalogu świadczeń.",
+    wstepFormy: {
+      "umowa-o-prace": "Pracujesz na umowie o pracę.",
+      "umowa-zlecenia": "Wykonujesz umowę zlecenia.",
+      jdg: "Prowadzisz jednoosobową działalność gospodarczą.",
+      "brak-tytulu": "Nie masz tytułu do ubezpieczenia.",
+    },
+    termin: "Termin",
+    bezTerminu: "Bez terminu",
+    sprawaBezTerminu: "Sprawa nie ma terminu w kalendarzu",
+    terminSzacowany: ({ opis }: { opis: string }) => `Szacowany, ${opis}`,
+    nieprzypominamyZlozona: "Nie przypominamy, wniosek złożony",
+    nieprzypominamyZalatwiona: "Nie przypominamy, sprawa załatwiona",
+    instytucja: "Instytucja",
+    kanal: "Kanał",
+    instytucjaIKanal: "Instytucja i kanał",
+    status: "Status",
+    rodzajSprawy: ({ rodzaj }: { rodzaj: string }) => `Rodzaj sprawy: ${rodzaj}`,
+    oznaczono: ({ data }: { data: string }) => `Oznaczono ${data}`,
+    rodzajePozycji: {
+      swiadczenie: "świadczenie",
+      uprawnienie: "uprawnienie",
+      obowiazek: "obowiązek",
+      informacja: "informacja",
+    },
+    // Instytucja i kanał według wybranego kanału
+    opisyKanalow: {
+      zam: {
+        kanal: "Kreator wniosku w przewodniku",
+        kanalPodpis: "Wniosek o zasiłek macierzyński (ZAM)",
+      },
+      zas53: {
+        instytucja: "ZUS",
+        instytucjaPodpis: "Wypłaca Ci zasiłek",
+        kanal: "Kreator wniosku w przewodniku",
+        kanalPodpis: "Wniosek o zasiłek chorobowy (ZAS-53)",
+      },
+      ezus: {
+        instytucja: "ZUS",
+        instytucjaPodpis: "Zakład Ubezpieczeń Społecznych",
+        kanal: "eZUS",
+        kanalPodpis: "Przez internet, po zalogowaniu do eZUS",
+      },
+      empatia: {
+        instytucja: "Gmina albo MOPS",
+        instytucjaPodpis: "W miejscu Twojego zamieszkania",
+        kanal: "Emp@tia",
+        kanalPodpis: "Przez internet albo osobiście w urzędzie",
+      },
+      mobywatel: {
+        instytucja: "Urząd stanu cywilnego",
+        instytucjaPodpis: "Właściwy dla miejsca urodzenia dziecka",
+        kanal: "mObywatel albo gov.pl",
+        kanalPodpis: "Przez internet albo osobiście w urzędzie",
+      },
+      "gov-rejestr-stanu-cywilnego": {
+        instytucja: "Urząd stanu cywilnego",
+        instytucjaPodpis: "Wniosek przez rejestr stanu cywilnego",
+        kanal: "gov.pl",
+        kanalPodpis: "Przez internet albo osobiście w urzędzie",
+      },
+      pracodawca: {
+        instytucja: "Pracodawca",
+        kanal: "Dział kadr",
+        kanalPodpis: "Osobiście albo w sposób przyjęty w firmie",
+      },
+      zleceniodawca: {
+        instytucja: "Zleceniodawca",
+        kanal: "Osoba, która prowadzi Twoją umowę",
+        kanalPodpis: "Osobiście albo w sposób przyjęty u zleceniodawcy",
+      },
+      informacja: {
+        wartosc: "Informacja w przewodniku",
+        podpis: "Nie składasz wniosku",
+      },
+    },
+    instytucjaPlatnika: {
+      zus: "ZUS",
+      zusPodpis: "Zasiłek wypłaca Ci ZUS",
+      platnikSkladek: "Płatnik składek",
+      platnikSkladekPodpis: "Zasiłek wypłaca Ci płatnik składek",
+      nieustalony: "Do ustalenia",
+      nieustalonyPodpis: "ZUS albo płatnik składek, zależy od płatnika zasiłku",
+    },
+    // Akcje przejścia do kanału
+    akcjaKreatorZam: "Wypełnij wniosek",
+    akcjaKreatorZas53: "Wypełnij wniosek ZAS-53",
+    akcjeZewnetrzne: {
+      ezus: "Przejdź do eZUS",
+      empatia: "Przejdź do Emp@tii",
+      mobywatel: "Przejdź do zgłoszenia urodzenia",
+      "gov-zgloszenie-urodzenia": "Przejdź do zgłoszenia urodzenia",
+      "gov-rejestr-stanu-cywilnego": "Przejdź do rejestru stanu cywilnego",
+    },
+    akcjeZewnetrzneEzus: {
+      K12: "Złóż wniosek o 800+ w eZUS",
+      K13: "Złóż wniosek o 800+ w eZUS",
+      K18: "Złóż wniosek Aktywny Rodzic w eZUS",
+    },
+    sprawdzWKanale: {
+      ezus: "Sprawdź wniosek w eZUS",
+      empatia: "Sprawdź wniosek w Emp@tii",
+      mobywatel: "Sprawdź zgłoszenie w mObywatelu",
+      "gov-zgloszenie-urodzenia": "Sprawdź zgłoszenie na gov.pl",
+      "gov-rejestr-stanu-cywilnego": "Sprawdź wniosek na gov.pl",
+    },
+    oznaczJakoZlozona: "Oznacz jako złożoną",
+    oznaczJakoZalatwiona: "Oznacz jako załatwioną",
+    cofnijOznaczenie: "Cofnij oznaczenie",
+    przejdzDoSwiadczeniaRodzicielskiego: "Przejdź do sprawy Świadczenie rodzicielskie",
+    // Notatki pod akcjami
+    notatkaKreator: "Kreator wniosku otworzy się w przewodniku, więc nie musisz logować się do innego serwisu.",
+    notatkaZewnetrzny: ({ kanal }: { kanal: string }) =>
+      `${kanal} otworzy się w nowej karcie. Gdy wrócisz do przewodnika, zapytamy, czy udało się załatwić sprawę.`,
+    notatkaMobywatel:
+      "Na telefonie z aplikacją mObywatel otworzy się aplikacja. Bez aplikacji usługa zgłoszenia urodzenia otworzy się w nowej karcie przeglądarki. Gdy wrócisz, zapytamy, czy udało się zgłosić urodzenie.",
+    notatkaPracodawca: "Tę sprawę załatwiasz u pracodawcy, dlatego nie ma tu przejścia do serwisu internetowego.",
+    notatkaZleceniodawca: "Tę sprawę załatwiasz u zleceniodawcy, dlatego nie ma tu przejścia do serwisu internetowego.",
+    notatkaK05Pracownik:
+      "Przekaż pracodawcy albo zleceniodawcy dane dziecka: imię, nazwisko, datę urodzenia i numer PESEL. Pracodawca albo zleceniodawca zgłosi dziecko do ubezpieczenia zdrowotnego w ZUS.",
+    notatkaBezKanalu: "Tę sprawę załatwiasz osobiście, dlatego nie ma tu przejścia do serwisu internetowego.",
+    notatkaInformacja: "Oznacz sprawę jako załatwioną, gdy przeczytasz informację. Zniknie z listy spraw do zrobienia.",
+    notatkaPoOznaczeniu:
+      "Kalendarz nie pokazuje już terminu tej sprawy. Sprawa oznaczona przez pomyłkę? Cofnij oznaczenie, a wróci do spraw do zrobienia.",
+    // Co przygotować
+    daneIDokumenty: "Dane i dokumenty",
+    dokumentyIAdresat: "Dokumenty i adresat wniosku",
+    dokumenty: "Dokumenty",
+    adresatWniosku: "Adresat wniosku",
+    adresatZus: "ZUS",
+    adresatPlatnik: "Płatnik składek",
+    platnikWProfilu: ({ platnik }: { platnik: string }) => `Płatnik zasiłku w Twoim profilu: ${platnik}.`,
+    odpowiedzOPlatnika: "Odpowiedz na pytanie o płatnika",
+    brakDokumentowWSlowniku: "Listę dokumentów pokażemy, gdy pojawi się w słowniku dokumentów katalogu świadczeń.",
+    serwisyWNowejKarcie: "Serwisy otworzą się w nowej karcie.",
+    // Nazwy kanałów w mianowniku i dopełniaczu
+    nazwyKanalow: {
+      ezus: "eZUS",
+      empatia: "Emp@tia",
+      mobywatel: "Aplikacja mObywatel",
+      "gov-zgloszenie-urodzenia": "Usługa zgłoszenia urodzenia",
+      "gov-rejestr-stanu-cywilnego": "Rejestr stanu cywilnego",
+      "pue-ezus": "eZUS",
+      "e-wizyta": "e-wizyta w ZUS",
+    },
     // koniec ViewCaseGuide
   },
   ViewDeadlines: {
@@ -1416,31 +1571,79 @@ export const teksty = {
   ViewEzusHome: {
     tytulStrony: "eZUS",
     naglowek: "eZUS",
+    wstep: "Symulowany serwis eZUS w trybie demonstracyjnym przewodnika.",
+    kartaWnioski: "Wnioski o świadczenia na dziecko",
+    wniosek800: "Wniosek o świadczenie wychowawcze 800+",
+    wniosekAktywnyRodzic: "Wniosek o świadczenie z programu Aktywny Rodzic",
+    notatka: "Po wysłaniu wniosku wróć do karty przewodnika i oznacz sprawę w instrukcji.",
     // koniec ViewEzusHome
   },
   ViewEzus800Application: {
     tytulStrony: "Wniosek o świadczenie wychowawcze 800+",
     naglowek: "Wniosek o świadczenie wychowawcze 800+",
+    opis: "Wniosek o świadczenie wychowawcze 800+ składasz w ZUS przez internet. Świadczenie przysługuje na każde dziecko do ukończenia 18 lat, bez względu na dochód rodziny.",
+    kroki: [
+      "Sprawdź swoje dane i dane drugiego rodzica.",
+      "Dodaj dane dziecka: imię, nazwisko, datę urodzenia i numer PESEL.",
+      "Wpisz numer rachunku do wypłaty świadczenia.",
+      "Potwierdź oświadczenia i wyślij wniosek.",
+    ],
     // koniec ViewEzus800Application
   },
   ViewEzusActiveParentApplication: {
     tytulStrony: "Wniosek o świadczenie z programu Aktywny Rodzic",
     naglowek: "Wniosek o świadczenie z programu Aktywny Rodzic",
+    opis: "Wniosek o świadczenie z programu Aktywny Rodzic składasz w ZUS przez internet. Wybierz jedno ze świadczeń: aktywni rodzice w pracy, aktywnie w żłobku albo aktywnie w domu.",
+    kroki: [
+      "Wybierz świadczenie z programu Aktywny Rodzic.",
+      "Sprawdź swoje dane i dodaj dane dziecka.",
+      "Wpisz numer rachunku do wypłaty świadczenia.",
+      "Potwierdź oświadczenia i wyślij wniosek.",
+    ],
     // koniec ViewEzusActiveParentApplication
   },
   ViewEzusApplicationDetails: {
     tytulStrony: "Szczegóły wniosku w eZUS",
     naglowek: "Szczegóły wniosku",
+    numerWniosku: "Numer wniosku",
+    status: "Status",
+    statusWartosc: "Wniosek w trakcie rozpatrywania",
     // koniec ViewEzusApplicationDetails
   },
   ViewZusEVisit: {
     tytulStrony: "e-wizyta w ZUS",
     naglowek: "e-wizyta w ZUS",
+    opis: "Symulowana rezerwacja e-wizyty w ZUS. Podczas e-wizyty rozmawiasz z pracownikiem ZUS przez internet, z obrazem i dźwiękiem.",
     // koniec ViewZusEVisit
   },
   ViewSimulatedChannel: {
     tytulStrony: "Serwis zewnętrzny",
     naglowek: "Serwis zewnętrzny",
+    wstep: "Symulowany serwis instytucji w trybie demonstracyjnym przewodnika.",
+    serwisy: {
+      empatia: {
+        naglowek: "Emp@tia",
+        opis: "Portal Emp@tia przyjmuje wnioski o świadczenia z gminy albo MOPS, na przykład o becikowe, świadczenie rodzicielskie i zasiłek rodzinny. Logujesz się profilem zaufanym albo podpisem kwalifikowanym.",
+      },
+      mobywatel: {
+        naglowek: "Aplikacja mObywatel",
+        opis: "W aplikacji mObywatel zgłaszasz urodzenie dziecka. Wypełniasz formularz, wybierasz imię dziecka i podpisujesz zgłoszenie w aplikacji.",
+      },
+      "gov-zgloszenie-urodzenia": {
+        naglowek: "Zgłoś urodzenie dziecka",
+        opis: "Usługa na gov.pl pozwala zgłosić urodzenie dziecka przez internet. Logujesz się przez login.gov.pl i podpisujesz zgłoszenie profilem zaufanym, e-dowodem albo podpisem kwalifikowanym.",
+      },
+      "gov-rejestr-stanu-cywilnego": {
+        naglowek: "Rejestr stanu cywilnego",
+        opis: "Usługa na gov.pl pozwala zamówić odpis aktu urodzenia dziecka przez internet.",
+      },
+      "pue-ezus": {
+        naglowek: "eZUS",
+        opis: "Platforma Usług Elektronicznych ZUS, w której wysyłasz wnioski i wiadomości do ZUS.",
+      },
+    },
+    notatka: "Gdy załatwisz sprawę, wróć do karty przewodnika. Zapytamy, czy udało się ją załatwić.",
+    zamknij: "Zakończ i wróć do przewodnika",
     // koniec ViewSimulatedChannel
   },
   ViewAssistantChat: {
@@ -1483,6 +1686,26 @@ export const teksty = {
   },
   SheetCaseDoneConfirm: {
     tytul: "Udało się załatwić sprawę?",
+    tytulSwiadczenie: "Udało się złożyć wniosek?",
+    zKanalu: {
+      ezus: "z eZUS",
+      empatia: "z Emp@tii",
+      mobywatel: "z aplikacji mObywatel",
+      "gov-zgloszenie-urodzenia": "z usługi zgłoszenia urodzenia",
+      "gov-rejestr-stanu-cywilnego": "z rejestru stanu cywilnego",
+      "pue-ezus": "z eZUS",
+      "e-wizyta": "z e-wizyty w ZUS",
+    },
+    opisSwiadczenie: ({ zKanalu, termin }: { zKanalu: string; termin: string }) =>
+      `Wracasz ${zKanalu}. Jeśli wniosek jest wysłany, oznacz sprawę jako złożoną, a przestaniemy przypominać o terminie ${termin}.`,
+    opisSwiadczenieBezTerminu: ({ zKanalu }: { zKanalu: string }) =>
+      `Wracasz ${zKanalu}. Jeśli wniosek jest wysłany, oznacz sprawę jako złożoną, a przestaniemy o niej przypominać.`,
+    opisPozostale: ({ zKanalu }: { zKanalu: string }) =>
+      `Wracasz ${zKanalu}. Jeśli sprawa jest załatwiona, oznacz ją jako załatwioną, a usuniemy ją z listy terminów i przestaniemy o niej przypominać.`,
+    notatka: "Oznaczenie możesz cofnąć w każdej chwili w instrukcji sprawy.",
+    potwierdzZlozona: "Tak, oznacz jako złożoną",
+    potwierdzZalatwiona: "Tak, oznacz jako załatwioną",
+    zostaw: "Nie, zostaw do zrobienia",
     // koniec SheetCaseDoneConfirm
   },
   SheetCalendarDownload: {
