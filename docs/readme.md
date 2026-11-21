@@ -13,9 +13,9 @@ Folder ma trzy foldery sekcji, ponumerowane tak samo jak sekcje we wzorze, oraz 
 
 Sekcje, które we wzorze są jedną stroną dla całego projektu, Opis produktu oraz Model systemu, mają jeden plik bezpośrednio w swoim folderze: `01-opis-produktu/opis-produktu.md` i `02-model-systemu/model-systemu.md`.
 
-W sekcji trzeciej folder najwyższego poziomu odpowiada Epikowi i nosi jego numer i nazwę z kolumny Epiki w podsekcji 2.1 Modelu systemu, folder drugiego poziomu odpowiada funkcji, a strony Story leżą w folderze funkcji, na przykład:
+W sekcji trzeciej folder najwyższego poziomu odpowiada Epikowi i nosi dwucyfrowy numer porządkowy, który wyznacza kolejność realizacji Epików, a po nim numer i nazwę Epika z kolumny Epiki w podsekcji 2.1 Modelu systemu. Folder drugiego poziomu odpowiada funkcji, a strony Story leżą w folderze funkcji, na przykład:
 
-- `03-user-stories/3.7.1-kalendarz-terminow/3.7.1.1-wyliczanie-terminow/3.7.1.1.1-wyliczenie-terminow-od-dat-z-profilu.md`
+- `03-user-stories/06-3.7.1-kalendarz-terminow/3.7.1.1-wyliczanie-terminow/3.7.1.1.1-wyliczenie-terminow-od-dat-z-profilu.md`
 
 Folder `03-user-stories` zawiera bezpośrednio także tablicę `tablica-komunikatow.md` z ID, nazwą sytuacji, typem, kodem HTTP i treścią każdego komunikatu, do którego odwołują się historyjki.
 
