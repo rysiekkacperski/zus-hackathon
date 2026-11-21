@@ -4,10 +4,11 @@
 // Wzór cz1/P03-04: lista czterech form zatrudnienia z oznaczeniem „Z konta ZUS” przy formie odczytanej
 // z konta ZUS, zaznaczona bieżąca forma (KA-07 3.3.1.1.1), akcje Anuluj i Wybierz, zamknięcie ikoną.
 import { useState } from 'react';
-import type { FormaZatrudnienia } from '@/domena/typy';
-import { GrupaOpcji, idOpcjiGrupy, type OpcjaGrupy } from '@/komponenty/grupa-opcji';
+import type { FormaZatrudnienia, KodKomunikatu } from '@/domena/typy';
+import { GrupaOpcji, type OpcjaGrupy } from '@/komponenty/grupa-opcji';
 import { Arkusz } from '@/komponenty/okno';
 import { Przycisk } from '@/komponenty/przycisk';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 
 const tekst = teksty.SheetEmploymentChoice;
@@ -15,6 +16,10 @@ const formy = teksty.ViewProfileZusData.kreator.formy;
 
 const FORMY: FormaZatrudnienia[] = ['umowa-o-prace', 'umowa-zlecenia', 'jdg', 'brak-tytulu'];
 const NAZWA_GRUPY = 'arkusz-forma-zatrudnienia';
+
+function walidujWybor(w: { forma: FormaZatrudnienia | null }): { forma?: KodKomunikatu } {
+  return w.forma === null ? { forma: '0006' } : {};
+}
 
 export interface ArkuszFormyZatrudnieniaProps {
   otwarte: boolean;
@@ -29,7 +34,7 @@ export interface ArkuszFormyZatrudnieniaProps {
 
 function TrescArkusza({ wybrana, zKontaZus, onWybor, onZamknij }: Omit<ArkuszFormyZatrudnieniaProps, 'otwarte'>) {
   const [forma, ustawForme] = useState<FormaZatrudnienia | null>(wybrana ?? null);
-  const [blad, ustawBlad] = useState<'0006' | null>(null);
+  const walidacja = useWalidacjaNaBiezaco({ wartosci: { forma }, waliduj: walidujWybor, pola: { forma: NAZWA_GRUPY } });
 
   const opcje: OpcjaGrupy<FormaZatrudnienia>[] = FORMY.map((f) => ({
     wartosc: f,
@@ -38,11 +43,7 @@ function TrescArkusza({ wybrana, zKontaZus, onWybor, onZamknij }: Omit<ArkuszFor
   }));
 
   const wybierz = () => {
-    if (forma === null) {
-      ustawBlad('0006');
-      document.getElementById(idOpcjiGrupy(NAZWA_GRUPY, FORMY[0]))?.focus();
-      return;
-    }
+    if (!walidacja.sprobujWyslac() || forma === null) return;
     onWybor?.(forma);
     onZamknij();
   };
@@ -69,11 +70,8 @@ function TrescArkusza({ wybrana, zKontaZus, onWybor, onZamknij }: Omit<ArkuszFor
         legenda={tekst.legenda}
         opcje={opcje}
         wartosc={forma}
-        onZmiana={(f) => {
-          ustawForme(f);
-          ustawBlad(null);
-        }}
-        blad={blad}
+        onZmiana={ustawForme}
+        {...walidacja.pole('forma')}
       />
     </Arkusz>
   );

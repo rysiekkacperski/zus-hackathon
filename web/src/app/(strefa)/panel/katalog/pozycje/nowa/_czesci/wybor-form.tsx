@@ -4,7 +4,7 @@
 // i jeden komunikat błędu pod grupą, a przy błędzie każde pole zaznaczenia ma aria-invalid.
 import { FORMY_ZATRUDNIENIA } from '@/domena/katalog/edycja';
 import type { FormaZatrudnienia, KodKomunikatu } from '@/domena/typy';
-import { BladPola, idBledu, polaczOpisy } from '@/komponenty/pole';
+import { BladPola, idBledu, opuszczonoKontener, polaczOpisy } from '@/komponenty/pole';
 import { klasyEtykietyZaznaczenia, klasyKwadratuZaznaczenia } from '@/komponenty/pole-zaznaczenia';
 import { teksty } from '@/teksty';
 
@@ -14,10 +14,12 @@ const ID_PODPOWIEDZI = 'formy-podpowiedz';
 export interface WyborFormProps {
   wartosci: FormaZatrudnienia[];
   onZmiana: (wartosci: FormaZatrudnienia[]) => void;
-  blad?: KodKomunikatu;
+  /** Wyjście fokusu poza grupę i zmiana zaznaczenia: walidacja po opuszczeniu (useWalidacjaNaBiezaco). */
+  onOpuszczenie?: () => void;
+  blad?: KodKomunikatu | null;
 }
 
-export function WyborForm({ wartosci, onZmiana, blad }: WyborFormProps) {
+export function WyborForm({ wartosci, onZmiana, onOpuszczenie, blad }: WyborFormProps) {
   const t = teksty.ViewCatalogItemAdd.warunek;
   const etykiety = teksty.ViewCatalogList.etykiety.formyZatrudnienia;
   const opisy = polaczOpisy(ID_PODPOWIEDZI, blad ? idBledu(ID_GRUPY) : null);
@@ -27,10 +29,17 @@ export function WyborForm({ wartosci, onZmiana, blad }: WyborFormProps) {
     if (zaznaczone) zbior.add(forma);
     else zbior.delete(forma);
     onZmiana(FORMY_ZATRUDNIENIA.filter((f) => zbior.has(f)));
+    onOpuszczenie?.();
   }
 
   return (
-    <fieldset aria-describedby={opisy} className="m-0 min-w-0 border-0 p-0">
+    <fieldset
+      aria-describedby={opisy}
+      onBlur={(e) => {
+        if (onOpuszczenie && opuszczonoKontener(e)) onOpuszczenie();
+      }}
+      className="m-0 min-w-0 border-0 p-0"
+    >
       <legend className="m-0 mb-1 p-0 text-body-strong">{t.formy}</legend>
       <p id={ID_PODPOWIEDZI} className="m-0 mb-3">
         {t.podpowiedzForm}

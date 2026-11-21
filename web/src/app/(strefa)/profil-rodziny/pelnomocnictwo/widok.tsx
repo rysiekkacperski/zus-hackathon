@@ -4,7 +4,6 @@
 // odczyt danych na jego podstawie albo instrukcja udzielenia pełnomocnictwa w eZUS.
 // Wzory: cz2/P19-12 (obowiązuje), P19-13 (błąd odczytu), P19-15 (od przyszłej daty), P19-16 (brak),
 // P19-17 (ograniczone do korespondencji), P19-18 (wygasło).
-import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { useKontekstRodziny, useStanSymulowanegoZus } from '@/dane/magazyn/hooki';
@@ -27,6 +26,7 @@ import { Komunikat } from '@/komponenty/komunikat';
 import { useKomunikatChwilowy } from '@/komponenty/komunikat-chwilowy';
 import { ListaKrokow } from '@/komponenty/kroki';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
@@ -63,11 +63,11 @@ function TabelaPelnomocnictwa({ wiersze }: { wiersze: { etykieta: string; wartos
             <tr key={w.etykieta}>
               <th
                 scope="row"
-                className="h-[62px] w-2/5 border-b border-line-row px-5 py-3 text-left align-middle font-semibold text-ink"
+                className="h-[3.875rem] w-2/5 border-b border-line-row px-5 py-3 text-left align-middle font-semibold text-ink"
               >
                 {w.etykieta}
               </th>
-              <td className="h-[62px] border-b border-line-row px-5 py-3 text-left align-middle">{w.wartosc}</td>
+              <td className="h-[3.875rem] border-b border-line-row px-5 py-3 text-left align-middle">{w.wartosc}</td>
             </tr>
           ))}
         </tbody>
@@ -182,13 +182,12 @@ function Instrukcja({
 }
 
 export function WidokPelnomocnictwa() {
-  const router = useRouter();
   const kontekst = useKontekstRodziny();
   const pesel = kontekst?.konto.pesel;
   const stanZus = useStanSymulowanegoZus(pesel);
   const { pokaz } = useKomunikatChwilowy();
   const [bladOdczytu, ustawBladOdczytu] = useState<KodKomunikatu | null>(null);
-  const [zajety, ustawZajety] = useState(false);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const komunikat = useRef<HTMLDivElement>(null);
 
   const drugi = kontekst?.rodzina.daneRodziny.drugiRodzic;
@@ -242,15 +241,15 @@ export function WidokPelnomocnictwa() {
   function odczytaj() {
     ustawZajety(true);
     const wynik = odczytajDaneZPelnomocnictwa(pobierzKontekstOperacji());
-    ustawZajety(false);
     if (!wynik.ok) {
+      ustawZajety(false);
       // Kod stanu pełnomocnictwa (np. wygasło przed chwilą) pokazuje ekran ze stanu; błąd odczytu i zapisu pokazuje baner.
       ustawBladOdczytu(wynik.kod === '0001' || wynik.kod === '0003' ? wynik.kod : null);
       requestAnimationFrame(() => komunikat.current?.focus());
       return;
     }
     ustawKomunikatPoPrzejsciu({ kod: '0219', dlaWidoku: 'ViewProfileSummary' });
-    router.push(PROFIL_RODZINY);
+    przejdz(PROFIL_RODZINY);
   }
 
   const komunikatStanuPel = komunikatStanu(pelnomocnictwo, stan, (d: DataISO) => formatujDate(d));

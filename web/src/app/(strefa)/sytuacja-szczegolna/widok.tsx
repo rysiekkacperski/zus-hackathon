@@ -3,20 +3,25 @@
 // ViewSpecialSituation (historyjki 3.3.5.1.1 i 3.3.5.1.2; wzory P22-02, P22-06 do P22-11). Właściciel: u25.
 // Formularz zgłoszenia sytuacji szczególnej, lista zapisanych sytuacji, spokojny tryb i jego wyłączenie.
 // Konto bez zgody na dane dotyczące zdrowia widzi wyłącznie komunikat 0004.
-import { useRouter } from 'next/navigation';
+// Formularz pierwszej sytuacji ma dwie części w ?czesc=N (rodzaj sytuacji, potem data i liczba dzieci), żeby każda
+// mieściła się w oknie. Formularz kolejnej sytuacji w akordeonie listy pokazuje obie sekcje razem.
 import { useState } from 'react';
 import { ListaAkordeonowa } from '@/komponenty/akordeon';
+import { useCzesciFormularza } from '@/komponenty/czesci-formularza';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { Tabela } from '@/komponenty/tabela';
 import { UkladDwuKolumnowy } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { formatujDate } from '@/domena/daty';
 import {
   PUSTY_FORMULARZ_SYTUACJI,
   czySpokojnyTryb,
+  walidujSytuacje,
   type FormularzSytuacji as Formularz,
   type PoleSytuacji,
   type ZgloszenieSytuacji,
@@ -27,23 +32,40 @@ import { wylaczSpokojnyTryb, zapiszSytuacjeSzczegolna } from '@/dane/magazyn/ope
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { teksty } from '@/teksty';
 import { ArkuszPotwierdzeniaSytuacji } from './_czesci/arkusz-potwierdzenia-sytuacji';
-import { FormularzSytuacji } from './_czesci/formularz-sytuacji';
+import { FormularzSytuacji, POLA_SYTUACJI } from './_czesci/formularz-sytuacji';
 import { KartyBoczne } from './_czesci/karty-boczne';
 import { useOsobySytuacji } from './_czesci/osoby';
 
 const t = teksty.ViewSpecialSituation;
 
+/** Pola części formularza pierwszej sytuacji: 1 rodzaj sytuacji, 2 data zdarzenia i liczba dzieci. */
+const PODZIAL: readonly (readonly PoleSytuacji[])[] = [['rodzaj'], ['dataZdarzenia', 'liczbaDzieci']];
+const PODZIAL_AKORDEONU: readonly (readonly PoleSytuacji[])[] = [['rodzaj', 'dataZdarzenia', 'liczbaDzieci']];
+
 export function WidokSytuacjiSzczegolnej() {
   const kontekst = useKontekstRodziny();
   const dzis = useDzis();
-  const router = useRouter();
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const osoby = useOsobySytuacji(kontekst);
   const [formularz, setFormularz] = useState<Formularz>(PUSTY_FORMULARZ_SYTUACJI);
-  const [zgloszenie, setZgloszenie] = useState<ZgloszenieSytuacji | null>(null);
-  const [bledyOperacji, setBledyOperacji] = useState<BledyPol<PoleSytuacji>>({});
+  // Arkusz zostaje otwarty z ładowaniem do pokazania planu rodziny i zamyka się po ukryciu trasy.
+  const [zgloszenie, setZgloszenie] = useStanChwilowy<ZgloszenieSytuacji | null>(null);
   const [komunikatArkusza, setKomunikatArkusza] = useState<KodKomunikatu | null>(null);
   const [komunikatWidoku, setKomunikatWidoku] = useState<KodKomunikatu | null>(null);
-  const [zajety, setZajety] = useState(false);
+
+  const daneCiazyRodziny = kontekst?.rodzina.daneCiazy ?? null;
+  const wAkordeonie = (daneCiazyRodziny?.sytuacjeSzczegolne ?? []).length > 0;
+  // Błąd pola pokazuje się po opuszczeniu pola, a po próbie przejścia dalej przy każdej zmianie.
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: formularz,
+    waliduj: (f: Formularz) => walidujSytuacje(f, daneCiazyRodziny, dzis),
+    pola: POLA_SYTUACJI,
+  });
+  const czesci = useCzesciFormularza({
+    liczba: wAkordeonie ? 1 : PODZIAL.length,
+    podzial: wAkordeonie ? PODZIAL_AKORDEONU : PODZIAL,
+    walidacja,
+  });
 
   const powrot = { href: trasy.ViewFamilyPlan(), etykieta: t.powrot };
 
@@ -66,25 +88,27 @@ export function WidokSytuacjiSzczegolnej() {
   const spokojny = czySpokojnyTryb(daneCiazy);
 
   function przejdzDoArkusza(z: ZgloszenieSytuacji) {
-    setBledyOperacji({});
     setKomunikatArkusza(null);
     setZgloszenie(z);
   }
 
   function zapisz() {
     if (zgloszenie === null) return;
-    setZajety(true);
+    ustawZajety(true);
     const wynik = zapiszSytuacjeSzczegolna(formularz, pobierzKontekstOperacji());
-    setZajety(false);
     if (wynik.ok) {
-      setZgloszenie(null);
       setFormularz(PUSTY_FORMULARZ_SYTUACJI);
-      router.push(trasy.ViewFamilyPlan());
+      walidacja.resetuj();
+      przejdz(trasy.ViewFamilyPlan());
       return;
     }
+    ustawZajety(false);
     if (wynik.bledyPol) {
-      setBledyOperacji(wynik.bledyPol as BledyPol<PoleSytuacji>);
+      const bledy = wynik.bledyPol as BledyPol<PoleSytuacji>;
       setZgloszenie(null);
+      walidacja.pokazBledy(bledy);
+      const numer = PODZIAL.findIndex((pola) => pola.some((pole) => bledy[pole] !== undefined)) + 1;
+      if (!wAkordeonie && numer > 0 && numer !== czesci.czesc) czesci.przejdzDo(numer, { bezFokusu: true });
       return;
     }
     setKomunikatArkusza(wynik.kod);
@@ -95,17 +119,15 @@ export function WidokSytuacjiSzczegolnej() {
     setKomunikatWidoku(wynik.ok ? '0128' : wynik.kod);
   }
 
-  const formularzSytuacji = (wAkordeonie: boolean) => (
+  const formularzSytuacji = (akordeon: boolean) => (
     <FormularzSytuacji
       daneCiazy={daneCiazy}
       dzis={dzis}
-      wAkordeonie={wAkordeonie}
+      wAkordeonie={akordeon}
       formularz={formularz}
-      onZmianaFormularza={(f) => {
-        setFormularz(f);
-        setBledyOperacji({});
-      }}
-      bledyZOperacji={bledyOperacji}
+      onZmianaFormularza={setFormularz}
+      walidacja={walidacja}
+      czesci={czesci}
       onDalej={przejdzDoArkusza}
     />
   );
@@ -124,13 +146,13 @@ export function WidokSytuacjiSzczegolnej() {
   if (sytuacje.length === 0) {
     return (
       <>
+        {arkusz}
         <NaglowekStrony tytul={t.naglowek} wstep={t.wstep} powrot={powrot} />
         <UkladDwuKolumnowy
           tresc={formularzSytuacji(false)}
           boczna={<KartyBoczne daneCiazy={daneCiazy} drugiRodzic={osoby.drugiRodzicImieINazwisko} dzis={dzis} />}
           etykietaBocznej={t.kartaProfilu}
         />
-        {arkusz}
       </>
     );
   }
@@ -146,6 +168,7 @@ export function WidokSytuacjiSzczegolnej() {
 
   return (
     <>
+      {arkusz}
       <NaglowekStrony tytul={t.naglowek} stanNa={dzis} powrot={powrot} />
       {komunikatWidoku ? <Komunikat kod={komunikatWidoku} className="mb-7.5 max-w-tresc" /> : null}
       <UkladDwuKolumnowy
@@ -188,7 +211,6 @@ export function WidokSytuacjiSzczegolnej() {
         }
         etykietaBocznej={t.kartaTrybu}
       />
-      {arkusz}
     </>
   );
 }

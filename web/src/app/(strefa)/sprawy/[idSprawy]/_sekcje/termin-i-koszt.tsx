@@ -153,7 +153,7 @@ export function SekcjaTerminIKoszt({ sprawa, termin, kontekst }: PropsSlotu<'sek
                   <p className="m-0 text-body font-semibold text-ink-strong">{formatujDate(p.data)}</p>
                   <DniDoTerminu data={p.data} dzis={dzis} />
                 </div>
-                <div className="min-w-0 flex-[1_1_320px]">
+                <div className="min-w-0 flex-[1_1_20rem]">
                   <h3 className="m-0 text-body font-semibold">
                     {(tl.etykietyDrugiegoTerminu as Record<string, string>)[p.klucz] ?? p.klucz}
                   </h3>

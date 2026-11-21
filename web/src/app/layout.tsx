@@ -1,21 +1,14 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { preload } from "react-dom";
 import { teksty } from "@/teksty";
 import "./globals.css";
 
-const openSansLatin = localFont({
-  src: "./_fonty/open-sans-latin-wght-normal.woff2",
-  weight: "300 800",
-  display: "swap",
-  variable: "--font-open-sans-latin",
-});
-
-const openSansLatinExt = localFont({
-  src: "./_fonty/open-sans-latin-ext-wght-normal.woff2",
-  weight: "300 800",
-  display: "swap",
-  variable: "--font-open-sans-latin-ext",
-});
+// Pliki kroju Open Sans z public/fonty/, zadeklarowane w globals.css jako jedna rodzina z unicode-range.
+// Interfejs po polsku korzysta z obu podzbiorów, więc przeglądarka wczytuje oba z wyprzedzeniem.
+const plikiFontow = [
+  "/fonty/open-sans-latin-wght-normal.woff2",
+  "/fonty/open-sans-latin-ext-wght-normal.woff2",
+] as const;
 
 export const metadata: Metadata = {
   title: teksty.wspolne.nazwaAplikacji,
@@ -23,9 +16,13 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  for (const plik of plikiFontow) {
+    preload(plik, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  }
+
   return (
-    <html lang="pl" className={`${openSansLatin.variable} ${openSansLatinExt.variable}`}>
-      <body className="min-h-dvh bg-surface-page text-ink">{children}</body>
+    <html lang="pl">
+      <body className="min-h-dvh bg-surface-page font-sans text-ink">{children}</body>
     </html>
   );
 }

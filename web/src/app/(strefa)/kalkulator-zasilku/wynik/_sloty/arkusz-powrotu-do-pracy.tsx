@@ -20,10 +20,12 @@ import { ListaDefinicji } from '@/komponenty/lista-definicji';
 import { Arkusz } from '@/komponenty/okno';
 import { PoleDaty } from '@/komponenty/pole-tekstowe';
 import { Przycisk } from '@/komponenty/przycisk';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
 import { wyliczScenariusz } from '@/domena/kalkulatory';
-import type { CzescUrlopuRodzicielskiego, KodKomunikatu, ParametryScenariusza, RodzicWRodzinie } from '@/domena/typy';
+import type { CzescUrlopuRodzicielskiego, ParametryScenariusza, RodzicWRodzinie } from '@/domena/typy';
 import { teksty } from '@/teksty';
+import { KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA } from '../../_czesci/arkusz';
 import type { PropsArkuszaWyniku } from './typy';
 
 const t = teksty.SheetCalcReturnToWork;
@@ -58,9 +60,18 @@ function TrescArkuszaPowrotu({ daneWejsciowe: d, parametry: p, podstawy, wynik, 
   );
   const obecnaData = wynik.datyPowrotu[rodzic] ?? p.datyPowrotu[rodzic];
   const [tekst, ustawTekst] = useState(obecnaData ? formatujDate(obecnaData) : '');
-  const [blad, ustawBlad] = useState<{ kod: KodKomunikatu; parametr?: string } | null>(null);
 
   const ocena = zakres && tekst.trim() !== '' ? walidujDatePowrotu(tekst, zakres) : null;
+  // Pusta data nie ma błędu: przycisk Zapisz jest wtedy nieaktywny.
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { data: tekst },
+    waliduj: (w) => {
+      const r = zakres && w.data.trim() !== '' ? walidujDatePowrotu(w.data, zakres) : null;
+      return { data: r && 'kod' in r ? r.kod : null };
+    },
+    pola: { data: `${ID}-data` },
+  });
+  const parametrBledu = ocena && 'kod' in ocena ? ocena.parametr : undefined;
   const { zmiana, nowe } = useMemo(() => {
     const ocenaPola = zakres && tekst.trim() !== '' ? walidujDatePowrotu(tekst, zakres) : null;
     if (!zakres || !ocenaPola || !('data' in ocenaPola)) return { zmiana: null, nowe: null };
@@ -90,11 +101,7 @@ function TrescArkuszaPowrotu({ daneWejsciowe: d, parametry: p, podstawy, wynik, 
 
   const zapisz = () => {
     if (!zakres || !ocena) return;
-    if ('kod' in ocena) {
-      ustawBlad({ kod: ocena.kod, parametr: ocena.parametr });
-      document.getElementById(`${ID}-data`)?.focus();
-      return;
-    }
+    if (!walidacja.sprobujWyslac()) return;
     if (nowe) onZmianaParametrow(nowe);
     onZamknij();
   };
@@ -126,6 +133,7 @@ function TrescArkuszaPowrotu({ daneWejsciowe: d, parametry: p, podstawy, wynik, 
       otwarte
       onZamknij={onZamknij}
       tytul={t.tytulRodzica({ kto: kto.mianownik })}
+      className={KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA}
       opis={
         obecnaData
           ? czesciDrugiego.length > 0
@@ -144,12 +152,9 @@ function TrescArkuszaPowrotu({ daneWejsciowe: d, parametry: p, podstawy, wynik, 
             etykieta={t.pole}
             podpowiedz={t.zakres({ od: formatujDate(zakres.najwczesniej), do_: formatujDate(zakres.najpozniej) })}
             wartosc={tekst}
-            onZmiana={(w) => {
-              ustawTekst(w);
-              ustawBlad(null);
-            }}
-            blad={blad?.kod ?? null}
-            parametryBledu={blad?.parametr ? { data: formatujDate(blad.parametr) } : undefined}
+            onZmiana={ustawTekst}
+            {...walidacja.pole('data')}
+            parametryBledu={parametrBledu ? { data: formatujDate(parametrBledu) } : undefined}
           />
           {zmiana?.dopasowano ? <Komunikat kod="0245" parametry={{ data: formatujDate(zmiana.dataPowrotu) }} /> : null}
           {zmiana ? (

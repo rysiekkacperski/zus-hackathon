@@ -28,6 +28,39 @@ export interface ListaKrokowProps {
   className?: string;
 }
 
+/** Krok kreatora z liczbą części; część kroku liczy się w postępie jako osobny krok. */
+export interface KrokZCzesciami<I extends string = string> {
+  id: I;
+  /** Liczba części kroku, domyślnie 1. */
+  czesci?: number;
+}
+
+function liczbaCzesci(krok: KrokZCzesciami): number {
+  return Math.max(1, Math.trunc(krok.czesci ?? 1));
+}
+
+/** Liczba kroków w „Krok X z N”: suma części wszystkich kroków. */
+export function liczbaKrokow<I extends string>(kroki: readonly KrokZCzesciami<I>[]): number {
+  return kroki.reduce((suma, krok) => suma + liczbaCzesci(krok), 0);
+}
+
+/** Numer kroku w „Krok X z N” dla części kroku: części kroków wcześniejszych plus numer części; nieznany krok daje 1. */
+export function numerKroku<I extends string>(kroki: readonly KrokZCzesciami<I>[], idKroku: I, czesc = 1): number {
+  const indeks = kroki.findIndex((krok) => krok.id === idKroku);
+  if (indeks < 0) return 1;
+  const wczesniejsze = liczbaKrokow(kroki.slice(0, indeks));
+  return wczesniejsze + Math.min(Math.max(1, Math.trunc(czesc)), liczbaCzesci(kroki[indeks]));
+}
+
+/** Propsy `krok` i `liczbaKrokow` dla PostepKreatora: `<PostepKreatora {...postepKroku(KROKI, 'dane', czesci.czesc)} … />`. */
+export function postepKroku<I extends string>(
+  kroki: readonly KrokZCzesciami<I>[],
+  idKroku: I,
+  czesc = 1,
+): { krok: number; liczbaKrokow: number } {
+  return { krok: numerKroku(kroki, idKroku, czesc), liczbaKrokow: liczbaKrokow(kroki) };
+}
+
 const ikonaStanu: Record<StanKroku, NazwaIkony> = {
   gotowe: 'sukces',
   biezacy: 'krok-biezacy',
@@ -87,7 +120,7 @@ export function ListaKrokow({ kroki, id, className }: ListaKrokowProps) {
   return (
     <ol id={id} role="list" className={['m-0 grid list-none gap-6 p-0', className].filter(Boolean).join(' ')}>
       {kroki.map((k, i) => (
-        <li key={i} className="grid grid-cols-[36px_minmax(0,1fr)] items-start gap-x-4">
+        <li key={i} className="grid grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-x-4">
           <span
             aria-hidden="true"
             className="box-border grid size-day place-items-center rounded-full border border-ink-muted text-ink"

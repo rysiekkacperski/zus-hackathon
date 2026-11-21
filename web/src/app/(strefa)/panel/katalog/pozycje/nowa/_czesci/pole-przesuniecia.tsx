@@ -4,7 +4,7 @@
 import { JEDNOSTKI_PRZESUNIECIA, type JednostkaPrzesuniecia } from '@/domena/katalog/edycja';
 import type { KodKomunikatu } from '@/domena/typy';
 import { Ikona } from '@/komponenty/ikona';
-import { Pole, klasyOdstepuPolaWpisu, klasyPolaWpisu } from '@/komponenty/pole';
+import { Pole, klasyOdstepuPolaWpisu, klasyPolaWpisu, opuszczonoKontener } from '@/komponenty/pole';
 import { teksty } from '@/teksty';
 
 export interface PolePrzesunieciaProps {
@@ -13,7 +13,9 @@ export interface PolePrzesunieciaProps {
   jednostka: JednostkaPrzesuniecia;
   onZmianaWartosci: (wartosc: string) => void;
   onZmianaJednostki: (jednostka: JednostkaPrzesuniecia) => void;
-  blad?: KodKomunikatu;
+  /** Wyjście fokusu poza pole liczby i jednostkę: walidacja po opuszczeniu (useWalidacjaNaBiezaco). */
+  onOpuszczenie?: () => void;
+  blad?: KodKomunikatu | null;
 }
 
 export function PolePrzesuniecia({
@@ -22,13 +24,19 @@ export function PolePrzesuniecia({
   jednostka,
   onZmianaWartosci,
   onZmianaJednostki,
+  onOpuszczenie,
   blad,
 }: PolePrzesunieciaProps) {
   const t = teksty.ViewCatalogItemAdd.kanal;
   return (
     <Pole id={id} etykieta={t.przesuniecie} podpowiedz={t.podpowiedzPrzesuniecia} blad={blad ?? null} wymagane>
       {(aria) => (
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <div
+          className="flex min-w-0 flex-wrap items-center gap-3"
+          onBlur={(e) => {
+            if (onOpuszczenie && opuszczonoKontener(e)) onOpuszczenie();
+          }}
+        >
           <input
             {...aria}
             type="text"
@@ -44,7 +52,7 @@ export function PolePrzesuniecia({
               aria-label={t.jednostkaPrzesuniecia}
               value={jednostka}
               onChange={(e) => onZmianaJednostki(e.target.value as JednostkaPrzesuniecia)}
-              className={`${klasyPolaWpisu} cursor-pointer appearance-none pr-12 pl-3 focus:pr-[47px] focus:pl-[11px]`}
+              className={`${klasyPolaWpisu} cursor-pointer appearance-none pr-12 pl-3 focus:pr-[2.9375rem] focus:pl-[0.6875rem]`}
             >
               {JEDNOSTKI_PRZESUNIECIA.map((j) => (
                 <option key={j} value={j}>

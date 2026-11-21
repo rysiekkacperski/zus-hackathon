@@ -3,9 +3,9 @@
 // Część Profilu na start: wspólny szkielet kreatora (kontrakt 11.2, u07: postęp, lista kroków, przyciski).
 // Gospodarze: ekrany kreatora profilu u07, u10, u11, u19 (tryb profilu) i u24. Widok kroku renderuje nad
 // szkieletem NaglowekStrony (albo NaglowekKreatoraProfilu), a w szkielecie swoje karty z polami; walidację
-// i zapis szkicu wykonuje w onDalej. Szkielet pokazuje „Krok N z 7”, kartę „Kroki profilu” ze stanem kroków
-// i przyciski Wróć i Przejdź dalej (wzory cz1/P03-*), a przy montowaniu zapisuje ekran jako ostatni
-// wyświetlony ekran szkicu (wznowienie po ponownym otwarciu przewodnika).
+// i zapis szkicu wykonuje w onDalej. Szkielet pokazuje „Krok X z N” (każda część ekranu podzielonego na części
+// liczy się jako krok), kartę „Kroki profilu” ze stanem kroków i przyciski Wróć i Przejdź dalej (wzory cz1/P03-*),
+// a przy montowaniu zapisuje ekran jako ostatni wyświetlony ekran szkicu (wznowienie po ponownym otwarciu przewodnika).
 import { useEffect, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useStanKonta } from '@/dane/magazyn/hooki';
@@ -42,6 +42,10 @@ export interface SzkieletKreatoraProfiluProps {
   notatkiKrokow?: ReactNode;
   /** Bez zapisu ekranu jako ostatniego wyświetlonego ekranu szkicu. */
   bezZapisuEkranu?: boolean;
+  /** Bieżąca część ekranu podzielonego na części (useCzesciFormularza), od 1. */
+  czesc?: number;
+  /** Liczba części ekranu według odpowiedzi na ekranie; domyślnie według szkicu. */
+  liczbaCzesci?: number;
 }
 
 /** Nagłówek ekranów kreatora: tytuł „Profil na start” i wstęp ze wzorów, bez linku powrotu. */
@@ -85,6 +89,8 @@ export function SzkieletKreatoraProfilu({
   komunikat,
   notatkiKrokow,
   bezZapisuEkranu,
+  czesc,
+  liczbaCzesci,
 }: SzkieletKreatoraProfiluProps) {
   const stanKonta = useStanKonta();
   const parametry = useSearchParams();
@@ -98,7 +104,8 @@ export function SzkieletKreatoraProfilu({
     zapiszOstatniEkran(biezacy, pobierzKontekstOperacji(), powrotNaPodsumowanie);
   }, [biezacy, bezZapisuEkranu, powrotNaPodsumowanie]);
 
-  const krok = krokEkranu(szkic, biezacy);
+  const zDanymiZus = (stanKonta?.kopiaDanychZus ?? null) !== null;
+  const krok = krokEkranu(szkic, biezacy, { zgoda, zDanymiZus, czesc, liczbaCzesci });
   const kroki = krokiProfilu(szkic ?? SZKIC_PUSTY, zgoda, biezacy);
   const idPostepu = `postep-${biezacy}`;
 

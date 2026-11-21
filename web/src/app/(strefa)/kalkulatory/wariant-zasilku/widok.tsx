@@ -14,6 +14,7 @@ import { StanPusty } from '@/komponenty/stan-pusty';
 import { Tabela } from '@/komponenty/tabela';
 import { Ikona } from '@/komponenty/ikona';
 import { trasy } from '@/komponenty/rama/trasy';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useKontekstRodziny } from '@/dane/magazyn/hooki';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { zapiszDecyzjeWariantu } from '@/dane/magazyn/operacje/kalkulacje-decyzje';
@@ -28,7 +29,7 @@ import {
   tygodnieUrlopuMacierzynskiego,
   walidujDanePorownania,
 } from '@/domena/kalkulatory/wariant';
-import type { BledyPol, KodKomunikatu, PodstawaWymiaru } from '@/domena/typy';
+import type { KodKomunikatu, PodstawaWymiaru } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { ostatniePorownanie, podstawaZKontaZus, wybranyWariantSprawy } from '../_czesci/dane-kalkulatorow';
 import { KafleWariantow } from './_czesci/kafle-wariantow';
@@ -103,7 +104,14 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
 
   const [podstawaTekst, setPodstawaTekst] = useState('');
   const [tygodnieTekst, setTygodnieTekst] = useState(String(maks));
-  const [bledy, setBledy] = useState<BledyPol<'podstawa' | 'tygodnie'>>({});
+  // Podstawę wpisuje rodzic tylko wtedy, gdy kalkulator nie wyliczył jej z konta ZUS.
+  const ocen = (w: { podstawa: string; tygodnie: string }) =>
+    walidujDanePorownania({ podstawa: podstawaZus === null ? w.podstawa : undefined, tygodnie: w.tygodnie }, maks, parsujKwote);
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { podstawa: podstawaTekst, tygodnie: tygodnieTekst },
+    waliduj: (w) => ocen(w).bledy,
+    pola: { podstawa: 'podstawa', tygodnie: 'tygodnie' },
+  });
   const [wejscie, setWejscie] = useState<{ podstawa: PodstawaWymiaru; tygodnie: number } | null>(
     podstawaZus === null ? null : { podstawa: podstawaZus, tygodnie: maks },
   );
@@ -129,12 +137,8 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
   const poTerminie = wynik !== null && !wynik.szczegoly.wariant81Dostepny;
 
   function oblicz() {
-    const w = walidujDanePorownania({ podstawa: podstawaZus === null ? podstawaTekst : undefined, tygodnie: tygodnieTekst }, maks, parsujKwote);
-    setBledy(w.bledy);
-    if (w.bledy.podstawa || w.bledy.tygodnie) {
-      document.getElementById(w.bledy.podstawa ? 'podstawa' : 'tygodnie')?.focus();
-      return;
-    }
+    if (!walidacja.sprobujWyslac()) return;
+    const w = ocen({ podstawa: podstawaTekst, tygodnie: tygodnieTekst });
     const podstawa: PodstawaWymiaru = podstawaZus ?? { kwota: w.kwota as number, zrodlo: 'wartosc-wpisana-przez-rodzica' };
     setWejscie({ podstawa, tygodnie: w.tygodnie as number });
     setZapisano(null);
@@ -294,7 +298,7 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
                       podpowiedz={t.podstawaPodpowiedz}
                       wartosc={podstawaTekst}
                       onZmiana={setPodstawaTekst}
-                      blad={bledy.podstawa ?? null}
+                      {...walidacja.pole('podstawa')}
                       szerokosc="srednia"
                     />
                     {wejscie ? (
@@ -316,7 +320,7 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
                   podpowiedz={t.tygodniePodpowiedz({ maks, opis: opisDzieci, pelny: t.tygodnie(maks) })}
                   wartosc={tygodnieTekst}
                   onZmiana={setTygodnieTekst}
-                  blad={bledy.tygodnie ?? null}
+                  {...walidacja.pole('tygodnie')}
                   szerokosc="waska"
                 />
                 <div>

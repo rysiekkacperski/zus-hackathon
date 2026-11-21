@@ -2,7 +2,8 @@
 
 // Część Profilu na start (u10): wspólna obsługa kroku kreatora dla ViewProfilePregnancy, ViewProfileEmploymentChange
 // i ViewProfileFamily. Zapis szkicu przez `zapiszSzkic` (u07), kolejny i poprzedni ekran z `domena/profil/nawigacja` (u07),
-// zapamiętanie ostatniego wyświetlonego ekranu i fokus na pierwszym polu z błędem.
+// zapamiętanie ostatniego wyświetlonego ekranu i nawigacja z ładowaniem; powrót prowadzi do ostatniej części
+// poprzedniego ekranu.
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useDzis, useStanKonta } from '@/dane/magazyn/hooki';
@@ -11,7 +12,8 @@ import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { czyMaZgode } from '@/domena/konto';
 import { nastepnyEkran, poprzedniEkran } from '@/domena/profil/nawigacja';
 import type { DaneRodzica, IdWidoku, KodKomunikatu, SzkicProfilu } from '@/domena/typy';
-import { sciezkaWidoku } from '@/komponenty/rama/trasy';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
+import { sciezkaEkranuProfilu, sciezkaPowrotuProfilu } from '../../_czesci/trasy-profilu';
 
 const POPRZEDNI_BEZ_SZKICU: Partial<Record<IdWidoku, IdWidoku>> = {
   ViewProfilePregnancy: 'ViewProfileSituation',
@@ -31,23 +33,15 @@ export function daneMatkiZeSzkicu(szkic: SzkicProfilu | null): DaneRodzica {
   );
 }
 
-/** Ustawia fokus na pierwszym polu z błędem według kolejności pól na ekranie. */
-export function ustawFokusNaPierwszymBledzie<P extends string>(
-  kolejnosc: readonly (readonly [P, string])[],
-  bledy: Partial<Record<P, KodKomunikatu>>,
-) {
-  const pierwsze = kolejnosc.find(([pole]) => bledy[pole] !== undefined);
-  if (pierwsze) document.getElementById(pierwsze[1])?.focus();
-}
-
 export function useKrokProfilu(ekran: IdWidoku) {
   const router = useRouter();
   const stanKonta = useStanKonta();
   const dzis = useDzis();
   const [bladZapisu, ustawBladZapisu] = useState<KodKomunikatu | null>(null);
-  const [zajety, ustawZajety] = useState(false);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const szkic = stanKonta?.szkicProfilu ?? null;
   const zgoda = stanKonta ? czyMaZgode(stanKonta.konto.decyzjeOZgodzie) : false;
+  const zDanymiZus = (stanKonta?.kopiaDanychZus ?? null) !== null;
 
   // Ostatni wyświetlony ekran szkicu: po ponownym otwarciu przewodnika rodzic wraca na ten ekran.
   const ostatniEkran = szkic?.ostatniEkran;
@@ -71,16 +65,16 @@ export function useKrokProfilu(ekran: IdWidoku) {
       return;
     }
     ustawBladZapisu(null);
-    router.push(sciezkaWidoku(nastepnyEkran(wynik.wartosc, zgoda)));
+    przejdz(sciezkaEkranuProfilu(nastepnyEkran(wynik.wartosc, zgoda), wynik.wartosc));
   }
 
   function sciezkaPowrotu(): string {
-    if (szkic) return sciezkaWidoku(poprzedniEkran({ ...szkic, ostatniEkran: ekran }, zgoda));
-    return sciezkaWidoku(POPRZEDNI_BEZ_SZKICU[ekran] ?? 'ViewProfileSituation');
+    if (szkic) return sciezkaPowrotuProfilu(poprzedniEkran({ ...szkic, ostatniEkran: ekran }, zgoda), szkic, zDanymiZus);
+    return sciezkaPowrotuProfilu(POPRZEDNI_BEZ_SZKICU[ekran] ?? 'ViewProfileSituation', null, zDanymiZus);
   }
 
   function wroc() {
-    router.push(sciezkaPowrotu());
+    przejdz(sciezkaPowrotu());
   }
 
   return {
@@ -88,6 +82,7 @@ export function useKrokProfilu(ekran: IdWidoku) {
     stanKonta,
     szkic,
     zgoda,
+    zDanymiZus,
     dzis,
     bladZapisu,
     zajety,

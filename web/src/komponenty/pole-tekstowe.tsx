@@ -8,6 +8,7 @@ import {
   klasyPolaWpisu,
   klasyRamkiPolaWpisu,
   klasySzerokosciPola,
+  opuszczonoKontener,
   polaczOpisy,
   type AtrybutyPola,
   type BladPolaWartosc,
@@ -180,13 +181,20 @@ export function PoleHasla(props: PoleHaslaProps) {
   return (
     <OprawaPola props={props}>
       {(aria) => (
-        <span className={`relative block ${klasySzerokosciPola[szerokosc]}`}>
+        <span
+          className={`relative block ${klasySzerokosciPola[szerokosc]}`}
+          onBlur={(e) => {
+            // Przejście fokusu z pola na przycisk pokaż hasło nie jest opuszczeniem pola.
+            if (props.onOpuszczenie && opuszczonoKontener(e)) props.onOpuszczenie();
+          }}
+        >
           <input
             {...aria}
             {...atrybutyWpisu(props)}
+            onBlur={undefined}
             type={widoczne ? 'text' : 'password'}
             autoComplete={autoComplete}
-            className={`${klasyPolaWpisu} pl-3 pr-13 focus:pl-[11px]`}
+            className={`${klasyPolaWpisu} pl-3 pr-13 focus:pl-[0.6875rem]`}
           />
           <button
             type="button"
@@ -234,7 +242,7 @@ export function PoleTekstuDlugiego(props: PoleTekstuDlugiegoProps) {
           placeholder={props.placeholder}
           rows={wiersze}
           autoComplete={autoComplete}
-          className={`${klasyRamkiPolaWpisu} min-h-control resize-y px-3 py-2.5 focus:px-[11px] focus:py-[9px] ${klasySzerokosciPola[szerokosc]}`}
+          className={`${klasyRamkiPolaWpisu} min-h-control resize-y px-3 py-2.5 focus:px-[0.6875rem] focus:py-[0.5625rem] ${klasySzerokosciPola[szerokosc]}`}
         />
       )}
     </OprawaPola>

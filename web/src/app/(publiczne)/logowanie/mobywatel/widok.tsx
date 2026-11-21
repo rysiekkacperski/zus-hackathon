@@ -14,7 +14,7 @@ import { KartaKoduMakiety, useAkcjeMakiety } from '../_czesci/makieta-logowania'
 const tekst = teksty.ViewMobywatelLogin;
 
 export function WidokLogowaniaMobywatel() {
-  const { logowanie, potwierdz, przerwij } = useAkcjeMakiety('mobywatel');
+  const { logowanie, potwierdz, przerwij, zajety } = useAkcjeMakiety('mobywatel');
   // Kod losuje się raz na otwarcie ekranu; magazyn zapamiętuje go jako poprzedni kod tej karty.
   const [kod] = useState(() => nowyKodMobywatel(logowanie?.poprzedniKodMobywatel, losuj));
 
@@ -46,6 +46,7 @@ export function WidokLogowaniaMobywatel() {
         etykietaPrzerwania={tekst.przerwij}
         onPotwierdz={potwierdz}
         onPrzerwij={przerwij}
+        zajety={zajety}
       />
     </>
   );

@@ -18,6 +18,7 @@ import { czyZasilekMacierzynskiPrzysluguje } from '@/domena/przykladowe-sprawy/w
 import type { KodKomunikatu, SprawaPrzykladowa, WynikWeryfikacjiSprawy } from '@/domena/typy';
 import { useStanSesji } from '@/dane/magazyn/hooki';
 import { teksty } from '@/teksty';
+import { adresCzesciDanychSprawy } from '../_czesci/czesci-danych-sprawy';
 import { LegendaWynikow, ZnacznikPorownania, ZnacznikWarunku, ZIkona } from './_czesci/znacznik-wyniku';
 
 const T = teksty.ViewSampleCaseVerification;
@@ -72,7 +73,7 @@ function TekstRozstrzygniecia({ sprawa, swiadczenie }: { sprawa: SprawaPrzyklado
   );
 }
 
-function KomunikatyWeryfikacji({ wynik }: { wynik: WynikWeryfikacjiSprawy }) {
+function KomunikatyWeryfikacji({ sprawa, wynik }: { sprawa: SprawaPrzykladowa; wynik: WynikWeryfikacjiSprawy }) {
   const parametry = wynik.rozszerzenie?.parametryKomunikatow ?? {};
   return (
     <>
@@ -89,7 +90,7 @@ function KomunikatyWeryfikacji({ wynik }: { wynik: WynikWeryfikacjiSprawy }) {
           );
         }
         if (kod === '0180') {
-          return <Komunikat key={kod} kod="0180" akcje={<Odnosnik href={trasy.ViewSampleCaseData()}>{T.podajRozstrzygniecie}</Odnosnik>} />;
+          return <Komunikat key={kod} kod="0180" akcje={<Odnosnik href={adresCzesciDanychSprawy(sprawa, 'rozstrzygniecie')}>{T.podajRozstrzygniecie}</Odnosnik>} />;
         }
         if (kod === '0177' || kod === '0178' || kod === '0227') return <Komunikat key={kod} kod={kod} />;
         return null;
@@ -174,7 +175,7 @@ function KartaWyniku({ sprawa, wynik }: { sprawa: SprawaPrzykladowa; wynik: Wyni
           <PrzyciskLink href={trasy.ViewSampleCaseData()} wariant="drugorzedny">
             {T.wrocDoDanychSprawyPrzycisk}
           </PrzyciskLink>
-          <p className="m-0 min-w-0 flex-[1_1_280px] text-body">
+          <p className="m-0 min-w-0 flex-[1_1_17.5rem] text-body">
             {zm ? (zwzm ? T.opisSprawdzeniaZwzm : T.opisSprawdzenia) : T.opisBezSprawdzenia}
           </p>
         </div>
@@ -251,7 +252,7 @@ export function WidokWeryfikacjiSprawy() {
         }}
       />
       <Stos odstep={7.5} className="max-w-tresc">
-        <KomunikatyWeryfikacji wynik={wynik} />
+        <KomunikatyWeryfikacji sprawa={sprawa} wynik={wynik} />
         <KartaWyniku sprawa={sprawa} wynik={wynik} />
         <KartaWarunkow wynik={wynik} />
         <Notatka>{T.notaNiezaleznosc}</Notatka>

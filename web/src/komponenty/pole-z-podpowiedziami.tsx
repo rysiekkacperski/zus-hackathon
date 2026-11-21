@@ -21,6 +21,8 @@ export interface PoleZPodpowiedziamiProps<T> {
   etykietaPodpowiedzi: (p: T) => string;
   wybrana: T | null;
   onWybor: (p: T | null) => void;
+  /** Opuszczenie pola i wybór podpowiedzi: walidacja po opuszczeniu (useWalidacjaNaBiezaco). */
+  onOpuszczenie?: () => void;
   opisWybranej?: (p: T) => string;
   blad?: BladPolaWartosc;
   parametryBledu?: Record<string, string>;
@@ -42,6 +44,7 @@ export function PoleZPodpowiedziami<T>({
   etykietaPodpowiedzi,
   wybrana,
   onWybor,
+  onOpuszczenie,
   opisWybranej,
   blad,
   parametryBledu,
@@ -74,6 +77,7 @@ export function PoleZPodpowiedziami<T>({
     onZmianaTekstu(etykietaPodpowiedzi(p));
     setOtwarta(false);
     setAktywny(-1);
+    onOpuszczenie?.();
   }
 
   function zmienTekst(nowy: string) {
@@ -158,6 +162,7 @@ export function PoleZPodpowiedziami<T>({
               onBlur={() => {
                 setOtwarta(false);
                 setAktywny(-1);
+                onOpuszczenie?.();
               }}
               className={`${klasyPolaWpisu} ${klasyOdstepuPolaWpisu}`}
             />

@@ -32,7 +32,7 @@ import {
 } from '@/app/(strefa)/kalkulator-zasilku/porownanie/_czesci/reguly-kalkulatora';
 import { opisDzieci, opisFormy, useNazwyRodzicow } from '@/app/(strefa)/kalkulator-zasilku/porownanie/_czesci/rodzice';
 import { formatujDate, formatujKwote } from '@/komponenty/format';
-import { GrupaOpcji, idOpcjiGrupy } from '@/komponenty/grupa-opcji';
+import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Komunikat } from '@/komponenty/komunikat';
 import { ListaDefinicji } from '@/komponenty/lista-definicji';
 import { Arkusz } from '@/komponenty/okno';
@@ -41,11 +41,13 @@ import { PoleWyboru } from '@/komponenty/pole-wyboru';
 import { Przycisk } from '@/komponenty/przycisk';
 import { PrzyciskIkona } from '@/komponenty/przycisk-ikona';
 import { Tabela } from '@/komponenty/tabela';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
 import { dodajDni, liczbaDniWlacznie, parsujDate } from '@/domena/daty';
 import { ustalPrawoDoZasilku, wyliczScenariusz } from '@/domena/kalkulatory';
-import type { DataISO, FormaZatrudnienia, ParametryScenariusza, RodzicWRodzinie } from '@/domena/typy';
+import type { DataISO, FormaZatrudnienia, KodKomunikatu, ParametryScenariusza, RodzicWRodzinie } from '@/domena/typy';
 import { teksty } from '@/teksty';
+import { KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA } from '../../_czesci/arkusz';
 import type { PropsArkuszaWyniku } from './typy';
 
 const t = teksty.SheetCalcParentalParts;
@@ -85,12 +87,14 @@ function formularzZParametrow(p: ParametryScenariusza, k: KontekstPodzialu): For
   };
 }
 
-/** Klucze błędów w kolejności pól arkusza (fokus po nieudanym zapisie). */
-function kolejnoscBledow(f: FormularzPodzialu): string[] {
+/** Klucze błędów w kolejności pól arkusza i cel fokusu każdego pola po nieudanym zapisie. */
+function polaPodzialu(f: FormularzPodzialu | null): Record<string, string> {
+  if (f === null) return {};
   const klucze = ['dataUbezpieczenia', 'formaPoPorodzie'];
   f.czesci.forEach((_, i) => klucze.push(`czesc-${i}-rodzic`, `czesc-${i}-od`, `czesc-${i}-tygodnie`));
   klucze.push('czesci', 'ojcowski-0', 'ojcowski-1', 'sytuacja', 'dataPrzejecia', 'koniecPobytu');
-  return klucze;
+  // Grupa „sytuacja” dostaje fokus przez nazwę grupy radio, pozostałe pola przez identyfikator.
+  return Object.fromEntries(klucze.map((k) => [k, `${ID}-${k}`]));
 }
 
 export function ArkuszPodzialuUrlopow(props: PropsArkuszaWyniku) {
@@ -123,7 +127,13 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
   }, [d, p, wynik]);
 
   const [f, ustawF] = useState<FormularzPodzialu | null>(() => (kontekst ? formularzZParametrow(p, kontekst) : null));
-  const [bledy, ustawBledy] = useState<BledyPodzialu>({});
+  const [bladDodania, ustawBladDodania] = useState<KodKomunikatu | null>(null);
+  const walidacja = useWalidacjaNaBiezaco<string, FormularzPodzialu | null>({
+    wartosci: f,
+    waliduj: (w): BledyPodzialu => (kontekst && w ? walidujPodzial(w, kontekst) : {}),
+    pola: polaPodzialu(f),
+  });
+  const blad = (klucz: string) => walidacja.blad(klucz);
 
   const podglad = useMemo(() => {
     if (!kontekst || !f || Object.keys(walidujPodzial(f, kontekst)).length > 0) return null;
@@ -172,9 +182,11 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
     return t.zakresOdDniaPo({ do_ });
   };
 
+  const bladCzesci = bladDodania ?? blad('czesci');
+
   const dodajCzesc = () => {
     if (formularz.czesci.length >= MAKS_CZESCI_RODZICIELSKIEGO) {
-      ustawBledy({ ...bledy, czesci: '0096' });
+      ustawBladDodania('0096');
       return;
     }
     zmien({ czesci: [...formularz.czesci, { rodzic: '', od: '', tygodnie: '' }] });
@@ -182,25 +194,16 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
 
   const usunCzesc = (i: number) => {
     zmien({ czesci: formularz.czesci.filter((_, j) => j !== i) });
-    const { czesci: _pominiete, ...reszta } = bledy;
-    void _pominiete;
-    ustawBledy(reszta);
+    ustawBladDodania(null);
   };
 
   const zapisz = () => {
-    const nowe = walidujPodzial(formularz, k);
-    ustawBledy(nowe);
-    const pierwszy = kolejnoscBledow(formularz).find((klucz) => nowe[klucz] !== undefined);
-    if (pierwszy) {
-      const idPola = pierwszy === 'sytuacja' ? idOpcjiGrupy(`${ID}-sytuacja`, sytuacje[0]) : `${ID}-${pierwszy}`;
-      document.getElementById(idPola)?.focus();
-      return;
-    }
+    if (!walidacja.sprobujWyslac()) return;
     onZmianaParametrow(parametryZPodzialu(p, formularz, k));
     onZamknij();
   };
 
-  const parametryBledu = (kod: string | undefined): Record<string, string> | undefined => {
+  const parametryBledu = (kod: string | null): Record<string, string> | undefined => {
     if (kod === '0095') return { liczbaTygodni: String(k.wymiar) };
     if (kod === '0247') return { data: formatujDate(ostatniDzienPodjeciaUbezpieczenia(k.dataPorodu)) };
     return undefined;
@@ -229,6 +232,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
       onZamknij={onZamknij}
       tytul={t.tytul}
       szerokosc="szeroka"
+      className={KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA}
       opis={
         k.prawoMatki
           ? t.wstep({
@@ -279,7 +283,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
                     wartosc={c.rodzic}
                     onZmiana={(w) => zmienCzesc(i, { rodzic: w })}
                     pustaOpcja={t.wybierz}
-                    blad={bledy[`czesc-${i}-rodzic`]}
+                    {...walidacja.pole(`czesc-${i}-rodzic`)}
                     szerokosc="srednia"
                   />
                   <PoleDaty
@@ -287,15 +291,15 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
                     etykieta={t.dataPoczatku}
                     wartosc={c.od}
                     onZmiana={(w) => zmienCzesc(i, { od: w })}
-                    blad={bledy[`czesc-${i}-od`]}
+                    {...walidacja.pole(`czesc-${i}-od`)}
                   />
                   <PoleLiczby
                     id={`${ID}-czesc-${i}-tygodnie`}
                     etykieta={t.liczbaTygodni}
                     wartosc={c.tygodnie}
                     onZmiana={(w) => zmienCzesc(i, { tygodnie: w })}
-                    blad={bledy[`czesc-${i}-tygodnie`]}
-                    parametryBledu={parametryBledu(bledy[`czesc-${i}-tygodnie`])}
+                    {...walidacja.pole(`czesc-${i}-tygodnie`)}
+                    parametryBledu={parametryBledu(blad(`czesc-${i}-tygodnie`))}
                     szerokosc="waska"
                   />
                   <PrzyciskIkona
@@ -318,7 +322,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
             <Przycisk wariant="tlo" type="button" ikona="plus" onClick={dodajCzesc}>
               {t.dodajCzesc}
             </Przycisk>
-            {bledy.czesci ? <Komunikat kod={bledy.czesci} /> : null}
+            {bladCzesci ? <Komunikat kod={bladCzesci} /> : null}
           </div>
         </section>
 
@@ -345,8 +349,8 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
                     })}
                     wartosc={formularz.dataUbezpieczenia}
                     onZmiana={(w) => zmien({ dataUbezpieczenia: w, datyOjcowskiego: [w, formularz.datyOjcowskiego[1]] })}
-                    blad={bledy.dataUbezpieczenia}
-                    parametryBledu={parametryBledu(bledy.dataUbezpieczenia)}
+                    {...walidacja.pole('dataUbezpieczenia')}
+                    parametryBledu={parametryBledu(blad('dataUbezpieczenia'))}
                   />
                   <PoleWyboru<FormaZatrudnienia>
                     id={`${ID}-formaPoPorodzie`}
@@ -355,7 +359,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
                     wartosc={formularz.formaPoPorodzie}
                     onZmiana={(w) => zmien({ formaPoPorodzie: w })}
                     pustaOpcja={t.wybierz}
-                    blad={bledy.formaPoPorodzie}
+                    {...walidacja.pole('formaPoPorodzie')}
                   />
                 </div>
                 {!prawoDrugiego ? <p className="m-0 text-body">{t.bezDatyUbezpieczenia({ kogo: drugi.dopelniacz })}</p> : null}
@@ -404,7 +408,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
                           daty[i] = w;
                           zmien({ datyOjcowskiego: daty });
                         }}
-                        blad={bledy[`ojcowski-${i}`]}
+                        {...walidacja.pole(`ojcowski-${i}`)}
                       />
                       {od ? (
                         <p className="m-0 text-small text-ink-muted">
@@ -445,7 +449,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
                   opcje={sytuacje.map((w) => ({ wartosc: w, etykieta: t.sytuacje[w] }))}
                   wartosc={formularz.sytuacja === '' ? null : formularz.sytuacja}
                   onZmiana={(w) => zmien({ sytuacja: w })}
-                  blad={bledy.sytuacja}
+                  {...walidacja.pole('sytuacja')}
                   uklad="proste"
                 />
                 {opisZakresuPrzejecia() ? <p className="m-0 text-small text-ink-muted">{opisZakresuPrzejecia()}</p> : null}
@@ -454,7 +458,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
                   etykieta={t.dataPrzejecia}
                   wartosc={formularz.dataPrzejecia}
                   onZmiana={(w) => zmien({ dataPrzejecia: w })}
-                  blad={bledy.dataPrzejecia}
+                  {...walidacja.pole('dataPrzejecia')}
                 />
                 {formularz.sytuacja === 'szpital' ? (
                   <PoleDaty
@@ -462,7 +466,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
                     etykieta={t.koniecPobytu}
                     wartosc={formularz.koniecPobytu}
                     onZmiana={(w) => zmien({ koniecPobytu: w })}
-                    blad={bledy.koniecPobytu}
+                    {...walidacja.pole('koniecPobytu')}
                   />
                 ) : null}
                 {okresPrzejetej ? (

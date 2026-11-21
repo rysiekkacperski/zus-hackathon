@@ -1,6 +1,7 @@
 // Formularz danych wejściowych kalkulatora zasiłku macierzyńskiego (ViewCalcMaternityInput, u15).
 // Czyste funkcje: uzupełnienie z profilu rodziny i konta ZUS, walidacja pól, budowa danych wejściowych silnika.
 import { dodajDni, dodajLata, dodajMiesiace, formatujDate, parsujDate, porownajDaty } from '@/domena/daty';
+import { walidujDaneWejsciowe } from '@/domena/kalkulatory';
 import { plecZPesel } from '@/domena/pesel';
 import { proponujFormeZatrudnienia } from '@/domena/profil/forma-zatrudnienia';
 import { wiekGraniczny } from '@/domena/rodzina/przyjecie';
@@ -461,6 +462,26 @@ export function walidujFormularz(f: FormularzKalkulatora, dzis: DataISO, katalog
 
 export function czyPoprawny(w: WynikWalidacji): boolean {
   return Object.keys(w.bledy).length === 0 && Object.keys(w.informacje).length === 0;
+}
+
+/**
+ * Kody pól do walidacji na bieżąco: błędy z walidacji formularza, komunikaty INFO, które zatrzymują wyliczenie
+ * (0091, 0092), a przy poprawnym formularzu błędy silnika kalkulatora. Widok pokazuje kod INFO komunikatem pod polem.
+ */
+export function bledyFormularza(f: FormularzKalkulatora, dzis: DataISO, katalog: Katalog): BledyPol<PoleFormularza> {
+  const w = walidujFormularz(f, dzis, katalog);
+  const bledy: BledyPol<PoleFormularza> = { ...w.bledy };
+  for (const p of KOLEJNOSC_POL) {
+    const informacja = w.informacje[p];
+    if (informacja && !bledy[p]) bledy[p] = informacja.kod;
+  }
+  if (!czyPoprawny(w)) return bledy;
+  const dane = zbudujDaneWejsciowe(f);
+  if (dane === null) return bledy;
+  for (const [klucz, kod] of Object.entries(walidujDaneWejsciowe(dane, dzis))) {
+    if (kod && (KOLEJNOSC_POL as readonly string[]).includes(klucz)) bledy[klucz as PoleFormularza] = kod;
+  }
+  return bledy;
 }
 
 /** Dane wejściowe silnika kalkulatora z poprawnego formularza. */

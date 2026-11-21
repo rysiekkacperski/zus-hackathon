@@ -216,7 +216,7 @@ export function PanelAsystenta({ id, otwarty, onZamknij }: PanelAsystentaProps) 
       aria-labelledby={idTytulu}
       hidden={!otwarty}
       onKeyDown={obsluzKlawisz}
-      className="fixed inset-0 z-40 box-border flex flex-col overflow-hidden bg-surface-card md:inset-auto md:right-6 md:bottom-6 md:z-25 md:max-h-[calc(100vh-128px)] md:w-panel-asystenta md:max-w-[calc(100vw-48px)] md:rounded-sm md:border md:border-line"
+      className="fixed inset-0 z-40 box-border flex flex-col overflow-hidden bg-surface-card md:inset-auto md:right-6 md:bottom-6 md:z-25 md:max-h-[calc(100vh-8rem)] md:w-panel-asystenta md:max-w-[calc(100vw-3rem)] md:rounded-sm md:border md:border-line"
     >
       <div className="flex flex-none items-center gap-3 bg-brand py-3 pr-4 pl-5 text-on-brand">
         <span aria-hidden="true" className="grid size-toggle flex-none place-items-center rounded-full bg-surface-card text-brand">

@@ -37,7 +37,7 @@ export function PoleWyszukiwania({
         aria-controls={steruje}
         autoComplete="off"
         onChange={(e) => onZmiana(e.target.value)}
-        className={`${klasyPolaWpisu} pr-3 pl-12 focus:pr-[11px] focus:pl-[47px]`}
+        className={`${klasyPolaWpisu} pr-3 pl-12 focus:pr-[0.6875rem] focus:pl-[2.9375rem]`}
       />
     </label>
   );

@@ -21,17 +21,24 @@ import { PoleLiczby } from '@/komponenty/pole-tekstowe';
 import { PoleWyboru } from '@/komponenty/pole-wyboru';
 import { Przycisk } from '@/komponenty/przycisk';
 import { Tabela } from '@/komponenty/tabela';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
 import { porownajDaty } from '@/domena/daty';
 import { wyliczScenariusz } from '@/domena/kalkulatory';
-import type { BledyPol, RodzicWRodzinie } from '@/domena/typy';
+import type { RodzicWRodzinie } from '@/domena/typy';
 import { teksty } from '@/teksty';
+import { KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA } from '../../_czesci/arkusz';
 import type { PropsArkuszaWyniku } from './typy';
 
 const t = teksty.SheetCalcWorkCombination;
 const tTygodnie = teksty.SheetCalcParentalParts.tygodnie;
 const ID = 'laczenie';
-const KOLEJNOSC: (keyof FormularzLaczenia)[] = ['indeksCzesci', 'tygodnie', 'wymiarPracy'];
+// Kolejność pól i cel fokusu po nieudanym zapisie.
+const POLA: Record<keyof FormularzLaczenia, string> = {
+  indeksCzesci: `${ID}-indeksCzesci`,
+  tygodnie: `${ID}-tygodnie`,
+  wymiarPracy: `${ID}-wymiarPracy`,
+};
 
 export function ArkuszLaczeniaZPraca(props: PropsArkuszaWyniku) {
   if (!props.otwarte) return null;
@@ -71,9 +78,12 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
     tygodnie: p.laczenie ? String(p.laczenie.tygodnie) : '',
     wymiarPracy: p.laczenie ? String(p.laczenie.wymiarPracy) : '',
   }));
-  const [bledy, ustawBledy] = useState<BledyPol<keyof FormularzLaczenia>>({});
-
   const czesciPracownikow = p.czesciRodzicielskiego.map((c) => (pracownicy.includes(c.rodzic) ? c : { ...c, tygodnie: 0 }));
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: f,
+    waliduj: (w) => walidujLaczenie(w, czesciPracownikow),
+    pola: POLA,
+  });
   const poprawny = Object.keys(walidujLaczenie(f, czesciPracownikow)).length === 0;
   const indeks = Number(f.indeksCzesci);
   const tygodnie = liczbaCalkowita(f.tygodnie) ?? 0;
@@ -115,13 +125,7 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
   const ktoPracuje = nazwy[czesc?.rodzic ?? pracownicy[0] ?? 'matka'].mianownik;
 
   const zapisz = () => {
-    const nowe = walidujLaczenie(f, czesciPracownikow);
-    ustawBledy(nowe);
-    const pierwszy = KOLEJNOSC.find((k) => nowe[k] !== undefined);
-    if (pierwszy) {
-      document.getElementById(`${ID}-${pierwszy}`)?.focus();
-      return;
-    }
+    if (!walidacja.sprobujWyslac()) return;
     onZmianaParametrow({ ...p, laczenie: { indeksCzesci: indeks, tygodnie, wymiarPracy: wymiar } });
     onZamknij();
   };
@@ -141,14 +145,22 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
 
   if (pracownicy.length === 0) {
     return (
-      <Arkusz otwarte onZamknij={onZamknij} tytul={t.tytul} stopka={stopka}>
+      <Arkusz otwarte onZamknij={onZamknij} tytul={t.tytul} stopka={stopka} className={KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA}>
         <Komunikat kod="0099" />
       </Arkusz>
     );
   }
 
   return (
-    <Arkusz otwarte onZamknij={onZamknij} tytul={t.tytul} szerokosc="szeroka" opis={t.wstep({ kto: ktoPracuje })} stopka={stopka}>
+    <Arkusz
+      otwarte
+      onZamknij={onZamknij}
+      tytul={t.tytul}
+      szerokosc="szeroka"
+      opis={t.wstep({ kto: ktoPracuje })}
+      stopka={stopka}
+      className={KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA}
+    >
       <div className="flex flex-col gap-5">
         {opcje.length === 0 ? (
           <p className="m-0 text-body">{t.brakCzesci}</p>
@@ -165,7 +177,7 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
               wartosc={f.indeksCzesci}
               onZmiana={(w) => ustawF({ ...f, indeksCzesci: w })}
               pustaOpcja={t.wybierz}
-              blad={bledy.indeksCzesci}
+              {...walidacja.pole('indeksCzesci')}
             />
             <div className="flex flex-wrap items-start gap-4">
               <PoleLiczby
@@ -173,7 +185,7 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
                 etykieta={t.tygodnie}
                 wartosc={f.tygodnie}
                 onZmiana={(w) => ustawF({ ...f, tygodnie: w })}
-                blad={bledy.tygodnie}
+                {...walidacja.pole('tygodnie')}
                 szerokosc="waska"
               />
               <PoleLiczby
@@ -181,7 +193,7 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
                 etykieta={t.wymiarPracy}
                 wartosc={f.wymiarPracy}
                 onZmiana={(w) => ustawF({ ...f, wymiarPracy: w })}
-                blad={bledy.wymiarPracy}
+                {...walidacja.pole('wymiarPracy')}
                 szerokosc="waska"
               />
             </div>

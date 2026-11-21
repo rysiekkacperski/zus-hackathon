@@ -2,22 +2,26 @@
 
 // ViewFatherTakeover (u34, Stories 3.9.2.1.2 i 3.9.2.2.1) w dwóch trybach: wniosek ojca pracownika do pracodawcy
 // i krok kreatora ZAM „urlop macierzyński przejęty od matki”. Wzory: cz2/P25-14 … P25-16, P25-21 … P25-23.
+// Formularz ma części: przyczyna przejęcia, okres urlopu i załączniki (gdy przyczyna ich wymaga).
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { GrupaOpcji, idOpcjiGrupy } from '@/komponenty/grupa-opcji';
+import { PrzyciskiCzesci, useCzesciFormularza } from '@/komponenty/czesci-formularza';
+import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { PoleDaty, PoleLiczby } from '@/komponenty/pole-tekstowe';
 import { PoleZaznaczenia } from '@/komponenty/pole-zaznaczenia';
-import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
+import { PrzyciskLink } from '@/komponenty/przycisk';
 import { UkladDwuKolumnowy } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { formatujDate } from '@/komponenty/format';
 import type { TrybWidoku } from '@/komponenty/rama/mapa-tras';
 import { trasy } from '@/komponenty/rama/trasy';
 import { dodajDni, parsujDate } from '@/domena/daty';
-import type { KodKomunikatu, PlikZalacznika, WniosekOUrlop, WniosekZam } from '@/domena/typy';
+import type { BledyPol, KodKomunikatu, PlikZalacznika, StanKonta, WniosekOUrlop, WniosekZam } from '@/domena/typy';
 import {
   czyObjetyChorobowym,
   dniPrzedPorodemZWnioskow,
@@ -41,7 +45,7 @@ import {
   zalacznikiZamOjca,
   type PrzyczynaPrzejecia,
 } from '@/domena/wnioski/przejecie';
-import { useKontekstRodziny, useStanKontaOsoby } from '@/dane/magazyn/hooki';
+import { useKontekstRodziny, useStanKontaOsoby, type KontekstRodziny } from '@/dane/magazyn/hooki';
 import { osobyRodziny } from '@/dane/magazyn/stan';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
@@ -66,7 +70,40 @@ const ID_DATY = 'data-przejecia';
 const ID_DNI = 'dni-przed-porodem';
 const NAZWA_PRZYCZYNY = 'przyczyna';
 
-type Bledy = Partial<Record<'przyczyna' | 'data' | 'dni', KodKomunikatu>>;
+type PolePrzejecia = 'przyczyna' | 'data' | 'dni';
+
+interface FormularzPrzejecia {
+  przyczyna: PrzyczynaPrzejecia | null;
+  data: string;
+  dni: string;
+}
+
+/** Dane wejściowe formularza z profilu rodziny, wniosków i parametrów adresu. */
+function wejsciePrzejecia(kontekst: KontekstRodziny, sytuacjaZAdresu: string | null, dataZAdresu: string | null) {
+  const { daneRodziny, daneCiazy, wnioski } = kontekst.rodzina;
+  const rezygnacja = wyslanaRezygnacja(wnioski);
+  const propozycja = proponujPrzejecie(daneCiazy, rezygnacja);
+  if (czyPrzyczynaPrzejecia(sytuacjaZAdresu)) {
+    propozycja.przyczyna = sytuacjaZAdresu;
+    propozycja.zrodloPrzyczyny = 'profil-rodziny';
+    const data = dataZAdresu ? (parsujDate(dataZAdresu) ?? (/^\d{4}-\d{2}-\d{2}$/.test(dataZAdresu) ? dataZAdresu : null)) : null;
+    if (data) propozycja.dataZdarzenia = data;
+  }
+  const dataPorodu = daneCiazy?.dataPorodu ?? null;
+  const dniPrzedZWniosku = dataPorodu ? dniPrzedPorodemZWnioskow(wnioski, dataPorodu) : 0;
+  const wniosekPrzedPorodem = dataPorodu && dniPrzedZWniosku > 0 ? dodajDni(dataPorodu, -dniPrzedZWniosku) : null;
+  return {
+    otwarcie: otworzPrzejecie(daneRodziny, daneCiazy),
+    rezygnacja,
+    propozycja,
+    dataPorodu,
+    dniPrzedZWniosku,
+    wniosekPrzedPorodem,
+    matkaUbezpieczona: czyObjetyChorobowym(daneRodziny.matka.formaZatrudnienia?.wartosc, daneRodziny.matka.dobrowolneChorobowe?.wartosc),
+  };
+}
+
+type WejsciePrzejecia = ReturnType<typeof wejsciePrzejecia>;
 
 export function WidokPrzejeciaUrlopu({ tryb }: { tryb: TrybWidoku<'ViewFatherTakeover'> }) {
   const kontekst = useKontekstRodziny();
@@ -92,62 +129,12 @@ export function WidokPrzejeciaUrlopu({ tryb }: { tryb: TrybWidoku<'ViewFatherTak
   }, [rodzina, zam, idWnioskuZAdresu]);
   const idSprawy = parametry.get('sprawa') ?? wniosekPracownika?.idSprawy ?? wniosekZam?.idSprawy ?? 'K10';
 
-  const wejscie = useMemo(() => {
-    if (!kontekst) return null;
-    const { daneRodziny, daneCiazy, wnioski } = kontekst.rodzina;
-    const rezygnacja = wyslanaRezygnacja(wnioski);
-    const propozycja = proponujPrzejecie(daneCiazy, rezygnacja);
-    const sytuacjaZAdresu = parametry.get('sytuacja');
-    const dataZAdresu = parametry.get('data');
-    if (czyPrzyczynaPrzejecia(sytuacjaZAdresu)) {
-      propozycja.przyczyna = sytuacjaZAdresu;
-      propozycja.zrodloPrzyczyny = 'profil-rodziny';
-      const data = dataZAdresu ? (parsujDate(dataZAdresu) ?? (/^\d{4}-\d{2}-\d{2}$/.test(dataZAdresu) ? dataZAdresu : null)) : null;
-      if (data) propozycja.dataZdarzenia = data;
-    }
-    const dataPorodu = daneCiazy?.dataPorodu ?? null;
-    const dniPrzedZWniosku = dataPorodu ? dniPrzedPorodemZWnioskow(wnioski, dataPorodu) : 0;
-    const wniosekPrzedPorodem = dataPorodu && dniPrzedZWniosku > 0 ? dodajDni(dataPorodu, -dniPrzedZWniosku) : null;
-    return {
-      otwarcie: otworzPrzejecie(daneRodziny, daneCiazy),
-      rezygnacja,
-      propozycja,
-      dataPorodu,
-      dniPrzedZWniosku,
-      wniosekPrzedPorodem,
-      matkaUbezpieczona: czyObjetyChorobowym(daneRodziny.matka.formaZatrudnienia?.wartosc, daneRodziny.matka.dobrowolneChorobowe?.wartosc),
-    };
-  }, [kontekst, parametry]);
-
-  const zapisaneOjca = wniosekPracownika?.wniosekOjca;
-  const zapisaneZam = wniosekZam?.przejecie;
-  const zapisanyOkres = (wniosekPracownika?.okresy ?? wniosekZam?.okresy ?? [])[0];
-  const przyczynaPoczatkowa: PrzyczynaPrzejecia | null = (() => {
-    const zapisana = zapisaneOjca?.przyczyna ?? zapisaneZam?.przyczyna;
-    if (czyPrzyczynaPrzejecia(zapisana)) return zapisana;
-    return wejscie?.propozycja.przyczyna ?? null;
-  })();
-
-  const [przyczyna, setPrzyczyna] = useState<PrzyczynaPrzejecia | null>(przyczynaPoczatkowa);
-  const [tekstDaty, setTekstDaty] = useState(() => {
-    const zapisanaData = zapisaneOjca?.dataZdarzenia ?? zapisaneZam?.dataZdarzenia;
-    if (przyczynaPoczatkowa === 'rezygnacja') {
-      const d = zapisanyOkres?.od ?? wejscie?.propozycja.dataPoczatku;
-      return d ? formatujDate(d) : '';
-    }
-    const d = zapisanaData ?? wejscie?.propozycja.dataZdarzenia;
-    return d ? formatujDate(d) : '';
-  });
-  const [tekstDni, setTekstDni] = useState(() =>
-    String(zapisaneOjca?.dniPrzedPorodem ?? wejscie?.dniPrzedZWniosku ?? 0),
+  const sytuacjaZAdresu = parametry.get('sytuacja');
+  const dataZAdresu = parametry.get('data');
+  const wejscie = useMemo(
+    () => (kontekst ? wejsciePrzejecia(kontekst, sytuacjaZAdresu, dataZAdresu) : null),
+    [kontekst, sytuacjaZAdresu, dataZAdresu],
   );
-  const [zobowiazanie, setZobowiazanie] = useState(zapisaneOjca?.zobowiazanieOWypisie ?? true);
-  const [pliki, setPliki] = useState<Record<string, PlikZalacznika>>(() =>
-    plikiZeSzkicu(wniosekPracownika?.zalaczniki ?? wniosekZam?.zalaczniki),
-  );
-  const [bledy, setBledy] = useState<Bledy>({});
-  const [bladOperacji, setBladOperacji] = useState<KodKomunikatu | null>(null);
-  const [zajety, setZajety] = useState(false);
 
   const przekierowanie = wejscie?.otwarcie.cel;
   useEffect(() => {
@@ -202,9 +189,78 @@ export function WidokPrzejeciaUrlopu({ tryb }: { tryb: TrybWidoku<'ViewFatherTak
     );
   }
 
+  return (
+    <FormularzPrzejeciaUrlopu
+      kontekst={kontekst}
+      wejscie={wejscie}
+      dataPorodu={wejscie.dataPorodu}
+      zam={zam}
+      wniosekPracownika={wniosekPracownika}
+      wniosekZam={wniosekZam}
+      idSprawy={idSprawy}
+      naglowek={naglowek}
+      powrot={powrot}
+      stanMatki={stanMatki}
+    />
+  );
+}
+
+interface FormularzPrzejeciaUrlopuProps {
+  kontekst: KontekstRodziny;
+  wejscie: WejsciePrzejecia;
+  dataPorodu: string;
+  zam: boolean;
+  wniosekPracownika: WniosekOUrlop | null;
+  wniosekZam: WniosekZam | null;
+  idSprawy: string;
+  naglowek: string;
+  powrot: { href: string; etykieta: string };
+  stanMatki: StanKonta | null;
+}
+
+function FormularzPrzejeciaUrlopu({
+  kontekst,
+  wejscie,
+  dataPorodu,
+  zam,
+  wniosekPracownika,
+  wniosekZam,
+  idSprawy,
+  naglowek,
+  powrot,
+  stanMatki,
+}: FormularzPrzejeciaUrlopuProps) {
+  const router = useRouter();
+  const pesel = kontekst.konto.pesel;
+  const zapisaneOjca = wniosekPracownika?.wniosekOjca;
+  const zapisaneZam = wniosekZam?.przejecie;
+  const zapisanyOkres = (wniosekPracownika?.okresy ?? wniosekZam?.okresy ?? [])[0];
+  const przyczynaPoczatkowa: PrzyczynaPrzejecia | null = (() => {
+    const zapisana = zapisaneOjca?.przyczyna ?? zapisaneZam?.przyczyna;
+    if (czyPrzyczynaPrzejecia(zapisana)) return zapisana;
+    return wejscie.propozycja.przyczyna ?? null;
+  })();
+
+  const [przyczyna, setPrzyczyna] = useState<PrzyczynaPrzejecia | null>(przyczynaPoczatkowa);
+  const [tekstDaty, setTekstDaty] = useState(() => {
+    const zapisanaData = zapisaneOjca?.dataZdarzenia ?? zapisaneZam?.dataZdarzenia;
+    if (przyczynaPoczatkowa === 'rezygnacja') {
+      const d = zapisanyOkres?.od ?? wejscie.propozycja.dataPoczatku;
+      return d ? formatujDate(d) : '';
+    }
+    const d = zapisanaData ?? wejscie.propozycja.dataZdarzenia;
+    return d ? formatujDate(d) : '';
+  });
+  const [tekstDni, setTekstDni] = useState(() => String(zapisaneOjca?.dniPrzedPorodem ?? wejscie.dniPrzedZWniosku ?? 0));
+  const [zobowiazanie, setZobowiazanie] = useState(zapisaneOjca?.zobowiazanieOWypisie ?? true);
+  const [pliki, setPliki] = useState<Record<string, PlikZalacznika>>(() =>
+    plikiZeSzkicu(wniosekPracownika?.zalaczniki ?? wniosekZam?.zalaczniki),
+  );
+  const [bladOperacji, setBladOperacji] = useState<KodKomunikatu | null>(null);
+  const { zajety, ustawZajety: setZajety, przejdz } = useNawigacjaZLadowaniem();
+
   const { daneRodziny, daneCiazy } = kontekst.rodzina;
   const dzis = kontekst.dzis;
-  const dataPorodu = wejscie.dataPorodu;
   const liczbaDzieci = daneCiazy?.liczbaUrodzonychDzieci ?? 1;
   const formaOjca = daneRodziny.drugiRodzic.formaZatrudnienia?.wartosc;
   const pracownik = !zam && formaOjca === 'umowa-o-prace';
@@ -216,28 +272,50 @@ export function WidokPrzejeciaUrlopu({ tryb }: { tryb: TrybWidoku<'ViewFatherTak
   const sytuacja = przyczyna !== null && przyczyna !== 'rezygnacja' ? przyczyna : null;
   const zakresZdarzenia = sytuacja ? zakresDatyZdarzenia(sytuacja, dataPorodu, dzis, matkaUbezpieczona) : null;
 
-  function sprawdzDate(): { okres: ReturnType<typeof wyliczOkresPrzejecia> | null; kod?: KodKomunikatu; data?: string } {
-    if (przyczyna === null) return { okres: null };
-    if (przyczyna === 'rezygnacja') {
-      if (tekstDaty.trim() === '') return { okres: null, kod: '0201' };
-      const data = parsujDate(tekstDaty);
+  function sprawdzDate(
+    przyczynaFormularza: PrzyczynaPrzejecia | null,
+    tekst: string,
+  ): { okres: ReturnType<typeof wyliczOkresPrzejecia> | null; kod?: KodKomunikatu; data?: string } {
+    if (przyczynaFormularza === null) return { okres: null };
+    if (przyczynaFormularza === 'rezygnacja') {
+      if (tekst.trim() === '') return { okres: null, kod: '0201' };
+      const data = parsujDate(tekst);
       if (data === null) return { okres: null, kod: '0010' };
-      const okres = wyliczOkresPrzejecia({ przyczyna, data, urlop, matkaUbezpieczona });
+      const okres = wyliczOkresPrzejecia({ przyczyna: przyczynaFormularza, data, urlop, matkaUbezpieczona });
       return 'kod' in okres ? { okres: null, kod: okres.kod } : { okres, data };
     }
-    const wynik = walidujDateZdarzenia(tekstDaty, zakresZdarzenia ?? { do: dzis });
+    const zakres = zakresDatyZdarzenia(przyczynaFormularza, dataPorodu, dzis, matkaUbezpieczona);
+    const wynik = walidujDateZdarzenia(tekst, zakres ?? { do: dzis });
     if ('kod' in wynik) return { okres: null, kod: wynik.kod };
     const okres = wyliczOkresPrzejecia({
-      przyczyna,
+      przyczyna: przyczynaFormularza,
       data: wynik.data,
       urlop,
       matkaUbezpieczona,
-      dataPowrotuMatki: wejscie?.rezygnacja?.rezygnacja?.dataPowrotu,
+      dataPowrotuMatki: wejscie.rezygnacja?.rezygnacja?.dataPowrotu,
     });
     return 'kod' in okres ? { okres: null, kod: okres.kod } : { okres, data: wynik.data };
   }
 
-  const biezacy = sprawdzDate();
+  /** Błędy pól: przyczyna (0006), data (0201, 0010 i kody zakresu), dni przed porodem (0202). */
+  function walidujPrzejecie(f: FormularzPrzejecia): BledyPol<PolePrzejecia> {
+    const bledy: BledyPol<PolePrzejecia> = {};
+    if (f.przyczyna === null) bledy.przyczyna = '0006';
+    const wynikDaty = sprawdzDate(f.przyczyna, f.data);
+    if (f.przyczyna !== null && wynikDaty.kod) bledy.data = wynikDaty.kod;
+    const dniWynik = walidujDniPrzedPorodem(f.dni);
+    if ('kod' in dniWynik) bledy.dni = dniWynik.kod;
+    return bledy;
+  }
+
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { przyczyna, data: tekstDaty, dni: tekstDni },
+    waliduj: walidujPrzejecie,
+    pola: { przyczyna: NAZWA_PRZYCZYNY, data: ID_DATY, dni: ID_DNI },
+  });
+  const bledy = walidacja.bledy;
+
+  const biezacy = sprawdzDate(przyczyna, tekstDaty);
   const okres = biezacy.okres && !('kod' in biezacy.okres) ? biezacy.okres : null;
   const ostrzezenie0208 =
     przyczyna === 'rezygnacja' && okres && pracownik ? ostrzezenieTerminuWnioskuOjca(okres.od, dzis, formaOjca) : null;
@@ -248,6 +326,10 @@ export function WidokPrzejeciaUrlopu({ tryb }: { tryb: TrybWidoku<'ViewFatherTak
       : zalacznikiWnioskuOjca(przyczyna)
     : [];
   const zalaczniki: PozycjaZalacznika[] = rodzajeZalacznikow.map((r) => ({ rodzaj: r, tytul: t.zalaczniki[r] }));
+
+  // Części: 1. przyczyna przejęcia, 2. okres urlopu, 3. załączniki (gdy przyczyna ich wymaga).
+  const podzial: PolePrzejecia[][] = zalaczniki.length > 0 ? [['przyczyna'], ['data', 'dni'], []] : [['przyczyna'], ['data', 'dni']];
+  const czesci = useCzesciFormularza({ liczba: podzial.length, podzial, walidacja });
 
   const kontoMatki = stanMatki?.konto ?? null;
   const zusMatki = kontekst.daneZusMatki;
@@ -260,26 +342,10 @@ export function WidokPrzejeciaUrlopu({ tryb }: { tryb: TrybWidoku<'ViewFatherTak
   const matkaDopelniacz = kontoMatki?.imieINazwiskoDopelniacz ?? imieMatki;
   const konto = kontekst.konto;
 
+  /** Akcja ostatniej części: zapis szkicu wniosku i przejście do następnego kroku. */
   function przejdzDalej() {
-    const nowe: Bledy = {};
-    if (przyczyna === null) nowe.przyczyna = '0006';
-    const wynikDaty = sprawdzDate();
-    if (przyczyna !== null && wynikDaty.kod) nowe.data = wynikDaty.kod;
+    const wynikDaty = sprawdzDate(przyczyna, tekstDaty);
     const dniWynik = walidujDniPrzedPorodem(tekstDni);
-    if ('kod' in dniWynik) nowe.dni = dniWynik.kod;
-    setBledy(nowe);
-    if (nowe.przyczyna) {
-      document.getElementById(idOpcjiGrupy(NAZWA_PRZYCZYNY, PRZYCZYNY_PRZEJECIA[0]))?.focus();
-      return;
-    }
-    if (nowe.data) {
-      document.getElementById(ID_DATY)?.focus();
-      return;
-    }
-    if (nowe.dni) {
-      document.getElementById(ID_DNI)?.focus();
-      return;
-    }
     const okresWniosku = wynikDaty.okres;
     if (!przyczyna || !okresWniosku || 'kod' in okresWniosku || !('dni' in dniWynik)) return;
 
@@ -311,7 +377,7 @@ export function WidokPrzejeciaUrlopu({ tryb }: { tryb: TrybWidoku<'ViewFatherTak
         setZajety(false);
         return;
       }
-      router.push(trasy.ViewZamData({ wniosek: wniosekZam.idWniosku }));
+      przejdz(trasy.ViewZamData({ wniosek: wniosekZam.idWniosku }));
       return;
     }
 
@@ -351,7 +417,7 @@ export function WidokPrzejeciaUrlopu({ tryb }: { tryb: TrybWidoku<'ViewFatherTak
       setZajety(false);
       return;
     }
-    router.push(trasy.ViewLeaveRequestSummary({ wniosek: zapis.wartosc.idWniosku }));
+    przejdz(trasy.ViewLeaveRequestSummary({ wniosek: zapis.wartosc.idWniosku }));
   }
 
   const wstep =
@@ -422,94 +488,89 @@ export function WidokPrzejeciaUrlopu({ tryb }: { tryb: TrybWidoku<'ViewFatherTak
         tresc={
           <>
             {bladOperacji ? <Komunikat kod={bladOperacji} /> : null}
-            <Karta tytul={t.kartaPrzyczyny} bezLinii>
-              <GrupaOpcji<PrzyczynaPrzejecia>
-                nazwa={NAZWA_PRZYCZYNY}
-                legenda={t.legendaPrzyczyny}
-                uklad="proste"
-                opcje={PRZYCZYNY_PRZEJECIA.map((p) => ({ wartosc: p, etykieta: t.przyczyny[p] }))}
-                wartosc={przyczyna}
-                onZmiana={(p) => {
-                  if (p !== przyczyna) {
-                    const proponowana =
-                      p === 'rezygnacja'
-                        ? wejscie.propozycja.dataPoczatku
-                        : wejscie.propozycja.przyczyna === p
-                          ? wejscie.propozycja.dataZdarzenia
-                          : undefined;
-                    setTekstDaty(proponowana ? formatujDate(proponowana) : '');
-                  }
-                  setPrzyczyna(p);
-                  setBledy((b) => ({ ...b, przyczyna: undefined, data: undefined }));
-                }}
-                blad={bledy.przyczyna}
-              />
-              {sytuacja ? <OstrzezeniePola id="przyczyna-uwaga" kod="0144" /> : null}
-            </Karta>
-            <Karta tytul={t.kartaOkresu} bezLinii>
-              <div className="grid gap-6">
-                <PoleDaty
-                  id={ID_DATY}
-                  etykieta={sytuacja ? t.poleDatyZdarzenia : t.poleDatyPoczatku}
-                  podpowiedz={podpowiedzDaty}
-                  wartosc={tekstDaty}
-                  onZmiana={(w) => {
-                    setTekstDaty(w);
-                    if (bledy.data) setBledy((b) => ({ ...b, data: undefined }));
+            {czesci.czesc === 1 ? (
+              <Karta tytul={t.kartaPrzyczyny} bezLinii>
+                <GrupaOpcji<PrzyczynaPrzejecia>
+                  nazwa={NAZWA_PRZYCZYNY}
+                  legenda={t.legendaPrzyczyny}
+                  uklad="proste"
+                  opcje={PRZYCZYNY_PRZEJECIA.map((p) => ({ wartosc: p, etykieta: t.przyczyny[p] }))}
+                  wartosc={przyczyna}
+                  onZmiana={(p) => {
+                    if (p !== przyczyna) {
+                      const proponowana =
+                        p === 'rezygnacja'
+                          ? wejscie.propozycja.dataPoczatku
+                          : wejscie.propozycja.przyczyna === p
+                            ? wejscie.propozycja.dataZdarzenia
+                            : undefined;
+                      setTekstDaty(proponowana ? formatujDate(proponowana) : '');
+                    }
+                    setPrzyczyna(p);
                   }}
-                  blad={bledy.data}
-                  dodatek={dodatekDaty}
-                  wymagane
-                  className="max-w-120"
+                  {...walidacja.pole('przyczyna')}
                 />
-                <PoleLiczby
-                  id={ID_DNI}
-                  etykieta={t.poleDniPrzed}
-                  podpowiedz={podpowiedzDni}
-                  wartosc={tekstDni}
-                  onZmiana={(w) => {
-                    setTekstDni(w);
-                    if (bledy.dni) setBledy((b) => ({ ...b, dni: undefined }));
-                  }}
-                  blad={bledy.dni}
-                  szerokosc="waska"
-                  className="max-w-120"
-                />
-              </div>
-              {okres && !bledy.data ? (
-                <RamkaOkresu
-                  etykieta={t.przejmujesz}
-                  okres={
-                    okres.doWypisu
-                      ? t.okresDoWypisu({ od: formatujDate(okres.od), do_: formatujDate(okres.do) })
-                      : t.okresZDniami({ od: formatujDate(okres.od), do_: formatujDate(okres.do), dni: dni(okres.dni) })
-                  }
-                />
-              ) : null}
-              {zam && okres ? <p className="m-0 mt-4">{t.zasilek100}</p> : null}
-              {przyczyna === 'szpital' ? (
-                <PoleZaznaczenia
-                  id="zobowiazanie"
-                  className="mt-6"
-                  etykieta={zam ? t.zobowiazaniePlatnik : t.zobowiazaniePracodawca}
-                  zaznaczone={zobowiazanie}
-                  onZmiana={setZobowiazanie}
-                />
-              ) : null}
-            </Karta>
-            {zalaczniki.length > 0 ? (
+                {sytuacja ? <OstrzezeniePola id="przyczyna-uwaga" kod="0144" /> : null}
+              </Karta>
+            ) : null}
+            {czesci.czesc === 2 ? (
+              <Karta tytul={t.kartaOkresu} bezLinii>
+                <div className="grid gap-6">
+                  <PoleDaty
+                    id={ID_DATY}
+                    etykieta={sytuacja ? t.poleDatyZdarzenia : t.poleDatyPoczatku}
+                    podpowiedz={podpowiedzDaty}
+                    wartosc={tekstDaty}
+                    onZmiana={setTekstDaty}
+                    {...walidacja.pole('data')}
+                    dodatek={dodatekDaty}
+                    wymagane
+                    className="max-w-120"
+                  />
+                  <PoleLiczby
+                    id={ID_DNI}
+                    etykieta={t.poleDniPrzed}
+                    podpowiedz={podpowiedzDni}
+                    wartosc={tekstDni}
+                    onZmiana={setTekstDni}
+                    {...walidacja.pole('dni')}
+                    szerokosc="waska"
+                    className="max-w-120"
+                  />
+                </div>
+                {okres && !bledy.data ? (
+                  <RamkaOkresu
+                    etykieta={t.przejmujesz}
+                    okres={
+                      okres.doWypisu
+                        ? t.okresDoWypisu({ od: formatujDate(okres.od), do_: formatujDate(okres.do) })
+                        : t.okresZDniami({ od: formatujDate(okres.od), do_: formatujDate(okres.do), dni: dni(okres.dni) })
+                    }
+                  />
+                ) : null}
+                {zam && okres ? <p className="m-0 mt-4">{t.zasilek100}</p> : null}
+                {przyczyna === 'szpital' ? (
+                  <PoleZaznaczenia
+                    id="zobowiazanie"
+                    className="mt-6"
+                    etykieta={zam ? t.zobowiazaniePlatnik : t.zobowiazaniePracodawca}
+                    zaznaczone={zobowiazanie}
+                    onZmiana={setZobowiazanie}
+                  />
+                ) : null}
+              </Karta>
+            ) : null}
+            {czesci.czesc === 3 && zalaczniki.length > 0 ? (
               <Karta tytul={t.kartaZalacznikow} bezLinii>
                 <ListaZalacznikow pozycje={zalaczniki} pliki={pliki} onZmianaPlikow={setPliki} wlasciciel={pesel} />
               </Karta>
             ) : null}
-            <div className="flex flex-wrap justify-between gap-4">
-              <PrzyciskLink href={powrotHref} wariant="drugorzedny">
-                {teksty.wspolne.przyciski.wroc}
-              </PrzyciskLink>
-              <Przycisk type="button" wariant="glowny" zajety={zajety} onClick={przejdzDalej}>
-                {teksty.wspolne.przyciski.dalej}
-              </Przycisk>
-            </div>
+            <PrzyciskiCzesci
+              czesci={czesci}
+              onAkcjaKroku={przejdzDalej}
+              onWrocKroku={() => router.push(powrot.href)}
+              zajety={zajety}
+            />
           </>
         }
         boczna={

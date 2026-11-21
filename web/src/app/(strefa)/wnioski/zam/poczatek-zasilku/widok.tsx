@@ -1,10 +1,14 @@
 'use client';
 
+// ViewZamPrebirth: dzień początku zasiłku przed porodem w trzech częściach (termin porodu, dzień początku,
+// zaświadczenie lekarskie); bez zaświadczenia, gdy zasiłek wypłaca płatnik składek, w dwóch.
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import { CzescFormularza, useCzesciFormularza } from '@/komponenty/czesci-formularza';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { Notatka } from '@/komponenty/notatka';
 import { PoleDaty } from '@/komponenty/pole-tekstowe';
@@ -12,8 +16,9 @@ import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { UkladDwuKolumnowy } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { formatujDate, parsujDate, porownajDaty } from '@/domena/daty';
-import type { BledyPol, KodKomunikatu, LiczbaDzieci, Wniosek, WniosekZam } from '@/domena/typy';
+import type { KodKomunikatu, LiczbaDzieci, Wniosek, WniosekZam } from '@/domena/typy';
 import {
   walidujPlikZaswiadczenia,
   walidujPoczatekZasilku,
@@ -26,10 +31,12 @@ import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsci
 import { zapiszPoczatekZasilkuZam } from '@/dane/magazyn/operacje/wnioski-zam-rozszerzenia';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { teksty } from '@/teksty';
+import { useKrokiKreatoraZam, useWniosekZam } from '../_czesci/kreator';
 import { KartaKrokowZam } from './_czesci/karta-krokow';
 import { PoleZaswiadczenia } from './_czesci/pole-zaswiadczenia';
 
 const t = teksty.ViewZamPrebirth;
+const tk = teksty.ViewZamLeaveType.kreator;
 const ID_DNIA = 'zam-dzien-poczatku';
 const ID_PLIKU = 'zam-zaswiadczenie';
 
@@ -85,9 +92,10 @@ function FormularzPoczatkuZasilku({ wniosek, ptp }: { wniosek: WniosekZam; ptp: 
   const [dzienTekst, ustawDzienTekst] = useState(zapisanyDzien ? formatujDate(zapisanyDzien) : '');
   const [nowyPlik, ustawNowyPlik] = useState<File | null>(null);
   const [usunietoZapisany, ustawUsunietoZapisany] = useState(false);
-  const [bledy, ustawBledy] = useState<BledyPol<PolePoczatkuZasilku>>({});
   const [bladOgolny, ustawBladOgolny] = useState<KodKomunikatu | null>(null);
-  const [zajety, ustawZajety] = useState(false);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
+  const { dane } = useWniosekZam();
+  const krokiZam = useKrokiKreatoraZam(dane, true);
 
   const zapisanyPlik = usunietoZapisany ? undefined : wniosek.przedPorodem?.zaswiadczenie?.plik;
   const plikDoPokazania = nowyPlik
@@ -96,17 +104,30 @@ function FormularzPoczatkuZasilku({ wniosek, ptp }: { wniosek: WniosekZam; ptp: 
       ? { nazwa: zapisanyPlik.nazwa, typ: zapisanyPlik.typ, rozmiar: zapisanyPlik.rozmiar }
       : null;
 
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { dzienPoczatku: dzienTekst, zaswiadczenie: plikDoPokazania },
+    waliduj: (w: { dzienPoczatku: string; zaswiadczenie: typeof plikDoPokazania }) =>
+      walidujPoczatekZasilku({ dzienPoczatku: w.dzienPoczatku, wymagaZaswiadczenia, maZaswiadczenie: w.zaswiadczenie !== null }, ptp, dzis).bledy,
+    pola: { dzienPoczatku: ID_DNIA, zaswiadczenie: ID_PLIKU },
+  });
+  const podzial: PolePoczatkuZasilku[][] = wymagaZaswiadczenia ? [[], ['dzienPoczatku'], ['zaswiadczenie']] : [[], ['dzienPoczatku']];
+  const czesci = useCzesciFormularza({ liczba: podzial.length, podzial, walidacja });
+
   const hrefRodzaju = trasy.ViewZamLeaveType({ wniosek: wniosek.idWniosku });
-  const kroki = t.kroki.nazwy.map((nazwa, i) => ({ nazwa, ...(i === 0 ? { href: hrefRodzaju } : {}) }));
+  const indeksEkranu = Math.max(0, krokiZam.findIndex((k) => k.id === 'ViewZamPrebirth'));
+  const kroki = krokiZam.map((k, i) => ({
+    nazwa: tk.nazwyKrokow[k.id],
+    czesci: k.id === 'ViewZamPrebirth' ? podzial.length : k.czesci,
+    ...(i < indeksEkranu ? { href: hrefRodzaju } : {}),
+  }));
 
   function wybierzPlik(plik: File) {
     const blad = walidujPlikZaswiadczenia({ nazwa: plik.name, typ: plik.type, rozmiar: plik.size });
     if (blad) {
-      ustawBledy((b) => ({ ...b, zaswiadczenie: blad }));
+      walidacja.pokazBledy({ zaswiadczenie: blad });
       return;
     }
     ustawNowyPlik(plik);
-    ustawBledy((b) => ({ ...b, zaswiadczenie: undefined }));
   }
 
   function usunPlik() {
@@ -138,112 +159,125 @@ function FormularzPoczatkuZasilku({ wniosek, ptp }: { wniosek: WniosekZam; ptp: 
     return porownajDaty(data, zakres.od) >= 0 && porownajDaty(data, zakres.do) <= 0 ? data : null;
   }
 
-  async function dalej(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  /** Akcja ostatniej części: zapis dnia początku i przejście do okresu zasiłku. */
+  async function zapiszIPrzejdzDalej() {
     if (zajety) return;
     const wynik = walidujPoczatekZasilku(
       { dzienPoczatku: dzienTekst, wymagaZaswiadczenia, maZaswiadczenie: plikDoPokazania !== null },
       ptp,
       dzis,
     );
-    ustawBledy(wynik.bledy);
+    if (!wynik.dzien) return;
     ustawBladOgolny(null);
-    if (wynik.bledy.dzienPoczatku || wynik.bledy.zaswiadczenie || !wynik.dzien) {
-      const pierwsze = wynik.bledy.dzienPoczatku ? ID_DNIA : ID_PLIKU;
-      window.setTimeout(() => document.getElementById(pierwsze)?.focus(), 0);
-      return;
-    }
     ustawZajety(true);
     const zapis = await zapisz(wynik.dzien);
-    ustawZajety(false);
     if (!zapis.ok) {
+      ustawZajety(false);
       ustawBladOgolny(zapis.kod);
       return;
     }
-    router.push(trasy.ViewZamPeriod({ wniosek: wniosek.idWniosku }));
+    przejdz(trasy.ViewZamPeriod({ wniosek: wniosek.idWniosku }));
   }
 
   async function zapiszIDokonczPozniej() {
     if (zajety) return;
     ustawZajety(true);
     const zapis = await zapisz(dzienDoZapisu());
-    ustawZajety(false);
     if (!zapis.ok) {
+      ustawZajety(false);
       ustawBladOgolny(zapis.kod);
       return;
     }
     ustawKomunikatPoPrzejsciu({ kod: '0058', dlaWidoku: 'ViewCaseGuide' });
-    router.push(trasy.ViewCaseGuide({ idSprawy: wniosek.idSprawy }));
+    przejdz(trasy.ViewCaseGuide({ idSprawy: wniosek.idSprawy }));
   }
 
   async function zmienTermin() {
     if (zajety) return;
     ustawZajety(true);
     const zapis = await zapisz(dzienDoZapisu());
-    ustawZajety(false);
     if (!zapis.ok) {
+      ustawZajety(false);
       ustawBladOgolny(zapis.kod);
       return;
     }
-    router.push(`${trasy.ViewProfileSummary({ tryb: 'rodzina' })}#dane-ciazy`);
+    przejdz(`${trasy.ViewProfileSummary({ tryb: 'rodzina' })}#dane-ciazy`);
   }
 
   const tresc = (
-    <form noValidate onSubmit={dalej} className="flex min-w-0 flex-col gap-7.5">
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        czesci.dalej(() => void zapiszIPrzejdzDalej());
+      }}
+      className="flex min-w-0 flex-col gap-7.5"
+    >
       {bladOgolny ? <Komunikat kod={bladOgolny} /> : null}
-      <Karta tytul={t.termin.tytul} bezLinii>
-        <p className="m-0 mb-3">{t.termin.stanNa({ data: formatujDate(dzis) })}</p>
-        <dl className="m-0 flex flex-wrap gap-x-7.5 gap-y-4 rounded-sm bg-surface-page px-5 py-4">
-          <div>
-            <dt className="text-body-strong">{t.termin.etykietaTerminu}</dt>
-            <dd className="m-0 text-ink-strong">{formatujDate(ptp)}</dd>
-          </div>
-          <div>
-            <dt className="text-body-strong">{t.termin.etykietaLiczby}</dt>
-            <dd className="m-0 text-ink-strong">{liczbaDzieci}</dd>
-          </div>
-        </dl>
-        <p className="m-0 mt-4 mb-3">{t.termin.zmianaOpis}</p>
-        <button
-          type="button"
-          onClick={zmienTermin}
-          className="cursor-pointer border-0 bg-transparent p-0 text-left text-body text-brand underline hover:text-brand-deep"
-        >
-          {t.termin.zmianaAkcja}
-        </button>
-      </Karta>
+      <CzescFormularza czesci={czesci} numer={1}>
+        <Karta tytul={t.termin.tytul} bezLinii>
+          <p className="m-0 mb-3">{t.termin.stanNa({ data: formatujDate(dzis) })}</p>
+          <dl className="m-0 flex flex-wrap gap-x-7.5 gap-y-4 rounded-sm bg-surface-page px-5 py-4">
+            <div>
+              <dt className="text-body-strong">{t.termin.etykietaTerminu}</dt>
+              <dd className="m-0 text-ink-strong">{formatujDate(ptp)}</dd>
+            </div>
+            <div>
+              <dt className="text-body-strong">{t.termin.etykietaLiczby}</dt>
+              <dd className="m-0 text-ink-strong">{liczbaDzieci}</dd>
+            </div>
+          </dl>
+          <p className="m-0 mt-4 mb-3">{t.termin.zmianaOpis}</p>
+          <button
+            type="button"
+            onClick={zmienTermin}
+            className="cursor-pointer border-0 bg-transparent p-0 text-left text-body text-brand underline hover:text-brand-deep"
+          >
+            {t.termin.zmianaAkcja}
+          </button>
+        </Karta>
+      </CzescFormularza>
 
-      <Karta tytul={t.poczatek.tytul} bezLinii>
-        <PoleDaty
-          id={ID_DNIA}
-          etykieta={t.poczatek.etykieta}
-          podpowiedz={t.poczatek.podpowiedz({ od: formatujDate(zakres.od), do_: formatujDate(zakres.do) })}
-          wartosc={dzienTekst}
-          onZmiana={ustawDzienTekst}
-          blad={bledy.dzienPoczatku ?? null}
-          szerokosc="waska"
-          autoComplete="off"
-        />
-        <Notatka className="mt-4">{t.poczatek.notatka({ tygodnie: String(tygodnie) })}</Notatka>
-      </Karta>
+      <CzescFormularza czesci={czesci} numer={2}>
+        <Karta tytul={t.poczatek.tytul} bezLinii>
+          <PoleDaty
+            id={ID_DNIA}
+            etykieta={t.poczatek.etykieta}
+            podpowiedz={t.poczatek.podpowiedz({ od: formatujDate(zakres.od), do_: formatujDate(zakres.do) })}
+            wartosc={dzienTekst}
+            onZmiana={ustawDzienTekst}
+            {...walidacja.pole('dzienPoczatku')}
+            szerokosc="waska"
+            autoComplete="off"
+          />
+          <Notatka className="mt-4">{t.poczatek.notatka({ tygodnie: String(tygodnie) })}</Notatka>
+        </Karta>
+      </CzescFormularza>
 
       {wymagaZaswiadczenia ? (
-        <Karta tytul={t.zaswiadczenie.tytul} bezLinii>
-          <p className="m-0 mb-4">{t.zaswiadczenie.opis}</p>
-          <PoleZaswiadczenia
-            id={ID_PLIKU}
-            plik={plikDoPokazania}
-            blad={bledy.zaswiadczenie ?? null}
-            onWybor={wybierzPlik}
-            onUsun={usunPlik}
-          />
-        </Karta>
+        <CzescFormularza czesci={czesci} numer={3}>
+          <Karta tytul={t.zaswiadczenie.tytul} bezLinii>
+            <p className="m-0 mb-4">{t.zaswiadczenie.opis}</p>
+            <PoleZaswiadczenia
+              id={ID_PLIKU}
+              plik={plikDoPokazania}
+              blad={walidacja.blad('zaswiadczenie')}
+              onWybor={wybierzPlik}
+              onUsun={usunPlik}
+            />
+          </Karta>
+        </CzescFormularza>
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <PrzyciskLink href={hrefRodzaju} wariant="drugorzedny">
+        <Przycisk
+          type="button"
+          wariant="drugorzedny"
+          disabled={zajety}
+          onClick={() => czesci.wroc(() => router.push(hrefRodzaju))}
+        >
           {t.przyciski.wstecz}
-        </PrzyciskLink>
+        </Przycisk>
         <div className="flex flex-wrap gap-4">
           <Przycisk type="button" wariant="tlo" ikona="zapisz" onClick={zapiszIDokonczPozniej} zajety={zajety}>
             {t.przyciski.zapiszDoDokonczenia}
@@ -298,7 +332,7 @@ function FormularzPoczatkuZasilku({ wniosek, ptp }: { wniosek: WniosekZam; ptp: 
         powrot={{ href: trasy.ViewCaseGuide({ idSprawy: wniosek.idSprawy }), etykieta: t.powrot }}
       />
       <div className="flex flex-col gap-7.5">
-        <KartaKrokowZam kroki={kroki} biezacy={2} id="zam-kroki" />
+        <KartaKrokowZam kroki={kroki} biezacy={indeksEkranu + 1} czesc={czesci.czesc} id="zam-kroki" />
         <UkladDwuKolumnowy tresc={tresc} boczna={boczna} etykietaBocznej={t.boczna.etykieta} />
       </div>
     </>

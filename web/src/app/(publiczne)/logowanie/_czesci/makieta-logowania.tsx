@@ -2,8 +2,8 @@
 
 // Wspólne części makiet logowania (analiza 3.1.1, reguły R12–R15; kontrakt 3.5). Właściciel: u01.
 // Potwierdzenie zapisuje sposób logowania w logowaniu w toku (z zachowaniem `powrot` z ViewGuideStart)
-// i prowadzi do wyboru konta. Przerwanie usuwa logowanie w toku, ustawia komunikat 0072, 0250 albo 0251
-// dla ViewGuideStart i wraca na stronę startową.
+// i prowadzi do wyboru konta z ładowaniem przycisku do pokazania nowej trasy. Przerwanie usuwa logowanie
+// w toku, ustawia komunikat 0072, 0250 albo 0251 dla ViewGuideStart i wraca na stronę startową.
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import type React from 'react';
@@ -14,6 +14,7 @@ import type { KodKomunikatu, LogowanieWToku, SposobZalogowania } from '@/domena/
 import { Karta } from '@/komponenty/karta';
 import { KodQrZastepczy } from '@/komponenty/kod-qr-zastepczy';
 import { ListaKrokow } from '@/komponenty/kroki';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Przycisk } from '@/komponenty/przycisk';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
@@ -30,15 +31,16 @@ function adresStartu(logowanie: LogowanieWToku | null): string {
   return logowanie?.powrot ? `${start}?powrot=${encodeURIComponent(logowanie.powrot)}` : start;
 }
 
-/** Akcje makiety: potwierdzenie logowania i przerwanie logowania. */
+/** Akcje makiety: potwierdzenie logowania (z ładowaniem `zajety`) i przerwanie logowania. */
 export function useAkcjeMakiety(sposob: SposobZalogowania) {
   const router = useRouter();
   const logowanie = useLogowanieWToku();
+  const { zajety, przejdz } = useNawigacjaZLadowaniem();
 
   const potwierdz = useCallback(() => {
     rozpocznijLogowanie({ ...logowanie, sposob });
-    router.push(sciezkaWidoku('ViewDemoAccountPicker'));
-  }, [logowanie, router, sposob]);
+    przejdz(sciezkaWidoku('ViewDemoAccountPicker'));
+  }, [logowanie, przejdz, sposob]);
 
   const przerwij = useCallback(() => {
     const cel = adresStartu(logowanie);
@@ -51,7 +53,7 @@ export function useAkcjeMakiety(sposob: SposobZalogowania) {
     router.push(cel);
   }, [logowanie, router, sposob]);
 
-  return { logowanie, potwierdz, przerwij };
+  return { logowanie, potwierdz, przerwij, zajety };
 }
 
 export interface KartaKoduMakietyProps {
@@ -66,6 +68,8 @@ export interface KartaKoduMakietyProps {
   etykietaPrzerwania: string;
   onPotwierdz: () => void;
   onPrzerwij: () => void;
+  // Ładowanie przycisku potwierdzenia do pokazania wyboru konta
+  zajety?: boolean;
   // Odliczanie ważności kodu pod kodem QR (makieta mZUS)
   pozostaloSekund?: number;
   waznoscSekund?: number;
@@ -84,6 +88,7 @@ export function KartaKoduMakiety({
   etykietaPrzerwania,
   onPotwierdz,
   onPrzerwij,
+  zajety = false,
   pozostaloSekund,
   waznoscSekund,
 }: KartaKoduMakietyProps) {
@@ -91,7 +96,7 @@ export function KartaKoduMakiety({
     <Karta tytul={tytulKarty} bezLinii className="max-w-okno-szerokie">
       <div className="flex flex-wrap items-start gap-7.5">
         <KodQrZastepczy opis={opisKoduQr} pozostaloSekund={pozostaloSekund} waznoscSekund={waznoscSekund} />
-        <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-6">
+        <div className="flex min-w-0 flex-[1_1_22.5rem] flex-col gap-6">
           <div className="rounded-sm bg-surface-page px-5 py-4">
             <p className="m-0 text-body-strong">{tytulKodu}</p>
             <p className="mt-1 mb-0 text-page-title tracking-[0.2em] break-all text-ink-strong">{kod}</p>
@@ -104,10 +109,10 @@ export function KartaKoduMakiety({
         <p>{notatka}</p>
       </Notatka>
       <div className="mt-6 flex flex-wrap gap-4">
-        <Przycisk wariant="glowny" onClick={onPotwierdz}>
+        <Przycisk wariant="glowny" zajety={zajety} onClick={onPotwierdz}>
           {etykietaPotwierdzenia}
         </Przycisk>
-        <Przycisk wariant="drugorzedny" onClick={onPrzerwij}>
+        <Przycisk wariant="drugorzedny" disabled={zajety} onClick={onPrzerwij}>
           {etykietaPrzerwania}
         </Przycisk>
       </div>

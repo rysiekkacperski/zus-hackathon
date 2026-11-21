@@ -6,7 +6,7 @@
 // płatnika nieustalonego. W kreatorze profilu ekran prowadzi do ViewProfileSituation, a z `?powrot=<ścieżka>`
 // (kreator wniosku, świadczenia w ciąży) wraca pod bezpieczny adres powrotu.
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
 import { zapiszOdpowiedzPlatnika } from '@/dane/magazyn/operacje/profil-szkic';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
@@ -15,20 +15,25 @@ import { tytulDlaFormy } from '@/domena/profil/forma-zatrudnienia';
 import { daneRodzicaKonta, nastepnyEkran, poprzedniEkran } from '@/domena/profil/nawigacja';
 import { odpowiedzZPlatnika, type OdpowiedzOPlatniku } from '@/domena/profil/platnik';
 import type { KodKomunikatu, RodzicWRodzinie, SzkicProfilu } from '@/domena/typy';
-import { GrupaOpcji, idOpcjiGrupy } from '@/komponenty/grupa-opcji';
+import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { bezpiecznyPowrot } from '@/komponenty/rama/trasy';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { NaglowekKreatoraProfilu, SzkieletKreatoraProfilu } from '../_czesci/szkielet-kreatora-profilu';
-import { sciezkaEkranuProfilu } from '../_czesci/trasy-profilu';
+import { sciezkaEkranuProfilu, sciezkaPowrotuProfilu } from '../_czesci/trasy-profilu';
 
 const tekst = teksty.ViewProfilePayer;
 const NAZWA_GRUPY = 'platnik-zasilku';
 
+function walidujOdpowiedz(w: { odpowiedz: OdpowiedzOPlatniku | null }): { odpowiedz?: KodKomunikatu } {
+  return w.odpowiedz === null ? { odpowiedz: '0006' } : {};
+}
+
 export function WidokPlatnikaZasilku() {
-  const router = useRouter();
   const parametry = useSearchParams();
   const stanKonta = useStanKonta();
   const rodzina = useRodzina();
@@ -60,9 +65,14 @@ export function WidokPlatnikaZasilku() {
     dane.platnikZasilku?.zrodlo === 'odpowiedz-rodzica' ? odpowiedzZPlatnika(dane.platnikZasilku.wartosc) : null;
   const [odpowiedz, ustawOdpowiedz] = useState<OdpowiedzOPlatniku | null>(null);
   const wybrana = odpowiedz ?? zapisana;
-  const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
   const [bladZapisu, ustawBladZapisu] = useState<KodKomunikatu | null>(null);
-  const [zajety, ustawZajety] = useState(false);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { odpowiedz: wybrana },
+    waliduj: walidujOdpowiedz,
+    pola: { odpowiedz: NAZWA_GRUPY },
+  });
+  const zDanymiZus = (stanKonta?.kopiaDanychZus ?? null) !== null;
 
   const formaMiejscownik = forma ? teksty.ViewProfileZusData.formyMiejscownik[forma] : null;
   const wstep = nazwa && formaMiejscownik
@@ -76,19 +86,15 @@ export function WidokPlatnikaZasilku() {
 
   const wroc = () => {
     if (adresPowrotu) {
-      router.push(adresPowrotu);
+      przejdz(adresPowrotu);
       return;
     }
     const s = naEkranie(szkic);
-    router.push(sciezkaEkranuProfilu(s ? poprzedniEkran(s, zgoda) : 'ViewProfileZusData', s));
+    przejdz(sciezkaPowrotuProfilu(s ? poprzedniEkran(s, zgoda) : 'ViewProfileZusData', s, zDanymiZus));
   };
 
   const dalej = () => {
-    if (wybrana === null) {
-      ustawBlad('0006');
-      document.getElementById(idOpcjiGrupy(NAZWA_GRUPY, 'tak'))?.focus();
-      return;
-    }
+    if (!walidacja.sprobujWyslac() || wybrana === null) return;
     ustawZajety(true);
     const wynik = zapiszOdpowiedzPlatnika(rodzic, wybrana, pobierzKontekstOperacji());
     if (!wynik.ok) {
@@ -97,11 +103,11 @@ export function WidokPlatnikaZasilku() {
       return;
     }
     if (adresPowrotu) {
-      router.push(adresPowrotu);
+      przejdz(adresPowrotu);
       return;
     }
     const s = naEkranie(szkic);
-    router.push(sciezkaEkranuProfilu(s ? nastepnyEkran(s, zgoda) : 'ViewProfileSituation', s));
+    przejdz(sciezkaEkranuProfilu(s ? nastepnyEkran(s, zgoda) : 'ViewProfileSituation', s));
   };
 
   return (
@@ -130,11 +136,8 @@ export function WidokPlatnikaZasilku() {
               { wartosc: 'nie-wiem', etykieta: tekst.odpowiedzi['nie-wiem'], opis: tekst.opisNieWiem },
             ]}
             wartosc={wybrana}
-            onZmiana={(w) => {
-              ustawOdpowiedz(w);
-              ustawBlad(null);
-            }}
-            blad={blad}
+            onZmiana={ustawOdpowiedz}
+            {...walidacja.pole('odpowiedz')}
           />
           <Notatka className="mt-6">
             <p className="m-0">{tekst.notatka}</p>

@@ -2,16 +2,27 @@
 
 import { useId, type ReactNode } from 'react';
 import type { OpcjaGrupy } from '@/komponenty/grupa-opcji';
-import { BladPola, idBledu, polaczOpisy, trescBledu, type BladPolaWartosc } from '@/komponenty/pole';
+import {
+  BladPola,
+  idBledu,
+  opuszczonoKontener,
+  polaczOpisy,
+  trescBledu,
+  type BladPolaWartosc,
+} from '@/komponenty/pole';
 
 export interface PoleZaznaczeniaProps {
   id: string;
   etykieta: ReactNode;
   zaznaczone: boolean;
   onZmiana: (z: boolean) => void;
+  /** Opuszczenie pola i zmiana zaznaczenia: walidacja po opuszczeniu (useWalidacjaNaBiezaco). */
+  onOpuszczenie?: () => void;
   opis?: ReactNode;
   blad?: BladPolaWartosc;
   parametryBledu?: Record<string, string>;
+  /** aria-invalid bez własnego komunikatu, gdy błąd pokazuje grupa (GrupaZaznaczen). */
+  nieprawidlowe?: boolean;
   wylaczone?: boolean;
   nazwa?: string;
   className?: string;
@@ -22,6 +33,8 @@ export interface GrupaZaznaczenProps<W extends string = string> {
   opcje: OpcjaGrupy<W>[];
   wartosci: W[];
   onZmiana: (w: W[]) => void;
+  /** Wyjście fokusu poza grupę i zmiana zaznaczenia: walidacja po opuszczeniu (useWalidacjaNaBiezaco). */
+  onOpuszczenie?: () => void;
   blad?: BladPolaWartosc;
   parametryBledu?: Record<string, string>;
   legendaUkryta?: boolean;
@@ -31,7 +44,7 @@ export interface GrupaZaznaczenProps<W extends string = string> {
 
 // Kwadrat ez-check: 20 px, ramka brand, po zaznaczeniu tło brand i znacznik rysowany pseudoelementem.
 export const klasyKwadratuZaznaczenia =
-  "m-0 mt-0.5 grid size-5 flex-none cursor-pointer appearance-none place-items-center rounded-xs border border-brand bg-surface-card checked:bg-brand checked:after:h-[5px] checked:after:w-2.5 checked:after:-translate-y-px checked:after:-rotate-45 checked:after:border-0 checked:after:border-b-2 checked:after:border-l-2 checked:after:border-solid checked:after:border-on-brand checked:after:content-[''] disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken";
+  "m-0 mt-0.5 grid size-5 flex-none cursor-pointer appearance-none place-items-center rounded-xs border border-brand bg-surface-card checked:bg-brand checked:after:h-[0.3125rem] checked:after:w-2.5 checked:after:-translate-y-px checked:after:-rotate-45 checked:after:border-0 checked:after:border-b-2 checked:after:border-l-2 checked:after:border-solid checked:after:border-on-brand checked:after:content-[''] disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken";
 
 export const klasyEtykietyZaznaczenia = {
   aktywna: 'inline-flex min-w-0 cursor-pointer items-start gap-3',
@@ -43,9 +56,11 @@ export function PoleZaznaczenia({
   etykieta,
   zaznaczone,
   onZmiana,
+  onOpuszczenie,
   opis,
   blad,
   parametryBledu,
+  nieprawidlowe,
   wylaczone,
   nazwa,
   className,
@@ -61,9 +76,13 @@ export function PoleZaznaczenia({
           name={nazwa}
           checked={zaznaczone}
           disabled={wylaczone}
-          aria-invalid={maBlad ? true : undefined}
+          aria-invalid={maBlad || nieprawidlowe ? true : undefined}
           aria-describedby={polaczOpisy(opis ? idOpisu : null, maBlad ? idBledu(id) : null)}
-          onChange={(e) => onZmiana(e.target.checked)}
+          onChange={(e) => {
+            onZmiana(e.target.checked);
+            onOpuszczenie?.();
+          }}
+          onBlur={onOpuszczenie}
           className={klasyKwadratuZaznaczenia}
         />
         <span className="min-w-0">{etykieta}</span>
@@ -83,6 +102,7 @@ export function GrupaZaznaczen<W extends string = string>({
   opcje,
   wartosci,
   onZmiana,
+  onOpuszczenie,
   blad,
   parametryBledu,
   legendaUkryta,
@@ -98,11 +118,15 @@ export function GrupaZaznaczen<W extends string = string>({
     if (zaznaczone) zbior.add(wartosc);
     else zbior.delete(wartosc);
     onZmiana(opcje.map((o) => o.wartosc).filter((w) => zbior.has(w)));
+    onOpuszczenie?.();
   }
 
   return (
     <fieldset
       id={id}
+      onBlur={(e) => {
+        if (onOpuszczenie && opuszczonoKontener(e)) onOpuszczenie();
+      }}
       aria-describedby={maBlad ? idBledu(idGrupy) : undefined}
       className={['m-0 min-w-0 border-0 p-0', className].filter(Boolean).join(' ')}
     >
@@ -124,6 +148,7 @@ export function GrupaZaznaczen<W extends string = string>({
             opis={opcja.opis}
             zaznaczone={wartosci.includes(opcja.wartosc)}
             wylaczone={opcja.wylaczona}
+            nieprawidlowe={maBlad}
             onZmiana={(z) => przelacz(opcja.wartosc, z)}
           />
         ))}

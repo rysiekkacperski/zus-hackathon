@@ -5,7 +5,6 @@
 // akcją „Zmień” przy każdej sekcji i zapisem profilu (wzory cz1/P03-24 i cz1/P03-25).
 // Tryb rodziny (/profil-rodziny, Rodzic i Drugi rodzic): zapisany profil, zmiana sekcji w szkicu zmiany
 // profilu ze śladem „Zmienione, przed zmianą”, anulowanie i zapis zmian (wzory cz1/Profil-rodziny i cz1/P03-26).
-import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDzis, useKontekstRodziny, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
 import { zapiszProfil, zapiszZmianyProfilu } from '@/dane/magazyn/operacje/profil-zapis';
@@ -18,6 +17,7 @@ import type { IdWidoku, KodKomunikatu } from '@/domena/typy';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import type { TrybWidoku } from '@/komponenty/rama/mapa-tras';
@@ -26,6 +26,7 @@ import { StanPusty } from '@/komponenty/stan-pusty';
 import { Stos, UkladDwuKolumnowy, Wiersz } from '@/komponenty/uklad';
 import { teksty } from '@/teksty';
 import { SzkieletKreatoraProfilu } from '../_czesci/szkielet-kreatora-profilu';
+import { sciezkaPowrotuProfilu } from '../_czesci/trasy-profilu';
 import { slotyPodsumowania } from './_sloty';
 import { KartaSekcjiProfilu } from './_czesci/karta-sekcji-profilu';
 import { sekcjeProfilu, wartosciWierszy, type ProfilDoPokazania, type SekcjaProfilu } from './_czesci/sekcje-profilu';
@@ -43,13 +44,12 @@ function adresSekcji(ekran: IdWidoku): string {
 }
 
 export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfileSummary'> }) {
-  const router = useRouter();
   const stanKonta = useStanKonta();
   const rodzina = useRodzina();
   const kontekst = useKontekstRodziny();
   const dzis = useDzis();
   const [blad, setBlad] = useState<KodKomunikatu | null>(null);
-  const [zajety, setZajety] = useState(false);
+  const { zajety, ustawZajety: setZajety, przejdz } = useNawigacjaZLadowaniem();
   const zapisanoOstatniEkran = useRef(false);
 
   const konto = stanKonta?.konto ?? null;
@@ -114,7 +114,7 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
     setBlad(null);
     const wynik = zapiszProfil(pobierzKontekstOperacji());
     if (wynik.ok) {
-      router.push(trasy.ViewFamilyPlan());
+      przejdz(trasy.ViewFamilyPlan());
       return;
     }
     setBlad(wynik.kod);
@@ -127,7 +127,7 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
     setBlad(null);
     const wynik = zapiszZmianyProfilu(pobierzKontekstOperacji());
     if (wynik.ok) {
-      router.push(trasy.ViewFamilyPlan());
+      przejdz(trasy.ViewFamilyPlan());
       return;
     }
     setBlad(wynik.kod);
@@ -180,7 +180,7 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
         ) : (
           <SzkieletKreatoraProfilu
             biezacy={EKRAN}
-            onWroc={() => router.push(trasy.ViewProfileSecondParent())}
+            onWroc={() => przejdz(sciezkaPowrotuProfilu('ViewProfileSecondParent', szkic, kopia !== null))}
             onDalej={zapiszPoStarcie}
             etykietaDalej={t.zapiszProfil}
             zajety={zajety}

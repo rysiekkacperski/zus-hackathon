@@ -46,23 +46,7 @@ export function OknoPodgladuWiadomosci({ otwarte, onZamknij, wniosek, dane, emai
     pracownik: dane.imieINazwisko,
   });
   return (
-    <OknoModalne
-      otwarte={otwarte}
-      onZamknij={onZamknij}
-      tytul={t.tytul}
-      stopka={
-        <div className="flex flex-wrap justify-end gap-4">
-          <Przycisk wariant="drugorzedny" onClick={onZamknij}>
-            {t.wroc}
-          </Przycisk>
-          {onWyslij ? (
-            <Przycisk wariant="glowny" ikona="wyslij" onClick={onWyslij}>
-              {t.wyslij}
-            </Przycisk>
-          ) : null}
-        </div>
-      }
-    >
+    <OknoModalne otwarte={otwarte} onZamknij={onZamknij} tytul={t.tytul}>
       {trybDemonstracyjny ? <FlagaDemo className="mb-4">{t.demo}</FlagaDemo> : null}
       <dl className="m-0 flex flex-col gap-3">
         {pozycje.map((p) => (
@@ -79,6 +63,17 @@ export function OknoPodgladuWiadomosci({ otwarte, onZamknij, wniosek, dane, emai
             {a}
           </p>
         ))}
+      </div>
+      {/* Przyklejona stopka: przyciski zostają widoczne przy przewijaniu treści okna. */}
+      <div className="sticky -bottom-5 z-10 -mx-5 -mb-5 mt-3.5 flex flex-wrap justify-end gap-4 border-t border-line bg-surface-card px-5 pt-4 pb-5">
+        <Przycisk wariant="drugorzedny" onClick={onZamknij}>
+          {t.wroc}
+        </Przycisk>
+        {onWyslij ? (
+          <Przycisk wariant="glowny" ikona="wyslij" onClick={onWyslij}>
+            {t.wyslij}
+          </Przycisk>
+        ) : null}
       </div>
     </OknoModalne>
   );

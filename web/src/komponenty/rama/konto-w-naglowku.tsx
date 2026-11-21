@@ -92,7 +92,7 @@ export function KontoWNaglowku() {
           <Ikona nazwa="konto" rozmiar={24} />
         </span>
         <span className="hidden min-w-0 md:block">
-          <span className="block text-body-strong leading-[22px]">{imieINazwisko}</span>
+          <span className="block text-body-strong leading-[1.375rem]">{imieINazwisko}</span>
           <span className="block text-small">{teksty.rama.kontoPodpis}</span>
         </span>
         <Ikona nazwa="w-dol" rozmiar={24} className="hidden md:block" />
@@ -104,7 +104,7 @@ export function KontoWNaglowku() {
         aria-label={teksty.rama.menuKonta}
         hidden={!otwarte}
         onKeyDown={naKlawiszMenu}
-        className="absolute top-[calc(100%-4px)] right-3 z-30 box-border max-w-[calc(100vw-24px)] min-w-70 rounded-sm border border-line bg-surface-card py-2 md:right-7.5"
+        className="absolute top-[calc(100%-0.25rem)] right-3 z-30 box-border max-w-[calc(100vw-1.5rem)] min-w-70 rounded-sm border border-line bg-surface-card py-2 md:right-7.5"
       >
         <div className="border-b border-line-row px-5 py-3">
           <p className="m-0 text-body-strong text-ink-strong">{imieINazwisko}</p>

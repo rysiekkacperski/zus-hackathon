@@ -3,7 +3,6 @@
 // ViewInviteAccept (3.3.3.1.1): zaproszenie do planu rodziny na koncie, które otworzyło link.
 // Wzory: cz2/P19-03-Przyjecie-zaproszenia, P19-04-Zaproszenie-wygaslo, P19-05-Zaproszenie-wlasne,
 // P19-06-Konto-w-innej-rodzinie. Bez aktywnej sesji strażnik ramy prowadzi na ViewGuideStart z powrotem do linku.
-import { useRouter } from 'next/navigation';
 import { use, useState } from 'react';
 import { useDzis, useKonto } from '@/dane/magazyn/hooki';
 import { odrzucZaproszenie, przyjmijZaproszenie, usePodgladZaproszenia } from '@/dane/magazyn/operacje/drugi-rodzic';
@@ -16,6 +15,7 @@ import { Ikona } from '@/komponenty/ikona';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { useEkranStartowy } from '@/komponenty/rama/straz-dostepu';
@@ -60,12 +60,12 @@ function KartaBledu({ kod }: { kod: BladLinku }) {
 
 export function WidokPrzyjeciaZaproszenia({ params }: { params: PageProps<'/zaproszenie/[token]'>['params'] }) {
   const { token } = use(params);
-  const router = useRouter();
   const konto = useKonto();
   const dzis = useDzis();
   const { rodzina, zapraszajacy } = usePodgladZaproszenia(token);
   const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
-  const [zajety, ustawZajety] = useState(false);
+  // Ładowanie trwa do pokazania następnego ekranu i nie wraca po powrocie na zaproszenie.
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
 
   // Bez konta (sesja w trakcie rozstrzygania) strażnik ramy kieruje na stronę startową z powrotem do linku.
   if (konto === null) return <SzkieletWidoku />;
@@ -76,12 +76,12 @@ export function WidokPrzyjeciaZaproszenia({ params }: { params: PageProps<'/zapr
   function przyjmij() {
     ustawZajety(true);
     const wynik = przyjmijZaproszenie(token, pobierzKontekstOperacji());
-    ustawZajety(false);
     if (!wynik.ok) {
+      ustawZajety(false);
       ustawBlad(wynik.kod);
       return;
     }
-    router.push(sciezkaWidoku('ViewFamilyPlan'));
+    przejdz(sciezkaWidoku('ViewFamilyPlan'));
   }
 
   function odrzuc() {
@@ -93,7 +93,7 @@ export function WidokPrzyjeciaZaproszenia({ params }: { params: PageProps<'/zapr
     }
     // R-ODRZUCENIE: rola bez zmian; bez decyzji o zgodzie powitanie, z zapisaną decyzją profil na start.
     const cel = stanZgody(konto.decyzjeOZgodzie) === 'brak-decyzji' ? 'ViewGuideWelcome' : 'ViewProfileZusData';
-    router.push(sciezkaWidoku(cel));
+    przejdz(sciezkaWidoku(cel));
   }
 
   const imie = zapraszajacy?.imie ?? '';
@@ -132,7 +132,7 @@ export function WidokPrzyjeciaZaproszenia({ params }: { params: PageProps<'/zapr
                     <Przycisk wariant="glowny" zajety={zajety} onClick={przyjmij}>
                       {t.przyjmij}
                     </Przycisk>
-                    <Przycisk wariant="drugorzedny" onClick={odrzuc}>
+                    <Przycisk wariant="drugorzedny" disabled={zajety} onClick={odrzuc}>
                       {t.odrzuc}
                     </Przycisk>
                   </div>

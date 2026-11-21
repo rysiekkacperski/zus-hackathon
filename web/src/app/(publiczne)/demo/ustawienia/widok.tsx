@@ -28,6 +28,7 @@ import { PoleDaty } from '@/komponenty/pole-tekstowe';
 import { PoleWyboru } from '@/komponenty/pole-wyboru';
 import { Przelacznik } from '@/komponenty/przelacznik';
 import { Przycisk } from '@/komponenty/przycisk';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { FormularzParametrow } from './_czesci/formularz-parametrow';
 
@@ -57,26 +58,32 @@ function useWykonanie(ustawBlad: (kod: KodKomunikatu | null) => void) {
   };
 }
 
+/** Data demonstracyjna: 0010, gdy wpis nie jest datą w zapisie DD.MM.RRRR. */
+function walidujDateDemo({ data }: { data: string }): { data?: KodKomunikatu } {
+  return parsujDate(data) === null ? { data: '0010' } : {};
+}
+
 function KartaDaty({ dataDemo, onBlad }: { dataDemo: string | null; onBlad: (kod: KodKomunikatu | null) => void }) {
   const dzis = useDzis();
   const wykonaj = useWykonanie(onBlad);
   const [wpis, ustawWpis] = useState(dataDemo ? formatujDate(dataDemo) : '');
-  const [blad, ustawBladPola] = useState<KodKomunikatu | null>(null);
+  // Puste pole po samym przejściu tabulatorem nie pokazuje błędu; błąd pustego pola pokazuje próba ustawienia daty.
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { data: wpis },
+    waliduj: walidujDateDemo,
+    pola: { data: 'demo-data' },
+    wymagane: [],
+  });
 
   const ustaw = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = parsujDate(wpis);
-    if (data === null) {
-      ustawBladPola('0010');
-      document.getElementById('demo-data')?.focus();
-      return;
-    }
-    ustawBladPola(null);
+    if (!walidacja.sprobujWyslac() || data === null) return;
     wykonaj(ustawParametry({ dataDemo: data }, pobierzKontekstOperacji()), tekst.data.ustawiono({ data: formatujDate(data) }));
   };
 
   const wyczysc = () => {
-    ustawBladPola(null);
+    walidacja.resetuj();
     ustawWpis('');
     wykonaj(ustawParametry({ dataDemo: null }, pobierzKontekstOperacji()), tekst.data.wyczyszczono);
   };
@@ -86,7 +93,13 @@ function KartaDaty({ dataDemo, onBlad }: { dataDemo: string | null; onBlad: (kod
       <p className="mt-0 mb-1 text-body-strong">{tekst.data.biezaca({ data: formatujDate(dzis) })}</p>
       <p className="mt-0 mb-6">{dataDemo ? tekst.data.zrodloDemo : tekst.data.zrodloZegar}</p>
       <form noValidate onSubmit={ustaw}>
-        <PoleDaty id="demo-data" etykieta={tekst.data.pole} wartosc={wpis} onZmiana={ustawWpis} blad={blad} />
+        <PoleDaty
+          id="demo-data"
+          etykieta={tekst.data.pole}
+          wartosc={wpis}
+          onZmiana={ustawWpis}
+          {...walidacja.pole('data')}
+        />
         <div className="mt-6 flex flex-wrap gap-4">
           <Przycisk type="submit" wariant="glowny">
             {tekst.data.ustaw}
@@ -153,7 +166,7 @@ function KartaScenariuszy({ onBlad }: { onBlad: (kod: KodKomunikatu | null) => v
         <ul className="m-0 list-none border-t border-line-row p-0">
           {scenariusze.map((s) => (
             <li key={s.id} className="flex flex-wrap items-center justify-between gap-4 border-b border-line-row py-4">
-              <div className="min-w-0 flex-[1_1_360px]">
+              <div className="min-w-0 flex-[1_1_22.5rem]">
                 <h3 className="m-0 text-body-strong">{s.nazwa}</h3>
                 <p className="m-0">{s.opis}</p>
                 <p className="mt-1 mb-0 text-small">

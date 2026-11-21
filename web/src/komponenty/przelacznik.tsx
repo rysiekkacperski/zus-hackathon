@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { BladPola, idBledu, polaczOpisy, trescBledu, type BladPolaWartosc } from '@/komponenty/pole';
 import { klasyEtykietyZaznaczenia, klasyKwadratuZaznaczenia } from '@/komponenty/pole-zaznaczenia';
 
 export interface PrzelacznikProps {
@@ -8,8 +9,12 @@ export interface PrzelacznikProps {
   etykieta: string;
   wlaczony: boolean;
   onZmiana: (w: boolean) => void;
+  /** Opuszczenie przełącznika i zmiana stanu: walidacja po opuszczeniu (useWalidacjaNaBiezaco). */
+  onOpuszczenie?: () => void;
   steruje?: string;
   opis?: ReactNode;
+  blad?: BladPolaWartosc;
+  parametryBledu?: Record<string, string>;
   wylaczony?: boolean;
   nazwa?: string;
   className?: string;
@@ -21,13 +26,17 @@ export function Przelacznik({
   etykieta,
   wlaczony,
   onZmiana,
+  onOpuszczenie,
   steruje,
   opis,
+  blad,
+  parametryBledu,
   wylaczony,
   nazwa,
   className,
 }: PrzelacznikProps) {
   const idOpisu = `${id}-opis`;
+  const maBlad = Boolean(blad);
   return (
     <div className={['min-w-0', className].filter(Boolean).join(' ')}>
       <label htmlFor={id} className={klasyEtykietyZaznaczenia[wylaczony ? 'wylaczona' : 'aktywna']}>
@@ -39,8 +48,13 @@ export function Przelacznik({
           checked={wlaczony}
           disabled={wylaczony}
           aria-controls={steruje}
-          aria-describedby={opis ? idOpisu : undefined}
-          onChange={(e) => onZmiana(e.target.checked)}
+          aria-invalid={maBlad ? true : undefined}
+          aria-describedby={polaczOpisy(opis ? idOpisu : null, maBlad ? idBledu(id) : null)}
+          onChange={(e) => {
+            onZmiana(e.target.checked);
+            onOpuszczenie?.();
+          }}
+          onBlur={onOpuszczenie}
           className={klasyKwadratuZaznaczenia}
         />
         <span className="min-w-0">{etykieta}</span>
@@ -50,6 +64,7 @@ export function Przelacznik({
           {opis}
         </div>
       ) : null}
+      {blad ? <BladPola id={idBledu(id)} tresc={trescBledu(blad, parametryBledu)} /> : null}
     </div>
   );
 }

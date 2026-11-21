@@ -2,7 +2,6 @@
 
 // ViewZas53Summary: podsumowanie wniosku ZAS-53 z akcją zmiany każdej sekcji, załącznikami (0149, 0103, 0104),
 // przekazem pocztowym (0241), oświadczeniem (0043), sprawą powiązaną K26 i wysyłką do ZUS (0044).
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { formatujDate, liczbaDniWlacznie } from '@/domena/daty';
 import type { KodKomunikatu, WniosekZas53, Zalacznik } from '@/domena/typy';
@@ -19,17 +18,21 @@ import {
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { dolaczPlikZas53, wyslijZas53, zapiszKrokZas53 } from '@/dane/magazyn/operacje/wnioski-zas53';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
+import { adresCzesci } from '@/komponenty/czesci-formularza';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { ListaDefinicji } from '@/komponenty/lista-definicji';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { Pole } from '@/komponenty/pole';
 import { PoleZaznaczenia } from '@/komponenty/pole-zaznaczenia';
 import { trasy } from '@/komponenty/rama/trasy';
 import { UkladDwuKolumnowy } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import {
   adresEkranuZas53,
+  adresOstatniejCzesciZas53,
   AkcjeKreatoraZas53,
   BrakWnioskuZas53,
   NaglowekKreatoraZas53,
@@ -52,19 +55,23 @@ function opisDokumentuBiernik(z: Zalacznik, wniosek: WniosekZas53): string {
 
 export function WidokPodsumowaniaZas53() {
   const k = useWniosekZas53();
-  const router = useRouter();
+  const { zajety: wysylanie, ustawZajety: ustawWysylanie, przejdz } = useNawigacjaZLadowaniem();
   const [oswiadczenie, setOswiadczenie] = useState<boolean | null>(null);
-  const [bladOswiadczenia, setBladOswiadczenia] = useState<KodKomunikatu | null>(null);
   const [bladWysylki, setBladWysylki] = useState<KodKomunikatu | null>(null);
   const [bledyPlikow, setBledyPlikow] = useState<Record<string, { kod: KodKomunikatu; nazwa: string }>>({});
-  const [wysylanie, setWysylanie] = useState(false);
+  const potwierdzone = oswiadczenie ?? k?.wniosek.oswiadczeniePotwierdzone ?? false;
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { oswiadczenie: potwierdzone },
+    waliduj: (w: { oswiadczenie: boolean }): { oswiadczenie: KodKomunikatu | null } => ({ oswiadczenie: w.oswiadczenie ? null : '0043' }),
+    pola: { oswiadczenie: 'zas53-oswiadczenie' },
+  });
 
   if (!k) return <BrakWnioskuZas53 />;
   const { wniosek, kopia, konto, rodzina } = k;
   const z = wniosek.zaswiadczenie;
   const poUstaniu = czyPoUstaniu(wniosek);
+  const zWypadkiem = wniosek.wypadek?.tak ?? false;
   const zalaczniki = wniosek.zalaczniki.length > 0 ? wniosek.zalaczniki : zbudujZalaczniki(wniosek);
-  const potwierdzone = oswiadczenie ?? wniosek.oswiadczeniePotwierdzone;
   const brakPliku = brakujeWymaganegoPliku(zalaczniki);
   const adres = kopia?.adres ?? '';
   const numer = z?.seriaINumer ?? '';
@@ -78,7 +85,6 @@ export function WidokPodsumowaniaZas53() {
 
   const zmienOswiadczenie = (wartosc: boolean) => {
     setOswiadczenie(wartosc);
-    setBladOswiadczenia(null);
     zapiszKrokZas53(wniosek.idWniosku, { oswiadczeniePotwierdzone: wartosc, zalaczniki }, 'ViewZas53Summary', pobierzKontekstOperacji());
   };
 
@@ -98,23 +104,19 @@ export function WidokPodsumowaniaZas53() {
 
   const wyslij = async () => {
     setBladWysylki(null);
-    if (!potwierdzone) {
-      setBladOswiadczenia('0043');
-      document.getElementById('zas53-oswiadczenie')?.focus();
-      return;
-    }
-    setWysylanie(true);
+    if (!walidacja.sprobujWyslac()) return;
+    ustawWysylanie(true);
     const ctx = pobierzKontekstOperacji();
     zapiszKrokZas53(wniosek.idWniosku, { oswiadczeniePotwierdzone: true, zalaczniki }, 'ViewZas53Summary', ctx);
     const wynik = await wyslijZas53(wniosek.idWniosku, ctx);
-    setWysylanie(false);
     if (!wynik.ok) {
-      if (wynik.kod === '0043') setBladOswiadczenia('0043');
+      ustawWysylanie(false);
+      if (wynik.kod === '0043') walidacja.pokazBledy({ oswiadczenie: '0043' });
       else setBladWysylki(wynik.kod);
       return;
     }
     ustawKomunikatPoPrzejsciu({ kod: '0045', dlaWidoku: 'ViewZas53Sent' });
-    router.push(trasy.ViewZas53Sent({ wniosek: wniosek.idWniosku }));
+    przejdz(trasy.ViewZas53Sent({ wniosek: wniosek.idWniosku }));
   };
 
   const zapiszDoDokonczenia = () => {
@@ -129,7 +131,7 @@ export function WidokPodsumowaniaZas53() {
       return;
     }
     ustawKomunikatPoPrzejsciu({ kod: '0058', dlaWidoku: 'ViewCaseDetails' });
-    router.push(trasy.ViewCaseDetails({ idSprawy: wniosek.idSprawy }));
+    przejdz(trasy.ViewCaseDetails({ idSprawy: wniosek.idSprawy }));
   };
 
   const akcjaZmien = (href: string, sekcja: string) => (
@@ -156,7 +158,7 @@ export function WidokPodsumowaniaZas53() {
     <>
       <NaglowekKreatoraZas53 />
       <div className="flex flex-col gap-7.5">
-        <PostepZas53 ekran="ViewZas53Summary" poUstaniu={poUstaniu} idWniosku={wniosek.idWniosku} />
+        <PostepZas53 ekran="ViewZas53Summary" poUstaniu={poUstaniu} idWniosku={wniosek.idWniosku} wypadek={zWypadkiem} />
         {bladWysylki ? <Komunikat kod={bladWysylki} /> : null}
         <UkladDwuKolumnowy
           etykietaBocznej={t.poWyslaniu}
@@ -211,7 +213,7 @@ export function WidokPodsumowaniaZas53() {
                   />
                 </Karta>
               ) : null}
-              <Karta tytul={t.kartaWnioskodawcy} bezLinii as="section" akcje={akcjaZmien(adresEkranu('ViewZas53Data'), t.kartaWnioskodawcy)}>
+              <Karta tytul={t.kartaWnioskodawcy} bezLinii as="section" akcje={akcjaZmien(adresCzesci(adresEkranu('ViewZas53Data'), 2), t.kartaWnioskodawcy)}>
                 <ListaDefinicji
                   pozycje={[
                     {
@@ -235,14 +237,14 @@ export function WidokPodsumowaniaZas53() {
                   ]}
                 />
               </Karta>
-              <Karta tytul={t.kartaWyplaty} bezLinii as="section" akcje={akcjaZmien(adresEkranu('ViewZas53Data'), t.kartaWyplaty)}>
+              <Karta tytul={t.kartaWyplaty} bezLinii as="section" akcje={akcjaZmien(adresCzesci(adresEkranu('ViewZas53Data'), 2), t.kartaWyplaty)}>
                 {wniosek.numerRachunku ? (
                   <ListaDefinicji pozycje={[{ etykieta: t.rachunek, wartosc: formatujRachunek(wniosek.numerRachunku) }]} />
                 ) : (
                   <Komunikat kod="0241" parametry={{ adres: adres || tD.brakDanej }} />
                 )}
               </Karta>
-              <Karta tytul={t.kartaWypadku} bezLinii as="section" akcje={akcjaZmien(adresEkranu('ViewZas53Data'), t.kartaWypadku)}>
+              <Karta tytul={t.kartaWypadku} bezLinii as="section" akcje={akcjaZmien(adresCzesci(adresEkranu('ViewZas53Data'), 3), t.kartaWypadku)}>
                 {wniosek.wypadek?.tak ? (
                   <ListaDefinicji
                     pozycje={[
@@ -328,11 +330,11 @@ export function WidokPodsumowaniaZas53() {
                   etykieta={t.oswiadczenie}
                   zaznaczone={potwierdzone}
                   onZmiana={zmienOswiadczenie}
-                  blad={bladOswiadczenia}
+                  {...walidacja.pole('oswiadczenie')}
                 />
               </Karta>
               <AkcjeKreatoraZas53
-                wstecz={adresEkranu(poprzedniEkranZas53('ViewZas53Summary', poUstaniu) ?? 'ViewZas53Data')}
+                wstecz={adresOstatniejCzesciZas53(poprzedniEkranZas53('ViewZas53Summary', poUstaniu) ?? 'ViewZas53Data', wniosek.idWniosku, zWypadkiem)}
                 onZapisz={zapiszDoDokonczenia}
                 onDalej={() => void wyslij()}
                 etykietaDalej={t.wyslij}

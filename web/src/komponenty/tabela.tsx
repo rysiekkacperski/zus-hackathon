@@ -59,7 +59,7 @@ export function Tabela<K extends string>({
                 key={k.klucz}
                 scope="col"
                 className={[
-                  'h-[62px] bg-surface-page px-5 py-2 align-middle font-semibold text-ink',
+                  'h-[3.875rem] bg-surface-page px-5 py-2 align-middle font-semibold text-ink',
                   k.liczbowa ? 'text-right whitespace-nowrap' : 'text-left',
                 ].join(' ')}
               >
@@ -71,7 +71,7 @@ export function Tabela<K extends string>({
         <tbody>
           {wiersze.length === 0 && pustaTresc ? (
             <tr>
-              <td colSpan={kolumny.length} className="h-[62px] border-b border-line-row px-5 py-3 align-middle">
+              <td colSpan={kolumny.length} className="h-[3.875rem] border-b border-line-row px-5 py-3 align-middle">
                 {pustaTresc}
               </td>
             </tr>
@@ -81,7 +81,7 @@ export function Tabela<K extends string>({
               {kolumny.map((k) => {
                 const tresc = w[k.klucz] as ReactNode;
                 const klasy = [
-                  'h-[62px] border-b border-line-row px-5 py-3 align-middle',
+                  'h-[3.875rem] border-b border-line-row px-5 py-3 align-middle',
                   klasyKomorki(k, kwoty),
                 ].join(' ');
                 return k.tytulowa ? (
@@ -104,7 +104,7 @@ export function Tabela<K extends string>({
                 <td
                   key={k.klucz}
                   className={[
-                    'h-[78px] border-b border-line-row px-5 py-3 align-middle',
+                    'h-[4.875rem] border-b border-line-row px-5 py-3 align-middle',
                     klasyKomorki(k, kwoty),
                     k.liczbowa ? 'text-amount' : 'font-semibold',
                   ].join(' ')}

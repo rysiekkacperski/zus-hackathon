@@ -205,7 +205,7 @@ export const teksty = {
   },
   rama: {
     logo: "Przewodnik rodzica",
-    logoEtykieta: "Przewodnik rodzica, strona główna",
+    logoEtykieta: "ZUS Mama, Przewodnik rodzica, strona główna",
     przejdzDoTresci: "Przejdź do treści",
     ladowanie: "Ładowanie przewodnika",
     powrotDoPrzewodnika: "Wróć do przewodnika",
@@ -1361,25 +1361,14 @@ export const teksty = {
     stanOdczytuZus: {
       wstepBezKopii: "Zaczynamy od danych, które ZUS ma na Twoim koncie.",
       stanNa: ({ dataICzas }: { dataICzas: string }) => `Stan na ${dataICzas}`,
-      tytulOdczytu: "Pobieramy Twoje dane z ZUS",
-      opisOdczytu: "Sprawdzamy dane z Twojego konta ZUS, żeby nie trzeba było ich wpisywać. To potrwa kilka sekund.",
-      tekstPostepu: ({ pobrano, zKolei }: { pobrano: string; zKolei: string }) =>
-        `Pobrano ${pobrano} z ${zKolei} rodzajów danych`,
-      licznik: ({ pobrano, zKolei }: { pobrano: string; zKolei: string }) => `Pobrano: ${pobrano} z ${zKolei}`,
-      czesci: {
-        tytuly: "Tytuły ubezpieczenia i ubezpieczenie chorobowe",
-        podstawy: "Podstawy składek z ostatnich 12 miesięcy",
-        platnicy: "Płatnicy składek i wypłata zasiłków",
-        czlonkowie: "Członkowie rodziny zgłoszeni do ubezpieczenia zdrowotnego",
-        zasilki: "Zasiłki z ostatnich 6 miesięcy",
-        kontakt: "Adres i adres e-mail konta eZUS",
-      },
-      stanyCzesci: {
-        pobrano: "Pobrano",
-        pobieramy: "Pobieramy",
-        wKolejce: "W kolejce",
-      },
-      listaCzesci: "Części danych z konta ZUS",
+      tytulOdczytu: "Pobieramy dane z Twojego konta ZUS",
+      opisOdczytu:
+        "Pobieramy tytuły ubezpieczenia, podstawy składek, płatników, członków rodziny i zasiłki, żeby nie trzeba było ich wpisywać.",
+      czasOdczytu: ({ liczbaSekund }: { liczbaSekund: number }) =>
+        liczbaSekund === 1 ? "To potrwa około sekundy." : `To potrwa około ${liczbaSekund} sekund.`,
+      czasOdczytuChwila: "To potrwa chwilę.",
+      ogloszenieStartu: ({ czas }: { czas: string }) => `Pobieramy dane z Twojego konta ZUS. ${czas}`,
+      ogloszenieKonca: "Pobraliśmy dane z Twojego konta ZUS.",
       tylkoOdczyt: "Przewodnik tylko odczytuje dane z Twojego konta ZUS i niczego w nim nie zmienia.",
       tytulBrakuDanych: "Twoje dane z ZUS",
       opisBrakuDanych:
@@ -1659,6 +1648,7 @@ export const teksty = {
     pozostaleDane: "Wszystkie dane z Twojego konta ZUS",
     notatkaOdswiezania: "Dane z konta ZUS odświeżamy przy każdym otwarciu przewodnika.",
     dalej: "Potwierdź i przejdź dalej",
+    tytulKartyZasilku: "Ubezpieczenie chorobowe i płatnik zasiłku",
     // koniec ViewProfileZusData
   },
   ViewProfilePayer: {
@@ -2366,6 +2356,7 @@ export const teksty = {
     powrotDoPlanu: "Plan rodziny",
     powrotDoProfilu: "Profil rodziny",
     kartaPorod: "Poród",
+    kartaHospitalizacja: "Pobyt dziecka w szpitalu",
     kartaZdrowie: "Zdrowie dziecka",
     dziecko: "Dziecko",
     dataPorodu: "Data porodu",
@@ -4365,7 +4356,6 @@ export const teksty = {
     przejdzDoEzus: "Przejdź do eZUS",
     stanNaCzas: ({ czas }: { czas: string }) => `Stan na ${czas}`,
     wstep: "Dane odczytaliśmy z Twojego konta ubezpieczonego w eZUS. Przewodnik ich nie zmienia – zmiany zgłosisz w eZUS.",
-    odczytywanie: "Odczytujemy dane z Twojego konta ZUS.",
     brakDaty: "-",
     okresOd: ({ od }: { od: string }) => `od ${od}`,
     okresOdDo: ({ od, doDnia }: { od: string; doDnia: string }) => `od ${od} do ${doDnia}`,
@@ -4758,6 +4748,10 @@ export const teksty = {
       },
     ],
     wiek: ({ lata }: { lata: string }) => `${lata} lat`,
+    // Części formularza (?czesc=N): nazwy w „Krok X z N” i tytuły kart części.
+    czescSprawy: "Dane z przykładowej sprawy",
+    kartaDatPrzyjecia: "Daty przyjęcia i urodzenia dziecka",
+    kartaDzieci: "Dzieci",
     // koniec ViewCalcMaternityInput
   },
   ViewCalcMaternityResult: {
@@ -5413,6 +5407,7 @@ export const teksty = {
       dodaj: "Dodaj dokument",
       dodajPodpowiedz: "PDF, JPG albo PNG, najwyżej 10 MB. Dokument tego samego rodzaju zastąpi poprzedni.",
       trwaOdczyt: ({ nazwa }: { nazwa: string }) => `Odczytujemy dane z pliku ${nazwa}. Odczyt trwa najdłużej 30 sekund.`,
+      nazwaCzesci: "Dokumenty sprawy",
     },
     nazwyDokumentow: {
       zam: "Wniosek ZAM",
@@ -5444,8 +5439,6 @@ export const teksty = {
       okresTrwa: "Okres trwa",
     },
     osoba: {
-      tytulKobieta: "Ubezpieczona i tytuł ubezpieczenia",
-      tytulMezczyzna: "Ubezpieczony i tytuł ubezpieczenia",
       daneKobieta: "Dane ubezpieczonej",
       daneMezczyzna: "Dane ubezpieczonego",
       imie: "Imię",
@@ -5458,7 +5451,6 @@ export const teksty = {
       tytulDo: "Data ustania tytułu",
       etat: "Wymiar czasu pracy",
       liczbaUb: "Liczba ubezpieczonych zgłoszonych przez płatnika do ubezpieczenia chorobowego",
-      ustanie: "Ustanie zatrudnienia",
       przyczyna: "Przyczyna ustania zatrudnienia",
       inneZatrudnienie: "Zapewnienie innego zatrudnienia",
       pracaPoUstaniu: "Praca zarobkowa, emerytura, renta albo zasiłek dla bezrobotnych po ustaniu ubezpieczenia",
@@ -5471,12 +5463,10 @@ export const teksty = {
       okresDo: ({ numer }: { numer: string }) => `Okres ${numer}, do`,
       usunOkres: ({ numer }: { numer: string }) => `Usuń okres ${numer}`,
       dodajOkres: "Dodaj okres",
-      zadluzenie: "Zadłużenie z tytułu składek",
       dlug: "Kwota zadłużenia na dzień porodu (zł)",
       dlugBrak: "Brak w dokumentach sprawy. Kwotę zawiera poświadczenie ubezpieczenia chorobowego",
     },
     zdarzenie: {
-      tytul: "Zdarzenie i wniosek",
       zdarzenie: "Zdarzenie",
       rodzaj: "Rodzaj zdarzenia",
       porod: "Data porodu",
@@ -5548,12 +5538,11 @@ export const teksty = {
       stawka: "Stawka (nieobowiązkowe)",
       kwota: "Miesięczna kwota w zł (nieobowiązkowe)",
       usun: ({ numer }: { numer: string }) => `Usuń świadczenie ${numer}`,
+      wyborWpisu: "Świadczenia oczekiwanego rozstrzygnięcia",
       dodaj: "Dodaj świadczenie",
     },
     zatwierdzenie: {
-      etykieta: "Zatwierdzenie danych sprawy",
       zatwierdz: "Zatwierdź dane",
-      wrocDoListy: "Wróć do listy spraw",
       opis: "Po zatwierdzeniu sprawdzimy warunki prawa do zasiłku z ubezpieczenia chorobowego.",
     },
     opcje: {
@@ -5883,6 +5872,7 @@ export const teksty = {
       zapisujemy: "Odpowiedzi zapisujemy po każdym kroku.",
       krokiWniosku: "Kroki wniosku",
       numerKroku: ({ numer, nazwa }: { numer: number; nazwa: string }) => `${numer}. ${nazwa}`,
+      zakresKrokow: ({ od, do_, nazwa }: { od: number; do_: number; nazwa: string }) => `${od}–${do_}. ${nazwa}`,
       nazwyKrokow: {
         ViewZamLeaveType: "Rodzaj urlopu",
         ViewZamPrebirth: "Początek zasiłku",
@@ -6001,8 +5991,8 @@ export const teksty = {
     kroki: {
       zapisujemy: "Odpowiedzi zapisujemy po każdym kroku.",
       etykietaListy: "Kroki wniosku",
-      nazwy: ["Rodzaj urlopu", "Początek zasiłku", "Okres zasiłku", "Dane", "Oświadczenia", "Podsumowanie"],
       pozycja: ({ numer, nazwa }: { numer: number; nazwa: string }) => `${numer}. ${nazwa}`,
+      pozycjaZakres: ({ od, do_, nazwa }: { od: number; do_: number; nazwa: string }) => `${od}–${do_}. ${nazwa}`,
       zakonczony: "krok zakończony",
     },
     termin: {
@@ -6552,6 +6542,7 @@ export const teksty = {
       zmienZaswiadczenie: "Zmień zaświadczenie",
       brakWniosku: "Nie znaleźliśmy tego wniosku. Rozpocznij wniosek przy sprawie Zasiłek chorobowy w ciąży.",
       rozpocznij: "Rozpocznij wniosek",
+      zakresKrokow: ({ od, do: koniec, nazwa }: { od: number; do: number; nazwa: string }) => `${od}–${koniec}. ${nazwa}`,
     },
     // koniec ViewZas53Start
   },
@@ -6682,6 +6673,7 @@ export const teksty = {
     notatkaDokumentu: "Dokument dodamy do listy załączników na podsumowaniu – tam możesz dołączyć jego plik. Przy wypadku albo chorobie zawodowej zasiłek przysługuje od pierwszego dnia ubezpieczenia.",
     zobaczPoprzedni: "Zobacz poprzedni wniosek",
     zobaczStanRozliczen: "Zobacz stan rozliczeń składek",
+    kartaDokumentu: "Dokument potwierdzający",
     // koniec ViewZas53Data
   },
   ViewZas53Summary: {
@@ -6802,9 +6794,12 @@ export const teksty = {
     naglowek: "Wniosek o urlop do pracodawcy",
     powrot: "Instrukcja sprawy",
     etykietaKrokow: "Kroki wniosku",
-    kroki: ["1. Rodzaj wniosku", "2. Wniosek", "3. Podsumowanie i wysłanie"],
+    nazwyKrokow: ["Rodzaj wniosku", "Wniosek", "Podsumowanie i wysłanie"],
+    numerKroku: ({ numer, nazwa }: { numer: number; nazwa: string }) => `${numer}. ${nazwa}`,
+    zakresKrokow: ({ od, do: koniec, nazwa }: { od: number; do: number; nazwa: string }) => `${od}–${koniec}. ${nazwa}`,
     nazwaKroku: "Rodzaj wniosku",
-    krok: ({ krok, nazwa }: { krok: number; nazwa: string }) => `Krok ${krok} z 3: ${nazwa}`,
+    krok: ({ krok, liczbaKrokow, nazwa }: { krok: number; liczbaKrokow: number; nazwa: string }) =>
+      `Krok ${krok} z ${liczbaKrokow}: ${nazwa}`,
     zapisujemy: "Odpowiedzi zapisujemy po każdym kroku.",
     tytulListy: "Rodzaj wniosku",
     legenda: "Którego urlopu dotyczy wniosek?",
@@ -7008,6 +7003,7 @@ export const teksty = {
     ochronaTresc: "Od dnia złożenia wniosku do końca urlopu pracodawca nie może wypowiedzieć ani rozwiązać z Tobą umowy o pracę. Datę złożenia zapiszemy przy wniosku.",
     skadTytul: "Skąd te dane",
     skadTresc: "Okresy i stawkę zasiłku proponujemy z profilu rodziny, wybranego wariantu sprawy w planie i wysłanych wniosków. Każdą wartość możesz zmienić.",
+    laczenieTytul: "Praca w części urlopu z wydłużenia",
     // koniec ViewLeaveRequestForm
   },
   ViewLeaveRequestSummary: {
@@ -7310,6 +7306,16 @@ export const teksty = {
     zloz: "Złóż wniosek",
     brakDatyPorodu: "Podaj datę porodu",
     brakRodziny: "Wniosek o odpis złożysz po zapisaniu profilu rodziny.",
+    tytulUrodzenia: "Urodzenie dziecka",
+    // Nazwy części formularza w „Krok X z N”
+    czesci: {
+      rodzaj: "Rodzaj odpisu",
+      dziecko: "Dane dziecka",
+      urodzenie: "Urodzenie dziecka",
+      cel: "Cel odpisu",
+      odbior: "Sposób odbioru",
+      wnioskodawca: "Wnioskodawca i urząd",
+    },
     // koniec ViewBirthCertificateRequest
   },
   ViewBirthCertificateRequestSent: {
@@ -7731,6 +7737,13 @@ export const teksty = {
       dzieckoNieUrodzilo: "Dziecko się nie urodziło.",
       dzieckoUrodzilo: "Dziecko się urodziło.",
     },
+    // Nazwy części formularza w „Krok X z N”
+    czesci: {
+      sprawa: "Sprawa",
+      warunek: "Warunek",
+      kanal: "Instytucja i kanał",
+      termin: "Termin i koszt spóźnienia",
+    },
     // koniec ViewCatalogItemAdd
   },
   ViewCatalogSupportOrganizations: {
@@ -7781,6 +7794,12 @@ export const teksty = {
       powrot: "Podmioty wsparcia",
       nieZnaleziono: "Nie znaleźliśmy tej organizacji w słowniku podmiotów wsparcia.",
       wrocDoListy: "Wróć do listy organizacji",
+    },
+    // Nazwy części formularza organizacji w „Krok X z N”
+    czesciFormularza: {
+      organizacja: "Organizacja i zakres pomocy",
+      sytuacje: "Sytuacje szczególne",
+      kontakt: "Kontakt i potwierdzenie",
     },
     // koniec ViewCatalogSupportOrganizations
   },

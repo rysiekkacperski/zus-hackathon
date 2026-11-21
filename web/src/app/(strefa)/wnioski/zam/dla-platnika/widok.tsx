@@ -33,7 +33,7 @@ function KrokiPrzekazania({ pozycje, start = 1 }: { pozycje: string[]; start?: n
   return (
     <ol role="list" className="m-0 grid list-none gap-6 p-0">
       {pozycje.map((tekst, i) => (
-        <li key={tekst} className="grid grid-cols-[36px_minmax(0,1fr)] items-start gap-x-4">
+        <li key={tekst} className="grid grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-x-4">
           <span aria-hidden="true" className="box-border grid size-day place-items-center rounded-full border border-ink-muted text-ink">
             {start + i}
           </span>

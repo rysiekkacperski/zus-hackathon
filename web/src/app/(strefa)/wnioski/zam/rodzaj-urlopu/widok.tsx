@@ -8,11 +8,11 @@ import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsci
 import { rozpocznijLubWznowZam } from '@/dane/magazyn/operacje/wnioski-zam';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { dodajDni, formatujDate } from '@/domena/daty';
-import type { KodKomunikatu, RodzajUrlopu } from '@/domena/typy';
+import type { BledyPol, KodKomunikatu, RodzajUrlopu } from '@/domena/typy';
 import { daneRodzicaWniosku, dostepneRodzajeUrlopu, sprawdzPrawoDoWnioskuZam } from '@/domena/wnioski/zam';
 import { ekranPoZam, nastepnyEkranZam } from '@/domena/wnioski/zam-nawigacja';
 import { parametryOkresuZam, TYGODNIE_URLOPU_MACIERZYNSKIEGO } from '@/domena/wnioski/zam-okresy';
-import { GrupaOpcji, idOpcjiGrupy, type OpcjaGrupy } from '@/komponenty/grupa-opcji';
+import { GrupaOpcji, type OpcjaGrupy } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { Notatka } from '@/komponenty/notatka';
@@ -20,6 +20,7 @@ import { Odnosnik } from '@/komponenty/odnosnik';
 import { sciezkaWidoku, trasy } from '@/komponenty/rama/trasy';
 import { SzkieletWidoku } from '@/komponenty/szkielet-widoku';
 import { Ikona } from '@/komponenty/ikona';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import {
   BrakWnioskuZam,
@@ -27,6 +28,7 @@ import {
   KomunikatBleduZapisu,
   PrzyciskiKreatora,
   RamaKreatoraZam,
+  useKrokiKreatoraZam,
   useWniosekZam,
   usePrzejscieDalej,
   useZapisDoDokonczenia,
@@ -35,6 +37,15 @@ import {
 
 const t = teksty.ViewZamLeaveType;
 const tk = t.kreator;
+
+interface FormularzRodzaju {
+  rodzaj: RodzajUrlopu | null;
+}
+
+/** Rodzaj urlopu jest wymagany (0006). */
+function walidujRodzaj(f: FormularzRodzaju): BledyPol<'rodzaj'> {
+  return f.rodzaj === null ? { rodzaj: '0006' } : {};
+}
 
 /** Start kreatora z ?sprawa=: sprawdzenie prawa (R1), przekierowanie albo szkic i wznowienie od ostatniego ekranu. */
 function StartWnioskuZam({ idSprawy }: { idSprawy: string }) {
@@ -104,11 +115,13 @@ function opisRodzaju(rodzaj: RodzajUrlopu, dane: DaneWnioskuZam, dzis: string): 
 function FormularzRodzajuUrlopu({ dane }: { dane: DaneWnioskuZam }) {
   const dzis = useDzis();
   const { wniosek, kontekst, okresy } = dane;
-  const przejdzDalej = usePrzejscieDalej();
+  const { przejdzDalej, zajety } = usePrzejscieDalej();
   const zapiszDoDokonczenia = useZapisDoDokonczenia();
   const [rodzaj, ustawRodzaj] = useState<RodzajUrlopu | null>(wniosek.rodzajUrlopu ?? null);
-  const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
+  // Liczba kroków zależy od wybranego rodzaju urlopu (części ekranu okresu), więc liczymy ją z bieżącego wyboru.
+  const kroki = useKrokiKreatoraZam({ ...dane, wniosek: { ...wniosek, rodzajUrlopu: rodzaj ?? wniosek.rodzajUrlopu } });
   const [bladZapisu, ustawBladZapisu] = useState<KodKomunikatu | null>(null);
+  const walidacja = useWalidacjaNaBiezaco({ wartosci: { rodzaj }, waliduj: walidujRodzaj, pola: { rodzaj: 'zam-rodzaj' } });
 
   const tryb = okresy.przedPorodem ? 'przed-porodem' : kontekst.rodzina.daneCiazy?.przyjecie ? 'przyjecie' : 'po-porodzie';
   const rola = okresy.rodzic === 'drugi-rodzic' ? 'drugi-rodzic' : 'rodzic';
@@ -123,11 +136,7 @@ function FormularzRodzajuUrlopu({ dane }: { dane: DaneWnioskuZam }) {
     r === null ? {} : r === wniosek.rodzajUrlopu ? { rodzajUrlopu: r } : { rodzajUrlopu: r, okresy: [], rodzicielski: undefined };
 
   const dalej = () => {
-    if (rodzaj === null) {
-      ustawBlad('0006');
-      document.getElementById(idOpcjiGrupy('zam-rodzaj', rodzaje[0]))?.focus();
-      return;
-    }
+    if (!walidacja.sprobujWyslac() || rodzaj === null) return;
     const cel = ekranPoZam(wniosek, 'ViewZamLeaveType', okresy.przedPorodem);
     ustawBladZapisu(przejdzDalej(wniosek, zmiana(rodzaj), cel));
   };
@@ -184,7 +193,7 @@ function FormularzRodzajuUrlopu({ dane }: { dane: DaneWnioskuZam }) {
   );
 
   return (
-    <RamaKreatoraZam ekran="ViewZamLeaveType" wniosek={wniosek} komunikaty={komunikaty} boczna={boczna}>
+    <RamaKreatoraZam ekran="ViewZamLeaveType" wniosek={wniosek} kroki={kroki} komunikaty={komunikaty} boczna={boczna}>
       <form
         noValidate
         className="flex flex-col gap-7.5"
@@ -200,11 +209,8 @@ function FormularzRodzajuUrlopu({ dane }: { dane: DaneWnioskuZam }) {
             legenda={t.legenda}
             opcje={opcje}
             wartosc={rodzaj}
-            onZmiana={(r) => {
-              ustawRodzaj(r);
-              ustawBlad(null);
-            }}
-            blad={blad}
+            onZmiana={ustawRodzaj}
+            {...walidacja.pole('rodzaj')}
             uklad="karty"
           />
           {okresy.rodzic === 'matka' && !okresy.przedPorodem ? (
@@ -214,6 +220,7 @@ function FormularzRodzajuUrlopu({ dane }: { dane: DaneWnioskuZam }) {
         <PrzyciskiKreatora
           onZapisz={() => ustawBladZapisu(zapiszDoDokonczenia(wniosek, zmiana(rodzaj), 'ViewZamLeaveType'))}
           onDalej={() => undefined}
+          zajety={zajety}
         />
       </form>
     </RamaKreatoraZam>

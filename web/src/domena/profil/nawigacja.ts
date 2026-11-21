@@ -2,9 +2,18 @@
 // Właściciel: u07 (Profil na start: dane ZUS, płatnik, sytuacja).
 // Bieżącym ekranem kreatora jest `szkic.ostatniEkran`: widok zapisuje szkic z własnym identyfikatorem
 // (zapiszSzkic) i dopiero potem wyznacza następny albo poprzedni ekran.
-import type { KrokiKreatoraProps } from '@/komponenty/kroki';
+import type { KrokiKreatoraProps, KrokZCzesciami } from '@/komponenty/kroki';
 import { czyFormaZPlatnikiemSkladek } from '@/domena/profil/platnik';
-import type { DaneRodzica, DrugiRodzic, IdWidoku, SytuacjaRodzica, SzkicProfilu } from '@/domena/typy';
+import { czyPytacODobrowolne } from '@/domena/profil/zapis';
+import { czyPokazacPrzyczyne, czyZmianaZData, type FormularzZmianyZatrudnienia } from '@/domena/profil/zmiana-zatrudnienia';
+import type {
+  DaneRodzica,
+  DrugiRodzic,
+  FormaZatrudnieniaDrugiegoRodzica,
+  IdWidoku,
+  SytuacjaRodzica,
+  SzkicProfilu,
+} from '@/domena/typy';
 import { teksty } from '@/teksty';
 
 /** Ekrany kreatora profilu w kolejności. */
@@ -157,14 +166,123 @@ function kluczKrokuCiazy(sytuacja: SytuacjaRodzica | null): KluczKroku {
   return 'ciazaAlboDziecko';
 }
 
-/** Liczba kroków kreatora profilu. */
+/** Liczba kroków na liście „Kroki profilu”. */
 export const LICZBA_KROKOW_PROFILU = 7;
 
-/** Numer i nazwa kroku bieżącego ekranu („Krok 3 z 7: Dane ciąży”). */
-export function krokEkranu(szkic: SzkicProfilu | null, biezacy: IdWidoku): { numer: number; liczba: number; nazwa: string } {
-  const kroki = nazwyKrokow(sytuacjaSzkicu(szkic));
-  const indeks = indeksKroku(biezacy);
-  return { numer: indeks + 1, liczba: LICZBA_KROKOW_PROFILU, nazwa: kroki[indeks] };
+// Części ekranów kreatora: ekran dzielony na części mieści każdą część w oknie bez przewijania, a w „Krok X z N”
+// każda część liczy się jako osobny krok.
+
+/** Części ViewProfileZusData: dane formy zatrudnienia, ubezpieczenie chorobowe i płatnik, dzieci i pozostałe dane;
+ * bez kopii Danych z konta ZUS najpierw stan odczytu z ponowieniem. */
+export function czesciDanychZKontaZus(zDanymiZus: boolean): number {
+  return zDanymiZus ? 3 : 4;
+}
+
+/** Części ViewProfilePregnancy: termin porodu i liczba dzieci, potem pierwsza wizyta. */
+export const CZESCI_DANYCH_CIAZY = 2;
+
+/** Części ViewProfileChildAdoption: rola i forma przyjęcia, daty, liczba dzieci. */
+export const CZESCI_PRZYJECIA_DZIECKA = 3;
+
+/** Części ViewProfileFamily: stan cywilny i uznanie ojcostwa, potem gmina i dochód. */
+export const CZESCI_DANYCH_RODZINY = 2;
+
+/**
+ * Części ViewProfileEmploymentChange: rodzaj zmiany; przy rozpoczęciu i ustaniu forma i data zmiany; przy ustaniu
+ * umowy o pracę przyczyna ustania i inne zatrudnienie.
+ */
+export function czesciZmianyZatrudnienia(f: Pick<FormularzZmianyZatrudnienia, 'rodzaj' | 'forma'>): number {
+  if (!czyZmianaZData(f.rodzaj)) return 1;
+  return czyPokazacPrzyczyne(f) ? 3 : 2;
+}
+
+/** Części ViewProfileSecondParent: forma zatrudnienia, a przy umowie zlecenia i działalności dobrowolne ubezpieczenie. */
+export function czesciDrugiegoRodzica(forma: FormaZatrudnieniaDrugiegoRodzica | null | undefined): number {
+  return czyPytacODobrowolne(forma) ? 2 : 1;
+}
+
+export interface KontekstCzesciProfilu {
+  szkic: Pick<SzkicProfilu, 'daneRodziny'> | null;
+  /** Konto ma kopię Danych z konta ZUS. */
+  zDanymiZus: boolean;
+}
+
+/** Liczba części ekranu kreatora według odpowiedzi zapisanych w szkicu. */
+export function czesciEkranuProfilu(ekran: IdWidoku, { szkic, zDanymiZus }: KontekstCzesciProfilu): number {
+  switch (ekran) {
+    case 'ViewProfileZusData':
+      return czesciDanychZKontaZus(zDanymiZus);
+    case 'ViewProfilePregnancy':
+      return CZESCI_DANYCH_CIAZY;
+    case 'ViewProfileChildAdoption':
+      return CZESCI_PRZYJECIA_DZIECKA;
+    case 'ViewProfileEmploymentChange': {
+      const zmiana = szkic?.daneRodziny.matka?.zmianaZatrudnienia;
+      return czesciZmianyZatrudnienia({ rodzaj: zmiana?.rodzaj.wartosc ?? null, forma: zmiana?.forma?.wartosc ?? null });
+    }
+    case 'ViewProfileFamily':
+      return CZESCI_DANYCH_RODZINY;
+    case 'ViewProfileSecondParent':
+      return czesciDrugiegoRodzica(szkic?.daneRodziny.drugiRodzic?.formaZatrudnienia?.wartosc);
+    default:
+      return 1;
+  }
+}
+
+const EKRANY_CIAZY_ALBO_DZIECKA: readonly IdWidoku[] = ['ViewProfilePregnancy', 'ViewBirthDate', 'ViewProfileChildAdoption'];
+
+/** Ekrany ścieżki kreatora z liczbą części; krok ciąży albo dziecka bez wybranej sytuacji ma jedną część. */
+function ekranySciezki(
+  szkic: SzkicProfilu | null,
+  zgoda: boolean,
+  biezacy: IdWidoku,
+  kontekst: KontekstCzesciProfilu,
+): KrokZCzesciami<string>[] {
+  const sytuacja = sytuacjaSzkicu(szkic);
+  const ekran = (id: IdWidoku): KrokZCzesciami<string> => ({ id, czesci: czesciEkranuProfilu(id, kontekst) });
+  const ekrany: KrokZCzesciami<string>[] = [ekran('ViewProfileZusData')];
+  if (biezacy === 'ViewProfilePayer' || czyEkranPlatnika(szkic)) ekrany.push(ekran('ViewProfilePayer'));
+  ekrany.push(ekran('ViewProfileSituation'));
+  const naEkranieCiazy = EKRANY_CIAZY_ALBO_DZIECKA.includes(biezacy);
+  if (zgoda || naEkranieCiazy) {
+    const ekranSytuacji = sytuacja === null || sytuacja === 'planowanie' ? null : EKRAN_SYTUACJI[sytuacja];
+    const ekranCiazy = naEkranieCiazy ? biezacy : ekranSytuacji;
+    ekrany.push(ekranCiazy ? ekran(ekranCiazy) : { id: 'ciaza-albo-dziecko' });
+  }
+  const przyjecie = sytuacja === 'przyjecie' || biezacy === 'ViewProfileChildAdoption';
+  if ((zgoda && !przyjecie) || biezacy === 'ViewProfileEmploymentChange') ekrany.push(ekran('ViewProfileEmploymentChange'));
+  ekrany.push(ekran('ViewProfileFamily'), ekran('ViewProfileSecondParent'), ekran('ViewProfileSummary'));
+  return ekrany;
+}
+
+export interface OpcjeKrokuEkranu {
+  zgoda: boolean;
+  /** Konto ma kopię Danych z konta ZUS. */
+  zDanymiZus: boolean;
+  /** Bieżąca część ekranu, od 1. */
+  czesc?: number;
+  /** Liczba części bieżącego ekranu według odpowiedzi na ekranie; domyślnie według szkicu. */
+  liczbaCzesci?: number;
+}
+
+/**
+ * Numer i nazwa kroku bieżącego ekranu („Krok 4 z 11: Dane ciąży”). Każda część ekranu liczy się jako krok,
+ * a ekrany pominięte na ścieżce rodzica się nie liczą.
+ */
+export function krokEkranu(
+  szkic: SzkicProfilu | null,
+  biezacy: IdWidoku,
+  { zgoda, zDanymiZus, czesc = 1, liczbaCzesci }: OpcjeKrokuEkranu,
+): { numer: number; liczba: number; nazwa: string } {
+  const ekrany = ekranySciezki(szkic, zgoda, biezacy, { szkic, zDanymiZus }).map((e) =>
+    e.id === biezacy && liczbaCzesci !== undefined ? { ...e, czesci: liczbaCzesci } : e,
+  );
+  const czesci = (e: KrokZCzesciami<string>) => Math.max(1, Math.trunc(e.czesci ?? 1));
+  const indeks = ekrany.findIndex((e) => e.id === biezacy);
+  const wczesniejsze = ekrany.slice(0, Math.max(0, indeks)).reduce((suma, e) => suma + czesci(e), 0);
+  const numer = indeks < 0 ? 1 : wczesniejsze + Math.min(Math.max(1, Math.trunc(czesc)), czesci(ekrany[indeks]));
+  const liczba = ekrany.reduce((suma, e) => suma + czesci(e), 0);
+  return { numer, liczba, nazwa: nazwyKrokow(sytuacjaSzkicu(szkic))[indeksKroku(biezacy)] };
 }
 
 function nazwyKrokow(sytuacja: SytuacjaRodzica | null): string[] {

@@ -26,6 +26,7 @@ import { trasy } from '@/komponenty/rama/trasy';
 import { SzkieletWidoku } from '@/komponenty/szkielet-widoku';
 import { trescKomunikatu } from '@/komponenty/typy-komunikatow';
 import { Stos } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import {
   czyPoprawny,
@@ -519,38 +520,38 @@ function KartaOkresow({
   const przyjecie = dane.przyjecie?.wartosc;
   const [tygodnie, ustawTygodnie] = useState(String(parametry.tygodniePrzedPorodem));
   const [poczatek, ustawPoczatek] = useState(parametry.poczatekNaWarunkach ? formatujDate(parametry.poczatekNaWarunkach) : '');
-  const [bladTygodni, ustawBladTygodni] = useState<KodKomunikatu | null>(null);
-  const [bladPoczatku, ustawBladPoczatku] = useState<KodKomunikatu | null>(null);
+
+  // Przy przyjęciu dziecka pusty początek oznacza początek w dniu przyjęcia.
+  const ocenPoczatek = (tekst: string) =>
+    przyjecie
+      ? walidujDateWZakresie(
+          tekst,
+          { od: przyjecie.dataPrzyjecia, do: dodajDni(przyjecie.dataPrzyjecia, 21) },
+          { format: '0010', zaWczesnie: '0042', zaPozno: '0042' },
+        )
+      : null;
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { tygodnie, poczatek },
+    waliduj: (w): { tygodnie?: KodKomunikatu; poczatek?: KodKomunikatu } => {
+      if (zdarzenie === 'przyjecie' && przyjecie) {
+        const r = w.poczatek.trim() === '' ? null : ocenPoczatek(w.poczatek);
+        return r && 'kod' in r ? { poczatek: r.kod } : {};
+      }
+      const r = walidujLiczbeCalkowita(w.tygodnie, 0, 6, '0061');
+      return 'kod' in r ? { tygodnie: r.kod } : {};
+    },
+    pola: { tygodnie: 'wynik-przed-porodem', poczatek: 'wynik-poczatek' },
+  });
 
   function przelicz() {
+    if (!walidacja.sprobujWyslac()) return;
     if (zdarzenie === 'przyjecie' && przyjecie) {
-      if (poczatek.trim() === '') {
-        ustawBladPoczatku(null);
-        onZmiana({ ...parametry, poczatekNaWarunkach: undefined });
-        return;
-      }
-      const r = walidujDateWZakresie(
-        poczatek,
-        { od: przyjecie.dataPrzyjecia, do: dodajDni(przyjecie.dataPrzyjecia, 21) },
-        { format: '0010', zaWczesnie: '0042', zaPozno: '0042' },
-      );
-      if ('kod' in r) {
-        ustawBladPoczatku(r.kod);
-        document.getElementById('wynik-poczatek')?.focus();
-        return;
-      }
-      ustawBladPoczatku(null);
-      onZmiana({ ...parametry, poczatekNaWarunkach: r.data });
+      const r = poczatek.trim() === '' ? null : ocenPoczatek(poczatek);
+      onZmiana({ ...parametry, poczatekNaWarunkach: r && 'data' in r ? r.data : undefined });
       return;
     }
     const r = walidujLiczbeCalkowita(tygodnie, 0, 6, '0061');
-    if ('kod' in r) {
-      ustawBladTygodni(r.kod);
-      document.getElementById('wynik-przed-porodem')?.focus();
-      return;
-    }
-    ustawBladTygodni(null);
-    onZmiana({ ...parametry, tygodniePrzedPorodem: r.liczba });
+    if ('liczba' in r) onZmiana({ ...parametry, tygodniePrzedPorodem: r.liczba });
   }
 
   const rodzicePrawo = (['matka', 'drugi-rodzic'] as const).filter((r) => prawo[r]);
@@ -582,7 +583,7 @@ function KartaOkresow({
               })}
               wartosc={poczatek}
               onZmiana={ustawPoczatek}
-              blad={bladPoczatku}
+              {...walidacja.pole('poczatek')}
               szerokosc="waska"
             />
           ) : (
@@ -592,7 +593,7 @@ function KartaOkresow({
               podpowiedz={t.tygodniePrzedPodpowiedz}
               wartosc={tygodnie}
               onZmiana={ustawTygodnie}
-              blad={bladTygodni}
+              {...walidacja.pole('tygodnie')}
               szerokosc="waska"
             />
           )}

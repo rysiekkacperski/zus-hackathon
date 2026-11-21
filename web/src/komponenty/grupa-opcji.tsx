@@ -6,6 +6,7 @@ import {
   PodpowiedzPola,
   idBledu,
   idPodpowiedzi,
+  opuszczonoKontener,
   polaczOpisy,
   trescBledu,
   type BladPolaWartosc,
@@ -26,6 +27,8 @@ export interface GrupaOpcjiProps<W extends string = string> {
   opcje: OpcjaGrupy<W>[];
   wartosc: W | null;
   onZmiana: (w: W) => void;
+  /** Wyjście fokusu poza grupę i wybór opcji: walidacja po opuszczeniu (useWalidacjaNaBiezaco). */
+  onOpuszczenie?: () => void;
   podpowiedz?: ReactNode;
   blad?: BladPolaWartosc;
   parametryBledu?: Record<string, string>;
@@ -47,7 +50,7 @@ const klasyListy = {
 
 const klasyKarty = {
   zaznaczona:
-    'flex min-w-0 cursor-pointer items-center gap-3 box-border min-h-control rounded-sm border-2 border-brand bg-brand-wash px-[15px] py-[7px] font-semibold',
+    'flex min-w-0 cursor-pointer items-center gap-3 box-border min-h-control rounded-sm border-2 border-brand bg-brand-wash px-[0.9375rem] py-[0.4375rem] font-semibold',
   niezaznaczona:
     'flex min-w-0 cursor-pointer items-center gap-3 box-border min-h-control rounded-sm border border-brand bg-surface-card px-4 py-2 transition-colors duration-150 hover:bg-brand-wash motion-reduce:transition-none',
   wylaczona:
@@ -68,6 +71,7 @@ export function GrupaOpcji<W extends string = string>({
   opcje,
   wartosc,
   onZmiana,
+  onOpuszczenie,
   podpowiedz,
   blad,
   parametryBledu,
@@ -81,6 +85,9 @@ export function GrupaOpcji<W extends string = string>({
   return (
     <fieldset
       id={id}
+      onBlur={(e) => {
+        if (onOpuszczenie && opuszczonoKontener(e)) onOpuszczenie();
+      }}
       aria-describedby={polaczOpisy(podpowiedz ? idPodpowiedzi(idGrupy) : null, maBlad ? idBledu(idGrupy) : null)}
       className={['m-0 min-w-0 border-0 p-0', className].filter(Boolean).join(' ')}
     >
@@ -105,7 +112,10 @@ export function GrupaOpcji<W extends string = string>({
                 checked={zaznaczona}
                 disabled={opcja.wylaczona}
                 aria-describedby={opcja.opis ? idOpisu : undefined}
-                onChange={() => onZmiana(opcja.wartosc)}
+                onChange={() => {
+                  onZmiana(opcja.wartosc);
+                  onOpuszczenie?.();
+                }}
                 className={uklad === 'proste' ? 'm-0 mt-0.5 size-5 flex-none accent-brand' : 'm-0 size-5 flex-none accent-brand'}
               />
               <span className="min-w-0 flex-1">

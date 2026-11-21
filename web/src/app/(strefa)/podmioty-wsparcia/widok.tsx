@@ -45,7 +45,7 @@ function etykietaPowrotu(sciezka: string, katalog: Katalog): string | undefined 
 function KartaOrganizacji({ podmiot, indeks }: { podmiot: PodmiotWsparcia; indeks: number }) {
   const idTytulu = `organizacja-${indeks}`;
   return (
-    <article aria-labelledby={idTytulu} className="box-border min-w-0 flex-[1_1_420px] rounded-sm bg-surface-card p-5">
+    <article aria-labelledby={idTytulu} className="box-border min-w-0 flex-[1_1_26.25rem] rounded-sm bg-surface-card p-5">
       <h2 id={idTytulu} className="m-0 text-tile-title text-ink-strong">
         {podmiot.nazwa}
       </h2>
@@ -142,7 +142,7 @@ export function WidokPodmiotowWsparcia() {
           {organizacje.map((p, i) => (
             <KartaOrganizacji key={p.id} podmiot={p} indeks={i + 1} />
           ))}
-          {organizacje.length % 2 === 1 ? <div aria-hidden="true" className="min-w-0 flex-[1_1_420px]" /> : null}
+          {organizacje.length % 2 === 1 ? <div aria-hidden="true" className="min-w-0 flex-[1_1_26.25rem]" /> : null}
         </div>
         {powrot ? (
           <div>

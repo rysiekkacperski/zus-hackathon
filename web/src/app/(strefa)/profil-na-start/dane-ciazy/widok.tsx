@@ -1,6 +1,7 @@
 'use client';
 
 // ViewProfilePregnancy (historyjka 3.3.1.2.1, wzory cz1/P03-11 i P03-12). Właściciel: u10.
+// Ekran ma dwie części (?czesc=N): termin porodu i liczba dzieci, potem data pierwszej wizyty.
 import { useEffect, useMemo, useState } from 'react';
 import { useKatalog } from '@/dane/magazyn/hooki';
 import { formatujDate, parsujDate } from '@/domena/daty';
@@ -12,7 +13,9 @@ import {
   type FormularzDanychCiazy,
   type PoleDanychCiazy,
 } from '@/domena/profil/ciaza';
-import type { BledyPol, LiczbaDzieci } from '@/domena/typy';
+import { CZESCI_DANYCH_CIAZY } from '@/domena/profil/nawigacja';
+import type { LiczbaDzieci } from '@/domena/typy';
+import { CzescFormularza, useCzesciFormularza } from '@/komponenty/czesci-formularza';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -23,19 +26,16 @@ import { PoleWyboru } from '@/komponenty/pole-wyboru';
 import { PoleZaznaczenia } from '@/komponenty/pole-zaznaczenia';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { Stos } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { SzkieletKreatoraProfilu } from '../_czesci/szkielet-kreatora-profilu';
-import { useKrokProfilu, ustawFokusNaPierwszymBledzie } from './_czesci/krok-profilu';
+import { useKrokProfilu } from './_czesci/krok-profilu';
 
 const tekst = teksty.ViewProfilePregnancy;
 const EKRAN = 'ViewProfilePregnancy' as const;
 
 const ID = { termin: 'termin', liczbaDzieci: 'dzieci', wizyta: 'wizyta', brakWizyty: 'wizyta-brak' } as const;
-const KOLEJNOSC_POL: readonly (readonly [PoleDanychCiazy, string])[] = [
-  ['termin', ID.termin],
-  ['liczbaDzieci', ID.liczbaDzieci],
-  ['wizyta', ID.wizyta],
-];
+const PODZIAL: readonly (readonly PoleDanychCiazy[])[] = [['termin', 'liczbaDzieci'], ['wizyta']];
 
 export function WidokDanychCiazy() {
   const krok = useKrokProfilu(EKRAN);
@@ -52,7 +52,12 @@ export function WidokDanychCiazy() {
       brakWizyty: wizyta === 'brak-wizyty',
     };
   });
-  const [bledy, ustawBledy] = useState<BledyPol<PoleDanychCiazy>>({});
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: formularz,
+    waliduj: (f: FormularzDanychCiazy) => walidujDaneCiazy(f, dzis),
+    pola: { termin: ID.termin, liczbaDzieci: ID.liczbaDzieci, wizyta: ID.wizyta },
+  });
+  const czesci = useCzesciFormularza({ liczba: CZESCI_DANYCH_CIAZY, podzial: PODZIAL, walidacja });
 
   // Konto bez zgody na dane dotyczące zdrowia pomija ekran danych ciąży.
   useEffect(() => {
@@ -74,13 +79,8 @@ export function WidokDanychCiazy() {
   }, [formularz.liczbaDzieci, formularz.termin, dzis, katalog]);
 
   function przejdzDalej() {
-    const noweBledy = walidujDaneCiazy(formularz, dzis);
-    ustawBledy(noweBledy);
     const dane = daneCiazyZFormularza(formularz, dzis);
-    if (Object.keys(noweBledy).length > 0 || dane === null) {
-      ustawFokusNaPierwszymBledzie(KOLEJNOSC_POL, noweBledy);
-      return;
-    }
+    if (dane === null) return;
     krok.zapiszIPrzejdzDalej({ daneCiazy: { ...(szkic?.daneCiazy ?? {}), ...dane } });
   }
 
@@ -91,67 +91,69 @@ export function WidokDanychCiazy() {
       <NaglowekStrony tytul={tekst.naglowek} wstep={tekst.wstep} powrot={false} />
       <SzkieletKreatoraProfilu
         biezacy={EKRAN}
-        onDalej={przejdzDalej}
-        onWroc={krok.wroc}
+        czesc={czesci.czesc}
+        onDalej={() => czesci.dalej(przejdzDalej)}
+        onWroc={() => czesci.wroc(krok.wroc)}
         zajety={krok.zajety}
       >
         {krok.bladZapisu ? <Komunikat kod={krok.bladZapisu} /> : null}
         <Karta tytul={tekst.tytulKarty} bezLinii as="section">
           <Stos odstep={6}>
             <p className="m-0">{tekst.opisKarty}</p>
-            <PoleDaty
-              id={ID.termin}
-              nazwa={ID.termin}
-              etykieta={tekst.etykietaTerminu}
-              podpowiedz={tekst.podpowiedzTerminu}
-              wartosc={formularz.termin}
-              onZmiana={(w) => zmien('termin', w)}
-              blad={bledy.termin}
-              wymagane
-            />
-            <PoleWyboru<`${LiczbaDzieci}`>
-              id={ID.liczbaDzieci}
-              nazwa={ID.liczbaDzieci}
-              etykieta={tekst.etykietaLiczbyDzieci}
-              podpowiedz={podpowiedzLiczby}
-              opcje={LICZBY_DZIECI.map((l) => ({ wartosc: `${l}` as const, etykieta: tekst.liczbyDzieci[l] }))}
-              wartosc={formularz.liczbaDzieci === null ? '' : `${formularz.liczbaDzieci}`}
-              onZmiana={(w) => zmien('liczbaDzieci', w === '' ? null : (Number(w) as LiczbaDzieci))}
-              blad={bledy.liczbaDzieci}
-              szerokosc="srednia"
-              wymagane
-            />
-            <div className="grid min-w-0 gap-3">
+            <CzescFormularza czesci={czesci} numer={1}>
               <PoleDaty
-                id={ID.wizyta}
-                nazwa={ID.wizyta}
-                etykieta={tekst.etykietaWizyty}
-                podpowiedz={tekst.podpowiedzWizyty}
-                wartosc={formularz.wizyta}
-                onZmiana={(w) => zmien('wizyta', w)}
-                blad={bledy.wizyta}
-                wylaczone={formularz.brakWizyty}
+                id={ID.termin}
+                nazwa={ID.termin}
+                etykieta={tekst.etykietaTerminu}
+                podpowiedz={tekst.podpowiedzTerminu}
+                wartosc={formularz.termin}
+                onZmiana={(w) => zmien('termin', w)}
+                {...walidacja.pole('termin')}
+                wymagane
               />
-              <PoleZaznaczenia
-                id={ID.brakWizyty}
-                nazwa={ID.brakWizyty}
-                etykieta={tekst.brakWizyty}
-                zaznaczone={formularz.brakWizyty}
-                onZmiana={(z) => {
-                  zmien('brakWizyty', z);
-                  if (z) ustawBledy((b) => ({ ...b, wizyta: undefined }));
-                }}
+              <PoleWyboru<`${LiczbaDzieci}`>
+                id={ID.liczbaDzieci}
+                nazwa={ID.liczbaDzieci}
+                etykieta={tekst.etykietaLiczbyDzieci}
+                podpowiedz={podpowiedzLiczby}
+                opcje={LICZBY_DZIECI.map((l) => ({ wartosc: `${l}` as const, etykieta: tekst.liczbyDzieci[l] }))}
+                wartosc={formularz.liczbaDzieci === null ? '' : `${formularz.liczbaDzieci}`}
+                onZmiana={(w) => zmien('liczbaDzieci', w === '' ? null : (Number(w) as LiczbaDzieci))}
+                {...walidacja.pole('liczbaDzieci')}
+                szerokosc="srednia"
+                wymagane
               />
-            </div>
-            <Notatka>
-              <p className="m-0">
-                {tekst.notatkaZgody.przed}
-                <Odnosnik href={sciezkaWidoku('ViewGuideSettings')} wTekscie>
-                  {tekst.notatkaZgody.odnosnik}
-                </Odnosnik>
-                {tekst.notatkaZgody.po}
-              </p>
-            </Notatka>
+            </CzescFormularza>
+            <CzescFormularza czesci={czesci} numer={2}>
+              <div className="grid min-w-0 gap-3">
+                <PoleDaty
+                  id={ID.wizyta}
+                  nazwa={ID.wizyta}
+                  etykieta={tekst.etykietaWizyty}
+                  podpowiedz={tekst.podpowiedzWizyty}
+                  wartosc={formularz.wizyta}
+                  onZmiana={(w) => zmien('wizyta', w)}
+                  {...walidacja.pole('wizyta')}
+                  wylaczone={formularz.brakWizyty}
+                />
+                <PoleZaznaczenia
+                  id={ID.brakWizyty}
+                  nazwa={ID.brakWizyty}
+                  etykieta={tekst.brakWizyty}
+                  zaznaczone={formularz.brakWizyty}
+                  onZmiana={(z) => zmien('brakWizyty', z)}
+                />
+              </div>
+              <Notatka>
+                <p className="m-0">
+                  {tekst.notatkaZgody.przed}
+                  <Odnosnik href={sciezkaWidoku('ViewGuideSettings')} wTekscie>
+                    {tekst.notatkaZgody.odnosnik}
+                  </Odnosnik>
+                  {tekst.notatkaZgody.po}
+                </p>
+              </Notatka>
+            </CzescFormularza>
           </Stos>
         </Karta>
       </SzkieletKreatoraProfilu>

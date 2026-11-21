@@ -113,18 +113,23 @@ export function MenuBoczne({ idMobilne, mobilneOtwarte, onZamknijMobilne }: Menu
     <>
       <nav
         aria-label={teksty.rama.menuPrzewodnika}
-        className={`relative hidden flex-col bg-brand px-3 pt-21 pb-3 text-on-brand lg:flex ${menuZwiniete ? 'w-sidebar-zwiniety' : 'w-sidebar'}`}
+        className={`hidden flex-col bg-brand px-3 pt-3 text-on-brand lg:flex ${menuZwiniete ? 'w-sidebar-zwiniety' : 'w-sidebar'}`}
       >
-        <button
-          type="button"
-          aria-label={menuZwiniete ? teksty.rama.rozwinMenu : teksty.rama.zwinMenu}
-          aria-expanded={!menuZwiniete}
-          onClick={przelaczZwiniecieMenu}
-          className="absolute top-12 -right-5 z-10 grid size-toggle cursor-pointer place-items-center rounded-full border-0 bg-brand-raised p-0 text-on-brand transition-colors duration-150 hover:bg-brand-deep focus-visible:outline-on-brand motion-reduce:transition-none"
-        >
-          <Ikona nazwa={menuZwiniete ? 'w-prawo' : 'w-lewo'} rozmiar={20} />
-        </button>
         <ListaPozycji pozycje={pozycje} biezaca={biezaca} zwiniete={menuZwiniete} />
+        {/* Przycisk zwijania: ostatni element menu, przyklejony do dołu widocznego obszaru menu. */}
+        <div className="sticky bottom-0 mt-auto border-t border-brand-muted bg-brand pt-3 pb-3">
+          <button
+            type="button"
+            aria-expanded={!menuZwiniete}
+            onClick={przelaczZwiniecieMenu}
+            className={`flex min-h-nav-item w-full cursor-pointer items-center gap-3 rounded-sm border-0 bg-transparent text-body text-on-brand transition-colors duration-150 hover:bg-brand-raised active:bg-brand-deep focus-visible:outline-on-brand motion-reduce:transition-none ${menuZwiniete ? 'justify-center px-0' : 'px-4'}`}
+          >
+            <Ikona nazwa={menuZwiniete ? 'w-prawo' : 'w-lewo'} rozmiar={24} />
+            <span className={menuZwiniete ? 'sr-only' : 'min-w-0'}>
+              {menuZwiniete ? teksty.rama.rozwinMenu : teksty.rama.zwinMenu}
+            </span>
+          </button>
+        </div>
       </nav>
 
       <div hidden={!mobilneOtwarte} className="contents lg:hidden">

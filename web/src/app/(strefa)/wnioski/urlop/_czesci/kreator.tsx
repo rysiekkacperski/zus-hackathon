@@ -1,22 +1,70 @@
 'use client';
 
-// Wspólne części kreatora wniosku o urlop do pracodawcy (u28): rama kroku, dane kreatora i karty boczne.
+// Wspólne części kreatora wniosku o urlop do pracodawcy (u28): rama kroku, części formularza, dane kreatora
+// i karty boczne. Krok formularza ma części (?czesc=N) według rodzaju wniosku; części liczą się jako kroki.
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useMemo, type ReactNode } from 'react';
 import { formatujDate } from '@/domena/daty';
-import type { WniosekOUrlop } from '@/domena/typy';
+import type { PodrodzajWnioskuOUrlop, WniosekOUrlop } from '@/domena/typy';
 import { zbierzDaneKreatora, type DaneKreatora } from '@/domena/wnioski/urlopy';
 import { useKontekstRodziny, type KontekstRodziny } from '@/dane/magazyn/hooki';
 import { znajdzWniosekOUrlop } from '@/dane/magazyn/operacje/wnioski-urlop';
 import { Ikona } from '@/komponenty/ikona';
+import { adresCzesci } from '@/komponenty/czesci-formularza';
 import { Karta } from '@/komponenty/karta';
+import { liczbaKrokow, numerKroku, type KrokZCzesciami } from '@/komponenty/kroki';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { Postep } from '@/komponenty/postep';
 import { trasy } from '@/komponenty/rama/trasy';
 import { teksty } from '@/teksty';
 
 const t = teksty.ViewLeaveRequestType;
+
+/** Sekcja kroku formularza: dane, pola okresu, wyniki okresu, części rodzicielskiego, oświadczenie, łączenie, wydłużenie, załączniki. */
+export type SekcjaFormularzaUrlopu =
+  | 'dane'
+  | 'okres'
+  | 'wyniki'
+  | 'czesci'
+  | 'oswiadczenie'
+  | 'laczenie'
+  | 'wydluzenie'
+  | 'zalaczniki';
+
+/** Części kroku formularza według rodzaju wniosku; każda część mieści się w oknie z polami warunkowymi. */
+const CZESCI_FORMULARZA: Record<PodrodzajWnioskuOUrlop, SekcjaFormularzaUrlopu[][]> = {
+  'czesc-przed-porodem': [['dane'], ['okres', 'zalaczniki']],
+  'macierzynski-z-rodzicielskim': [['dane'], ['okres'], ['wyniki'], ['oswiadczenie', 'zalaczniki']],
+  rodzicielski: [['dane'], ['czesci'], ['okres'], ['oswiadczenie', 'zalaczniki']],
+  ojcowski: [['dane', 'oswiadczenie'], ['okres'], ['zalaczniki']],
+  uzupelniajacy: [['dane'], ['okres'], ['oswiadczenie', 'zalaczniki']],
+  'na-warunkach-macierzynskiego': [['dane'], ['okres'], ['wyniki'], ['zalaczniki']],
+  'laczenie-z-praca': [['dane'], ['okres'], ['laczenie'], ['wydluzenie', 'zalaczniki']],
+  'rezygnacja-matki': [['dane'], ['okres', 'zalaczniki']],
+  'pozostala-czesc-macierzynskiego': [['dane'], ['okres', 'zalaczniki']],
+};
+
+export function czesciFormularzaUrlopu(podrodzaj: PodrodzajWnioskuOUrlop | null | undefined): SekcjaFormularzaUrlopu[][] {
+  return podrodzaj ? CZESCI_FORMULARZA[podrodzaj] : [['dane']];
+}
+
+/** Numer pierwszej części z sekcją (od 1); sekcja spoza rodzaju wniosku daje część 1. */
+export function czescSekcjiUrlopu(podrodzaj: PodrodzajWnioskuOUrlop | null | undefined, sekcja: SekcjaFormularzaUrlopu): number {
+  const indeks = czesciFormularzaUrlopu(podrodzaj).findIndex((sekcje) => sekcje.includes(sekcja));
+  return indeks < 0 ? 1 : indeks + 1;
+}
+
+/** Adres części formularza, np. „Zmień” w podsumowaniu albo Wstecz na ostatnią część. */
+export function adresCzesciFormularzaUrlopu(idWniosku: string, czesc: number): string {
+  return adresCzesci(trasy.ViewLeaveRequestForm({ wniosek: idWniosku }), czesc);
+}
+
+function krokiKreatora(podrodzaj: PodrodzajWnioskuOUrlop | null | undefined): KrokZCzesciami<'rodzaj' | 'formularz' | 'podsumowanie'>[] {
+  return [{ id: 'rodzaj' }, { id: 'formularz', czesci: czesciFormularzaUrlopu(podrodzaj).length }, { id: 'podsumowanie' }];
+}
+
+const ID_KROKOW = ['rodzaj', 'formularz', 'podsumowanie'] as const;
 
 export interface StanKreatora {
   kontekst: KontekstRodziny;
@@ -40,6 +88,8 @@ export function useKreatorUrlopu(): StanKreatora | null {
 /** Nagłówek z powrotem do instrukcji sprawy, karta postępu i układ formularza z kolumną boczną. */
 export function RamaKreatora({
   krok,
+  czesc = 1,
+  podrodzaj,
   nazwaKroku,
   idSprawy,
   idWniosku,
@@ -47,6 +97,10 @@ export function RamaKreatora({
   children,
 }: {
   krok: 1 | 2 | 3;
+  /** Część kroku formularza (od 1). */
+  czesc?: number;
+  /** Rodzaj wniosku, od którego zależy liczba części kroku formularza. */
+  podrodzaj?: PodrodzajWnioskuOUrlop | null;
   nazwaKroku: string;
   idSprawy: string | null;
   idWniosku?: string;
@@ -54,6 +108,10 @@ export function RamaKreatora({
   children: ReactNode;
 }) {
   const idTytulu = 'kreator-urlopu-krok';
+  const kroki = krokiKreatora(podrodzaj);
+  const liczba = liczbaKrokow(kroki);
+  const numer = numerKroku(kroki, ID_KROKOW[krok - 1], czesc);
+  const naglowekKroku = t.krok({ krok: numer, liczbaKrokow: liczba, nazwa: nazwaKroku });
   const hrefKroku = [
     trasy.ViewLeaveRequestType({ wniosek: idWniosku }),
     trasy.ViewLeaveRequestForm({ wniosek: idWniosku }),
@@ -65,25 +123,29 @@ export function RamaKreatora({
         tytul={t.naglowek}
         powrot={idSprawy ? { href: trasy.ViewCaseGuide({ idSprawy }), etykieta: t.powrot } : undefined}
       />
-      <section aria-labelledby={idTytulu} className="mt-7.5 rounded-sm bg-surface-card p-5">
+      <section aria-labelledby={idTytulu} className="rounded-sm bg-surface-card p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
           <h2 id={idTytulu} className="m-0 text-body-strong text-ink-strong">
-            {t.krok({ krok, nazwa: nazwaKroku })}
+            {naglowekKroku}
           </h2>
           <p className="m-0 text-small">{t.zapisujemy}</p>
         </div>
-        <Postep wartosc={krok} maks={3} min={0} etykieta={t.krok({ krok, nazwa: nazwaKroku })} idEtykiety={idTytulu} className="mt-3" />
-        <ol aria-label={t.etykietaKrokow} className="m-0 mt-4 flex list-none flex-wrap gap-x-6 gap-y-2 p-0 text-small">
-          {t.kroki.map((etykieta, i) => {
-            const numer = i + 1;
-            if (numer === krok) {
+        <Postep wartosc={numer} maks={liczba} min={0} etykieta={naglowekKroku} idEtykiety={idTytulu} className="mt-3" />
+        <ol aria-label={t.etykietaKrokow} className="m-0 mt-3 flex list-none flex-wrap gap-x-6 gap-y-2 p-0 text-small">
+          {t.nazwyKrokow.map((nazwa, i) => {
+            const numerKrokuListy = i + 1;
+            const od = numerKroku(kroki, ID_KROKOW[i], 1);
+            const czesciKroku = kroki[i].czesci ?? 1;
+            const etykieta =
+              czesciKroku > 1 ? t.zakresKrokow({ od, do: od + czesciKroku - 1, nazwa }) : t.numerKroku({ numer: od, nazwa });
+            if (numerKrokuListy === krok) {
               return (
                 <li key={etykieta} aria-current="step" className="font-semibold text-ink-strong">
                   {etykieta}
                 </li>
               );
             }
-            if (numer < krok && idWniosku) {
+            if (numerKrokuListy < krok && idWniosku) {
               return (
                 <li key={etykieta}>
                   <Link href={hrefKroku[i]} className="inline-flex items-center gap-1">

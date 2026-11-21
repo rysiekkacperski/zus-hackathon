@@ -1,8 +1,9 @@
 'use client';
 
 // Formularz parametrów systemu na ViewDemoSettings (kontrakt 5.15 i 6.6). Wartości startowe pochodzą
-// z magazynu; gospodarz montuje formularz od nowa po zmianie parametrów poza formularzem. Właściciel: u01.
-import { useRef, useState, type FormEvent } from 'react';
+// z magazynu; gospodarz montuje formularz od nowa po zmianie parametrów poza formularzem. Błąd pola
+// pokazuje się po opuszczeniu pola i po próbie zapisu. Właściciel: u01.
+import { useState, type FormEvent } from 'react';
 import { ustawParametry, ustawSymulacje } from '@/dane/magazyn/operacje/parametry';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import type { ParametrySystemu } from '@/domena/typy';
@@ -12,6 +13,7 @@ import { Komunikat } from '@/komponenty/komunikat';
 import { useKomunikatChwilowy } from '@/komponenty/komunikat-chwilowy';
 import { PoleLiczby, PoleTekstowe } from '@/komponenty/pole-tekstowe';
 import { Przycisk } from '@/komponenty/przycisk';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 
 const tekst = teksty.ViewDemoSettings.parametry;
@@ -41,9 +43,37 @@ function idPola(pole: Pole): string {
   return `demo-parametr-${pole}`;
 }
 
+// Kolejność pól na ekranie i cel fokusu: pierwsze pole z błędem dostaje fokus.
+const idPol = Object.fromEntries(
+  [...polaLiczbowe.map((p) => p.pole), 'kodSmsStaly'].map((pole) => [pole, idPola(pole as Pole)]),
+) as Record<Pole, string>;
+
+/**
+ * Walidacja wpisów: liczba całkowita z zakresu pola, kod SMS pusty albo z 6 cyframi. Zwraca błędy pól
+ * i liczby z poprawnych pól liczbowych.
+ */
+function sprawdzWartosci(wartosci: Record<Pole, string>): {
+  bledy: Partial<Record<Pole, string>>;
+  liczby: Partial<Record<PoleLiczbowe, number>>;
+} {
+  const bledy: Partial<Record<Pole, string>> = {};
+  const liczby: Partial<Record<PoleLiczbowe, number>> = {};
+  for (const { pole, min, maks } of polaLiczbowe) {
+    const wynik = walidujLiczbeCalkowita(wartosci[pole], min, maks, '0078');
+    if ('kod' in wynik) bledy[pole] = tekst.zakres({ min: String(min), maks: String(maks) });
+    else liczby[pole] = wynik.liczba;
+  }
+  const kodSms = wartosci.kodSmsStaly.trim();
+  if (kodSms !== '' && !/^\d{6}$/.test(kodSms)) bledy.kodSmsStaly = tekst.kodSmsBlad;
+  return { bledy, liczby };
+}
+
+function walidujWartosci(wartosci: Record<Pole, string>): Partial<Record<Pole, string>> {
+  return sprawdzWartosci(wartosci).bledy;
+}
+
 export function FormularzParametrow({ parametry }: { parametry: ParametrySystemu }) {
   const { pokaz } = useKomunikatChwilowy();
-  const formularz = useRef<HTMLFormElement>(null);
   const [wartosci, ustawWartosci] = useState<Record<Pole, string>>(() => ({
     progPodwyzszeniaPodstawyProcent: String(parametry.progPodwyzszeniaPodstawyProcent),
     progOstrzezeniaOkresuZasilkowegoDni: String(parametry.progOstrzezeniaOkresuZasilkowegoDni),
@@ -52,29 +82,20 @@ export function FormularzParametrow({ parametry }: { parametry: ParametrySystemu
     opoznienieOdczytuZusMs: String(wartoscPoczatkowa(parametry, 'opoznienieOdczytuZusMs')),
     kodSmsStaly: parametry.symulacje.kodSmsStaly ?? '',
   }));
-  const [bledy, ustawBledy] = useState<Partial<Record<Pole, string>>>({});
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci,
+    waliduj: walidujWartosci,
+    pola: idPol,
+  });
   const [bladZapisu, ustawBladZapisu] = useState(false);
 
   const zmien = (pole: Pole) => (wartosc: string) => ustawWartosci((w) => ({ ...w, [pole]: wartosc }));
 
   const zapisz = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const noweBledy: Partial<Record<Pole, string>> = {};
-    const liczby: Partial<Record<PoleLiczbowe, number>> = {};
-    for (const { pole, min, maks } of polaLiczbowe) {
-      const wynik = walidujLiczbeCalkowita(wartosci[pole], min, maks, '0078');
-      if ('kod' in wynik) noweBledy[pole] = tekst.zakres({ min: String(min), maks: String(maks) });
-      else liczby[pole] = wynik.liczba;
-    }
+    if (!walidacja.sprobujWyslac()) return;
+    const { liczby } = sprawdzWartosci(wartosci);
     const kodSms = wartosci.kodSmsStaly.trim();
-    if (kodSms !== '' && !/^\d{6}$/.test(kodSms)) noweBledy.kodSmsStaly = tekst.kodSmsBlad;
-    ustawBledy(noweBledy);
-
-    const pierwsze = ([...polaLiczbowe.map((p) => p.pole), 'kodSmsStaly'] as Pole[]).find((p) => noweBledy[p]);
-    if (pierwsze !== undefined) {
-      formularz.current?.querySelector<HTMLElement>(`#${idPola(pierwsze)}`)?.focus();
-      return;
-    }
 
     // Po walidacji bez błędów każde pole liczbowe ma liczbę.
     const l = liczby as Record<PoleLiczbowe, number>;
@@ -103,7 +124,7 @@ export function FormularzParametrow({ parametry }: { parametry: ParametrySystemu
   return (
     <Karta tytul={tekst.tytul} bezLinii>
       {bladZapisu ? <Komunikat kod="0003" className="mb-6" /> : null}
-      <form ref={formularz} noValidate onSubmit={zapisz}>
+      <form noValidate onSubmit={zapisz}>
         <div className="flex max-w-login-column flex-col gap-6">
           {polaLiczbowe.map(({ pole, etykieta }) => (
             <PoleLiczby
@@ -112,7 +133,7 @@ export function FormularzParametrow({ parametry }: { parametry: ParametrySystemu
               etykieta={etykieta}
               wartosc={wartosci[pole]}
               onZmiana={zmien(pole)}
-              blad={bledy[pole]}
+              {...walidacja.pole(pole)}
               szerokosc="srednia"
             />
           ))}
@@ -122,7 +143,7 @@ export function FormularzParametrow({ parametry }: { parametry: ParametrySystemu
             podpowiedz={tekst.kodSmsOpis}
             wartosc={wartosci.kodSmsStaly}
             onZmiana={zmien('kodSmsStaly')}
-            blad={bledy.kodSmsStaly}
+            {...walidacja.pole('kodSmsStaly')}
             inputMode="numeric"
             maksDlugosc={6}
             szerokosc="waska"

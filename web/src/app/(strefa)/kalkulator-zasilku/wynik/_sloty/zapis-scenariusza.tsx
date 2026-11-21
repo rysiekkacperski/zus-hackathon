@@ -4,12 +4,12 @@
 // Karta „Co dalej” (historyjka 3.10.4.5.1): zapis scenariusza (0100, 0101, 0171, 0003), wybrany wariant spraw planu,
 // porównanie scenariuszy i przeniesienie scenariusza do wniosku ZAM (0037, 0101) albo do wniosku o urlop do pracodawcy.
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useNazwyRodzicow } from '@/app/(strefa)/kalkulator-zasilku/porownanie/_czesci/rodzice';
 import { formatujDate, formatujProcent } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
+import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { useKatalog, useKonto, useRodzina } from '@/dane/magazyn/hooki';
 import {
@@ -72,7 +72,9 @@ interface Zapisany {
 }
 
 export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
-  const router = useRouter();
+  const { zajety, przejdz } = useNawigacjaZLadowaniem();
+  // Przycisk przejścia, który pokazuje ładowanie; wraca do null po ukryciu trasy.
+  const [cel, ustawCel] = useStanChwilowy<'zam' | 'urlop' | null>(null);
   const konto = useKonto();
   const rodzina = useRodzina();
   const katalog = useKatalog();
@@ -128,7 +130,8 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
     if (numer === null) return;
     const wynik = przeniesDoZam(numer, pobierzKontekstOperacji());
     if (!wynik.ok) return ustawBlad(wynik.kod);
-    router.push(`/wnioski/zam/okres-zasilku?wniosek=${encodeURIComponent(wynik.wartosc.idWniosku)}`);
+    ustawCel('zam');
+    przejdz(`/wnioski/zam/okres-zasilku?wniosek=${encodeURIComponent(wynik.wartosc.idWniosku)}`);
   };
 
   const naUrlop = () => {
@@ -137,7 +140,8 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
     if (numer === null) return;
     const wynik = przeniesDoWnioskuOUrlop(numer, pobierzKontekstOperacji());
     if (!wynik.ok) return ustawBlad(wynik.kod);
-    router.push(
+    ustawCel('urlop');
+    przejdz(
       `/wnioski/urlop/rodzaj?wniosek=${encodeURIComponent(wynik.wartosc.idWniosku)}&scenariusz=${encodeURIComponent(String(numer))}`,
     );
   };
@@ -201,12 +205,12 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
             {t.porownaj}
           </PrzyciskLink>
           {rodzicZam ? (
-            <Przycisk wariant="drugorzedny" type="button" onClick={naZam}>
+            <Przycisk wariant="drugorzedny" type="button" onClick={naZam} zajety={zajety && cel === 'zam'} disabled={zajety && cel !== 'zam'}>
               {t.przeniesZam({ kto: nazwy[rodzicZam].mianownik })}
             </Przycisk>
           ) : null}
           {rodzicUrlopu ? (
-            <Przycisk wariant="drugorzedny" type="button" onClick={naUrlop}>
+            <Przycisk wariant="drugorzedny" type="button" onClick={naUrlop} zajety={zajety && cel === 'urlop'} disabled={zajety && cel !== 'urlop'}>
               {t.przeniesUrlop({ kto: nazwy[rodzicUrlopu].mianownik })}
             </Przycisk>
           ) : null}

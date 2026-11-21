@@ -4,7 +4,6 @@
 // Tryb pakietu (/narodziny/data-porodu, Rodzic) zapisuje datę w profilu rodziny i przelicza plan;
 // tryb profilu (/profil-na-start/data-porodu) zapisuje ją w szkicu Profilu na start.
 // Wzory: cz1/P10-04, P10-05, P10-06, P10-07, P10-08.
-import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { useDzis, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
 import { potwierdzDatePorodu } from '@/dane/magazyn/operacje/narodziny';
@@ -12,12 +11,13 @@ import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { formatujDate } from '@/domena/daty';
 import { czyMaZgode } from '@/domena/konto';
 import { nastepnyEkran, poprzedniEkran } from '@/domena/profil/nawigacja';
-import { porownajZDanymiZus, type PoleDatyPorodu } from '@/domena/rodzina/narodziny';
-import type { CzlonekRodzinyZus, DaneCiazyIDziecka, KodKomunikatu, SzkicProfilu } from '@/domena/typy';
+import { porownajZDanymiZus, walidujDatePorodu, type PoleDatyPorodu } from '@/domena/rodzina/narodziny';
+import type { BledyPol, CzlonekRodzinyZus, DaneCiazyIDziecka, KodKomunikatu, SzkicProfilu } from '@/domena/typy';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { ListaDefinicji } from '@/komponenty/lista-definicji';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { PoleDaty } from '@/komponenty/pole-tekstowe';
 import { PoleWyboru } from '@/komponenty/pole-wyboru';
@@ -26,14 +26,13 @@ import type { TrybWidoku } from '@/komponenty/rama/mapa-tras';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { Stos, Wiersz } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 
 const t = teksty.ViewBirthDate;
 
 const ID_POL: Record<PoleDatyPorodu, string> = { dataPorodu: 'data-porodu', liczbaDzieci: 'liczba-dzieci' };
 const OPCJE_LICZBY = (['1', '2', '3', '4', '5'] as const).map((w) => ({ wartosc: w, etykieta: w }));
-
-type Bledy = Partial<Record<PoleDatyPorodu, KodKomunikatu>>;
 
 /** Rozbieżność daty porodu w profilu z dziećmi z danych ZUS (3.3.2.2.1 KA-07). */
 function rozbieznoscZZus(dane: DaneCiazyIDziecka | null): { dataWProfilu: string; dzieci: CzlonekRodzinyZus[] } | null {
@@ -72,8 +71,8 @@ interface PropsFormularza {
 }
 
 function FormularzDatyPorodu({ tryb, daneCiazy, szkic, zgoda }: PropsFormularza) {
-  const router = useRouter();
   const dzis = useDzis();
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const profil = tryb === 'profil';
   const rozbieznosc = profil ? null : rozbieznoscZZus(daneCiazy);
   const zrodloDanych = profil ? szkic?.daneCiazy : daneCiazy;
@@ -86,9 +85,14 @@ function FormularzDatyPorodu({ tryb, daneCiazy, szkic, zgoda }: PropsFormularza)
     if (rozbieznosc) return String(Math.min(rozbieznosc.dzieci.filter((d) => d.dataUrodzenia === rozbieznosc.dzieci[0].dataUrodzenia).length, 5));
     return String(zrodloDanych?.liczbaUrodzonychDzieci ?? zrodloDanych?.liczbaDzieciZCiazy ?? 1);
   });
-  const [bledy, setBledy] = useState<Bledy>({});
   const [bladZapisu, setBladZapisu] = useState<KodKomunikatu | null>(null);
-  const [zajety, setZajety] = useState(false);
+
+  // Błąd pola pokazuje się po opuszczeniu pola, a po próbie wysłania przy każdej zmianie.
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { dataPorodu: data, liczbaDzieci: liczba },
+    waliduj: (f) => walidujDatePorodu(f, dzis),
+    pola: ID_POL,
+  });
 
   const przewidywany = zrodloDanych?.przewidywanyTerminPorodu;
   const powrot = profil
@@ -97,21 +101,21 @@ function FormularzDatyPorodu({ tryb, daneCiazy, szkic, zgoda }: PropsFormularza)
 
   function wyslij(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setZajety(true);
+    if (!walidacja.sprobujWyslac()) {
+      setBladZapisu(null);
+      return;
+    }
+    ustawZajety(true);
     const wynik = potwierdzDatePorodu(
       { dataPorodu: data, liczbaDzieci: liczba, zrodlo: profil ? 'profil' : rozbieznosc ? 'rozna-data' : 'plan' },
       pobierzKontekstOperacji(),
     );
-    setZajety(false);
     if (!wynik.ok) {
+      ustawZajety(false);
       if (wynik.bledyPol) {
-        const nowe = wynik.bledyPol as Bledy;
-        setBledy(nowe);
         setBladZapisu(null);
-        const pierwsze = (Object.keys(ID_POL) as PoleDatyPorodu[]).find((p) => nowe[p] !== undefined);
-        if (pierwsze) document.getElementById(ID_POL[pierwsze])?.focus();
+        walidacja.pokazBledy(wynik.bledyPol as BledyPol<PoleDatyPorodu>);
       } else {
-        setBledy({});
         setBladZapisu(wynik.kod);
       }
       return;
@@ -120,10 +124,10 @@ function FormularzDatyPorodu({ tryb, daneCiazy, szkic, zgoda }: PropsFormularza)
       const poZapisie: SzkicProfilu | null = szkic
         ? { ...szkic, daneCiazy: { ...szkic.daneCiazy, dataPoroduPotwierdzona: true } }
         : null;
-      router.push(sciezkaWidoku(poZapisie ? nastepnyEkranProfilu(poZapisie, zgoda) : 'ViewProfileEmploymentChange'));
+      przejdz(sciezkaWidoku(poZapisie ? nastepnyEkranProfilu(poZapisie, zgoda) : 'ViewProfileEmploymentChange'));
       return;
     }
-    router.push(zgoda ? sciezkaWidoku('ViewBirthDetails', { tryb: 'pakiet' }) : sciezkaWidoku('ViewBirthPackage'));
+    przejdz(zgoda ? sciezkaWidoku('ViewBirthDetails', { tryb: 'pakiet' }) : sciezkaWidoku('ViewBirthPackage'));
   }
 
   const pola = (
@@ -135,7 +139,7 @@ function FormularzDatyPorodu({ tryb, daneCiazy, szkic, zgoda }: PropsFormularza)
         podpowiedz={t.poleDaty.podpowiedz}
         wartosc={data}
         onZmiana={setData}
-        blad={bledy.dataPorodu ?? null}
+        {...walidacja.pole('dataPorodu')}
         wymagane
       />
       <PoleWyboru
@@ -147,7 +151,7 @@ function FormularzDatyPorodu({ tryb, daneCiazy, szkic, zgoda }: PropsFormularza)
         pustaOpcja={t.poleLiczby.wybierz}
         wartosc={liczba as (typeof OPCJE_LICZBY)[number]['wartosc'] | ''}
         onZmiana={setLiczba}
-        blad={bledy.liczbaDzieci ?? null}
+        {...walidacja.pole('liczbaDzieci')}
         szerokosc="srednia"
         wymagane
       />

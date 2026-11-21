@@ -2,6 +2,10 @@
 
 // ViewSickLeaveList (3.4.4.1.1, 3.4.4.1.2; wzory cz2/Zaswiadczenia-e-ZLA i P16-02…P16-09). Właściciel: u14.
 import { useState } from 'react';
+import {
+  KartaOdczytuDanychZus,
+  OgloszenieOdczytuDanychZus,
+} from '@/app/(strefa)/profil-na-start/dane-z-konta-zus/_czesci/stan-odczytu-zus';
 import { odczytajDaneKontaZus } from '@/dane/magazyn/operacje/odczyt-zus';
 import { useStanKonta } from '@/dane/magazyn/hooki';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
@@ -46,6 +50,7 @@ export function WidokZaswiadczenEZla() {
   const { konto, kopia, wyliczenia, rodzina } = dane;
   const stanOdczytu = stanKonta.stanOdczytuZus;
   const brakPolaczenia = kopia === null && stanOdczytu.stan !== 'trwa';
+  const odczytBezKopii = kopia === null && stanOdczytu.stan === 'trwa';
   const nieaktualne = kopia !== null && stanOdczytu.stan === 'nieudany-z-kopia';
   const ptp = rodzina?.daneCiazy?.przewidywanyTerminPorodu;
 
@@ -63,12 +68,14 @@ export function WidokZaswiadczenEZla() {
 
   return (
     <>
+      <OgloszenieOdczytuDanychZus trwa={odczytBezKopii} udany={stanOdczytu.stan === 'udany'} />
       <NaglowekStrony
         tytul={t.naglowek}
         powrot={{ etykieta: t.powrot }}
         wstep={kopia ? t.stanNaZGodzina({ data: formatujDateICzas(kopia.odczytano) }) : undefined}
       />
       <div className="flex max-w-tresc flex-col gap-7.5">
+        {odczytBezKopii ? <KartaOdczytuDanychZus pesel={konto.pesel} /> : null}
         {brakPolaczenia ? (
           <>
             <Komunikat kod="0001" />

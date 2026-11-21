@@ -2,9 +2,9 @@
 
 // SheetFamilyDataDeleteConfirm (kontrakt, tabela 2.3): arkusz na ViewGuideSettings. Właściciel: u02.
 // Wzór: cz1/P01-23 (plan 12 spraw, nieukończony wniosek ZAM). Historyjka 3.1.1.2.1 (zadania 5 i 6; KA-09 do KA-12).
-import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { Komunikat } from '@/komponenty/komunikat';
+import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Arkusz } from '@/komponenty/okno';
 import { Przycisk } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
@@ -41,11 +41,11 @@ function zakresUsuniecia(rodzina: StanRodziny | null): ZakresUsuniecia {
 }
 
 export function ArkuszUsunieciaDanychRodziny({ otwarte, onZamknij }: ArkuszUsunieciaDanychRodzinyProps) {
-  const router = useRouter();
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const rodzina = useRodzina();
   const biezacy = useMemo(() => zakresUsuniecia(rodzina), [rodzina]);
   // Zakres pokazany w chwili potwierdzenia zostaje w arkuszu do przejścia na ekran powitalny.
-  const [zamrozony, ustawZamrozony] = useState<ZakresUsuniecia | null>(null);
+  const [zamrozony, ustawZamrozony] = useStanChwilowy<ZakresUsuniecia | null>(null);
   const [bladZapisu, ustawBladZapisu] = useState(false);
   const zakres = zamrozony ?? biezacy;
 
@@ -55,14 +55,16 @@ export function ArkuszUsunieciaDanychRodziny({ otwarte, onZamknij }: ArkuszUsuni
   }
 
   function potwierdz() {
+    ustawZajety(true);
     ustawZamrozony(biezacy);
     const wynik = usunDaneRodziny(pobierzKontekstOperacji());
     if (!wynik.ok) {
+      ustawZajety(false);
       ustawZamrozony(null);
       ustawBladZapisu(true);
       return;
     }
-    router.push(trasy.ViewGuideWelcome());
+    przejdz(trasy.ViewGuideWelcome());
   }
 
   return (
@@ -72,12 +74,13 @@ export function ArkuszUsunieciaDanychRodziny({ otwarte, onZamknij }: ArkuszUsuni
       tytul={t.tytul}
       opis={t.wstep}
       komunikat={bladZapisu ? <Komunikat kod="0003" /> : undefined}
+      zamykanieZablokowane={zajety}
       stopka={
         <>
-          <Przycisk wariant="glowny" onClick={potwierdz}>
+          <Przycisk wariant="glowny" onClick={potwierdz} zajety={zajety}>
             {t.potwierdz}
           </Przycisk>
-          <Przycisk wariant="drugorzedny" onClick={zamknij}>
+          <Przycisk wariant="drugorzedny" onClick={zamknij} disabled={zajety}>
             {t.anuluj}
           </Przycisk>
         </>

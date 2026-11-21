@@ -2,21 +2,31 @@
 
 // Części wspólne ekranów kreatora wniosku ZAM (u27): odczyt wniosku z adresu, nagłówek z linkiem powrotu do
 // instrukcji sprawy, karta postępu „Krok N z M”, układ dwukolumnowy, przyciski kreatora i karty boczne.
+// Ekrany dzielą się na części (?czesc=N), a karta postępu liczy każdą część jako krok.
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, type ReactNode } from 'react';
-import { useKontekstRodziny, type KontekstRodziny } from '@/dane/magazyn/hooki';
+import { useDzis, useKontekstRodziny, type KontekstRodziny } from '@/dane/magazyn/hooki';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { zapiszKrokZam, znajdzWniosekZam } from '@/dane/magazyn/operacje/wnioski-zam';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { formatujDate } from '@/domena/daty';
 import { formatujProcent } from '@/domena/kwoty';
-import type { IdWidoku, KodKomunikatu, OkresWniosku, WniosekZam } from '@/domena/typy';
+import type { DataISO, IdWidoku, KodKomunikatu, OkresWniosku, RodzajUrlopu, WniosekZam } from '@/domena/typy';
 import { rodzicKontaWRodzinie } from '@/domena/wnioski/zam';
-import { ekranyWnioskuZam } from '@/domena/wnioski/zam-nawigacja';
-import { kontekstOkresowZam, type KontekstOkresowZam } from '@/domena/wnioski/zam-okresy';
+import { krokiWnioskuZam, type WarunkiCzesciZam } from '@/domena/wnioski/zam-nawigacja';
+import {
+  kontekstOkresowZam,
+  okresyMacierzynskiego,
+  parametryOkresuZam,
+  type KontekstOkresowZam,
+  type ParametryOkresuZam,
+} from '@/domena/wnioski/zam-okresy';
+import { adresCzesci } from '@/komponenty/czesci-formularza';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
+import { liczbaKrokow, numerKroku, type KrokZCzesciami } from '@/komponenty/kroki';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { Postep } from '@/komponenty/postep';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
@@ -28,6 +38,9 @@ import { teksty } from '@/teksty';
 const tk = teksty.ViewZamLeaveType.kreator;
 
 export type EkranKreatoraZam = keyof typeof tk.nazwyKrokow;
+
+/** Krok kreatora z liczbą części ekranu. */
+export type KrokKreatoraZam = KrokZCzesciami<EkranKreatoraZam>;
 
 export interface DaneWnioskuZam {
   wniosek: WniosekZam;
@@ -56,6 +69,65 @@ export function adresEkranuZam(ekran: IdWidoku, idWniosku: string): string {
   return sciezkaWidoku(ekran, { wniosek: idWniosku });
 }
 
+// --- Podział ekranów na części ---------------------------------------------------------------------
+
+/**
+ * Ekran okresu ma dwie części dla urlopu macierzyńskiego z dostępnym wariantem 81,5% (okres z tabelą stawek,
+ * potem wybór wariantu) i dla urlopu rodzicielskiego (tryb z datą początku, potem liczba tygodni).
+ */
+export function okresWDwochCzesciachZam(rodzaj: RodzajUrlopu, p: ParametryOkresuZam): boolean {
+  if (rodzaj === 'rodzicielski') return true;
+  if (rodzaj !== 'macierzynski' || !p.okresMacierzynski || !p.wariantDostepny) return false;
+  const [mac, rodz] = okresyMacierzynskiego(p, 'caly-rodzicielski');
+  return Boolean(mac && rodz);
+}
+
+/** Liczba dzieci, których dane wnioskodawca wpisuje na ekranie danych; przed porodem 0. */
+export function liczbaDzieciZDanymiZam(okresy: KontekstOkresowZam): number {
+  return !okresy.przedPorodem && okresy.dataPorodu !== null ? Math.max(1, okresy.liczbaDzieci) : 0;
+}
+
+/** Zaświadczenie lekarskie na ekranie początku zasiłku: zasiłek matki wypłaca ZUS. */
+export function wymagaZaswiadczeniaZam(kontekst: KontekstRodziny): boolean {
+  return kontekst.rodzina.daneRodziny.matka.platnikZasilku?.wartosc === 'zus';
+}
+
+function warunkiCzesciZam(dane: DaneWnioskuZam, dzis: DataISO): WarunkiCzesciZam {
+  const { wniosek, kontekst, okresy } = dane;
+  return {
+    liczbaDzieciZDanymi: liczbaDzieciZDanymiZam(okresy),
+    okresWDwochCzesciach: okresWDwochCzesciachZam(wniosek.rodzajUrlopu ?? 'macierzynski', parametryOkresuZam(okresy, dzis)),
+    zZaswiadczeniem: wymagaZaswiadczeniaZam(kontekst),
+  };
+}
+
+/** Kroki kreatora z liczbą części każdego ekranu dla wniosku; bez wniosku ekrany mają podział domyślny. */
+export function useKrokiKreatoraZam(dane: DaneWnioskuZam | null, przedPorodem = false): KrokKreatoraZam[] {
+  const dzis = useDzis();
+  const wniosek = dane?.wniosek ?? null;
+  const przed = przedPorodem || wniosek?.przedPorodem !== undefined;
+  return krokiWnioskuZam(wniosek, przed, dane ? warunkiCzesciZam(dane, dzis) : undefined) as KrokKreatoraZam[];
+}
+
+/** Liczba części ekranu w krokach kreatora. */
+export function liczbaCzesciZam(kroki: readonly KrokKreatoraZam[], ekran: EkranKreatoraZam): number {
+  return kroki.find((k) => k.id === ekran)?.czesci ?? 1;
+}
+
+/** Adres ostatniej części ekranu przed bieżącym, do przycisku Wstecz w pierwszej części ekranu. */
+export function adresPoprzedniegoKrokuZam(
+  kroki: readonly KrokKreatoraZam[],
+  ekran: EkranKreatoraZam,
+  idWniosku: string,
+  domyslny: EkranKreatoraZam,
+): string {
+  const i = kroki.findIndex((k) => k.id === ekran);
+  const poprzedni = i > 0 ? kroki[i - 1].id : domyslny;
+  return adresCzesci(adresEkranuZam(poprzedni, idWniosku), liczbaCzesciZam(kroki, poprzedni));
+}
+
+// --- Zapis i przejścia -----------------------------------------------------------------------------
+
 /** Zapis odpowiedzi i przejście do instrukcji sprawy z komunikatem 0058 (R19). */
 export function useZapisDoDokonczenia() {
   const router = useRouter();
@@ -68,51 +140,74 @@ export function useZapisDoDokonczenia() {
   };
 }
 
-/** Zapis odpowiedzi kroku i przejście do następnego ekranu (ostatni wyświetlony ekran = ekran docelowy). */
+/**
+ * Zapis odpowiedzi kroku i przejście do następnego ekranu (ostatni wyświetlony ekran = ekran docelowy).
+ * `zajety` trwa od zapisu do pokazania następnego ekranu i nie wraca po powrocie na ekran.
+ */
 export function usePrzejscieDalej() {
-  const router = useRouter();
-  return (wniosek: WniosekZam, zmiana: Partial<WniosekZam>, ekranDocelowy: IdWidoku): KodKomunikatu | null => {
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
+  const przejdzDalej = (wniosek: WniosekZam, zmiana: Partial<WniosekZam>, ekranDocelowy: IdWidoku): KodKomunikatu | null => {
+    ustawZajety(true);
     const wynik = zapiszKrokZam(wniosek.idWniosku, zmiana, ekranDocelowy, pobierzKontekstOperacji());
-    if (!wynik.ok) return wynik.kod;
-    router.push(adresEkranuZam(ekranDocelowy, wniosek.idWniosku));
+    if (!wynik.ok) {
+      ustawZajety(false);
+      return wynik.kod;
+    }
+    przejdz(adresEkranuZam(ekranDocelowy, wniosek.idWniosku));
     return null;
   };
+  return { przejdzDalej, zajety };
+}
+
+// --- Układ -----------------------------------------------------------------------------------------
+
+/** Etykieta kroku na liście: „3. Dane” albo dla ekranu z częściami „3–5. Dane”. */
+function etykietaKrokuZam(kroki: readonly KrokKreatoraZam[], krok: KrokKreatoraZam): string {
+  const od = numerKroku(kroki, krok.id, 1);
+  const czesci = krok.czesci ?? 1;
+  const nazwa = tk.nazwyKrokow[krok.id];
+  return czesci > 1 ? tk.zakresKrokow({ od, do_: od + czesci - 1, nazwa }) : tk.numerKroku({ numer: od, nazwa });
 }
 
 /** Karta postępu kreatora: „Krok N z M: nazwa”, pasek i lista kroków z odnośnikami do kroków wcześniejszych. */
-function KartaPostepu({ ekran, wniosek, przedPorodem }: { ekran: EkranKreatoraZam; wniosek: WniosekZam | null; przedPorodem: boolean }) {
-  const ekrany = ekranyWnioskuZam(wniosek, przedPorodem) as EkranKreatoraZam[];
-  const indeks = Math.max(0, ekrany.indexOf(ekran));
+function KartaPostepu({
+  ekran,
+  wniosek,
+  kroki,
+  czesc,
+}: {
+  ekran: EkranKreatoraZam;
+  wniosek: WniosekZam | null;
+  kroki: readonly KrokKreatoraZam[];
+  czesc: number;
+}) {
+  const indeks = Math.max(0, kroki.findIndex((k) => k.id === ekran));
+  const krok = numerKroku(kroki, ekran, czesc);
+  const liczba = liczbaKrokow(kroki);
+  const tytul = tk.krok({ krok, liczbaKrokow: liczba, nazwa: tk.nazwyKrokow[ekran] });
   const idTytulu = 'zam-postep-tytul';
   return (
     <Karta as="section">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
         <h2 id={idTytulu} className="m-0 text-body-strong text-ink-strong">
-          {tk.krok({ krok: indeks + 1, liczbaKrokow: ekrany.length, nazwa: tk.nazwyKrokow[ekran] })}
+          {tytul}
         </h2>
         <p className="m-0 text-small">{tk.zapisujemy}</p>
       </div>
-      <Postep
-        className="mt-3"
-        wartosc={indeks + 1}
-        maks={ekrany.length}
-        min={1}
-        etykieta={tk.krok({ krok: indeks + 1, liczbaKrokow: ekrany.length, nazwa: tk.nazwyKrokow[ekran] })}
-        idEtykiety={idTytulu}
-      />
+      <Postep className="mt-3" wartosc={krok} maks={liczba} min={1} etykieta={tytul} idEtykiety={idTytulu} />
       <ol aria-label={tk.krokiWniosku} className="m-0 mt-4 flex list-none flex-wrap gap-x-6 gap-y-2 p-0 text-small">
-        {ekrany.map((e, i) => {
-          const etykieta = tk.numerKroku({ numer: i + 1, nazwa: tk.nazwyKrokow[e] });
+        {kroki.map((k, i) => {
+          const etykieta = etykietaKrokuZam(kroki, k);
           if (i === indeks) {
             return (
-              <li key={e} aria-current="step" className="font-semibold text-ink-strong">
+              <li key={k.id} aria-current="step" className="font-semibold text-ink-strong">
                 {etykieta}
               </li>
             );
           }
           return (
-            <li key={e}>
-              {i < indeks && wniosek ? <Odnosnik href={adresEkranuZam(e, wniosek.idWniosku)}>{etykieta}</Odnosnik> : etykieta}
+            <li key={k.id}>
+              {i < indeks && wniosek ? <Odnosnik href={adresEkranuZam(k.id, wniosek.idWniosku)}>{etykieta}</Odnosnik> : etykieta}
             </li>
           );
         })}
@@ -126,16 +221,31 @@ export interface RamaKreatoraZamProps {
   wniosek: WniosekZam | null;
   idSprawy?: string;
   przedPorodem?: boolean;
+  /** Kroki z liczbą części (useKrokiKreatoraZam); domyślnie podział bez danych wniosku. */
+  kroki?: readonly KrokKreatoraZam[];
+  /** Bieżąca część ekranu, od 1. */
+  czesc?: number;
   komunikaty?: ReactNode;
   boczna?: ReactNode;
   children: ReactNode;
 }
 
 /** Układ ekranu kreatora: nagłówek, karta postępu, treść z przyciskami i kolumna boczna. */
-export function RamaKreatoraZam({ ekran, wniosek, idSprawy, przedPorodem = false, komunikaty, boczna, children }: RamaKreatoraZamProps) {
+export function RamaKreatoraZam({
+  ekran,
+  wniosek,
+  idSprawy,
+  przedPorodem = false,
+  kroki,
+  czesc = 1,
+  komunikaty,
+  boczna,
+  children,
+}: RamaKreatoraZamProps) {
   const sprawa = wniosek?.idSprawy ?? idSprawy;
   const przed = przedPorodem || wniosek?.przedPorodem !== undefined;
   const naglowek = przed ? teksty.ViewZamPrebirth.naglowek : teksty[ekran].naglowek;
+  const krokiPostepu = kroki ?? (krokiWnioskuZam(wniosek, przed) as KrokKreatoraZam[]);
   return (
     <>
       <NaglowekStrony
@@ -143,7 +253,7 @@ export function RamaKreatoraZam({ ekran, wniosek, idSprawy, przedPorodem = false
         powrot={sprawa ? { href: trasy.ViewCaseGuide({ idSprawy: sprawa }), etykieta: tk.powrot } : undefined}
       />
       <div className="flex flex-col gap-7.5">
-        <KartaPostepu ekran={ekran} wniosek={wniosek} przedPorodem={przed} />
+        <KartaPostepu ekran={ekran} wniosek={wniosek} kroki={krokiPostepu} czesc={czesc} />
         {komunikaty}
         <UkladDwuKolumnowy tresc={<div className="flex min-w-0 flex-col gap-7.5">{children}</div>} boczna={boczna} etykietaBocznej={tk.etykietaBocznej} />
       </div>
@@ -159,17 +269,17 @@ export interface PrzyciskiKreatoraProps {
   zajety?: boolean;
 }
 
-/** Wiersz przycisków kreatora: Wstecz, Zapisz do dokończenia, Dalej. */
+/** Wiersz przycisków kreatora: Wstecz, Zapisz do dokończenia, Dalej. W trakcie przejścia Wstecz i Zapisz są wyłączone. */
 export function PrzyciskiKreatora({ onWstecz, onZapisz, onDalej, etykietaDalej = tk.przyciski.dalej, zajety }: PrzyciskiKreatoraProps) {
   return (
     <div className="flex flex-wrap items-center justify-end gap-4">
       {onWstecz ? (
-        <Przycisk type="button" wariant="drugorzedny" onClick={onWstecz} className="mr-auto">
+        <Przycisk type="button" wariant="drugorzedny" onClick={onWstecz} disabled={zajety} className="mr-auto">
           {tk.przyciski.wstecz}
         </Przycisk>
       ) : null}
       {onZapisz ? (
-        <Przycisk type="button" wariant="tlo" ikona="zapisz" onClick={onZapisz}>
+        <Przycisk type="button" wariant="tlo" ikona="zapisz" onClick={onZapisz} disabled={zajety}>
           {tk.przyciski.zapiszDoDokonczenia}
         </Przycisk>
       ) : null}

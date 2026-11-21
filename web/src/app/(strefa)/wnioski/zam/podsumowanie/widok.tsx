@@ -12,23 +12,25 @@ import { formatujProcent } from '@/domena/kwoty';
 import type { IdWidoku, KodKomunikatu } from '@/domena/typy';
 import { formatujRachunek } from '@/domena/walidacje';
 import { czyPotrzebneZ3a, daneRodzicaWniosku, zalacznikiZam } from '@/domena/wnioski/zam';
-import { ekranPrzedZam } from '@/domena/wnioski/zam-nawigacja';
 import { parametryOkresuZam } from '@/domena/wnioski/zam-okresy';
 import { Ikona } from '@/komponenty/ikona';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { SzkieletWidoku } from '@/komponenty/szkielet-widoku';
 import { Tabela } from '@/komponenty/tabela';
 import { teksty } from '@/teksty';
 import {
   adresEkranuZam,
+  adresPoprzedniegoKrokuZam,
   BrakWnioskuZam,
   DaneBoczne,
   nazwaRodzajuWniosku,
   PrzyciskiKreatora,
   RamaKreatoraZam,
   tekstStawki,
+  useKrokiKreatoraZam,
   useWniosekZam,
   useZapisDoDokonczenia,
   type DaneWnioskuZam,
@@ -60,8 +62,9 @@ function Podsumowanie({ dane }: { dane: DaneWnioskuZam }) {
   const dzis = useDzis();
   const { wniosek, kontekst, okresy } = dane;
   const zapiszDoDokonczenia = useZapisDoDokonczenia();
+  const kroki = useKrokiKreatoraZam(dane);
   const [wynik, ustawWynik] = useState<{ kod: KodKomunikatu; dataSzkicu?: string } | null>(null);
-  const [zajety, ustawZajety] = useState(false);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const p = parametryOkresuZam(okresy, dzis);
   const adresat = wniosek.adresat ?? 'zus';
   const rodzicDane = daneRodzicaWniosku(kontekst.rodzina, okresy.rodzic);
@@ -73,22 +76,22 @@ function Podsumowanie({ dane }: { dane: DaneWnioskuZam }) {
     const ctx = pobierzKontekstOperacji();
     if (adresat === 'platnik-skladek') {
       const przygotowanie = przygotujZamDlaPlatnika(wniosek.idWniosku, ctx);
-      ustawZajety(false);
       if (!przygotowanie.ok) {
+        ustawZajety(false);
         ustawWynik({ kod: przygotowanie.kod });
         return;
       }
-      router.push(adresEkranuZam('ViewZamForPayer', wniosek.idWniosku));
+      przejdz(adresEkranuZam('ViewZamForPayer', wniosek.idWniosku));
       return;
     }
     const dataSzkicu = formatujDate(dataZeZnacznika(wniosek.zaktualizowano));
     const odpowiedz = await wyslijZam(wniosek.idWniosku, ctx);
-    ustawZajety(false);
     if (!odpowiedz.ok) {
+      ustawZajety(false);
       ustawWynik({ kod: odpowiedz.kod, dataSzkicu });
       return;
     }
-    router.push(adresEkranuZam('ViewZamSent', wniosek.idWniosku));
+    przejdz(adresEkranuZam('ViewZamSent', wniosek.idWniosku));
   };
 
   const komunikaty: ReactNode[] = [];
@@ -143,7 +146,7 @@ function Podsumowanie({ dane }: { dane: DaneWnioskuZam }) {
 
   const ekranOkresu: IdWidoku = 'ViewZamPeriod';
   return (
-    <RamaKreatoraZam ekran="ViewZamSummary" wniosek={wniosek} komunikaty={komunikaty.length > 0 ? komunikaty : null} boczna={boczna}>
+    <RamaKreatoraZam ekran="ViewZamSummary" wniosek={wniosek} kroki={kroki} komunikaty={komunikaty.length > 0 ? komunikaty : null} boczna={boczna}>
       <p className="m-0">{t.wstep}</p>
       <Sekcja tytul={t.sekcje.rodzajUrlopu} ekran="ViewZamLeaveType" idWniosku={wniosek.idWniosku}>
         <p className="m-0">{nazwaRodzajuWniosku(wniosek)}</p>
@@ -223,9 +226,7 @@ function Podsumowanie({ dane }: { dane: DaneWnioskuZam }) {
         {adresat === 'zus' && !wniosek.przedPorodem ? <p className="m-0 mt-4">{t.bezOdpisu}</p> : null}
       </Sekcja>
       <PrzyciskiKreatora
-        onWstecz={() =>
-          router.push(adresEkranuZam(ekranPrzedZam(wniosek, 'ViewZamSummary') ?? 'ViewZamStatements', wniosek.idWniosku))
-        }
+        onWstecz={() => router.push(adresPoprzedniegoKrokuZam(kroki, 'ViewZamSummary', wniosek.idWniosku, 'ViewZamStatements'))}
         onZapisz={() => {
           const kod = zapiszDoDokonczenia(wniosek, {}, 'ViewZamSummary');
           if (kod) ustawWynik({ kod });

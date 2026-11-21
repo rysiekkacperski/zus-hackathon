@@ -89,7 +89,7 @@ export function KafelekMetody({ href, ikona, tytul, opis, znaczek, onClick, id, 
       id={id}
       onClick={onClick}
       className={[
-        'group grid grid-cols-[40px_minmax(0,1fr)_24px] items-center gap-x-6 rounded-md bg-surface-method py-5 pr-4 pl-6 text-ink no-underline hover:text-ink',
+        'group grid grid-cols-[2.5rem_minmax(0,1fr)_1.5rem] items-center gap-x-6 rounded-md bg-surface-method py-5 pr-4 pl-6 text-ink no-underline hover:text-ink',
         className,
       ]
         .filter(Boolean)
@@ -112,7 +112,7 @@ export function Statystyki({ pozycje, id, className }: StatystykiProps) {
   return (
     <dl id={id} className={['m-0 flex flex-wrap gap-3', className].filter(Boolean).join(' ')}>
       {pozycje.map((p) => (
-        <div key={p.etykieta} className="min-w-0 flex-[1_1_120px] rounded-md bg-surface-page p-4">
+        <div key={p.etykieta} className="min-w-0 flex-[1_1_7.5rem] rounded-md bg-surface-page p-4">
           <dt className="text-body text-ink">{p.etykieta}</dt>
           <dd className="m-0 mt-1 text-amount text-ink-strong">{p.wartosc}</dd>
         </div>

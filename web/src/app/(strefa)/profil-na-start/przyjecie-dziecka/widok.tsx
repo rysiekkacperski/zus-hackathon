@@ -1,9 +1,10 @@
 'use client';
 
 // ViewProfileChildAdoption (historyjka 3.3.4.1.1, wzory P21-02..P21-07). Właściciel: u24.
-// Tryb profilu na start: krok 3 z 6, „Dalej” zapisuje dane w szkicu i prowadzi do ViewProfileFamily.
+// Tryb profilu na start: formularz w trzech częściach, „Dalej” na ostatniej części zapisuje dane w szkicu
+// i prowadzi do ViewProfileFamily.
 // Tryb zmiany z podsumowania (?powrot=podsumowanie albo konto Rodzic): „Dalej” wraca na ViewProfileSummary.
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -15,13 +16,12 @@ import { czyMaZgode } from '@/domena/konto/zgoda';
 import { formatujDate } from '@/domena/daty';
 import { formularzZPrzyjecia } from '@/domena/rodzina/przyjecie';
 import { teksty } from '@/teksty';
-import { BocznaKrokow, BocznaZmiany, PostepPrzyjecia } from './_czesci/boczne';
+import { BocznaKrokow, BocznaZmiany } from './_czesci/boczne';
 import { FormularzDanychPrzyjecia } from './_czesci/formularz';
 
 const t = teksty.ViewProfileChildAdoption;
 
 export function WidokPrzyjeciaDziecka() {
-  const router = useRouter();
   const parametry = useSearchParams();
   const konto = useKonto();
   const stanKonta = useStanKonta();
@@ -70,17 +70,15 @@ export function WidokPrzyjeciaDziecka() {
   }
 
   const tresc = (
-    <Stos odstep={7.5}>
-      {trybZmiany ? null : <PostepPrzyjecia />}
-      <FormularzDanychPrzyjecia
-        poczatkowy={poczatkowy}
-        dzis={dzis}
-        trybZmiany={trybZmiany}
-        zapisanaDataPrzyjecia={trybZmiany && zapisane ? formatujDate(zapisane.dataPrzyjecia) : undefined}
-        adresWstecz={adresWstecz}
-        onZapisano={() => router.push(adresDalej)}
-      />
-    </Stos>
+    <FormularzDanychPrzyjecia
+      poczatkowy={poczatkowy}
+      dzis={dzis}
+      trybZmiany={trybZmiany}
+      zapisanaDataPrzyjecia={trybZmiany && zapisane ? formatujDate(zapisane.dataPrzyjecia) : undefined}
+      adresWstecz={adresWstecz}
+      adresDalej={adresDalej}
+      pokazPostep={!trybZmiany}
+    />
   );
 
   return (

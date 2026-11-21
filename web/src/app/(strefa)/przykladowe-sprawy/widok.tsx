@@ -2,11 +2,11 @@
 
 // ViewSampleCaseList (3.4.3.1.1, 3.4.3.1.5): sprawy z zestawów ZUS i sprawy wzorcowe S01–S11 z akcją wyboru
 // oraz karta wgrania dokumentu z zestawu ZUS (wzory Przykladowe-sprawy, P13-01).
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
@@ -25,10 +25,10 @@ type Kolumna = 'sprawa' | 'sytuacja' | 'forma' | 'dokumenty' | 'prawo' | 'akcja'
 
 export function WidokPrzykladowychSpraw() {
   const dzis = useDzis();
-  const router = useRouter();
+  const { przejdz } = useNawigacjaZLadowaniem();
   const [sprawy, setSprawy] = useState<SprawaPrzykladowa[]>(() => sprawyZespolu());
   const [blad, setBlad] = useState<KodKomunikatu | null>(null);
-  const [wybierana, setWybierana] = useState<string | null>(null);
+  const [wybierana, setWybierana] = useStanChwilowy<string | null>(null);
 
   useEffect(() => {
     let aktywne = true;
@@ -56,7 +56,7 @@ export function WidokPrzykladowychSpraw() {
       setWybierana(null);
       return;
     }
-    router.push(trasy.ViewSampleCaseData());
+    przejdz(trasy.ViewSampleCaseData());
   }
 
   const kolumny: { klucz: Kolumna; naglowek: string; ukryjNaglowek?: boolean }[] = [
@@ -106,7 +106,7 @@ export function WidokPrzykladowychSpraw() {
         {blad ? <Komunikat kod={blad} /> : null}
         <Karta tytul={t.kartaWgrania.tytul} bezLinii>
           <div className="flex flex-wrap items-center justify-between gap-6">
-            <p className="m-0 min-w-0 flex-[1_1_480px]">{t.kartaWgrania.opis}</p>
+            <p className="m-0 min-w-0 flex-[1_1_30rem]">{t.kartaWgrania.opis}</p>
             <PrzyciskLink href={trasy.ViewSampleCaseUpload({ trybWgrania: 'nowa' })} wariant="glowny" ikona="wgraj">
               {t.kartaWgrania.przycisk}
             </PrzyciskLink>

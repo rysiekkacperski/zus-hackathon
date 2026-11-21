@@ -48,7 +48,7 @@ export function SlotTerminSprawy({ sprawa, termin, kontekst }: PropsSlotu<'przyS
         )}
         {termin.szacowany ? <span className="block font-semibold text-ink-strong">{t.szacowany}</span> : null}
       </div>
-      <div className="min-w-0 flex-[1_1_240px]">
+      <div className="min-w-0 flex-[1_1_15rem]">
         <span className="sr-only">{t.etykietaKosztu}: </span>
         {koszt.rodzaj === 'brak' ? (
           <span>{t.brakTerminu}</span>

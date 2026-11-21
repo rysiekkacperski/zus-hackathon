@@ -5,7 +5,7 @@
 import { adresyProdukcyjne } from '@/dane/parametry-produkcyjne';
 import { losowyCiag } from '@/dane/magazyn/losowanie';
 import { nastepnyNumerPotwierdzenia } from '@/dane/magazyn/operacje/konto';
-import { odczytajDaneKontaZus } from '@/dane/magazyn/operacje/odczyt-zus';
+import { odczytajDaneKontaZus, poczekajNaSymulowanyOdczytZus } from '@/dane/magazyn/operacje/odczyt-zus';
 import { uruchomPoOdczycieDanychZus } from '@/dane/magazyn/operacje/po-odczycie-zus';
 import { ustawStatusSprawy } from '@/dane/magazyn/operacje/plan';
 import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
@@ -112,7 +112,9 @@ export async function odczytajDaneKontaUbezpieczonego(ctx: KontekstOperacji): Pr
   const pesel = zalogowany.sesja.pesel;
 
   if (czySymulacja('pueEzusNiedostepne') || czySymulacja('daneZusNiedostepne')) {
-    const maKopie = zalogowany.stanKonta.kopiaDanychZus !== null;
+    // Nieudany odczyt kończy się po czasie symulowanego odczytu, tak jak odczyt udany.
+    await poczekajNaSymulowanyOdczytZus();
+    const maKopie = (odczytajStanKonta(pesel)?.kopiaDanychZus ?? null) !== null;
     wykonajOperacje(() => {
       zmienStanKonta(
         pesel,

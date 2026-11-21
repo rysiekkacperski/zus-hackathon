@@ -1,18 +1,17 @@
 'use client';
 
 // Postęp i kolumna boczna ViewProfileChildAdoption (wzory P21-02 i P21-07). Właściciel: u24.
+// Postęp liczy kroki ścieżki przyjęcia dziecka z nawigacji profilu (bez zmiany zatrudnienia w ciąży), a każda
+// część formularza przyjęcia liczy się jako krok.
+import { useStanKonta } from '@/dane/magazyn/hooki';
 import { Karta } from '@/komponenty/karta';
 import { KrokiKreatora, PostepKreatora, type KrokiKreatoraProps } from '@/komponenty/kroki';
 import { Notatka } from '@/komponenty/notatka';
-import { krokiProfilu } from '@/domena/profil/nawigacja';
+import { CZESCI_PRZYJECIA_DZIECKA, krokEkranu, krokiProfilu } from '@/domena/profil/nawigacja';
 import type { SzkicProfilu } from '@/domena/typy';
 import { teksty } from '@/teksty';
 
 const t = teksty.ViewProfileChildAdoption;
-
-// Ścieżka przyjęcia dziecka ma 6 kroków: bez zmiany zatrudnienia w ciąży.
-const NUMER_KROKU = 3;
-const LICZBA_KROKOW = 6;
 
 const KROKI_SCIEZKI_PRZYJECIA: KrokiKreatoraProps['kroki'] = [
   { etykieta: t.krokiProfilu.daneZKontaZus, stan: 'gotowe' },
@@ -23,10 +22,17 @@ const KROKI_SCIEZKI_PRZYJECIA: KrokiKreatoraProps['kroki'] = [
   { etykieta: t.krokiProfilu.podsumowanie, stan: 'oczekuje' },
 ];
 
-export function PostepPrzyjecia() {
+export function PostepPrzyjecia({ czesc }: { czesc: number }) {
+  const stanKonta = useStanKonta();
+  const krok = krokEkranu(stanKonta?.szkicProfilu ?? null, 'ViewProfileChildAdoption', {
+    zgoda: true,
+    zDanymiZus: (stanKonta?.kopiaDanychZus ?? null) !== null,
+    czesc,
+    liczbaCzesci: CZESCI_PRZYJECIA_DZIECKA,
+  });
   return (
     <Karta>
-      <PostepKreatora id="przyjecie-postep" krok={NUMER_KROKU} liczbaKrokow={LICZBA_KROKOW} nazwaKroku={t.nazwaKroku} />
+      <PostepKreatora id="przyjecie-postep" krok={krok.numer} liczbaKrokow={krok.liczba} nazwaKroku={t.nazwaKroku} />
     </Karta>
   );
 }

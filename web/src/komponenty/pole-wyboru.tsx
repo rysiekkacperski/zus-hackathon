@@ -17,6 +17,8 @@ export interface PoleWyboruProps<W extends string = string> {
   opcje: OpcjaWyboru<W>[];
   wartosc: W | '';
   onZmiana: (w: W | '') => void;
+  /** Opuszczenie pola i wybór opcji: walidacja po opuszczeniu (useWalidacjaNaBiezaco). */
+  onOpuszczenie?: () => void;
   pustaOpcja?: string;
   podpowiedz?: ReactNode;
   blad?: BladPolaWartosc;
@@ -35,6 +37,7 @@ export function PoleWyboru<W extends string = string>({
   opcje,
   wartosc,
   onZmiana,
+  onOpuszczenie,
   pustaOpcja,
   podpowiedz,
   blad,
@@ -65,8 +68,12 @@ export function PoleWyboru<W extends string = string>({
             name={nazwa}
             value={wartosc}
             disabled={wylaczone}
-            onChange={(e) => onZmiana(e.target.value as W | '')}
-            className={`${klasyPolaWpisu} cursor-pointer appearance-none pr-12 pl-3 focus:pr-[47px] focus:pl-[11px]`}
+            onChange={(e) => {
+              onZmiana(e.target.value as W | '');
+              onOpuszczenie?.();
+            }}
+            onBlur={onOpuszczenie}
+            className={`${klasyPolaWpisu} cursor-pointer appearance-none pr-12 pl-3 focus:pr-[2.9375rem] focus:pl-[0.6875rem]`}
           >
             {pokazPusta ? <option value="">{pustaOpcja ?? teksty.wspolne.pola.wybierzZListy}</option> : null}
             {opcje.map((opcja) => (

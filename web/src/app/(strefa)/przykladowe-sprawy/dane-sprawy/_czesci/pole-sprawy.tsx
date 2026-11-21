@@ -18,6 +18,8 @@ interface WspolnePolaSprawy {
   blad?: KodKomunikatu | null;
   className?: string;
   dodatek?: ReactNode;
+  /** Opuszczenie pola (blur), a w polu wyboru także wybór opcji: walidacja na bieżąco. */
+  onOpuszczenie?: () => void;
 }
 
 function Zrodlo({ id, zrodlo }: { id: string; zrodlo: OpisZrodla }) {
@@ -54,7 +56,7 @@ export interface PoleWpisuSprawyProps extends WspolnePolaSprawy {
 }
 
 export function PoleWpisuSprawy({ wartosc, onZmiana, tylkoDoOdczytu, inputMode = 'text', data, dodatek, ...reszta }: PoleWpisuSprawyProps) {
-  const { id, zrodlo, blad } = reszta;
+  const { id, zrodlo, blad, onOpuszczenie } = reszta;
   return (
     <Oprawa {...reszta}>
       <div className="flex min-w-0 items-center gap-2">
@@ -63,6 +65,7 @@ export function PoleWpisuSprawy({ wartosc, onZmiana, tylkoDoOdczytu, inputMode =
           type="text"
           value={wartosc}
           onChange={(e) => onZmiana?.(e.target.value)}
+          onBlur={onOpuszczenie}
           readOnly={tylkoDoOdczytu}
           aria-readonly={tylkoDoOdczytu || undefined}
           inputMode={data ? 'numeric' : inputMode}
@@ -86,17 +89,21 @@ export interface PoleWyboruSprawyProps extends WspolnePolaSprawy {
 }
 
 export function PoleWyboruSprawy({ wartosc, opcje, onZmiana, pustaOpcja, ...reszta }: PoleWyboruSprawyProps) {
-  const { id, zrodlo, blad } = reszta;
+  const { id, zrodlo, blad, onOpuszczenie } = reszta;
   return (
     <Oprawa {...reszta}>
       <span className="relative block w-full">
         <select
           id={id}
           value={wartosc}
-          onChange={(e) => onZmiana(e.target.value)}
+          onChange={(e) => {
+            onZmiana(e.target.value);
+            onOpuszczenie?.();
+          }}
+          onBlur={onOpuszczenie}
           aria-describedby={opisy(id, zrodlo, blad)}
           aria-invalid={blad ? true : undefined}
-          className={`${klasyPolaWpisu} cursor-pointer appearance-none pr-12 pl-3 focus:pr-[47px] focus:pl-[11px]`}
+          className={`${klasyPolaWpisu} cursor-pointer appearance-none pr-12 pl-3 focus:pr-[2.9375rem] focus:pl-[0.6875rem]`}
         >
           {pustaOpcja || wartosc === '' ? <option value="">{teksty.wspolne.pola.wybierzZListy}</option> : null}
           {Object.entries(opcje).map(([w, e]) => (
@@ -111,9 +118,18 @@ export function PoleWyboruSprawy({ wartosc, opcje, onZmiana, pustaOpcja, ...resz
   );
 }
 
-/** Siatka pól karty danych sprawy: jedna kolumna na telefonie, trzy od 1024 px. */
-export function SiatkaPol({ children }: { children: ReactNode }) {
-  return <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 lg:grid-cols-3">{children}</div>;
+const klasySiatki = {
+  3: 'grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 lg:grid-cols-3',
+  4: 'grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+  6: 'grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6',
+} as const;
+
+/**
+ * Siatka pól karty danych sprawy: jedna kolumna na telefonie, trzy od 1024 px. Wariant 4 (wpis rozstrzygnięcia)
+ * i wariant 6 (kwoty miesięczne) od 1280 px mieszczą wpis w dwóch wierszach, a 12 miesięcy w dwóch wierszach.
+ */
+export function SiatkaPol({ children, kolumny = 3 }: { children: ReactNode; kolumny?: keyof typeof klasySiatki }) {
+  return <div className={klasySiatki[kolumny]}>{children}</div>;
 }
 
 export function PodtytulKarty({ children, id }: { children: ReactNode; id?: string }) {

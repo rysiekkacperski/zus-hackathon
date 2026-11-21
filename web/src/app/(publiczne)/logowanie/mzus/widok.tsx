@@ -19,7 +19,7 @@ const tekst = teksty.ViewMzusCodeLogin;
 const ZAKRES_ZIARNA = 0x1_0000_0000;
 
 export function WidokLogowaniaKodemMzus() {
-  const { potwierdz, przerwij } = useAkcjeMakiety('mzus');
+  const { potwierdz, przerwij, zajety } = useAkcjeMakiety('mzus');
   const teraz = useTeraz('sekunda');
   // Chwila pokazania pierwszego kodu i ziarno kodów tego otwarcia ekranu.
   const [otwarcie] = useState(() => ({ pokazano: teraz, ziarno: Math.floor(losuj() * ZAKRES_ZIARNA) }));
@@ -52,6 +52,7 @@ export function WidokLogowaniaKodemMzus() {
         etykietaPrzerwania={tekst.przerwij}
         onPotwierdz={potwierdz}
         onPrzerwij={przerwij}
+        zajety={zajety}
         pozostaloSekund={pozostalo}
         waznoscSekund={WAZNOSC_KODU_MZUS_SEKUNDY}
       />

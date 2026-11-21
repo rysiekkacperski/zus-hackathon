@@ -24,7 +24,7 @@ export function utworzParametryPoczatkowe(): ParametrySystemu {
       uslugaEmailNiedostepna: false,
       asystentNiedostepny: false,
       odczytDokumentu: 'model',
-      opoznienieOdczytuZusMs: 2400,
+      opoznienieOdczytuZusMs: 4000,
       kodSmsStaly: '482913',
     },
   };

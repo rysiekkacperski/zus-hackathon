@@ -12,6 +12,7 @@ import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { Ikona } from '@/komponenty/ikona';
 import { trasy } from '@/komponenty/rama/trasy';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useKontekstRodziny } from '@/dane/magazyn/hooki';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { zapiszPlanPodzialu } from '@/dane/magazyn/operacje/kalkulacje-decyzje';
@@ -27,6 +28,19 @@ import { WynikPodzialuUrlopu } from './_czesci/wynik-podzialu';
 const t = teksty.ViewCalcParentalSplit;
 const tyg = teksty.ViewCalcMaternityVariant.tygodnie;
 type Pole = 'tygodnieMatki' | 'tygodnieDrugiegoRodzica' | 'podstawaMatki' | 'podstawaDrugiego';
+// Kolejność pól na ekranie i cel fokusu po nieudanym wyliczeniu.
+const POLA: Record<Pole, string> = {
+  tygodnieMatki: 'tygodnieMatki',
+  podstawaMatki: 'podstawaMatki',
+  tygodnieDrugiegoRodzica: 'tygodnieDrugiegoRodzica',
+  podstawaDrugiego: 'podstawaDrugiego',
+};
+interface WpisPodzialu {
+  tekstMatki: string;
+  tekstDrugiego: string;
+  tekstPodstawyMatki: string;
+  tekstPodstawyDrugiego: string;
+}
 
 export function WidokPodzialuUrlopuRodzicielskiego() {
   const kontekst = useKontekstRodziny();
@@ -80,7 +94,6 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
   const [tekstDrugiego, setTekstDrugiego] = useState(String(bezPrawa ? 0 : start.tygodnieDrugiegoRodzica));
   const [tekstPodstawyMatki, setTekstPodstawyMatki] = useState('');
   const [tekstPodstawyDrugiego, setTekstPodstawyDrugiego] = useState('');
-  const [bledy, setBledy] = useState<BledyPol<Pole>>({});
   const [zapisano, setZapisano] = useState(false);
   const [bladZapisu, setBladZapisu] = useState<KodKomunikatu | null>(null);
 
@@ -110,35 +123,45 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
 
   const razem = (Number(tekstMatki.trim()) || 0) + (bezPrawa ? 0 : Number(tekstDrugiego.trim()) || 0);
 
-  function wylicz() {
+  // Błędy pól i dane do wyliczenia z bieżącego wpisu.
+  function ocen(w: WpisPodzialu) {
     const b: BledyPol<Pole> = {};
-    const tm = walidujTygodnie(tekstMatki, z.maks);
+    const tm = walidujTygodnie(w.tekstMatki, z.maks);
     if ('kod' in tm) b.tygodnieMatki = tm.kod;
-    const td = bezPrawa ? { tygodnie: 0 } : walidujTygodnie(tekstDrugiego, z.maks);
+    const td = bezPrawa ? { tygodnie: 0 } : walidujTygodnie(w.tekstDrugiego, z.maks);
     if ('kod' in td) b.tygodnieDrugiegoRodzica = td.kod;
     else if ('tygodnie' in tm && tm.tygodnie + td.tygodnie > z.wymiar) b.tygodnieDrugiegoRodzica = '0061';
     const podstawy: Partial<Record<RodzicWRodzinie, PodstawaWymiaru>> = {};
     if (podstawaMatkiZus) podstawy.matka = podstawaMatkiZus;
     else {
-      const p = walidujPodstawe(tekstPodstawyMatki, parsujKwote);
+      const p = walidujPodstawe(w.tekstPodstawyMatki, parsujKwote);
       if ('kod' in p) b.podstawaMatki = p.kod;
       else podstawy.matka = { kwota: p.kwota, zrodlo: 'wartosc-wpisana-przez-rodzica' };
     }
     if (podstawaDrugiegoZus) podstawy['drugi-rodzic'] = podstawaDrugiegoZus;
     else if (poleDrugiego) {
-      const p = walidujPodstawe(tekstPodstawyDrugiego, parsujKwote);
+      const p = walidujPodstawe(w.tekstPodstawyDrugiego, parsujKwote);
       if ('kod' in p) b.podstawaDrugiego = p.kod;
       else podstawy['drugi-rodzic'] = { kwota: p.kwota, zrodlo: 'wartosc-wpisana-przez-rodzica' };
     }
-    setBledy(b);
+    return { bledy: b, tm, td, podstawy };
+  }
+
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { tekstMatki, tekstDrugiego, tekstPodstawyMatki, tekstPodstawyDrugiego },
+    waliduj: (w) => ocen(w).bledy,
+    pola: POLA,
+  });
+
+  function wylicz() {
     setZapisano(false);
-    const pierwszy = (['tygodnieMatki', 'podstawaMatki', 'tygodnieDrugiegoRodzica', 'podstawaDrugiego'] as const).find((p) => b[p]);
-    if (pierwszy) {
+    if (!walidacja.sprobujWyslac()) {
       setWyliczenie(null);
-      document.getElementById(pierwszy)?.focus();
       return;
     }
-    setWyliczenie(policz((tm as { tygodnie: number }).tygodnie, (td as { tygodnie: number }).tygodnie, podstawy));
+    const { tm, td, podstawy } = ocen({ tekstMatki, tekstDrugiego, tekstPodstawyMatki, tekstPodstawyDrugiego });
+    if ('kod' in tm || 'kod' in td) return;
+    setWyliczenie(policz(tm.tygodnie, td.tygodnie, podstawy));
   }
 
   function zapisz() {
@@ -222,7 +245,7 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
                 podpowiedz={t.podpowiedzMatki({ maks: z.maks })}
                 wartosc={tekstMatki}
                 onZmiana={setTekstMatki}
-                blad={bledy.tygodnieMatki ?? null}
+                {...walidacja.pole('tygodnieMatki')}
                 szerokosc="waska"
               />
               {podstawaMatkiZus === null ? (
@@ -232,7 +255,7 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
                   podpowiedz={t.podstawaPodpowiedz}
                   wartosc={tekstPodstawyMatki}
                   onZmiana={setTekstPodstawyMatki}
-                  blad={bledy.podstawaMatki ?? null}
+                  {...walidacja.pole('podstawaMatki')}
                   szerokosc="srednia"
                 />
               ) : null}
@@ -274,7 +297,7 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
                   podpowiedz={t.podpowiedzDrugiego({ maks: z.maks, wymiar: z.wymiar })}
                   wartosc={tekstDrugiego}
                   onZmiana={setTekstDrugiego}
-                  blad={bledy.tygodnieDrugiegoRodzica ?? null}
+                  {...walidacja.pole('tygodnieDrugiegoRodzica')}
                   szerokosc="waska"
                 />
               )}
@@ -285,7 +308,7 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
                   podpowiedz={t.podstawaPodpowiedz}
                   wartosc={tekstPodstawyDrugiego}
                   onZmiana={setTekstPodstawyDrugiego}
-                  blad={bledy.podstawaDrugiego ?? null}
+                  {...walidacja.pole('podstawaDrugiego')}
                   szerokosc="srednia"
                 />
               ) : null}

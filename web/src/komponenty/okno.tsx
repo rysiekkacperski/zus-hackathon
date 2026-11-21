@@ -126,7 +126,7 @@ function Okno({
       onCancel={obsluzAnulowanie}
       onKeyDown={obsluzKlawisz}
       className={[
-        'm-auto box-border max-h-[calc(100dvh-32px)] w-[calc(100vw-32px)] overflow-y-auto rounded-sm border-0 bg-surface-card p-5 text-ink',
+        'm-auto box-border max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto rounded-sm border-0 bg-surface-card p-5 text-ink',
         klasySzerokosci[szerokosc],
         className,
       ]

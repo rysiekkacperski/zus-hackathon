@@ -213,7 +213,7 @@ export function WidokTerminow() {
               { wartosc: 'powtarzalne', etykieta: t.filtry.powtarzalne({ liczba: String(dane.liczniki.powtarzalne) }) },
             ]}
           />
-          <div className="min-w-0 flex-[0_1_300px]">
+          <div className="min-w-0 flex-[0_1_18.75rem]">
             <PoleWyboru<KogoDotyczyFiltr>
               id="kogo-dotyczy"
               etykieta={t.filtry.kogoDotyczy}
@@ -291,7 +291,7 @@ export function WidokTerminow() {
               <p className="m-0 text-body">{t.daneProfilu.wstep}</p>
               <dl className="m-0 mt-4 flex flex-wrap gap-x-7.5 gap-y-4">
                 {pozycjeProfilu.map((p) => (
-                  <div key={p.e} className="min-w-0 flex-[1_1_260px]">
+                  <div key={p.e} className="min-w-0 flex-[1_1_16.25rem]">
                     <dt className="text-body font-semibold">{p.e}</dt>
                     <dd className="m-0 text-body text-ink-strong">{p.w}</dd>
                   </div>

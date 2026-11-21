@@ -4,11 +4,13 @@
 // Krok 6 z 7 profilu na start: forma zatrudnienia drugiego rodzica i jego dobrowolne ubezpieczenie
 // chorobowe przy umowie zlecenia i jednoosobowej działalności. Przejście dalej zapisuje dane drugiego
 // rodzica w szkicu ze źródłem odpowiedź rodzica i prowadzi do ViewProfileSummary (KA-03 do KA-08).
-import { useRouter } from 'next/navigation';
+// Przy umowie zlecenia i działalności ekran ma dwie części (?czesc=N): forma zatrudnienia, potem dobrowolne
+// ubezpieczenie chorobowe.
 import { useEffect, useRef, useState } from 'react';
 import { useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
 import { rozpocznijZmianeProfilu, zapiszSzkic } from '@/dane/magazyn/operacje/profil-szkic';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
+import { czesciDrugiegoRodzica } from '@/domena/profil/nawigacja';
 import {
   FORMY_DRUGIEGO_RODZICA,
   czyPytacODobrowolne,
@@ -18,16 +20,20 @@ import {
   type FormularzDrugiegoRodzica,
   type PoleDrugiegoRodzica,
 } from '@/domena/profil/zapis';
-import type { BledyPol, FormaZatrudnieniaDrugiegoRodzica, IdWidoku, KodKomunikatu, SzkicProfilu } from '@/domena/typy';
-import { GrupaOpcji, idOpcjiGrupy } from '@/komponenty/grupa-opcji';
+import type { FormaZatrudnieniaDrugiegoRodzica, IdWidoku, KodKomunikatu, SzkicProfilu } from '@/domena/typy';
+import { CzescFormularza, useCzesciFormularza } from '@/komponenty/czesci-formularza';
+import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { trasy } from '@/komponenty/rama/trasy';
 import { Stos } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { SzkieletKreatoraProfilu } from '../_czesci/szkielet-kreatora-profilu';
+import { sciezkaPowrotuProfilu } from '../_czesci/trasy-profilu';
 
 const t = teksty.ViewProfileSecondParent;
 const EKRAN: IdWidoku = 'ViewProfileSecondParent';
@@ -39,6 +45,7 @@ const opcjeDobrowolnego = [
   { wartosc: 'tak' as const, etykieta: t.odpowiedziDobrowolnego.tak },
   { wartosc: 'nie' as const, etykieta: t.odpowiedziDobrowolnego.nie },
 ];
+const PODZIAL: readonly (readonly PoleDrugiegoRodzica[])[] = [['forma'], ['dobrowolne']];
 
 function podpowiedzDobrowolnego(forma: FormaZatrudnieniaDrugiegoRodzica | null): string | undefined {
   if (forma === 'umowa-zlecenia' || forma === 'jdg') return t.podpowiedziDobrowolnego[forma];
@@ -46,7 +53,6 @@ function podpowiedzDobrowolnego(forma: FormaZatrudnieniaDrugiegoRodzica | null):
 }
 
 export function WidokDrugiegoRodzica() {
-  const router = useRouter();
   const stanKonta = useStanKonta();
   const rodzina = useRodzina();
   const szkic = stanKonta?.szkicProfilu ?? null;
@@ -57,9 +63,15 @@ export function WidokDrugiegoRodzica() {
   const [formularz, setFormularz] = useState<FormularzDrugiegoRodzica>(() =>
     formularzDrugiegoRodzica(szkic?.daneRodziny.drugiRodzic ?? rodzina?.daneRodziny.drugiRodzic),
   );
-  const [bledy, setBledy] = useState<BledyPol<PoleDrugiegoRodzica>>({});
   const [bladZapisu, setBladZapisu] = useState<KodKomunikatu | null>(null);
-  const [zajety, setZajety] = useState(false);
+  const { zajety, ustawZajety: setZajety, przejdz } = useNawigacjaZLadowaniem();
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: formularz,
+    waliduj: walidujDrugiegoRodzica,
+    pola: { forma: NAZWA_FORMY, dobrowolne: NAZWA_DOBROWOLNEGO },
+  });
+  const czesci = useCzesciFormularza({ liczba: czesciDrugiegoRodzica(formularz.forma), podzial: PODZIAL, walidacja });
+  const zDanymiZus = (stanKonta?.kopiaDanychZus ?? null) !== null;
   const zapisanoOstatniEkran = useRef(false);
 
   // Szkic zapamiętuje ostatni wyświetlony ekran, żeby po ponownym otwarciu przewodnika wrócić na ten krok.
@@ -86,39 +98,23 @@ export function WidokDrugiegoRodzica() {
     );
   }
 
-  function zmien(nowy: FormularzDrugiegoRodzica, pole: PoleDrugiegoRodzica) {
+  function zmien(nowy: FormularzDrugiegoRodzica) {
     setFormularz(nowy);
-    setBledy((poprzednie) => {
-      const { [pole]: usuniety, ...pozostale } = poprzednie;
-      void usuniety;
-      return pozostale;
-    });
     // Autozapis zachowuje odpowiedź bieżącego ekranu, gdy rodzic zamknie przewodnik przed przejściem dalej.
     zapiszFormularz(nowy, szkic);
   }
 
   function zmienForme(forma: FormaZatrudnieniaDrugiegoRodzica) {
     const dobrowolne = czyPytacODobrowolne(forma) ? formularz.dobrowolne : null;
-    zmien({ forma, dobrowolne }, 'forma');
+    zmien({ forma, dobrowolne });
   }
 
   function zmienDobrowolne(odpowiedz: 'tak' | 'nie') {
-    zmien({ ...formularz, dobrowolne: odpowiedz === 'tak' }, 'dobrowolne');
+    zmien({ ...formularz, dobrowolne: odpowiedz === 'tak' });
   }
 
   function przejdzDalej() {
-    const noweBledy = walidujDrugiegoRodzica(formularz);
-    setBledy(noweBledy);
     setBladZapisu(null);
-    if (noweBledy.forma) {
-      document.getElementById(idOpcjiGrupy(NAZWA_FORMY, opcjeFormy[0].wartosc))?.focus();
-      return;
-    }
-    if (noweBledy.dobrowolne) {
-      document.getElementById(idOpcjiGrupy(NAZWA_DOBROWOLNEGO, opcjeDobrowolnego[0].wartosc))?.focus();
-      return;
-    }
-
     setZajety(true);
     const ctx = pobierzKontekstOperacji();
     let biezacySzkic = szkic;
@@ -133,11 +129,15 @@ export function WidokDrugiegoRodzica() {
       setBladZapisu(wynik === null ? '0003' : wynik.kod);
       return;
     }
-    router.push(adresPodsumowania);
+    przejdz(adresPodsumowania);
   }
 
   function wroc() {
-    router.push(powrotNaPodsumowanie ? adresPodsumowania : trasy.ViewProfileFamily());
+    if (powrotNaPodsumowanie) {
+      przejdz(adresPodsumowania);
+      return;
+    }
+    przejdz(sciezkaPowrotuProfilu('ViewProfileFamily', szkic, zDanymiZus));
   }
 
   const pytajODobrowolne = czyPytacODobrowolne(formularz.forma);
@@ -146,38 +146,49 @@ export function WidokDrugiegoRodzica() {
   return (
     <>
       <NaglowekStrony tytul={t.naglowek} wstep={t.wstep} powrot={false} />
-      <SzkieletKreatoraProfilu biezacy={EKRAN} onDalej={przejdzDalej} onWroc={wroc} zajety={zajety}>
+      <SzkieletKreatoraProfilu
+        biezacy={EKRAN}
+        czesc={czesci.czesc}
+        liczbaCzesci={czesci.liczba}
+        onDalej={() => czesci.dalej(przejdzDalej)}
+        onWroc={() => czesci.wroc(wroc)}
+        zajety={zajety}
+      >
         {bladZapisu ? <Komunikat kod={bladZapisu} /> : null}
         <Karta tytul={t.tytulKarty} bezLinii>
           <p className="m-0 mb-6">{t.opisKarty}</p>
           <Stos odstep={6}>
-            <GrupaOpcji
-              nazwa={NAZWA_FORMY}
-              legenda={t.legendaFormy}
-              opcje={opcjeFormy}
-              wartosc={formularz.forma}
-              onZmiana={zmienForme}
-              blad={bledy.forma ?? null}
-              className="max-w-135"
-            />
-            {pytajODobrowolne ? (
+            <CzescFormularza czesci={czesci} numer={1}>
               <GrupaOpcji
-                nazwa={NAZWA_DOBROWOLNEGO}
-                legenda={t.legendaDobrowolnego}
-                podpowiedz={podpowiedzDobrowolnego(formularz.forma)}
-                opcje={opcjeDobrowolnego}
-                wartosc={wartoscDobrowolnego}
-                onZmiana={zmienDobrowolne}
-                blad={bledy.dobrowolne ?? null}
-                uklad="poziomo"
+                nazwa={NAZWA_FORMY}
+                legenda={t.legendaFormy}
+                opcje={opcjeFormy}
+                wartosc={formularz.forma}
+                onZmiana={zmienForme}
+                {...walidacja.pole('forma')}
                 className="max-w-135"
               />
-            ) : null}
-            {formularz.forma === 'umowa-o-prace' ? (
-              <Notatka>
-                <p>{t.notatkaUmowyOPrace}</p>
-              </Notatka>
-            ) : null}
+              {formularz.forma === 'umowa-o-prace' ? (
+                <Notatka>
+                  <p>{t.notatkaUmowyOPrace}</p>
+                </Notatka>
+              ) : null}
+            </CzescFormularza>
+            <CzescFormularza czesci={czesci} numer={2}>
+              {pytajODobrowolne ? (
+                <GrupaOpcji
+                  nazwa={NAZWA_DOBROWOLNEGO}
+                  legenda={t.legendaDobrowolnego}
+                  podpowiedz={podpowiedzDobrowolnego(formularz.forma)}
+                  opcje={opcjeDobrowolnego}
+                  wartosc={wartoscDobrowolnego}
+                  onZmiana={zmienDobrowolne}
+                  {...walidacja.pole('dobrowolne')}
+                  uklad="poziomo"
+                  className="max-w-135"
+                />
+              ) : null}
+            </CzescFormularza>
           </Stos>
         </Karta>
       </SzkieletKreatoraProfilu>

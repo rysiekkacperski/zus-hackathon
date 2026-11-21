@@ -71,7 +71,7 @@ export function PozycjaTerminu({ termin, sprawa, kontekst, ostatnia }: { termin:
           </p>
         ) : null}
       </div>
-      <div className="min-w-0 flex-[1_1_380px]">
+      <div className="min-w-0 flex-[1_1_23.75rem]">
         <h4 className="m-0 text-body font-semibold">
           <Odnosnik href={sciezkaWidoku('ViewCaseDetails', { idSprawy: sprawa.idSprawy })} pochodzenie="terminy">
             {tytul}

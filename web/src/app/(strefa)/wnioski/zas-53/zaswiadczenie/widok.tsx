@@ -2,7 +2,6 @@
 
 // ViewZas53Certificate: krok 1 kreatora ZAS-53. Lista e-ZLA od najpóźniejszego początku, zaświadczenie spoza listy,
 // ustalenie prawa do zasiłku (0084, 0086, 0182, 0234, 0235, 0236, 0242) i zapis szkicu.
-import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { formatujDate, liczbaDniWlacznie } from '@/domena/daty';
 import type { KodKomunikatu, ZaswiadczenieEzla } from '@/domena/typy';
@@ -22,18 +21,20 @@ import { useDzis } from '@/dane/magazyn/hooki';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { zapiszKrokZas53 } from '@/dane/magazyn/operacje/wnioski-zas53';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
-import { GrupaOpcji, idOpcjiGrupy, type OpcjaGrupy } from '@/komponenty/grupa-opcji';
+import { GrupaOpcji, type OpcjaGrupy } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
-import { ListaDefinicji } from '@/komponenty/lista-definicji';
+import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { UkladDwuKolumnowy } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import {
   adresEkranuZas53,
   AkcjeKreatoraZas53,
   BrakWnioskuZas53,
+  DaneWKolumnieBocznej,
   NaglowekKreatoraZas53,
   PostepZas53,
   useWniosekZas53,
@@ -53,11 +54,11 @@ function opisKodow(kody: ('B' | 'E')[]): string {
 export function WidokZaswiadczeniaZas53() {
   const k = useWniosekZas53();
   const dzis = useDzis();
-  const router = useRouter();
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const [wybor, setWybor] = useState<string | null>(null);
   const [blad, setBlad] = useState<KodKomunikatu | null>(null);
   const [blokada, setBlokada] = useState<KomunikatZas53 | null>(null);
-  const [arkusz, setArkusz] = useState(false);
+  const [arkusz, setArkusz] = useStanChwilowy(false);
   const [zapisany, setZapisany] = useState<KodKomunikatu | null>(null);
 
   const lista = useMemo<ZaswiadczenieEzla[]>(() => (k ? listaZaswiadczenZas53(k.kopia, k.rodzina.wnioski) : []), [k]);
@@ -65,16 +66,21 @@ export function WidokZaswiadczeniaZas53() {
     () => (k ? sprawdzDostepZas53({ stanZgody: stanZgody(k.konto.decyzjeOZgodzie), kopia: k.kopia, dzis }) : null),
     [k, dzis],
   );
+  const alternatywne = k?.wniosek.zaswiadczenie?.zrodlo === 'tryb-alternatywny' ? k.wniosek.zaswiadczenie : undefined;
+  const zapisane = k?.wniosek.zaswiadczenie;
+  const wybrane =
+    wybor ?? (zapisane ? (alternatywne ? WARTOSC_ALTERNATYWNEGO : kluczZaswiadczenia(zapisane.seriaINumer)) : null);
+  const liczbaOpcji = lista.length + (alternatywne ? 1 : 0);
+  // Błąd 0006 przy grupie: po opuszczeniu grupy bez wyboru; przy pustej liście komunikat pod notatką.
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { zaswiadczenie: wybrane },
+    waliduj: (w: { zaswiadczenie: string | null }) => ({
+      zaswiadczenie: liczbaOpcji > 0 && w.zaswiadczenie === null ? ('0006' as const) : null,
+    }),
+    pola: { zaswiadczenie: 'zaswiadczenie' },
+  });
   if (!k) return <BrakWnioskuZas53 />;
   const { wniosek } = k;
-  const alternatywne = wniosek.zaswiadczenie?.zrodlo === 'tryb-alternatywny' ? wniosek.zaswiadczenie : undefined;
-  const wybrane =
-    wybor ??
-    (wniosek.zaswiadczenie
-      ? alternatywne
-        ? WARTOSC_ALTERNATYWNEGO
-        : kluczZaswiadczenia(wniosek.zaswiadczenie.seriaINumer)
-      : null);
   const poUstaniu = dostep?.dozwolony ? dostep.sciezka === 'po-ustaniu' : false;
   const tytul = dostep && 'tytul' in dostep ? dostep.tytul : undefined;
 
@@ -110,10 +116,12 @@ export function WidokZaswiadczeniaZas53() {
     return z ? zaswiadczenieZEzla(z) : null;
   };
 
-  const przejdz = (z: ZaswiadczenieWnioskuZas53) => {
+  const ustalIPrzejdz = (z: ZaswiadczenieWnioskuZas53) => {
+    ustawZajety(true);
     const ctx = pobierzKontekstOperacji();
     const prawo = ustalPrawoZas53({ zaswiadczenie: z, kopia: k.kopia, wnioski: k.rodzina.wnioski, wypadek: wniosek.wypadek?.tak ?? false });
     if (prawo.blokuje) {
+      ustawZajety(false);
       setBlokada(prawo.komunikaty[0] ?? null);
       setArkusz(false);
       if (z.zrodlo === 'tryb-alternatywny') {
@@ -126,23 +134,23 @@ export function WidokZaswiadczeniaZas53() {
     const zalaczniki = zbudujZalaczniki({ ...wniosek, ...zmiana });
     const wynik = zapiszKrokZas53(wniosek.idWniosku, { ...zmiana, zalaczniki }, ekran, ctx);
     if (!wynik.ok) {
+      ustawZajety(false);
       setBlad(wynik.kod);
       return;
     }
-    router.push(adresEkranuZas53(ekran, wniosek.idWniosku));
+    przejdz(adresEkranuZas53(ekran, wniosek.idWniosku));
   };
 
   const dalej = () => {
     setBlokada(null);
+    if (!walidacja.sprobujWyslac()) return;
     const z = zaswiadczenieWyboru(wybrane);
     if (!z) {
       setBlad('0006');
-      const pierwsza = opcje[0]?.wartosc;
-      if (pierwsza) document.getElementById(idOpcjiGrupy('zaswiadczenie', pierwsza))?.focus();
       return;
     }
     setBlad(null);
-    przejdz(z);
+    ustalIPrzejdz(z);
   };
 
   const zapiszDoDokonczenia = () => {
@@ -153,14 +161,14 @@ export function WidokZaswiadczeniaZas53() {
       return;
     }
     ustawKomunikatPoPrzejsciu({ kod: '0058', dlaWidoku: 'ViewCaseDetails' });
-    router.push(trasy.ViewCaseDetails({ idSprawy: wniosek.idSprawy }));
+    przejdz(trasy.ViewCaseDetails({ idSprawy: wniosek.idSprawy }));
   };
 
   return (
     <>
       <NaglowekKreatoraZas53 />
       <div className="flex flex-col gap-7.5">
-        <PostepZas53 ekran="ViewZas53Certificate" poUstaniu={poUstaniu} idWniosku={wniosek.idWniosku} />
+        <PostepZas53 ekran="ViewZas53Certificate" poUstaniu={poUstaniu} idWniosku={wniosek.idWniosku} wypadek={wniosek.wypadek?.tak ?? false} />
         {zapisany ? <Komunikat kod={zapisany} /> : null}
         <UkladDwuKolumnowy
           etykietaBocznej={tS.kartaUbezpieczenia}
@@ -199,7 +207,7 @@ export function WidokZaswiadczeniaZas53() {
                       setBlad(null);
                       setBlokada(null);
                     }}
-                    blad={blad === '0006' ? blad : null}
+                    {...walidacja.pole('zaswiadczenie')}
                     uklad="karty"
                   />
                 ) : (
@@ -209,10 +217,12 @@ export function WidokZaswiadczeniaZas53() {
                   </>
                 )}
                 {blad && blad !== '0006' ? <Komunikat className="mt-4" kod={blad} /> : null}
-                <div className="mt-6 rounded-sm bg-surface-page px-5 py-4">
-                  <p className="m-0 mb-1 text-body-strong">{t.spozaListyTytul}</p>
-                  <p className="m-0 mb-4">{t.spozaListyOpis}</p>
-                  <Przycisk type="button" wariant="drugorzedny" onClick={() => setArkusz(true)}>
+                <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-sm bg-surface-page px-5 py-4">
+                  <div className="min-w-0 grow-999 basis-100">
+                    <p className="m-0 mb-1 text-body-strong">{t.spozaListyTytul}</p>
+                    <p className="m-0">{t.spozaListyOpis}</p>
+                  </div>
+                  <Przycisk type="button" wariant="drugorzedny" onClick={() => setArkusz(true)} className="grow">
                     {t.spozaListyAkcja}
                   </Przycisk>
                 </div>
@@ -222,30 +232,27 @@ export function WidokZaswiadczeniaZas53() {
                 wstecz={trasy.ViewCaseDetails({ idSprawy: wniosek.idSprawy })}
                 onZapisz={zapiszDoDokonczenia}
                 onDalej={dalej}
+                zajety={zajety}
               />
             </div>
           }
           boczna={
-            <div className="flex flex-col gap-7.5">
-              <Karta tytul={tS.kartaUbezpieczenia} bezLinii as="section">
-                <p className="m-0 mb-4 text-body-strong">{t.stanNa({ data: formatujDate(dzis) })}</p>
-                <ListaDefinicji
-                  szerokoscEtykiety="waska"
-                  pozycje={[
-                    { etykieta: tS.tytulUbezpieczenia, wartosc: tytul ? tS.rodzajeTytulu[tytul.rodzaj] : tS.brakTytulu },
-                    { etykieta: tS.ubezpieczenieChorobowe, wartosc: opisChorobowego(tytul, false) },
-                    { etykieta: tS.platnikZasilku, wartosc: tS.zus },
-                  ]}
-                />
-              </Karta>
-              <Karta tytul={poUstaniu ? t.poUstaniuTytul : t.coSprawdzimy} bezLinii as="section">
-                <ul className="m-0 grid gap-2 pl-5">
-                  {(poUstaniu ? t.poUstaniuPozycje : t.coSprawdzimyPozycje).map((p) => (
-                    <li key={p}>{p}</li>
-                  ))}
-                </ul>
-              </Karta>
-            </div>
+            <Karta tytul={tS.kartaUbezpieczenia} bezLinii as="section">
+              <p className="m-0 mb-3 text-body-strong">{t.stanNa({ data: formatujDate(dzis) })}</p>
+              <DaneWKolumnieBocznej
+                pozycje={[
+                  { etykieta: tS.tytulUbezpieczenia, wartosc: tytul ? tS.rodzajeTytulu[tytul.rodzaj] : tS.brakTytulu },
+                  { etykieta: tS.ubezpieczenieChorobowe, wartosc: opisChorobowego(tytul, false) },
+                  { etykieta: tS.platnikZasilku, wartosc: tS.zus },
+                ]}
+              />
+              <h3 className="m-0 mt-6 mb-2 text-tile-title text-ink">{poUstaniu ? t.poUstaniuTytul : t.coSprawdzimy}</h3>
+              <ul className="m-0 grid gap-1 pl-5">
+                {(poUstaniu ? t.poUstaniuPozycje : t.coSprawdzimyPozycje).map((p) => (
+                  <li key={p}>{p}</li>
+                ))}
+              </ul>
+            </Karta>
           }
         />
       </div>
@@ -257,7 +264,7 @@ export function WidokZaswiadczeniaZas53() {
           setWybor(WARTOSC_ALTERNATYWNEGO);
           setBlad(null);
           setBlokada(null);
-          przejdz(z);
+          ustalIPrzejdz(z);
         }}
       />
     </>

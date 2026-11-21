@@ -35,9 +35,10 @@ export function ArkuszPotwierdzeniaSytuacji({
       onZamknij={onZamknij}
       tytul={t.tytul}
       komunikat={komunikat}
+      zamykanieZablokowane={zajety}
       stopka={
         <div className="flex flex-wrap justify-between gap-4">
-          <Przycisk type="button" wariant="drugorzedny" onClick={onZamknij}>
+          <Przycisk type="button" wariant="drugorzedny" onClick={onZamknij} disabled={zajety}>
             {teksty.wspolne.przyciski.wroc}
           </Przycisk>
           <Przycisk type="button" wariant="glowny" onClick={onZapisz} zajety={zajety}>

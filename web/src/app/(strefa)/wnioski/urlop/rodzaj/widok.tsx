@@ -19,13 +19,15 @@ import {
   zapiszKrokWnioskuOUrlop,
 } from '@/dane/magazyn/operacje/wnioski-urlop';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
-import { GrupaOpcji, idOpcjiGrupy } from '@/komponenty/grupa-opcji';
+import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Przycisk } from '@/komponenty/przycisk';
 import { sciezkaWidoku, trasy } from '@/komponenty/rama/trasy';
 import { SzkieletWidoku } from '@/komponenty/szkielet-widoku';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { KartaDanychZProfilu, RamaKreatora, useKreatorUrlopu } from '../_czesci/kreator';
 
@@ -53,7 +55,7 @@ export function WidokRodzajuWnioskuOUrlop() {
 
   const [wybor, setWybor] = useState<PodrodzajWnioskuOUrlop | null>(null);
   const [blad, setBlad] = useState<KodKomunikatu | null>(null);
-  const [zajety, setZajety] = useState(false);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const przekierowano = useRef(false);
 
   useEffect(() => {
@@ -69,20 +71,25 @@ export function WidokRodzajuWnioskuOUrlop() {
     return rodzajeWniosku(kontekst.rola, kontekst.rodzina, kontekst.rodzina.plan, kontekst.rodzina.wnioski, kontekst.dzis);
   }, [stan]);
 
+  const wybrany = wybor ?? (wniosekWejscia?.podrodzaj && rodzaje.includes(wniosekWejscia.podrodzaj) ? wniosekWejscia.podrodzaj : null);
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { rodzaj: wybrany },
+    waliduj: (w: { rodzaj: PodrodzajWnioskuOUrlop | null }): { rodzaj: KodKomunikatu | null } => ({
+      rodzaj: rodzaje.length > 0 && w.rodzaj === null ? '0006' : null,
+    }),
+    pola: { rodzaj: 'rodzaj-wniosku' },
+  });
+
   if (stan === null || przekierowanie !== null) return <SzkieletWidoku />;
   const { kontekst, dane } = stan;
-  const wybrany = wybor ?? (wniosekWejscia?.podrodzaj && rodzaje.includes(wniosekWejscia.podrodzaj) ? wniosekWejscia.podrodzaj : null);
   const idSprawyPowrotu = wniosekWejscia?.idSprawy ?? sprawaWejscia;
   const termin = stawkaZasilku({ zakres: 'z-calym-rodzicielskim', dzis: kontekst.dzis, dataPorodu: dane.dataPoroduPotwierdzona ? dane.dataPorodu : undefined, przyjecie: dane.przyjecie });
 
   function zapisz(cel: 'dalej' | 'dokonczenie') {
     if (stan === null) return;
-    if (cel === 'dalej' && wybrany === null) {
-      setBlad('0006');
-      document.getElementById(idOpcjiGrupy('rodzaj-wniosku', rodzaje[0] ?? 'brak'))?.focus();
-      return;
-    }
-    setZajety(true);
+    if (cel === 'dalej' && !walidacja.sprobujWyslac()) return;
+    setBlad(null);
+    ustawZajety(true);
     const ctx = pobierzKontekstOperacji();
     const idSprawy = wybrany
       ? idSprawyWniosku(kontekst.rodzina.plan, pozycjaSprawyWniosku(wybrany, dane.rodzic, dane.przyjecie !== undefined), dane.rodzic)
@@ -91,7 +98,7 @@ export function WidokRodzajuWnioskuOUrlop() {
       ? { ok: true as const, wartosc: wniosekWejscia }
       : rozpocznijLubWznowWniosekOUrlop(idSprawy, scenariusz ? Number(scenariusz) : undefined, ctx);
     if (!start.ok) {
-      setZajety(false);
+      ustawZajety(false);
       setBlad(start.kod);
       return;
     }
@@ -103,16 +110,16 @@ export function WidokRodzajuWnioskuOUrlop() {
         : { podrodzaj: wybrany, idSprawy };
     const ekran = cel === 'dalej' ? 'ViewLeaveRequestForm' : 'ViewLeaveRequestType';
     const wynik = zapiszKrokWnioskuOUrlop(start.wartosc.idWniosku, zmiana, ekran, ctx);
-    setZajety(false);
     if (!wynik.ok) {
+      ustawZajety(false);
       setBlad(wynik.kod);
       return;
     }
     if (cel === 'dalej') {
-      router.push(trasy.ViewLeaveRequestForm({ wniosek: wynik.wartosc.idWniosku }));
+      przejdz(trasy.ViewLeaveRequestForm({ wniosek: wynik.wartosc.idWniosku }));
     } else {
       ustawKomunikatPoPrzejsciu({ kod: '0058', dlaWidoku: 'ViewCaseGuide' });
-      router.push(trasy.ViewCaseGuide({ idSprawy: wynik.wartosc.idSprawy }));
+      przejdz(trasy.ViewCaseGuide({ idSprawy: wynik.wartosc.idSprawy }));
     }
   }
 
@@ -132,7 +139,14 @@ export function WidokRodzajuWnioskuOUrlop() {
   );
 
   return (
-    <RamaKreatora krok={1} nazwaKroku={t.nazwaKroku} idSprawy={idSprawyPowrotu} idWniosku={wniosekWejscia?.idWniosku} boczna={boczna}>
+    <RamaKreatora
+      krok={1}
+      podrodzaj={wybrany}
+      nazwaKroku={t.nazwaKroku}
+      idSprawy={idSprawyPowrotu}
+      idWniosku={wniosekWejscia?.idWniosku}
+      boczna={boczna}
+    >
       <form
         noValidate
         className="flex flex-col gap-7.5"
@@ -154,7 +168,7 @@ export function WidokRodzajuWnioskuOUrlop() {
                 setWybor(w);
                 setBlad(null);
               }}
-              blad={blad === '0006' ? '0006' : null}
+              {...walidacja.pole('rodzaj')}
               opcje={rodzaje.map((r) => ({ wartosc: r, etykieta: t.rodzaje[r].etykieta, opis: t.rodzaje[r].opis }))}
             />
           )}
@@ -162,17 +176,22 @@ export function WidokRodzajuWnioskuOUrlop() {
             <Notatka className="mt-4">{t.notatkaPrzedPorodem}</Notatka>
           ) : null}
         </Karta>
-        {blad && blad !== '0006' ? <Komunikat kod={blad} /> : null}
+        {blad ? <Komunikat kod={blad} /> : null}
         <div className="flex flex-wrap items-center justify-between gap-4">
           {idSprawyPowrotu ? (
-            <Przycisk type="button" wariant="drugorzedny" onClick={() => router.push(trasy.ViewCaseGuide({ idSprawy: idSprawyPowrotu }))}>
+            <Przycisk
+              type="button"
+              wariant="drugorzedny"
+              disabled={zajety}
+              onClick={() => przejdz(trasy.ViewCaseGuide({ idSprawy: idSprawyPowrotu }))}
+            >
               {t.wstecz}
             </Przycisk>
           ) : (
             <span />
           )}
           <div className="flex flex-wrap gap-4">
-            <Przycisk type="button" wariant="tlo" ikona="zapisz" zajety={zajety} onClick={() => zapisz('dokonczenie')}>
+            <Przycisk type="button" wariant="tlo" ikona="zapisz" disabled={zajety} onClick={() => zapisz('dokonczenie')}>
               {t.zapiszDoDokonczenia}
             </Przycisk>
             <Przycisk type="submit" wariant="glowny" zajety={zajety} disabled={rodzaje.length === 0}>

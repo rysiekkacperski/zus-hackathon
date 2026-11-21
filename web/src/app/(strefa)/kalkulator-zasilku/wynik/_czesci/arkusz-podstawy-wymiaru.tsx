@@ -13,11 +13,19 @@ import { Arkusz } from '@/komponenty/okno';
 import { PoleKwoty } from '@/komponenty/pole-tekstowe';
 import { Przycisk } from '@/komponenty/przycisk';
 import { trescKomunikatu } from '@/komponenty/typy-komunikatow';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
+import { KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA } from '../../_czesci/arkusz';
 import type { PodstawaRodzica } from '../../_czesci/podstawy';
 
 const t = teksty.SheetCalcBaseSource;
 const MAKS_GROSZE = 9_999_999;
+
+function bladKwoty(kwota: string): KodKomunikatu | null {
+  if (kwota.trim() === '') return '0093';
+  const g = parsujKwote(kwota);
+  return g === null || g <= 0 || g > MAKS_GROSZE ? '0016' : null;
+}
 
 export type ZrodloWyboru = 'konto-zus' | 'wpisana' | 'przykladowa-sprawa';
 
@@ -69,24 +77,19 @@ function TrescArkusza({
     efektywna?.zrodlo === 'wartosc-wpisana-przez-rodzica' ? formatujKwote(efektywna.kwota).replace(/\s?zł$/u, '') : '',
   );
   const [pelnyEtat, ustawPelnyEtat] = useState(podstawa.pelnyEtat);
-  const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { zrodlo, kwota },
+    waliduj: (w) => ({ kwota: w.zrodlo === 'wpisana' ? bladKwoty(w.kwota) : null }),
+    pola: { kwota: 'podstawa-kwota' },
+  });
 
   const kodBraku = podstawa.zKonta.rodzaj === 'brak' ? podstawa.zKonta.kod : null;
   const tytul = etykietaRodzica ? t.tytulRodzica({ rodzic: etykietaRodzica }) : t.tytul;
 
   function zapisz() {
     if (zrodlo === 'wpisana') {
-      if (kwota.trim() === '') {
-        ustawBlad('0093');
-        document.getElementById('podstawa-kwota')?.focus();
-        return;
-      }
       const g = parsujKwote(kwota);
-      if (g === null || g <= 0 || g > MAKS_GROSZE) {
-        ustawBlad('0016');
-        document.getElementById('podstawa-kwota')?.focus();
-        return;
-      }
+      if (!walidacja.sprobujWyslac() || g === null) return;
       onZapisz?.({ rodzic: podstawa.rodzic, zrodlo, kwota: g, pelnyEtat });
     } else {
       onZapisz?.({ rodzic: podstawa.rodzic, zrodlo, pelnyEtat });
@@ -116,6 +119,7 @@ function TrescArkusza({
       otwarte={otwarte}
       onZamknij={onZamknij}
       tytul={tytul}
+      className={KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA}
       stopka={
         <div className="flex flex-wrap justify-end gap-4">
           <Przycisk type="button" wariant="drugorzedny" onClick={onZamknij}>
@@ -135,10 +139,7 @@ function TrescArkusza({
           legenda={t.zrodloLegenda}
           opcje={opcje}
           wartosc={zrodlo}
-          onZmiana={(w) => {
-            ustawZrodlo(w);
-            ustawBlad(null);
-          }}
+          onZmiana={ustawZrodlo}
         />
         {zrodlo === 'wpisana' ? (
           <PoleKwoty
@@ -146,11 +147,8 @@ function TrescArkusza({
             etykieta={t.kwota}
             podpowiedz={t.kwotaPodpowiedz}
             wartosc={kwota}
-            onZmiana={(w) => {
-              ustawKwote(w);
-              ustawBlad(null);
-            }}
-            blad={blad}
+            onZmiana={ustawKwote}
+            {...walidacja.pole('kwota')}
             szerokosc="srednia"
           />
         ) : null}

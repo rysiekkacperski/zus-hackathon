@@ -103,12 +103,12 @@ function KartaPrzedluzenia({ kontekst, rodzic, poziom, pochodzenie, przyrostek }
         {edycja ? tekst.przedluzenie.wybierz : tekst.przedluzenie.sprawdzono[plec]}
       </p>
       <dl className="m-0 mt-4 mb-6 flex flex-wrap gap-x-7.5 gap-y-3">
-        <div className="min-w-0 flex-[1_1_200px]">
+        <div className="min-w-0 flex-[1_1_12.5rem]">
           <dt className="text-body-strong">{tekst.przedluzenie.koniecUmowy}</dt>
           <dd className="m-0 text-body text-ink-strong">{formatujDate(dataUstania)}</dd>
         </div>
         {ptp !== undefined ? (
-          <div className="min-w-0 flex-[1_1_200px]">
+          <div className="min-w-0 flex-[1_1_12.5rem]">
             <dt className="text-body-strong">{tekst.przedluzenie.uplywTrzeciegoMiesiaca}</dt>
             <dd className="m-0 text-body text-ink-strong">{formatujDate(uplywTrzeciegoMiesiaca(ptp))}</dd>
           </div>

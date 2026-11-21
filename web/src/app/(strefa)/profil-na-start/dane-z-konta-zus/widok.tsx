@@ -5,8 +5,9 @@
 // Krok 1 kreatora „Praca i zasiłek”: forma zatrudnienia proponowana z tytułów ubezpieczenia, tytuły zakończone
 // i pozostałe, ubezpieczenie chorobowe albo pytanie o dobrowolne ubezpieczenie chorobowe, płatnik zasiłku
 // i dzieci zgłoszone do ubezpieczenia zdrowotnego; zapis w szkicu profilu ze źródłem danej.
+// Ekran ma trzy części (?czesc=N): forma zatrudnienia i tytuły, ubezpieczenie chorobowe i płatnik zasiłku, dzieci
+// i pozostałe dane. Bez kopii Danych z konta ZUS pierwszą częścią jest stan odczytu z ponowieniem.
 import { useMemo, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import { useStanKonta } from '@/dane/magazyn/hooki';
 import { zapiszSzkic, type ZmianaSzkicu } from '@/dane/magazyn/operacje/profil-szkic';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
@@ -23,7 +24,13 @@ import {
   tytulDlaFormy,
   tytulyTrwajace,
 } from '@/domena/profil/forma-zatrudnienia';
-import { daneRodzicaKonta, kluczRodzicaKonta, nastepnyEkran, poprzedniEkran } from '@/domena/profil/nawigacja';
+import {
+  czesciDanychZKontaZus,
+  daneRodzicaKonta,
+  kluczRodzicaKonta,
+  nastepnyEkran,
+  poprzedniEkran,
+} from '@/domena/profil/nawigacja';
 import { ustalPlatnikaZasilku } from '@/domena/profil/platnik';
 import type {
   DanaZeZrodla,
@@ -35,14 +42,17 @@ import type {
   TytulUbezpieczenia,
 } from '@/domena/typy';
 import { Akordeon } from '@/komponenty/akordeon';
-import { GrupaOpcji, idOpcjiGrupy } from '@/komponenty/grupa-opcji';
+import { CzescFormularza, useCzesciFormularza } from '@/komponenty/czesci-formularza';
+import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { BladPola } from '@/komponenty/pole';
 import { Przycisk } from '@/komponenty/przycisk';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { Tabela } from '@/komponenty/tabela';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { NaglowekKreatoraProfilu, NotatkaZapamietywania, SzkieletKreatoraProfilu } from '../_czesci/szkielet-kreatora-profilu';
 import { sciezkaEkranuProfilu } from '../_czesci/trasy-profilu';
@@ -59,7 +69,24 @@ const ID_PRZYCISKU_FORMY = 'forma-zatrudnienia-zmien';
 const NAZWA_DOBROWOLNEGO = 'dobrowolne-chorobowe';
 
 type PlatnikRodzica = NonNullable<DaneRodzica['platnikZasilku']>;
-type BledyEkranu = { forma?: KodKomunikatu; dobrowolne?: KodKomunikatu };
+type PoleEkranu = 'forma' | 'dobrowolne';
+
+interface OdpowiedziEkranu {
+  forma: DanaZeZrodla<FormaZatrudnienia> | null;
+  dobrowolne: DanaZeZrodla<boolean> | null;
+  pytacODobrowolne: boolean;
+}
+
+/** Błędy ekranu: 0006 bez formy zatrudnienia i bez odpowiedzi o dobrowolnym ubezpieczeniu chorobowym. */
+function walidujOdpowiedzi(o: OdpowiedziEkranu): Partial<Record<PoleEkranu, KodKomunikatu>> {
+  if (!o.forma) return { forma: '0006' };
+  if (o.pytacODobrowolne && !o.dobrowolne) return { dobrowolne: '0006' };
+  return {};
+}
+
+// Pola każdej części: z kopią Danych z konta ZUS i bez niej (pierwsza część to stan odczytu).
+const PODZIAL_Z_DANYMI: readonly (readonly PoleEkranu[])[] = [['forma'], ['dobrowolne'], []];
+const PODZIAL_BEZ_DANYCH: readonly (readonly PoleEkranu[])[] = [[], ['forma'], ['dobrowolne'], []];
 
 function WierszDanych({ etykieta, children, ostatni }: { etykieta: string; children: ReactNode; ostatni?: boolean }) {
   return (
@@ -192,7 +219,6 @@ function zmianaDanychRodzica(klucz: 'matka' | 'drugiRodzic', dane: Partial<DaneR
 }
 
 export function WidokDanychZKontaZus() {
-  const router = useRouter();
   const stanKonta = useStanKonta();
   const kopia = stanKonta?.kopiaDanychZus ?? null;
   const stanOdczytu = stanKonta?.stanOdczytuZus ?? { stan: 'brak' as const };
@@ -209,9 +235,8 @@ export function WidokDanychZKontaZus() {
   const [zmianaFormy, ustawZmianeFormy] = useState<DanaZeZrodla<FormaZatrudnienia> | null>(null);
   const [zmianaDobrowolnego, ustawZmianeDobrowolnego] = useState<{ wartosc: DanaZeZrodla<boolean> | null } | null>(null);
   const [arkuszOtwarty, ustawArkuszOtwarty] = useState(false);
-  const [bledy, ustawBledy] = useState<BledyEkranu>({});
   const [bladZapisu, ustawBladZapisu] = useState<KodKomunikatu | null>(null);
-  const [zajety, ustawZajety] = useState(false);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
 
   const formaZPropozycji: DanaZeZrodla<FormaZatrudnienia> | null = propozycja
     ? { wartosc: propozycja.forma, zrodlo: 'konto-zus' }
@@ -232,17 +257,30 @@ export function WidokDanychZKontaZus() {
   const zakonczone = propozycja?.tytulyZakonczone ?? [];
   const kilkaTytulow = kopia !== null && tytulyTrwajace(kopia).length > 1;
 
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { forma, dobrowolne, pytacODobrowolne },
+    waliduj: walidujOdpowiedzi,
+    pola: { forma: ID_PRZYCISKU_FORMY, dobrowolne: NAZWA_DOBROWOLNEGO },
+  });
+  const zDanymiZus = kopia !== null;
+  const czesci = useCzesciFormularza({
+    liczba: czesciDanychZKontaZus(zDanymiZus),
+    podzial: zDanymiZus ? PODZIAL_Z_DANYMI : PODZIAL_BEZ_DANYCH,
+    walidacja,
+  });
+  const przesuniecie = zDanymiZus ? 0 : 1;
+  const CZESC = { forma: 1 + przesuniecie, zasilek: 2 + przesuniecie, dzieci: 3 + przesuniecie };
+  const bladFormy = walidacja.blad('forma');
+
   const wybierzForme = (wybrana: FormaZatrudnienia) => {
     const nowa = formaPoWyborze(wybrana, propozycja);
     ustawZmianeFormy(nowa);
     ustawZmianeDobrowolnego({ wartosc: dobrowolnePoZmianieFormy(nowa, propozycja) });
-    ustawBledy({});
   };
 
   const wybierzDobrowolne = (w: 'tak' | 'nie') => {
     if (!forma) return;
     ustawZmianeDobrowolnego({ wartosc: dobrowolneZOdpowiedzi(w === 'tak', forma, propozycja) });
-    ustawBledy((b) => ({ ...b, dobrowolne: undefined }));
   };
 
   const szkicNaEkranie = (s: SzkicProfilu | null): SzkicProfilu | null =>
@@ -251,22 +289,10 @@ export function WidokDanychZKontaZus() {
   const wroc = () => {
     const s = szkicNaEkranie(szkic);
     const cel = s ? poprzedniEkran(s, zgoda) : 'ViewGuideWelcome';
-    router.push(sciezkaEkranuProfilu(cel, s));
+    przejdz(sciezkaEkranuProfilu(cel, s));
   };
 
-  const dalej = () => {
-    const nowe: BledyEkranu = {};
-    if (!forma) nowe.forma = '0006';
-    else if (pytacODobrowolne && !dobrowolne) nowe.dobrowolne = '0006';
-    ustawBledy(nowe);
-    if (nowe.forma) {
-      document.getElementById(ID_PRZYCISKU_FORMY)?.focus();
-      return;
-    }
-    if (nowe.dobrowolne) {
-      document.getElementById(idOpcjiGrupy(NAZWA_DOBROWOLNEGO, 'tak'))?.focus();
-      return;
-    }
+  const zapiszIPrzejdz = () => {
     if (!forma) return;
 
     const ustalenie = ustalPlatnikaZasilku(forma.wartosc, tytulFormy, forma.zrodlo);
@@ -298,20 +324,19 @@ export function WidokDanychZKontaZus() {
       return;
     }
     ustawBladZapisu(null);
-    router.push(sciezkaEkranuProfilu(nastepnyEkran(wynik.wartosc, zgoda), wynik.wartosc));
+    przejdz(sciezkaEkranuProfilu(nastepnyEkran(wynik.wartosc, zgoda), wynik.wartosc));
   };
-
-  const komunikat = stanKonta ? <StanOdczytuDanychZus stan={stanOdczytu} kopia={kopia} /> : null;
 
   return (
     <>
       <NaglowekKreatoraProfilu />
       <SzkieletKreatoraProfilu
         biezacy="ViewProfileZusData"
-        komunikat={komunikat}
-        onWroc={wroc}
-        onDalej={odczytTrwa ? undefined : dalej}
-        etykietaDalej={tekst.dalej}
+        czesc={czesci.czesc}
+        liczbaCzesci={czesci.liczba}
+        onWroc={() => czesci.wroc(wroc)}
+        onDalej={odczytTrwa ? undefined : () => czesci.dalej(zapiszIPrzejdz)}
+        etykietaDalej={czesci.czyOstatnia ? tekst.dalej : undefined}
         zajety={zajety}
         notatkiKrokow={
           <>
@@ -322,131 +347,148 @@ export function WidokDanychZKontaZus() {
           </>
         }
       >
+        {stanKonta ? (
+          <StanOdczytuDanychZus stan={stanOdczytu} kopia={kopia} bezTresci={!czesci.czyPierwsza && !odczytTrwa} />
+        ) : null}
         {odczytTrwa ? null : (
           <>
-            <Karta tytul={tekst.tytulKarty} bezLinii as="section">
-              <p className="m-0 mb-4">{kopia ? tekst.opisKarty : tekst.opisKartyBezDanych}</p>
-              {kopia ? (
-                <p className="m-0 mb-2 text-body-strong">
-                  {teksty.wspolne.stanNa({ data: formatujDate(dataZeZnacznika(kopia.odczytano)) })}
-                </p>
-              ) : null}
-              <dl className="m-0">
-                <WierszDanych etykieta={tekst.etykiety.forma} ostatni={!forma}>
-                  {forma ? (
-                    <>
-                      <span className="block">{formy[forma.wartosc]}</span>
-                      {tytulFormy ? <span className="block">{opisTytulu(tytulFormy)}</span> : null}
-                      {forma.wartosc === 'brak-tytulu' && forma.zrodlo === 'konto-zus' ? (
-                        <span className="block">{opisBrakuTytulu(kopia)}</span>
-                      ) : null}
-                      <ZrodloDanejPola zrodlo={forma.zrodlo} className="mt-1" />
-                      <button
-                        type="button"
-                        id={ID_PRZYCISKU_FORMY}
-                        aria-haspopup="dialog"
-                        onClick={() => ustawArkuszOtwarty(true)}
-                        className="mt-2 cursor-pointer border-0 bg-transparent p-0 text-left font-sans text-body font-semibold text-brand hover:text-brand-deep hover:underline"
-                      >
-                        {tekst.zmienForme}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="block">{tekst.nieWybrano}</span>
-                      <Przycisk
-                        id={ID_PRZYCISKU_FORMY}
-                        wariant="drugorzedny"
-                        aria-haspopup="dialog"
-                        aria-describedby={bledy.forma ? ID_BLEDU_FORMY : undefined}
-                        onClick={() => ustawArkuszOtwarty(true)}
-                        className="mt-2"
-                      >
-                        {tekst.wybierzForme}
-                      </Przycisk>
-                      {bledy.forma ? <BladPola id={ID_BLEDU_FORMY} kod={bledy.forma} /> : null}
-                    </>
-                  )}
-                </WierszDanych>
-                {forma
-                  ? zakonczone.map((t) => (
-                      <WierszDanych key={t.id} etykieta={tekst.etykiety.zakonczony}>
-                        <TytulZForma tytul={t} />
-                        {t.rodzaj === 'dzialalnosc' ? null : (
-                          <span className="block">{tekst.platnikSkladek({ nazwa: t.platnik.nazwa })}</span>
-                        )}
-                        <ZrodloDanejPola zrodlo="konto-zus" className="mt-1" />
-                        <span className="block">
-                          {t.rodzaj === 'dzialalnosc' ? tekst.zakonczonaDzialalnosc : tekst.zakonczonaUmowa}
-                        </span>
-                      </WierszDanych>
-                    ))
-                  : null}
-                {forma ? (
-                  <WierszDanych etykieta={tekst.etykiety.pozostale}>
-                    {pozostale.length === 0 ? (
-                      <span className="block">{tekst.brakPozostalych}</span>
+            <CzescFormularza czesci={czesci} numer={CZESC.forma}>
+              <Karta tytul={tekst.tytulKarty} bezLinii as="section">
+                <p className="m-0 mb-4">{kopia ? tekst.opisKarty : tekst.opisKartyBezDanych}</p>
+                {kopia ? (
+                  <p className="m-0 mb-2 text-body-strong">
+                    {teksty.wspolne.stanNa({ data: formatujDate(dataZeZnacznika(kopia.odczytano)) })}
+                  </p>
+                ) : null}
+                <dl className="m-0">
+                  <WierszDanych etykieta={tekst.etykiety.forma} ostatni={!forma}>
+                    {forma ? (
+                      <>
+                        <span className="block">{formy[forma.wartosc]}</span>
+                        {tytulFormy ? <span className="block">{opisTytulu(tytulFormy)}</span> : null}
+                        {forma.wartosc === 'brak-tytulu' && forma.zrodlo === 'konto-zus' ? (
+                          <span className="block">{opisBrakuTytulu(kopia)}</span>
+                        ) : null}
+                        <ZrodloDanejPola zrodlo={forma.zrodlo} className="mt-1" />
+                        <button
+                          type="button"
+                          id={ID_PRZYCISKU_FORMY}
+                          aria-haspopup="dialog"
+                          onClick={() => ustawArkuszOtwarty(true)}
+                          className="mt-2 cursor-pointer border-0 bg-transparent p-0 text-left font-sans text-body font-semibold text-brand hover:text-brand-deep hover:underline"
+                        >
+                          {tekst.zmienForme}
+                        </button>
+                      </>
                     ) : (
-                      pozostale.map((t) => (
-                        <span key={t.id} className="flex flex-col gap-1">
-                          <TytulZForma tytul={t} />
-                        </span>
-                      ))
+                      <>
+                        <span className="block">{tekst.nieWybrano}</span>
+                        <Przycisk
+                          id={ID_PRZYCISKU_FORMY}
+                          wariant="drugorzedny"
+                          aria-haspopup="dialog"
+                          aria-describedby={bladFormy ? ID_BLEDU_FORMY : undefined}
+                          onClick={() => ustawArkuszOtwarty(true)}
+                          className="mt-2"
+                        >
+                          {tekst.wybierzForme}
+                        </Przycisk>
+                        {bladFormy ? <BladPola id={ID_BLEDU_FORMY} kod={bladFormy} /> : null}
+                      </>
                     )}
                   </WierszDanych>
+                  {forma
+                    ? zakonczone.map((t) => (
+                        <WierszDanych key={t.id} etykieta={tekst.etykiety.zakonczony}>
+                          <TytulZForma tytul={t} />
+                          {t.rodzaj === 'dzialalnosc' ? null : (
+                            <span className="block">{tekst.platnikSkladek({ nazwa: t.platnik.nazwa })}</span>
+                          )}
+                          <ZrodloDanejPola zrodlo="konto-zus" className="mt-1" />
+                          <span className="block">
+                            {t.rodzaj === 'dzialalnosc' ? tekst.zakonczonaDzialalnosc : tekst.zakonczonaUmowa}
+                          </span>
+                        </WierszDanych>
+                      ))
+                    : null}
+                  {forma ? (
+                    <WierszDanych etykieta={tekst.etykiety.pozostale} ostatni>
+                      {pozostale.length === 0 ? (
+                        <span className="block">{tekst.brakPozostalych}</span>
+                      ) : (
+                        pozostale.map((t) => (
+                          <span key={t.id} className="flex flex-col gap-1">
+                            <TytulZForma tytul={t} />
+                          </span>
+                        ))
+                      )}
+                    </WierszDanych>
+                  ) : null}
+                </dl>
+                {kilkaTytulow ? (
+                  <Notatka className="mt-6">
+                    <p className="m-0">{tekst.notatkaKilkaTytulow}</p>
+                  </Notatka>
                 ) : null}
-                {forma?.wartosc === 'umowa-o-prace' ? (
-                  <WierszDanych etykieta={tekst.etykiety.chorobowe}>
-                    <span className="block">{tekst.choroboweObowiazkowe}</span>
-                  </WierszDanych>
-                ) : null}
+              </Karta>
+            </CzescFormularza>
+            <CzescFormularza czesci={czesci} numer={CZESC.zasilek}>
+              <Karta tytul={tekst.tytulKartyZasilku} bezLinii as="section">
                 {forma ? (
-                  <WierszDanych etykieta={tekst.etykiety.platnik} ostatni>
-                    <PlatnikZasilku forma={forma} kopia={kopia} />
-                  </WierszDanych>
+                  <dl className="m-0">
+                    {forma.wartosc === 'umowa-o-prace' ? (
+                      <WierszDanych etykieta={tekst.etykiety.chorobowe}>
+                        <span className="block">{tekst.choroboweObowiazkowe}</span>
+                      </WierszDanych>
+                    ) : null}
+                    <WierszDanych etykieta={tekst.etykiety.platnik} ostatni>
+                      <PlatnikZasilku forma={forma} kopia={kopia} />
+                    </WierszDanych>
+                  </dl>
                 ) : null}
-              </dl>
-              {kilkaTytulow ? (
-                <Notatka className="mt-6">
-                  <p className="m-0">{tekst.notatkaKilkaTytulow}</p>
-                </Notatka>
+                {forma && pytacODobrowolne ? (
+                  <div className="mt-6">
+                    <GrupaOpcji
+                      nazwa={NAZWA_DOBROWOLNEGO}
+                      legenda={tekst.dobrowolne.legenda}
+                      podpowiedz={
+                        <p className="m-0">
+                          {opisDobrowolnego(forma.wartosc as 'umowa-zlecenia' | 'jdg', dobrowolne)}
+                        </p>
+                      }
+                      uklad="poziomo"
+                      opcje={[
+                        { wartosc: 'tak', etykieta: tekst.dobrowolne.tak },
+                        { wartosc: 'nie', etykieta: tekst.dobrowolne.nie },
+                      ]}
+                      wartosc={dobrowolne === null ? null : dobrowolne.wartosc ? 'tak' : 'nie'}
+                      onZmiana={wybierzDobrowolne}
+                      {...walidacja.pole('dobrowolne')}
+                    />
+                    {dobrowolne ? <ZrodloDanejPola zrodlo={dobrowolne.zrodlo} className="mt-2" /> : null}
+                  </div>
+                ) : null}
+              </Karta>
+            </CzescFormularza>
+            <CzescFormularza czesci={czesci} numer={CZESC.dzieci}>
+              <DzieciZgloszone kopia={kopia} />
+              {kopia ? (
+                <Akordeon id="dane-z-konta-zus-szczegoly" naglowek={tekst.pozostaleDane}>
+                  <SekcjeDanychZus kopia={kopia} />
+                </Akordeon>
               ) : null}
-              {forma && pytacODobrowolne ? (
-                <div className="mt-6">
-                  <GrupaOpcji
-                    nazwa={NAZWA_DOBROWOLNEGO}
-                    legenda={tekst.dobrowolne.legenda}
-                    podpowiedz={
-                      <p className="m-0">
-                        {opisDobrowolnego(forma.wartosc as 'umowa-zlecenia' | 'jdg', dobrowolne)}
-                      </p>
-                    }
-                    uklad="poziomo"
-                    opcje={[
-                      { wartosc: 'tak', etykieta: tekst.dobrowolne.tak },
-                      { wartosc: 'nie', etykieta: tekst.dobrowolne.nie },
-                    ]}
-                    wartosc={dobrowolne === null ? null : dobrowolne.wartosc ? 'tak' : 'nie'}
-                    onZmiana={wybierzDobrowolne}
-                    blad={bledy.dobrowolne ?? null}
-                  />
-                  {dobrowolne ? <ZrodloDanejPola zrodlo={dobrowolne.zrodlo} className="mt-2" /> : null}
-                </div>
-              ) : null}
-            </Karta>
-            <DzieciZgloszone kopia={kopia} />
-            {kopia ? (
-              <Akordeon id="dane-z-konta-zus-szczegoly" naglowek={tekst.pozostaleDane}>
-                <SekcjeDanychZus kopia={kopia} />
-              </Akordeon>
-            ) : null}
+            </CzescFormularza>
             {bladZapisu ? <Komunikat kod={bladZapisu} /> : null}
           </>
         )}
       </SzkieletKreatoraProfilu>
       <ArkuszFormyZatrudnienia
         otwarte={arkuszOtwarty}
-        onZamknij={() => ustawArkuszOtwarty(false)}
+        onZamknij={() => {
+          ustawArkuszOtwarty(false);
+          // Zamknięcie arkusza bez wyboru formy jest opuszczeniem pola formy zatrudnienia.
+          walidacja.onOpuszczenie('forma');
+        }}
         wybrana={forma?.wartosc ?? null}
         zKontaZus={propozycja?.forma ?? null}
         onWybor={wybierzForme}

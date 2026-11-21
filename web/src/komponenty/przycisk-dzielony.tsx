@@ -92,7 +92,7 @@ export function PrzyciskDzielony({ glowny, opcje, etykietaWiecej, id, className 
           role="menu"
           aria-label={etykietaWiecej}
           onKeyDown={obsluzKlawisz}
-          className="absolute top-full right-0 z-30 m-0 mt-1 min-w-60 max-w-[calc(100vw-32px)] list-none rounded-sm border border-line bg-surface-card py-2"
+          className="absolute top-full right-0 z-30 m-0 mt-1 min-w-60 max-w-[calc(100vw-2rem)] list-none rounded-sm border border-line bg-surface-card py-2"
         >
           {opcje.map((opcja, indeks) => (
             <li key={opcja.etykieta} role="none">

@@ -23,14 +23,23 @@ import { DokumentDoDruku, drukujDokument } from '@/komponenty/dokument-do-druku'
 import { FlagaDemo } from '@/komponenty/flaga-demo';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
+import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { BladPola } from '@/komponenty/pole';
 import { PoleTekstowe } from '@/komponenty/pole-tekstowe';
 import { Przycisk } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
-import { DaneNaTle, RamaKreatora, useKreatorUrlopu } from '../_czesci/kreator';
+import {
+  adresCzesciFormularzaUrlopu,
+  czescSekcjiUrlopu,
+  czesciFormularzaUrlopu,
+  DaneNaTle,
+  RamaKreatora,
+  useKreatorUrlopu,
+} from '../_czesci/kreator';
 import { OknoPodgladuWiadomosci } from './_czesci/okno-podgladu-wiadomosci';
 
 const t = teksty.ViewLeaveRequestSummary;
@@ -46,13 +55,18 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   const parametry = useParametry();
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
-  const [bladEmail, setBladEmail] = useState<KodKomunikatu | null>(null);
   const [bledyPlikow, setBledyPlikow] = useState<Record<string, KodKomunikatu>>({});
   const [komunikat, setKomunikat] = useState<{ kod: KodKomunikatu; ponow?: boolean } | null>(null);
   const [pobrano, setPobrano] = useState(false);
-  const [okno, setOkno] = useState(false);
-  const [zajety, setZajety] = useState(false);
+  const [okno, setOkno] = useStanChwilowy(false);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const idWyslanego = stan?.wniosek?.stan === 'wyslany' ? stan.wniosek.idWniosku : null;
+  const adres = email ?? stan?.wniosek?.emailPracodawcy ?? stan?.dane.emailPracodawcy ?? '';
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { email: adres },
+    waliduj: (w: { email: string }): { email: KodKomunikatu | null } => ({ email: walidujWysylke({ email: w.email }).email ?? null }),
+    pola: { email: 'urlop-email' },
+  });
 
   useEffect(() => {
     if (idWyslanego) router.replace(trasy.ViewLeaveRequestSent({ wniosek: idWyslanego }));
@@ -68,24 +82,23 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
     );
   }
   const podrodzaj = wniosek.podrodzaj;
-  const adres = email ?? wniosek.emailPracodawcy ?? dane.emailPracodawcy ?? '';
   const idW = wniosek.idWniosku;
   const zalaczniki = listaZalacznikow(podrodzaj, dane).map((z) => wniosek.zalaczniki.find((s) => s.id === z.id) ?? z);
   const pierwszy = okresOchrony(wniosek);
   const ochronaDzis = pierwszy
     ? poczatekOchrony(kontekst.dzis, pierwszy.od, pierwszy.rodzajUrlopu === 'laczenie-z-praca' ? 'rodzicielski' : pierwszy.rodzajUrlopu)
     : null;
-  const hrefFormularza = trasy.ViewLeaveRequestForm({ wniosek: idW });
+  const hrefFormularza = adresCzesciFormularzaUrlopu(idW, czescSekcjiUrlopu(podrodzaj, 'okres'));
+  const hrefOsob = adresCzesciFormularzaUrlopu(idW, czescSekcjiUrlopu(podrodzaj, 'dane'));
+  const hrefOswiadczen = adresCzesciFormularzaUrlopu(
+    idW,
+    czescSekcjiUrlopu(podrodzaj, podrodzaj === 'laczenie-z-praca' ? 'laczenie' : 'oswiadczenie'),
+  );
+  const hrefWstecz = adresCzesciFormularzaUrlopu(idW, czesciFormularzaUrlopu(podrodzaj).length);
   const nazwaPliku = nazwaPlikuWniosku(podrodzaj);
 
   function zapiszEmail(): boolean {
-    const bledy = walidujWysylke({ email: adres });
-    if (bledy.email) {
-      setBladEmail(bledy.email);
-      setTimeout(() => document.getElementById('urlop-email')?.focus(), 0);
-      return false;
-    }
-    setBladEmail(null);
+    if (!walidacja.sprobujWyslac()) return false;
     const wynik = zapiszKrokWnioskuOUrlop(idW, { emailPracodawcy: adres.trim() }, 'ViewLeaveRequestSummary', pobierzKontekstOperacji());
     if (!wynik.ok) setKomunikat({ kod: wynik.kod });
     return wynik.ok;
@@ -94,14 +107,14 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   async function wyslij() {
     setOkno(false);
     if (!zapiszEmail()) return;
-    setZajety(true);
+    ustawZajety(true);
     const wynik = await wyslijWniosekDoPracodawcy(idW, pobierzKontekstOperacji());
-    setZajety(false);
     if (wynik.ok) {
-      router.push(trasy.ViewLeaveRequestSent({ wniosek: idW }));
+      przejdz(trasy.ViewLeaveRequestSent({ wniosek: idW }));
       return;
     }
-    if (wynik.kod === '0134' || wynik.kod === '0060') setBladEmail(wynik.kod);
+    ustawZajety(false);
+    if (wynik.kod === '0134' || wynik.kod === '0060') walidacja.pokazBledy({ email: wynik.kod });
     else setKomunikat({ kod: wynik.kod, ponow: wynik.kod === '0138' });
   }
 
@@ -123,7 +136,7 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
       return;
     }
     ustawKomunikatPoPrzejsciu({ kod: '0058', dlaWidoku: 'ViewCaseGuide' });
-    router.push(trasy.ViewCaseGuide({ idSprawy: wynik.wartosc.idSprawy }));
+    przejdz(trasy.ViewCaseGuide({ idSprawy: wynik.wartosc.idSprawy }));
   }
 
   async function dolacz(idZalacznika: string, plik: File | undefined) {
@@ -178,6 +191,7 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   return (
     <RamaKreatora
       krok={3}
+      podrodzaj={podrodzaj}
       nazwaKroku={t.nazwaKroku}
       idSprawy={wniosek.idSprawy}
       idWniosku={idW}
@@ -227,10 +241,10 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
         {pobrano ? <Komunikat kod="0139" akcje={<span>{t.pobrano({ nazwa: nazwaPliku })}</span>} /> : null}
         {sekcja(t.rodzajTytul, trasy.ViewLeaveRequestType({ wniosek: idW }), <p className="m-0">{tf.nazwyWnioskow[podrodzaj]}</p>)}
         {sekcja(t.okresTytul, hrefFormularza, <DaneNaTle poziomo={false} pozycje={okresy} />)}
-        {sekcja(t.osobyTytul, hrefFormularza, <DaneNaTle pozycje={osoby} />)}
+        {sekcja(t.osobyTytul, hrefOsob, <DaneNaTle pozycje={osoby} />)}
         {sekcja(
           t.oswiadczeniaTytul,
-          hrefFormularza,
+          hrefOswiadczen,
           oswiadczenia.length === 0 ? <p className="m-0">{t.brakOswiadczen}</p> : <DaneNaTle poziomo={false} pozycje={oswiadczenia} />,
         )}
         <Karta tytul={t.zalacznikiTytul} bezLinii>
@@ -302,7 +316,7 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
             podpowiedz={t.emailPodpowiedz}
             wartosc={adres}
             onZmiana={(w) => setEmail(w)}
-            blad={bladEmail}
+            {...walidacja.pole('email')}
             maksDlugosc={254}
           />
           <div className="mt-4">
@@ -313,14 +327,14 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
           {parametry.trybDemonstracyjny ? <FlagaDemo className="mt-4">{t.demo}</FlagaDemo> : null}
         </Karta>
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <Przycisk type="button" wariant="drugorzedny" onClick={() => router.push(hrefFormularza)}>
+          <Przycisk type="button" wariant="drugorzedny" disabled={zajety} onClick={() => przejdz(hrefWstecz)}>
             {t.wstecz}
           </Przycisk>
           <div className="flex flex-wrap gap-4">
-            <Przycisk type="button" wariant="tlo" ikona="zapisz" onClick={zapiszDoDokonczenia}>
+            <Przycisk type="button" wariant="tlo" ikona="zapisz" disabled={zajety} onClick={zapiszDoDokonczenia}>
               {t.zapiszDoDokonczenia}
             </Przycisk>
-            <Przycisk type="button" wariant="drugorzedny" ikona="pobierz" onClick={pobierz}>
+            <Przycisk type="button" wariant="drugorzedny" ikona="pobierz" disabled={zajety} onClick={pobierz}>
               {t.pobierz}
             </Przycisk>
             <Przycisk type="submit" wariant="glowny" ikona="wyslij" zajety={zajety}>

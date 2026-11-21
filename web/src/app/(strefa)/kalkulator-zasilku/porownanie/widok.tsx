@@ -4,14 +4,16 @@
 // Lista zapisanych scenariuszy rodziny albo konta, wybór od 2 do 3 scenariuszy (0170), tabela porównania
 // i zapis scenariusza w planie rodziny (0100).
 import { useSearchParams } from 'next/navigation';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type FocusEvent, type ReactNode } from 'react';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { opuszczonoKontener } from '@/komponenty/pole';
 import { GrupaZaznaczen } from '@/komponenty/pole-zaznaczenia';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { Tabela } from '@/komponenty/tabela';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { Znaczek } from '@/komponenty/znaczek';
 import { formatujDate, formatujKwote } from '@/komponenty/format';
 import { useDzis, useKonto, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
@@ -67,7 +69,12 @@ export function WidokPorownaniaScenariuszy() {
   const zAdresu = numeryZAdresu(adres.get('numery'));
   const [wybrane, ustawWybrane] = useState<string[]>(zAdresu);
   const [porownane, ustawPorownane] = useState<string[]>(walidujWyborScenariuszy(zAdresu.map(Number)) === null ? zAdresu : []);
-  const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
+  // Wybór od 2 do 3 scenariuszy (0170) sprawdzamy po wyjściu fokusu z listy, a po próbie porównania przy każdej zmianie.
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { wybor: wybrane },
+    waliduj: (w) => ({ wybor: walidujWyborScenariuszy(w.wybor.map(Number)) }),
+    pola: { wybor: ID_LISTY },
+  });
   const [komunikat, ustawKomunikat] = useState<KodKomunikatu | null>(null);
 
   const nazwaKonta = (pesel: Pesel): string => {
@@ -80,12 +87,9 @@ export function WidokPorownaniaScenariuszy() {
   };
 
   const porownaj = () => {
-    const kod = walidujWyborScenariuszy(wybrane.map(Number));
-    ustawBlad(kod);
     ustawKomunikat(null);
-    if (kod) {
+    if (!walidacja.sprobujWyslac()) {
       ustawPorownane([]);
-      document.getElementById(`${ID_LISTY}-${scenariusze[0]?.numer ?? ''}`)?.focus();
       return;
     }
     ustawPorownane(wybrane);
@@ -184,33 +188,36 @@ export function WidokPorownaniaScenariuszy() {
           <Karta tytul={t.listaTytul} bezLinii>
             <div className="flex flex-col gap-4">
               <p className="m-0 text-body">{zPlanem ? t.opisRodziny : t.opisKonta}</p>
-              <GrupaZaznaczen
-                id={ID_LISTY}
-                legenda={t.legenda}
-                opcje={scenariusze.map((s) => ({
-                  wartosc: String(s.numer),
-                  etykieta: s.parametry.datyPowrotu.matka
-                    ? t.opcjaZPowrotem({
-                        numer: String(s.numer),
-                        wariant: t.warianty[s.parametry.wariant],
-                        data: formatujDate(s.parametry.datyPowrotu.matka),
-                      })
-                    : t.opcja({ numer: String(s.numer), wariant: t.warianty[s.parametry.wariant] }),
-                  opis: [
-                    t.opisOpcji({ data: formatujDate(s.zapisano), konto: nazwaKonta(s.konto) }),
-                    s.wybranyWPlanie ? t.wybranyWPlanieOpis : null,
-                    s.przykladowaSprawa ? t.przykladowaSprawaOpis : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' '),
-                }))}
-                wartosci={wybrane}
-                onZmiana={(w) => {
-                  ustawWybrane(w);
-                  ustawBlad(null);
+              <div
+                onBlur={(e: FocusEvent<HTMLDivElement>) => {
+                  if (opuszczonoKontener(e)) walidacja.onOpuszczenie('wybor');
                 }}
-                blad={blad}
-              />
+              >
+                <GrupaZaznaczen
+                  id={ID_LISTY}
+                  legenda={t.legenda}
+                  opcje={scenariusze.map((s) => ({
+                    wartosc: String(s.numer),
+                    etykieta: s.parametry.datyPowrotu.matka
+                      ? t.opcjaZPowrotem({
+                          numer: String(s.numer),
+                          wariant: t.warianty[s.parametry.wariant],
+                          data: formatujDate(s.parametry.datyPowrotu.matka),
+                        })
+                      : t.opcja({ numer: String(s.numer), wariant: t.warianty[s.parametry.wariant] }),
+                    opis: [
+                      t.opisOpcji({ data: formatujDate(s.zapisano), konto: nazwaKonta(s.konto) }),
+                      s.wybranyWPlanie ? t.wybranyWPlanieOpis : null,
+                      s.przykladowaSprawa ? t.przykladowaSprawaOpis : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' '),
+                  }))}
+                  wartosci={wybrane}
+                  onZmiana={ustawWybrane}
+                  blad={walidacja.blad('wybor')}
+                />
+              </div>
               <div>
                 <Przycisk wariant="glowny" type="button" onClick={porownaj}>
                   {t.porownaj}

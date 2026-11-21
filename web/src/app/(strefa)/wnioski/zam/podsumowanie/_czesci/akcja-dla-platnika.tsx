@@ -1,9 +1,9 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Przycisk } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import type { KodKomunikatu, StanRodziny, WniosekZam } from '@/domena/typy';
@@ -42,10 +42,9 @@ export function SekcjaAdresataPlatnika({ rodzina, wniosek }: { rodzina: StanRodz
  * do ZUS, nadaje sprawie oznaczenie „wniosek przygotowany” i prowadzi do ViewZamForPayer.
  */
 export function AkcjaPrzygotowaniaDlaPlatnika({ wniosek }: { wniosek: WniosekZam }) {
-  const router = useRouter();
   const konto = useKonto();
   const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
-  const [zajety, ustawZajety] = useState(false);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
 
   function przygotuj() {
     if (zajety) return;
@@ -53,12 +52,12 @@ export function AkcjaPrzygotowaniaDlaPlatnika({ wniosek }: { wniosek: WniosekZam
     const imie = wniosek.daneRodzica?.imie ?? konto?.imie ?? '';
     const nazwisko = wniosek.daneRodzica?.nazwisko ?? konto?.nazwisko ?? '';
     const wynik = przygotujZamDlaPlatnika(wniosek.idWniosku, pobierzKontekstOperacji(), nazwaPlikuDlaPlatnika(wniosek, imie, nazwisko));
-    ustawZajety(false);
     if (!wynik.ok) {
+      ustawZajety(false);
       ustawBlad(wynik.kod);
       return;
     }
-    router.push(trasy.ViewZamForPayer({ wniosek: wniosek.idWniosku }));
+    przejdz(trasy.ViewZamForPayer({ wniosek: wniosek.idWniosku }));
   }
 
   return (

@@ -1,9 +1,12 @@
 'use client';
 
 // ViewProfileEmploymentChange (historyjka 3.3.1.1.3, wzory cz1/P03-14…P03-18). Właściciel: u10.
+// Ekran ma do trzech części (?czesc=N): rodzaj zmiany; przy rozpoczęciu i ustaniu forma i data zmiany; przy ustaniu
+// umowy o pracę przyczyna ustania i inne zatrudnienie.
 import { useEffect, useMemo, useState } from 'react';
 import { czyWOkresie, formatujDate, parsujDate } from '@/domena/daty';
 import { okresCiazy } from '@/domena/profil/ciaza';
+import { czesciZmianyZatrudnienia } from '@/domena/profil/nawigacja';
 import {
   FORMY_ZMIANY,
   PRZYCZYNY_USTANIA,
@@ -23,7 +26,6 @@ import {
   type PoleZmianyZatrudnienia,
 } from '@/domena/profil/zmiana-zatrudnienia';
 import type {
-  BledyPol,
   DataISO,
   Okres,
   PrzyczynaUstaniaUmowy,
@@ -32,7 +34,8 @@ import type {
   ZmianaZatrudnieniaWCiazy,
   ZrodloDanej,
 } from '@/domena/typy';
-import { GrupaOpcji, idOpcjiGrupy } from '@/komponenty/grupa-opcji';
+import { CzescFormularza, useCzesciFormularza } from '@/komponenty/czesci-formularza';
+import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -42,9 +45,10 @@ import { PoleDaty } from '@/komponenty/pole-tekstowe';
 import { PoleWyboru } from '@/komponenty/pole-wyboru';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { Stos } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { SzkieletKreatoraProfilu } from '../_czesci/szkielet-kreatora-profilu';
-import { daneMatkiZeSzkicu, useKrokProfilu, ustawFokusNaPierwszymBledzie } from '../dane-ciazy/_czesci/krok-profilu';
+import { daneMatkiZeSzkicu, useKrokProfilu } from '../dane-ciazy/_czesci/krok-profilu';
 import { ZrodloDanejPola } from './_czesci/zrodlo-danej';
 
 const tekst = teksty.ViewProfileEmploymentChange;
@@ -52,12 +56,10 @@ const EKRAN = 'ViewProfileEmploymentChange' as const;
 
 const NAZWA = { rodzaj: 'zmiana', forma: 'forma-zmiany', inne: 'inne' } as const;
 const ID = { data: 'data-zmiany', przyczyna: 'przyczyna' } as const;
-const KOLEJNOSC_POL: readonly (readonly [PoleZmianyZatrudnienia, string])[] = [
-  ['rodzaj', idOpcjiGrupy(NAZWA.rodzaj, 'bez-zmian')],
-  ['forma', idOpcjiGrupy(NAZWA.forma, 'umowa-o-prace')],
-  ['data', ID.data],
-  ['przyczyna', ID.przyczyna],
-  ['inneZatrudnienie', idOpcjiGrupy(NAZWA.inne, 'tak')],
+const PODZIAL: readonly (readonly PoleZmianyZatrudnienia[])[] = [
+  ['rodzaj'],
+  ['forma', 'data'],
+  ['przyczyna', 'inneZatrudnienie'],
 ];
 
 function opisTytulu(t: TytulUbezpieczenia, okres: Okres): string {
@@ -159,39 +161,35 @@ function FormularzZmiany({
   const [formularz, ustawFormularz] = useState<FormularzZmianyZatrudnienia>(() =>
     formularzZeZmiany(zapisana ?? propozycja, formatujDate),
   );
-  const [bledy, ustawBledy] = useState<BledyPol<PoleZmianyZatrudnienia>>({});
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: formularz,
+    waliduj: (f: FormularzZmianyZatrudnienia) => walidujZmianeZatrudnienia(f, okres, tytuly, dzis),
+    pola: {
+      rodzaj: NAZWA.rodzaj,
+      forma: NAZWA.forma,
+      data: ID.data,
+      przyczyna: ID.przyczyna,
+      inneZatrudnienie: NAZWA.inne,
+    },
+  });
+  const czesci = useCzesciFormularza({ liczba: czesciZmianyZatrudnienia(formularz), podzial: PODZIAL, walidacja });
 
-  const zmien = (zmiana: Partial<FormularzZmianyZatrudnienia>, czyszczone: PoleZmianyZatrudnienia[]) => {
-    ustawFormularz((f) => ({ ...f, ...zmiana }));
-    ustawBledy((b) => {
-      const nowe = { ...b };
-      for (const pole of czyszczone) delete nowe[pole];
-      return nowe;
-    });
-  };
+  const zmien = (zmiana: Partial<FormularzZmianyZatrudnienia>) => ustawFormularz((f) => ({ ...f, ...zmiana }));
 
   function zmienRodzaj(rodzaj: RodzajZmianyZatrudnienia) {
     const zPropozycji = propozycja !== null && propozycja.rodzaj.wartosc === rodzaj;
-    zmien(
-      {
-        rodzaj,
-        forma: zPropozycji ? (propozycja.forma?.wartosc ?? null) : null,
-        data: zPropozycji && propozycja.data ? formatujDate(propozycja.data.wartosc) : '',
-        przyczyna: '',
-        inneZatrudnienie: null,
-      },
-      ['rodzaj', 'forma', 'data', 'przyczyna', 'inneZatrudnienie'],
-    );
+    zmien({
+      rodzaj,
+      forma: zPropozycji ? (propozycja.forma?.wartosc ?? null) : null,
+      data: zPropozycji && propozycja.data ? formatujDate(propozycja.data.wartosc) : '',
+      przyczyna: '',
+      inneZatrudnienie: null,
+    });
   }
 
   function przejdzDalej() {
-    const noweBledy = walidujZmianeZatrudnienia(formularz, okres, tytuly, dzis);
-    ustawBledy(noweBledy);
     const zmiana = zmianaZFormularza(formularz, propozycja, okres);
-    if (Object.keys(noweBledy).length > 0 || zmiana === null) {
-      ustawFokusNaPierwszymBledzie(KOLEJNOSC_POL, noweBledy);
-      return;
-    }
+    if (zmiana === null) return;
     krok.zapiszIPrzejdzDalej({
       daneRodziny: { matka: { ...daneMatkiZeSzkicu(krok.szkic), zmianaZatrudnienia: zmiana } },
     });
@@ -214,89 +212,102 @@ function FormularzZmiany({
   }
 
   return (
-    <SzkieletKreatoraProfilu biezacy={EKRAN} onDalej={przejdzDalej} onWroc={krok.wroc} zajety={krok.zajety}>
+    <SzkieletKreatoraProfilu
+      biezacy={EKRAN}
+      czesc={czesci.czesc}
+      liczbaCzesci={czesci.liczba}
+      onDalej={() => czesci.dalej(przejdzDalej)}
+      onWroc={() => czesci.wroc(krok.wroc)}
+      zajety={krok.zajety}
+    >
       {krok.bladZapisu ? <Komunikat kod={krok.bladZapisu} /> : null}
       <Karta tytul={tekst.tytulKarty} bezLinii as="section">
         <Stos odstep={6}>
-          <p className="m-0">{opisOkresu}</p>
-          <div className="grid min-w-0 gap-2">
-            <GrupaOpcji<RodzajZmianyZatrudnienia>
-              nazwa={NAZWA.rodzaj}
-              legenda={tekst.legendaRodzaju}
-              podpowiedz={podpowiedzRodzaju(tytul, okres, propozycja, formularz.rodzaj)}
-              opcje={RODZAJE_ZMIANY.map((r) => ({ wartosc: r, etykieta: tekst.rodzaje[r].etykieta, opis: tekst.rodzaje[r].opis }))}
-              wartosc={formularz.rodzaj}
-              onZmiana={zmienRodzaj}
-              blad={bledy.rodzaj}
-            />
-            {formularz.rodzaj !== null ? <ZrodloDanejPola zrodlo={zrodloPol.rodzaj} /> : null}
-          </div>
+          <CzescFormularza czesci={czesci} numer={1}>
+            <p className="m-0">{opisOkresu}</p>
+            <div className="grid min-w-0 gap-2">
+              <GrupaOpcji<RodzajZmianyZatrudnienia>
+                nazwa={NAZWA.rodzaj}
+                legenda={tekst.legendaRodzaju}
+                podpowiedz={podpowiedzRodzaju(tytul, okres, propozycja, formularz.rodzaj)}
+                opcje={RODZAJE_ZMIANY.map((r) => ({ wartosc: r, etykieta: tekst.rodzaje[r].etykieta, opis: tekst.rodzaje[r].opis }))}
+                wartosc={formularz.rodzaj}
+                onZmiana={zmienRodzaj}
+                {...walidacja.pole('rodzaj')}
+              />
+              {formularz.rodzaj !== null ? <ZrodloDanejPola zrodlo={zrodloPol.rodzaj} /> : null}
+            </div>
+          </CzescFormularza>
           {zData ? (
             <>
-              <div className="grid min-w-0 gap-2">
-                <GrupaOpcji<FormaZmiany>
-                  nazwa={NAZWA.forma}
-                  legenda={tekst.legendaFormy}
-                  opcje={FORMY_ZMIANY.map((f) => ({ wartosc: f, etykieta: tekst.formy[f] }))}
-                  wartosc={formularz.forma}
-                  onZmiana={(forma) => zmien({ forma }, ['forma', 'przyczyna', 'inneZatrudnienie'])}
-                  blad={bledy.forma}
-                />
-                {formularz.forma !== null ? <ZrodloDanejPola zrodlo={zrodloPol.forma} /> : null}
-              </div>
-              <div className="grid min-w-0 gap-2">
-                <PoleDaty
-                  id={ID.data}
-                  nazwa={ID.data}
-                  etykieta={formularz.rodzaj === 'ustanie' ? tekst.etykietaDatyUstania : tekst.etykietaDatyRozpoczecia}
-                  podpowiedz={tekst.podpowiedzDaty}
-                  wartosc={formularz.data}
-                  onZmiana={(data) => zmien({ data }, ['data'])}
-                  blad={bledy.data}
-                  wymagane
-                />
-                {formularz.data.trim() !== '' ? <ZrodloDanejPola zrodlo={zrodloPol.data} /> : null}
-              </div>
-              {pokazPrzyczyne ? (
+              <CzescFormularza czesci={czesci} numer={2}>
                 <div className="grid min-w-0 gap-2">
-                  <PoleWyboru<PrzyczynaUstaniaUmowy>
-                    id={ID.przyczyna}
-                    nazwa={ID.przyczyna}
-                    etykieta={tekst.etykietaPrzyczyny}
-                    pustaOpcja={tekst.pustaPrzyczyna}
-                    opcje={PRZYCZYNY_USTANIA.map((p) => ({ wartosc: p, etykieta: tekst.przyczyny[p] }))}
-                    wartosc={formularz.przyczyna}
-                    onZmiana={(przyczyna) => zmien({ przyczyna, inneZatrudnienie: null }, ['przyczyna', 'inneZatrudnienie'])}
-                    blad={bledy.przyczyna}
+                  <GrupaOpcji<FormaZmiany>
+                    nazwa={NAZWA.forma}
+                    legenda={tekst.legendaFormy}
+                    opcje={FORMY_ZMIANY.map((f) => ({ wartosc: f, etykieta: tekst.formy[f] }))}
+                    wartosc={formularz.forma}
+                    onZmiana={(forma) => zmien({ forma })}
+                    {...walidacja.pole('forma')}
+                  />
+                  {formularz.forma !== null ? <ZrodloDanejPola zrodlo={zrodloPol.forma} /> : null}
+                </div>
+                <div className="grid min-w-0 gap-2">
+                  <PoleDaty
+                    id={ID.data}
+                    nazwa={ID.data}
+                    etykieta={formularz.rodzaj === 'ustanie' ? tekst.etykietaDatyUstania : tekst.etykietaDatyRozpoczecia}
+                    podpowiedz={tekst.podpowiedzDaty}
+                    wartosc={formularz.data}
+                    onZmiana={(data) => zmien({ data })}
+                    {...walidacja.pole('data')}
                     wymagane
                   />
-                  {formularz.przyczyna !== '' ? <ZrodloDanejPola zrodlo="odpowiedz-rodzica" /> : null}
-                  {informacjaPrzyczyny ? <Komunikat kod={informacjaPrzyczyny} id="przyczyna-info" /> : null}
+                  {formularz.data.trim() !== '' ? <ZrodloDanejPola zrodlo={zrodloPol.data} /> : null}
                 </div>
-              ) : null}
-              {pokazInne && formularz.przyczyna !== '' ? (
-                <GrupaOpcji<'tak' | 'nie'>
-                  nazwa={NAZWA.inne}
-                  legenda={tekst.legendaInnegoZatrudnienia}
-                  podpowiedz={tekst.podpowiedzInnegoZatrudnienia({
-                    przyczyna:
-                      tekst.przyczynyWDopelniaczu[formularz.przyczyna as keyof typeof tekst.przyczynyWDopelniaczu],
-                  })}
-                  opcje={[
-                    { wartosc: 'tak', etykieta: tekst.tak },
-                    { wartosc: 'nie', etykieta: tekst.nie },
-                  ]}
-                  wartosc={formularz.inneZatrudnienie === null ? null : formularz.inneZatrudnienie ? 'tak' : 'nie'}
-                  onZmiana={(w) => zmien({ inneZatrudnienie: w === 'tak' }, ['inneZatrudnienie'])}
-                  blad={bledy.inneZatrudnienie}
-                />
-              ) : null}
+                {notatka ? (
+                  <Notatka>
+                    <p className="m-0">{notatka}</p>
+                  </Notatka>
+                ) : null}
+              </CzescFormularza>
+              <CzescFormularza czesci={czesci} numer={3}>
+                {pokazPrzyczyne ? (
+                  <div className="grid min-w-0 gap-2">
+                    <PoleWyboru<PrzyczynaUstaniaUmowy>
+                      id={ID.przyczyna}
+                      nazwa={ID.przyczyna}
+                      etykieta={tekst.etykietaPrzyczyny}
+                      pustaOpcja={tekst.pustaPrzyczyna}
+                      opcje={PRZYCZYNY_USTANIA.map((p) => ({ wartosc: p, etykieta: tekst.przyczyny[p] }))}
+                      wartosc={formularz.przyczyna}
+                      onZmiana={(przyczyna) => zmien({ przyczyna, inneZatrudnienie: null })}
+                      {...walidacja.pole('przyczyna')}
+                      wymagane
+                    />
+                    {formularz.przyczyna !== '' ? <ZrodloDanejPola zrodlo="odpowiedz-rodzica" /> : null}
+                    {informacjaPrzyczyny ? <Komunikat kod={informacjaPrzyczyny} id="przyczyna-info" /> : null}
+                  </div>
+                ) : null}
+                {pokazInne && formularz.przyczyna !== '' ? (
+                  <GrupaOpcji<'tak' | 'nie'>
+                    nazwa={NAZWA.inne}
+                    legenda={tekst.legendaInnegoZatrudnienia}
+                    podpowiedz={tekst.podpowiedzInnegoZatrudnienia({
+                      przyczyna:
+                        tekst.przyczynyWDopelniaczu[formularz.przyczyna as keyof typeof tekst.przyczynyWDopelniaczu],
+                    })}
+                    opcje={[
+                      { wartosc: 'tak', etykieta: tekst.tak },
+                      { wartosc: 'nie', etykieta: tekst.nie },
+                    ]}
+                    wartosc={formularz.inneZatrudnienie === null ? null : formularz.inneZatrudnienie ? 'tak' : 'nie'}
+                    onZmiana={(w) => zmien({ inneZatrudnienie: w === 'tak' })}
+                    {...walidacja.pole('inneZatrudnienie')}
+                  />
+                ) : null}
+              </CzescFormularza>
             </>
-          ) : null}
-          {notatka ? (
-            <Notatka>
-              <p className="m-0">{notatka}</p>
-            </Notatka>
           ) : null}
         </Stos>
       </Karta>

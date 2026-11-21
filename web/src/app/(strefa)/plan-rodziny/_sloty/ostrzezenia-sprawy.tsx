@@ -3,15 +3,15 @@
 // Slot ViewFamilyPlan „ostrzezenia-sprawy” w liście slotyPrzySprawie (kontrakt, sekcja 12.4). Właściciel: u22.
 // Ostrzeżenie przy sprawie K28 (0119) albo K29 (0120) w etapie Ciąża z odnośnikiem do arkusza SheetRiskDetails
 // (wzory cz2/P18-01, P18-04, P18-05). Po potwierdzeniu daty porodu slot nic nie pokazuje (cz2/P18-07).
-import { useState } from 'react';
 import { ArkuszRyzyka, KomunikatRyzyka, ostrzezenieDoPokazania } from '@/app/(strefa)/sprawy/[idSprawy]/_czesci/arkusz-ryzyka';
+import { useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { teksty } from '@/teksty';
 import type { PropsSlotu } from './typy';
 
 const tekst = teksty.ViewFamilyPlan.ostrzezeniaSprawy;
 
 export function SlotOstrzezeniaSprawy({ sprawa, kontekst, pochodzenie }: PropsSlotu<'przySprawie'>) {
-  const [otwarte, setOtwarte] = useState(false);
+  const [otwarte, setOtwarte] = useStanChwilowy(false);
   const ostrzezenie = ostrzezenieDoPokazania(sprawa, kontekst);
   if (ostrzezenie === undefined) return null;
 

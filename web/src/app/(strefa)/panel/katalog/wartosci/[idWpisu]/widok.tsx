@@ -55,15 +55,24 @@ export function WidokZmianyWartosciKatalogu({ params }: { params: PageProps<'/pa
         powrot={{ href: `${lista}#${kotwicaWpisu(wpis.id)}`, etykieta: t.powrot }}
       />
       <div className="flex max-w-tresc min-w-0 flex-col gap-7.5">
-        <HistoriaWartosci wpis={wpis} katalog={katalog} dzis={dzis} />
         {czyWpisEdytowalny(wpis) ? (
-          <FormularzWersji key={wpis.id} wpis={wpis} katalog={katalog} dzis={dzis} adresListy={lista} />
+          <FormularzWersji
+            key={wpis.id}
+            wpis={wpis}
+            katalog={katalog}
+            dzis={dzis}
+            adresListy={lista}
+            historia={<HistoriaWartosci wpis={wpis} katalog={katalog} dzis={dzis} />}
+          />
         ) : (
-          <Karta>
-            <Notatka>
-              <p>{t.wartoscWyprowadzona}</p>
-            </Notatka>
-          </Karta>
+          <>
+            <HistoriaWartosci wpis={wpis} katalog={katalog} dzis={dzis} />
+            <Karta>
+              <Notatka>
+                <p>{t.wartoscWyprowadzona}</p>
+              </Notatka>
+            </Karta>
+          </>
         )}
       </div>
     </>

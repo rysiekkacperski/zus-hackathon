@@ -5,10 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import { useMemo, type ReactNode } from 'react';
 import { dodajDni, formatujDate, liczbaDniWlacznie } from '@/domena/daty';
 import type { DaneZKontaZus, IdWidoku, KontoPrzewodnika, StanRodziny, Ustawienia, WniosekZas53 } from '@/domena/typy';
+import { PYTANIA_Z10 } from '@/domena/wnioski/z10';
 import { czyPoUstaniu, czyStawkaPelna, ekranyZas53 } from '@/domena/wnioski/zas53';
 import { useKatalog, useKonto, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
+import { adresCzesci } from '@/komponenty/czesci-formularza';
 import { Karta } from '@/komponenty/karta';
-import { ListaDefinicji } from '@/komponenty/lista-definicji';
+import { liczbaKrokow, numerKroku, type KrokZCzesciami } from '@/komponenty/kroki';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { Postep } from '@/komponenty/postep';
@@ -59,6 +61,23 @@ export function adresEkranuZas53(ekran: IdWidoku, idWniosku: string): string {
   }
 }
 
+/** Liczba części ekranu kreatora: Z-10 ma jedno pytanie na część, dane mają część dokumentu tylko przy wypadku. */
+export function liczbaCzesciEkranuZas53(ekran: IdWidoku, wypadek: boolean): number {
+  if (ekran === 'ViewZas53AfterInsurance') return PYTANIA_Z10.length;
+  if (ekran === 'ViewZas53Data') return wypadek ? 4 : 3;
+  return 1;
+}
+
+/** Kroki kreatora z liczbą części do „Krok X z N”. */
+export function krokiZas53(poUstaniu: boolean, wypadek: boolean): KrokZCzesciami<IdWidoku>[] {
+  return ekranyZas53(poUstaniu).map((id) => ({ id, czesci: liczbaCzesciEkranuZas53(id, wypadek) }));
+}
+
+/** Adres ostatniej części ekranu, np. powrót Wstecz z następnego ekranu. */
+export function adresOstatniejCzesciZas53(ekran: IdWidoku, idWniosku: string, wypadek: boolean): string {
+  return adresCzesci(adresEkranuZas53(ekran, idWniosku), liczbaCzesciEkranuZas53(ekran, wypadek));
+}
+
 /** Ekran przed bieżącym w kolejności kreatora (Wstecz); pierwszy ekran wraca do sprawy K24. */
 export function poprzedniEkranZas53(ekran: IdWidoku, poUstaniu: boolean): IdWidoku | null {
   const ekrany = ekranyZas53(poUstaniu);
@@ -81,41 +100,60 @@ export function NaglowekKreatoraZas53() {
   );
 }
 
-/** Karta postępu: „Krok X z N”, pasek i lista kroków z odnośnikami do kroków zakończonych. */
-export function PostepZas53({ ekran, poUstaniu, idWniosku }: { ekran: IdWidoku; poUstaniu: boolean; idWniosku?: string }) {
-  const ekrany = ekranyZas53(poUstaniu);
+/** Karta postępu: „Krok X z N”, pasek i lista kroków z odnośnikami do kroków zakończonych; części liczą się jako kroki. */
+export function PostepZas53({
+  ekran,
+  poUstaniu,
+  idWniosku,
+  czesc = 1,
+  wypadek = false,
+}: {
+  ekran: IdWidoku;
+  poUstaniu: boolean;
+  idWniosku?: string;
+  czesc?: number;
+  wypadek?: boolean;
+}) {
+  const kroki = krokiZas53(poUstaniu, wypadek);
+  const ekrany = kroki.map((k) => k.id);
   const indeks = Math.max(0, ekrany.indexOf(ekran));
+  const liczba = liczbaKrokow(kroki);
+  const numer = numerKroku(kroki, ekrany[indeks], czesc);
   const nazwa = (e: IdWidoku) => t.kroki[e as keyof typeof t.kroki];
   const idTytulu = 'postep-zas53-tytul';
   return (
-    <section aria-labelledby={idTytulu} className="rounded-md border border-line bg-surface-card p-6">
+    <section aria-labelledby={idTytulu} className="rounded-md border border-line bg-surface-card p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
         <h2 id={idTytulu} className="m-0 text-body-strong text-ink-strong">
-          {t.krok({ krok: indeks + 1, liczbaKrokow: ekrany.length, nazwa: nazwa(ekran) })}
+          {t.krok({ krok: numer, liczbaKrokow: liczba, nazwa: nazwa(ekran) })}
         </h2>
         <p className="m-0 text-small">{t.zapisujemy}</p>
       </div>
       <Postep
         className="mt-3"
-        wartosc={indeks + 1}
+        wartosc={numer}
         min={0}
-        maks={ekrany.length}
-        etykieta={t.postep({ krok: indeks + 1, liczbaKrokow: ekrany.length })}
+        maks={liczba}
+        etykieta={t.postep({ krok: numer, liczbaKrokow: liczba })}
         idEtykiety={idTytulu}
       />
-      <ol aria-label={t.listaKrokow} className="m-0 mt-4 flex list-none flex-wrap gap-x-6 gap-y-2 p-0 text-small">
-        {ekrany.map((e, i) => {
-          const etykieta = t.numerKroku({ numer: i + 1, nazwa: nazwa(e) });
+      <ol aria-label={t.listaKrokow} className="m-0 mt-3 flex list-none flex-wrap gap-x-6 gap-y-2 p-0 text-small">
+        {kroki.map((k, i) => {
+          const od = numerKroku(kroki, k.id, 1);
+          const etykieta =
+            (k.czesci ?? 1) > 1
+              ? t.zakresKrokow({ od, do: od + (k.czesci ?? 1) - 1, nazwa: nazwa(k.id) })
+              : t.numerKroku({ numer: od, nazwa: nazwa(k.id) });
           if (i === indeks) {
             return (
-              <li key={e} aria-current="step" className="font-semibold text-ink-strong">
+              <li key={k.id} aria-current="step" className="font-semibold text-ink-strong">
                 {etykieta}
               </li>
             );
           }
           return (
-            <li key={e}>
-              {i < indeks && idWniosku ? <Odnosnik href={adresEkranuZas53(e, idWniosku)}>{etykieta}</Odnosnik> : etykieta}
+            <li key={k.id}>
+              {i < indeks && idWniosku ? <Odnosnik href={adresEkranuZas53(k.id, idWniosku)}>{etykieta}</Odnosnik> : etykieta}
             </li>
           );
         })}
@@ -127,6 +165,7 @@ export function PostepZas53({ ekran, poUstaniu, idWniosku }: { ekran: IdWidoku; 
 /** Akcje kroku: Wstecz po lewej, Zapisz do dokończenia i Dalej (albo akcja główna) po prawej. */
 export function AkcjeKreatoraZas53({
   wstecz,
+  onWstecz,
   onZapisz,
   onDalej,
   etykietaDalej = t.dalej,
@@ -134,7 +173,9 @@ export function AkcjeKreatoraZas53({
   zajety,
   opisDalej,
 }: {
-  wstecz: string;
+  /** Adres Wstecz albo obsługa Wstecz (powrót do poprzedniej części kroku). */
+  wstecz?: string;
+  onWstecz?: () => void;
   onZapisz: () => void;
   onDalej: () => void;
   etykietaDalej?: string;
@@ -144,11 +185,19 @@ export function AkcjeKreatoraZas53({
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
-      <PrzyciskLink href={wstecz} wariant="drugorzedny">
-        {t.wstecz}
-      </PrzyciskLink>
+      {onWstecz ? (
+        <Przycisk type="button" wariant="drugorzedny" onClick={onWstecz} disabled={zajety}>
+          {t.wstecz}
+        </Przycisk>
+      ) : wstecz ? (
+        <PrzyciskLink href={wstecz} wariant="drugorzedny">
+          {t.wstecz}
+        </PrzyciskLink>
+      ) : (
+        <span />
+      )}
       <div className="flex flex-wrap gap-4">
-        <Przycisk type="button" wariant="tlo" onClick={onZapisz}>
+        <Przycisk type="button" wariant="tlo" onClick={onZapisz} disabled={zajety}>
           {t.zapiszDoDokonczenia}
         </Przycisk>
         <Przycisk
@@ -163,6 +212,20 @@ export function AkcjeKreatoraZas53({
         </Przycisk>
       </div>
     </div>
+  );
+}
+
+/** Zwarta lista etykiet i wartości do wąskiej kolumny bocznej: etykieta nad wartością. */
+export function DaneWKolumnieBocznej({ pozycje, className }: { pozycje: { etykieta: string; wartosc: ReactNode }[]; className?: string }) {
+  return (
+    <dl className={['m-0 flex flex-col gap-3', className].filter(Boolean).join(' ')}>
+      {pozycje.map((p) => (
+        <div key={p.etykieta} className="min-w-0">
+          <dt className="text-body-strong">{p.etykieta}</dt>
+          <dd className="m-0 break-words text-ink-strong">{p.wartosc}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -218,7 +281,7 @@ export function PanelWnioskuZas53({ wniosek, dodatek }: { wniosek: WniosekZas53;
   if (czyPoUstaniu(wniosek) && wniosek.oswiadczenieZ10) pozycje.push({ etykieta: t.z10, wartosc: t.z10Dolaczone });
   return (
     <Karta tytul={t.twojWniosek} bezLinii as="section">
-      <ListaDefinicji pozycje={pozycje} szerokoscEtykiety="waska" />
+      <DaneWKolumnieBocznej pozycje={pozycje} />
       {dodatek}
       <p className="m-0 mt-4">
         <Odnosnik href={trasy.ViewZas53Certificate({ wniosek: wniosek.idWniosku })}>{t.zmienZaswiadczenie}</Odnosnik>

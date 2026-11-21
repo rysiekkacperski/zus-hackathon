@@ -2,8 +2,8 @@
 
 // Pozycja listy kont na ViewDemoAccountPicker (wzory P02-01, P02-02 i Wybor-konta): imię i nazwisko,
 // forma zatrudnienia, rola albo oznaczenie nowego konta, akcje „Zaloguj się”, „Symuluj zgłoszenie
-// dziecka” i „Przywróć stan początkowy”. Właściciel: u01.
-import { useRouter } from 'next/navigation';
+// dziecka” i „Przywróć stan początkowy”. „Zaloguj się” pokazuje ładowanie do otwarcia ekranu startowego
+// konta. Właściciel: u01.
 import { useLogowanieWToku, useParametry, useStanSymulowanegoZus } from '@/dane/magazyn/hooki';
 import { symulujZgloszenieDziecka } from '@/dane/magazyn/operacje/konta-demo';
 import { przywrocStanPoczatkowy, zalogujKontem } from '@/dane/magazyn/operacje/konto';
@@ -12,6 +12,7 @@ import type { KodKomunikatu, KontoDemo } from '@/domena/typy';
 import { formatujDate } from '@/komponenty/format';
 import { Ikona } from '@/komponenty/ikona';
 import { useKomunikatChwilowy } from '@/komponenty/komunikat-chwilowy';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Przycisk } from '@/komponenty/przycisk';
 import { teksty } from '@/teksty';
 
@@ -34,7 +35,7 @@ export interface PozycjaKontaProps {
 }
 
 export function PozycjaKonta({ konto, onBlad }: PozycjaKontaProps) {
-  const router = useRouter();
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const logowanie = useLogowanieWToku();
   const parametry = useParametry();
   const stanZus = useStanSymulowanegoZus(konto.pesel);
@@ -45,16 +46,19 @@ export function PozycjaKonta({ konto, onBlad }: PozycjaKontaProps) {
   const symulacjaDostepna = parametry.trybDemonstracyjny && !administrator && dziecko === undefined;
 
   const zaloguj = () => {
+    if (zajety) return;
+    ustawZajety(true);
     const wynik = zalogujKontem(
       { pesel: konto.pesel, sposob: logowanie?.sposob ?? 'mobywatel', powrot: logowanie?.powrot },
       pobierzKontekstOperacji(),
     );
     if (!wynik.ok) {
+      ustawZajety(false);
       onBlad(wynik.kod);
       return;
     }
     onBlad(null);
-    router.push(wynik.wartosc.cel);
+    przejdz(wynik.wartosc.cel);
   };
 
   const symuluj = () => {
@@ -75,7 +79,7 @@ export function PozycjaKonta({ konto, onBlad }: PozycjaKontaProps) {
   return (
     <li className="border-b border-line-row py-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0 flex-[1_1_360px]">
+        <div className="min-w-0 flex-[1_1_22.5rem]">
           <h3 className="m-0 text-tile-title text-ink-max">{imieINazwisko}</h3>
           <p className="m-0">{opisKonta(konto)}</p>
           {dziecko ? (
@@ -96,7 +100,7 @@ export function PozycjaKonta({ konto, onBlad }: PozycjaKontaProps) {
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <Przycisk wariant="drugorzedny" onClick={zaloguj} aria-label={tekst.zalogujKonto({ imieINazwisko })}>
+          <Przycisk wariant="drugorzedny" zajety={zajety} onClick={zaloguj} aria-label={tekst.zalogujKonto({ imieINazwisko })}>
             {tekst.zaloguj}
           </Przycisk>
           {symulacjaDostepna ? (

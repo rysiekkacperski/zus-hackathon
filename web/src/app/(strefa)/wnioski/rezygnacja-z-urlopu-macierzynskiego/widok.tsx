@@ -1,18 +1,22 @@
 'use client';
 
 // ViewMaternityResignation (u34, Story 3.9.2.1.1, wariant orzeczenia z 3.9.2.2.1). Wzory: cz2/P25-02 … P25-10.
+// Formularz rezygnacji ma części: urlop macierzyński, data powrotu do pracy i załączniki (gdy są wymagane).
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { PrzyciskiCzesci, useCzesciFormularza } from '@/komponenty/czesci-formularza';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { PoleDaty } from '@/komponenty/pole-tekstowe';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { UkladDwuKolumnowy } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { formatujDate } from '@/komponenty/format';
 import { trasy } from '@/komponenty/rama/trasy';
-import type { KodKomunikatu, PlikZalacznika, WniosekOUrlop } from '@/domena/typy';
+import type { BledyPol, KodKomunikatu, PlikZalacznika, WniosekOUrlop } from '@/domena/typy';
 import {
   najwczesniejszyPowrot,
   okresZamZa14Tygodni,
@@ -89,10 +93,9 @@ export function WidokRezygnacjiZUrlopu() {
   const [tekstPowrotu, setTekstPowrotu] = useState(() =>
     szkic?.rezygnacja?.dataPowrotu ? formatujDate(szkic.rezygnacja.dataPowrotu) : '',
   );
-  const [blad, setBlad] = useState<KodKomunikatu | null>(null);
   const [bladOperacji, setBladOperacji] = useState<KodKomunikatu | null>(null);
   const [pliki, setPliki] = useState<Record<string, PlikZalacznika>>(() => plikiZeSzkicu(szkic?.zalaczniki));
-  const [zajety, setZajety] = useState(false);
+  const { zajety, ustawZajety: setZajety, przejdz } = useNawigacjaZLadowaniem();
 
   const dane = useMemo(() => {
     if (!kontekst) return null;
@@ -119,6 +122,23 @@ export function WidokRezygnacjiZUrlopu() {
     );
     return { otwarcie, urlop, zalaczniki };
   }, [kontekst]);
+
+  const urlopDoWalidacji = dane?.urlop ?? null;
+  const zOrzeczeniemDoWalidacji = dane?.otwarcie.zOrzeczeniem ?? false;
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { powrot: tekstPowrotu },
+    waliduj: (w: { powrot: string }): BledyPol<'powrot'> => {
+      if (!urlopDoWalidacji) return {};
+      const wynik = walidujDatePowrotu(w.powrot, urlopDoWalidacji, zOrzeczeniemDoWalidacji);
+      return 'kod' in wynik ? { powrot: wynik.kod } : {};
+    },
+    pola: { powrot: ID_POLA },
+  });
+  // Części formularza: 1. urlop macierzyński, 2. data powrotu, 3. załączniki (gdy są wymagane).
+  const zFormularzem = dane?.otwarcie.wariant === 'formularz' && dane.urlop !== null;
+  const podzial: 'powrot'[][] = !zFormularzem ? [['powrot']] : dane.zalaczniki.length > 0 ? [[], ['powrot'], []] : [[], ['powrot']];
+  const czesci = useCzesciFormularza({ liczba: podzial.length, podzial, walidacja });
+  const czescWidoczna = (numer: number) => !zFormularzem || czesci.czesc === numer;
 
   if (!kontekst || !dane) {
     return (
@@ -160,19 +180,16 @@ export function WidokRezygnacjiZUrlopu() {
   const najwczesniej = najwczesniejszyPowrot(urlop, otwarcie.zOrzeczeniem);
   const dzis = kontekst.dzis;
 
-  const walidacja = walidujDatePowrotu(tekstPowrotu, urlop, otwarcie.zOrzeczeniem);
-  const dataPowrotu = 'data' in walidacja ? walidacja.data : null;
+  const wynikPowrotu = walidujDatePowrotu(tekstPowrotu, urlop, otwarcie.zOrzeczeniem);
+  const dataPowrotu = 'data' in wynikPowrotu ? wynikPowrotu.data : null;
   const ostrzezenie = dataPowrotu ? ostrzezenieTerminuRezygnacji(dataPowrotu, dzis) : null;
+  const blad = walidacja.blad('powrot');
 
+  /** Akcja ostatniej części: zapis szkicu rezygnacji i przejście do podsumowania wniosku. */
   function przejdzDalej() {
     if (!urlop) return;
     const wynik = walidujDatePowrotu(tekstPowrotu, urlop, otwarcie.zOrzeczeniem);
-    if ('kod' in wynik) {
-      setBlad(wynik.kod);
-      document.getElementById(ID_POLA)?.focus();
-      return;
-    }
-    setBlad(null);
+    if ('kod' in wynik) return;
     setZajety(true);
     const ctx = pobierzKontekstOperacji();
     const start = szkic ? { ok: true as const, wartosc: szkic } : rozpocznijRezygnacje(idSprawy, ctx);
@@ -199,7 +216,7 @@ export function WidokRezygnacjiZUrlopu() {
       setZajety(false);
       return;
     }
-    router.push(trasy.ViewLeaveRequestSummary({ wniosek: zapis.wartosc.idWniosku }));
+    przejdz(trasy.ViewLeaveRequestSummary({ wniosek: zapis.wartosc.idWniosku }));
   }
 
   function zlozZam14() {
@@ -211,7 +228,7 @@ export function WidokRezygnacjiZUrlopu() {
       setZajety(false);
       return;
     }
-    router.push(trasy.ViewZamPeriod({ wniosek: wynik.wartosc.idWniosku }));
+    przejdz(trasy.ViewZamPeriod({ wniosek: wynik.wartosc.idWniosku }));
   }
 
   const kartaUrlopu = (
@@ -352,63 +369,60 @@ export function WidokRezygnacjiZUrlopu() {
         etykietaBocznej={t.kartaDrugiegoRodzica}
         tresc={
           <>
-            {kartaUrlopu}
+            {czescWidoczna(1) ? kartaUrlopu : null}
             {bladOperacjiKomunikat}
-            <Karta tytul={t.kartaPowrotu} bezLinii>
-              {formularz ? (
-                <>
-                  <PoleDaty
-                    id={ID_POLA}
-                    etykieta={t.poleDatyPowrotu}
-                    podpowiedz={t.podpowiedzPowrotu({ od: formatujDate(najwczesniej), do_: formatujDate(urlop.okres.do) })}
-                    wartosc={tekstPowrotu}
-                    onZmiana={(w) => {
-                      setTekstPowrotu(w);
-                      if (blad) setBlad(null);
-                    }}
-                    blad={blad}
-                    dodatek={ostrzezenie && !blad ? <OstrzezeniePola id={`${ID_POLA}-uwaga`} kod={ostrzezenie} /> : undefined}
-                    wymagane
-                    className="max-w-120"
-                  />
-                  {dataPowrotu && !blad ? (
-                    <RamkaOkresu
-                      etykieta={imieOjca ? t.ojciecPrzejmie({ imieINazwisko: imieOjca }) : t.ojciecDzieckaPrzejmie}
-                      okres={t.okres({ od: formatujDate(dataPowrotu), do_: formatujDate(urlop.okres.do) })}
+            {czescWidoczna(2) ? (
+              <Karta tytul={t.kartaPowrotu} bezLinii>
+                {formularz ? (
+                  <>
+                    <PoleDaty
+                      id={ID_POLA}
+                      etykieta={t.poleDatyPowrotu}
+                      podpowiedz={t.podpowiedzPowrotu({ od: formatujDate(najwczesniej), do_: formatujDate(urlop.okres.do) })}
+                      wartosc={tekstPowrotu}
+                      onZmiana={setTekstPowrotu}
+                      {...walidacja.pole('powrot')}
+                      dodatek={ostrzezenie && !blad ? <OstrzezeniePola id={`${ID_POLA}-uwaga`} kod={ostrzezenie} /> : undefined}
+                      wymagane
+                      className="max-w-120"
                     />
-                  ) : null}
-                </>
-              ) : (
-                <Komunikat
-                  kod={otwarcie.kod}
-                  akcje={
-                    otwarcie.wariant === 'brak-drugiego-rodzica' ? (
-                      <PrzyciskLink href={trasy.ViewProfileSummary({ tryb: 'rodzina' })} wariant="drugorzedny">
-                        {t.przejdzDoProfilu}
-                      </PrzyciskLink>
-                    ) : (
-                      <PrzyciskLink href={trasy.ViewFamilyPlan()} wariant="drugorzedny">
-                        {t.przejdzDoPlanu}
-                      </PrzyciskLink>
-                    )
-                  }
-                />
-              )}
-            </Karta>
-            {formularz && zalaczniki.length > 0 ? (
+                    {dataPowrotu && !blad ? (
+                      <RamkaOkresu
+                        etykieta={imieOjca ? t.ojciecPrzejmie({ imieINazwisko: imieOjca }) : t.ojciecDzieckaPrzejmie}
+                        okres={t.okres({ od: formatujDate(dataPowrotu), do_: formatujDate(urlop.okres.do) })}
+                      />
+                    ) : null}
+                  </>
+                ) : (
+                  <Komunikat
+                    kod={otwarcie.kod}
+                    akcje={
+                      otwarcie.wariant === 'brak-drugiego-rodzica' ? (
+                        <PrzyciskLink href={trasy.ViewProfileSummary({ tryb: 'rodzina' })} wariant="drugorzedny">
+                          {t.przejdzDoProfilu}
+                        </PrzyciskLink>
+                      ) : (
+                        <PrzyciskLink href={trasy.ViewFamilyPlan()} wariant="drugorzedny">
+                          {t.przejdzDoPlanu}
+                        </PrzyciskLink>
+                      )
+                    }
+                  />
+                )}
+              </Karta>
+            ) : null}
+            {formularz && zalaczniki.length > 0 && czescWidoczna(3) ? (
               <Karta tytul={t.kartaZalacznikow} bezLinii>
                 <ListaZalacznikow pozycje={zalaczniki} pliki={pliki} onZmianaPlikow={setPliki} wlasciciel={pesel} />
               </Karta>
             ) : null}
             {formularz ? (
-              <div className="flex flex-wrap justify-between gap-4">
-                <PrzyciskLink href={powrotHref} wariant="drugorzedny">
-                  {teksty.wspolne.przyciski.wroc}
-                </PrzyciskLink>
-                <Przycisk type="button" wariant="glowny" zajety={zajety} onClick={przejdzDalej}>
-                  {teksty.wspolne.przyciski.dalej}
-                </Przycisk>
-              </div>
+              <PrzyciskiCzesci
+                czesci={czesci}
+                onAkcjaKroku={przejdzDalej}
+                onWrocKroku={() => router.push(powrotHref)}
+                zajety={zajety}
+              />
             ) : null}
           </>
         }

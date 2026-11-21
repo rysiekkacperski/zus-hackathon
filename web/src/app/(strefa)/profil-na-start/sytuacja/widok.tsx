@@ -7,22 +7,23 @@
 // zatrudnienia i prowadzi do ViewProfileFamily (komunikat 0004 pokazuje ten ekran). Planowanie rodzicielstwa
 // zostawia ostatnim ekranem szkicu ViewProfileSituation, więc rodzic wraca tu po ponownym otwarciu przewodnika.
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useStanKonta } from '@/dane/magazyn/hooki';
 import { zapiszSzkic } from '@/dane/magazyn/operacje/profil-szkic';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { czyMaZgode } from '@/domena/konto';
 import { nastepnyEkran, poprzedniEkran, sytuacjaSzkicu } from '@/domena/profil/nawigacja';
 import type { KodKomunikatu, SytuacjaRodzica, SzkicProfilu } from '@/domena/typy';
-import { GrupaOpcji, idOpcjiGrupy, type OpcjaGrupy } from '@/komponenty/grupa-opcji';
+import { GrupaOpcji, type OpcjaGrupy } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { NaglowekKreatoraProfilu, SzkieletKreatoraProfilu } from '../_czesci/szkielet-kreatora-profilu';
-import { sciezkaEkranuProfilu } from '../_czesci/trasy-profilu';
+import { sciezkaEkranuProfilu, sciezkaPowrotuProfilu } from '../_czesci/trasy-profilu';
 
 const tekst = teksty.ViewProfileSituation;
 const NAZWA_GRUPY = 'sytuacja-rodzica';
@@ -34,29 +35,33 @@ const OPCJE: OpcjaGrupy<SytuacjaRodzica>[] = SYTUACJE.map((s) => ({
   opis: tekst.sytuacje[s].opis,
 }));
 
+function walidujSytuacje(w: { sytuacja: SytuacjaRodzica | null }): { sytuacja?: KodKomunikatu } {
+  return w.sytuacja === null ? { sytuacja: '0006' } : {};
+}
+
 export function WidokSytuacjiRodzica() {
-  const router = useRouter();
   const stanKonta = useStanKonta();
   const szkic = stanKonta?.szkicProfilu ?? null;
   const zgoda = stanKonta ? czyMaZgode(stanKonta.konto.decyzjeOZgodzie) : false;
+  const zDanymiZus = (stanKonta?.kopiaDanychZus ?? null) !== null;
 
   const [wybor, ustawWybor] = useState<SytuacjaRodzica | null>(null);
   const wybrana = wybor ?? sytuacjaSzkicu(szkic);
-  const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
   const [bladZapisu, ustawBladZapisu] = useState<KodKomunikatu | null>(null);
-  const [zajety, ustawZajety] = useState(false);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { sytuacja: wybrana },
+    waliduj: walidujSytuacje,
+    pola: { sytuacja: NAZWA_GRUPY },
+  });
 
   const wroc = () => {
     const s: SzkicProfilu | null = szkic === null ? null : { ...szkic, ostatniEkran: 'ViewProfileSituation' };
-    router.push(sciezkaEkranuProfilu(s ? poprzedniEkran(s, zgoda) : 'ViewProfileZusData', s));
+    przejdz(sciezkaPowrotuProfilu(s ? poprzedniEkran(s, zgoda) : 'ViewProfileZusData', s, zDanymiZus));
   };
 
   const dalej = () => {
-    if (wybrana === null) {
-      ustawBlad('0006');
-      document.getElementById(idOpcjiGrupy(NAZWA_GRUPY, SYTUACJE[0]))?.focus();
-      return;
-    }
+    if (!walidacja.sprobujWyslac() || wybrana === null) return;
     ustawZajety(true);
     const wynik = zapiszSzkic(
       { daneRodziny: { sytuacja: { wartosc: wybrana, zrodlo: 'odpowiedz-rodzica' } } },
@@ -68,7 +73,7 @@ export function WidokSytuacjiRodzica() {
       ustawBladZapisu(wynik.kod);
       return;
     }
-    router.push(sciezkaEkranuProfilu(nastepnyEkran(wynik.wartosc, zgoda), wynik.wartosc));
+    przejdz(sciezkaEkranuProfilu(nastepnyEkran(wynik.wartosc, zgoda), wynik.wartosc));
   };
 
   return (
@@ -82,11 +87,8 @@ export function WidokSytuacjiRodzica() {
             legenda={tekst.legenda}
             opcje={OPCJE}
             wartosc={wybrana}
-            onZmiana={(s) => {
-              ustawWybor(s);
-              ustawBlad(null);
-            }}
-            blad={blad}
+            onZmiana={ustawWybor}
+            {...walidacja.pole('sytuacja')}
           />
           <Notatka className="mt-6">
             <p className="m-0">

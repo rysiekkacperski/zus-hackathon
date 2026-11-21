@@ -2,7 +2,7 @@
 
 // ViewZas53Data: dane wnioskodawcy i płatnika z konta ZUS (tylko odczyt), telefon, rachunek, wypadek albo choroba
 // zawodowa z dokumentem (0124, 0040, 0041, 0006, 0238, 0239, 0010, 0240) i ponowne ustalenie prawa po wypadku.
-import { useRouter } from 'next/navigation';
+// Krok ma części (?czesc=N): 1 dane z konta ZUS, 2 kontakt i wypłata, 3 wypadek, 4 dokument (tylko przy wypadku).
 import { useState } from 'react';
 import { formatujDate, parsujDate, porownajDaty } from '@/domena/daty';
 import type { KodKomunikatu, WniosekZas53 } from '@/domena/typy';
@@ -12,10 +12,12 @@ import { useDzis } from '@/dane/magazyn/hooki';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { zapiszKrokZas53 } from '@/dane/magazyn/operacje/wnioski-zas53';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
-import { GrupaOpcji, idOpcjiGrupy } from '@/komponenty/grupa-opcji';
+import { CzescFormularza, useCzesciFormularza } from '@/komponenty/czesci-formularza';
+import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { ListaDefinicji } from '@/komponenty/lista-definicji';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { PoleDaty, PoleTekstowe } from '@/komponenty/pole-tekstowe';
@@ -23,8 +25,10 @@ import { PoleWyboru } from '@/komponenty/pole-wyboru';
 import { formatujKwote } from '@/komponenty/format';
 import { trasy } from '@/komponenty/rama/trasy';
 import { UkladDwuKolumnowy } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import {
   adresEkranuZas53,
+  adresOstatniejCzesciZas53,
   AkcjeKreatoraZas53,
   BrakWnioskuZas53,
   NaglowekKreatoraZas53,
@@ -40,16 +44,18 @@ type Wypadek = NonNullable<WniosekZas53['wypadek']>;
 type Przyczyna = NonNullable<Wypadek['przyczyna']>;
 type RodzajDokumentu = NonNullable<Wypadek['dokument']>['rodzaj'];
 type PoleDanych = 'telefon' | 'rachunek' | 'wypadek' | 'przyczyna' | 'rodzaj' | 'numer' | 'data';
-const KOLEJNOSC_POL: PoleDanych[] = ['telefon', 'rachunek', 'wypadek', 'przyczyna', 'rodzaj', 'numer', 'data'];
+/** Cel fokusu pola w kolejności na ekranie; dla grup radio nazwa grupy. */
 const ID_POLA: Record<PoleDanych, string> = {
   telefon: 'zas53-telefon',
   rachunek: 'zas53-rachunek',
-  wypadek: idOpcjiGrupy('zas53-wypadek', 'tak'),
-  przyczyna: idOpcjiGrupy('zas53-przyczyna', 'wypadek-przy-pracy'),
+  wypadek: 'zas53-wypadek',
+  przyczyna: 'zas53-przyczyna',
   rodzaj: 'zas53-rodzaj',
   numer: 'zas53-numer',
   data: 'zas53-data',
 };
+/** Pola części kroku: dane z konta ZUS (tylko odczyt), kontakt i wypłata, wypadek, dokument. */
+const PODZIAL: PoleDanych[][] = [[], ['telefon', 'rachunek'], ['wypadek', 'przyczyna'], ['rodzaj', 'numer', 'data']];
 
 /** 9 cyfr w grupach po 3 (`500 100 200`). */
 function grupujTelefon(numer: string): string {
@@ -65,7 +71,7 @@ export function WidokDanychZas53() {
 function FormularzDanych({ k }: { k: NonNullable<ReturnType<typeof useWniosekZas53>> }) {
   const { wniosek, kopia, konto, ustawienia } = k;
   const dzis = useDzis();
-  const router = useRouter();
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const numerZUstawien =
     ustawienia?.stanNumeru === 'potwierdzony' ? (ustawienia.numerPotwierdzony ?? ustawienia.numerTelefonu) : undefined;
   const [telefon, setTelefon] = useState(
@@ -77,11 +83,11 @@ function FormularzDanych({ k }: { k: NonNullable<ReturnType<typeof useWniosekZas
   const [rodzaj, setRodzaj] = useState<RodzajDokumentu | ''>(wniosek.wypadek?.dokument?.rodzaj ?? '');
   const [numer, setNumer] = useState(wniosek.wypadek?.dokument?.numer ?? '');
   const [data, setData] = useState(wniosek.wypadek?.dokument ? formatujDate(wniosek.wypadek.dokument.data) : '');
-  const [bledy, setBledy] = useState<Partial<Record<PoleDanych, KodKomunikatu>>>({});
   const [bladZapisu, setBladZapisu] = useState<KodKomunikatu | null>(null);
 
   const poUstaniu = czyPoUstaniu(wniosek);
   const poprzedni = poprzedniEkranZas53('ViewZas53Data', poUstaniu) ?? 'ViewZas53Certificate';
+  const zWypadkiem = wypadek === 'tak';
 
   const zbierz = (pelnaWalidacja: boolean): { zmiana: Partial<WniosekZas53>; bledy: Partial<Record<PoleDanych, KodKomunikatu>> } => {
     const b: Partial<Record<PoleDanych, KodKomunikatu>> = {};
@@ -120,14 +126,17 @@ function FormularzDanych({ k }: { k: NonNullable<ReturnType<typeof useWniosekZas
     return { zmiana, bledy: b };
   };
 
-  const dalej = () => {
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { telefon, rachunek, wypadek, przyczyna, rodzaj, numer, data },
+    waliduj: (): Partial<Record<PoleDanych, KodKomunikatu>> => zbierz(true).bledy,
+    pola: ID_POLA,
+  });
+  const czesci = useCzesciFormularza({ liczba: zWypadkiem ? 4 : 3, podzial: PODZIAL, walidacja });
+
+  const zapiszIPrzejdzDalej = () => {
     const { zmiana, bledy: b } = zbierz(true);
-    setBledy(b);
-    const pierwsze = KOLEJNOSC_POL.find((p) => b[p]);
-    if (pierwsze) {
-      document.getElementById(ID_POLA[pierwsze])?.focus();
-      return;
-    }
+    if (Object.keys(b).length > 0) return;
+    ustawZajety(true);
     let pelna: Partial<WniosekZas53> = zmiana;
     if (wniosek.zaswiadczenie) {
       const prawo = ustalPrawoZas53({
@@ -141,11 +150,14 @@ function FormularzDanych({ k }: { k: NonNullable<ReturnType<typeof useWniosekZas
     const zalaczniki = zbudujZalaczniki({ ...wniosek, ...pelna });
     const wynik = zapiszKrokZas53(wniosek.idWniosku, { ...pelna, zalaczniki }, 'ViewZas53Summary', pobierzKontekstOperacji());
     if (!wynik.ok) {
+      ustawZajety(false);
       setBladZapisu(wynik.kod);
       return;
     }
-    router.push(adresEkranuZas53('ViewZas53Summary', wniosek.idWniosku));
+    przejdz(adresEkranuZas53('ViewZas53Summary', wniosek.idWniosku));
   };
+
+  const dalej = () => czesci.dalej(zapiszIPrzejdzDalej);
 
   const zapiszDoDokonczenia = () => {
     const { zmiana, bledy: b } = zbierz(false);
@@ -158,7 +170,7 @@ function FormularzDanych({ k }: { k: NonNullable<ReturnType<typeof useWniosekZas
       return;
     }
     ustawKomunikatPoPrzejsciu({ kod: '0058', dlaWidoku: 'ViewCaseDetails' });
-    router.push(trasy.ViewCaseDetails({ idSprawy: wniosek.idSprawy }));
+    przejdz(trasy.ViewCaseDetails({ idSprawy: wniosek.idSprawy }));
   };
 
   const platnik = wniosek.platnik;
@@ -194,8 +206,14 @@ function FormularzDanych({ k }: { k: NonNullable<ReturnType<typeof useWniosekZas
     <>
       <NaglowekKreatoraZas53 />
       <div className="flex flex-col gap-7.5">
-        <PostepZas53 ekran="ViewZas53Data" poUstaniu={poUstaniu} idWniosku={wniosek.idWniosku} />
-        {komunikatyPrawa.length > 0 ? <div className="flex flex-col gap-4">{komunikatyPrawa}</div> : null}
+        <PostepZas53
+          ekran="ViewZas53Data"
+          poUstaniu={poUstaniu}
+          idWniosku={wniosek.idWniosku}
+          czesc={czesci.czesc}
+          wypadek={zWypadkiem}
+        />
+        {czesci.czyPierwsza && komunikatyPrawa.length > 0 ? <div className="flex flex-col gap-4">{komunikatyPrawa}</div> : null}
         {bladZapisu ? <Komunikat kod={bladZapisu} /> : null}
         <UkladDwuKolumnowy
           etykietaBocznej={teksty.ViewZas53Start.kreator.twojWniosek}
@@ -208,120 +226,135 @@ function FormularzDanych({ k }: { k: NonNullable<ReturnType<typeof useWniosekZas
                 dalej();
               }}
             >
-              <Karta tytul={t.kartaWnioskodawcy} bezLinii as="section">
-                <Notatka>{t.notatkaDanych}</Notatka>
-                <p className="m-0 my-4 text-body-strong">{t.stanNa({ data: formatujDate(kopia?.odczytano ?? dzis) })}</p>
-                <ListaDefinicji
-                  pozycje={[
-                    { etykieta: t.imieINazwisko, wartosc: imieINazwisko },
-                    { etykieta: t.pesel, wartosc: kopia?.pesel ?? konto.pesel },
-                    { etykieta: t.adres, wartosc: kopia?.adres ?? t.brakDanej },
-                  ]}
-                />
-              </Karta>
-              <Karta tytul={t.kartaPlatnika} bezLinii as="section">
-                <p className="m-0 mb-4">{poUstaniu ? t.platnikPoUstaniu : t.platnikDzialalnosc}</p>
-                <ListaDefinicji
-                  pozycje={[
-                    { etykieta: t.nazwaPlatnika, wartosc: platnik?.nazwa ?? t.brakDanej },
-                    { etykieta: t.nip, wartosc: platnik?.nip ?? t.brakDanej },
-                    { etykieta: t.regon, wartosc: platnik?.regon ?? t.brakDanej },
-                  ]}
-                />
-              </Karta>
-              <Karta tytul={t.kartaWyplaty} bezLinii as="section">
-                <div className="flex flex-col gap-6">
-                  <PoleTekstowe
-                    id={ID_POLA.telefon}
-                    etykieta={t.telefon}
-                    podpowiedz={numerZUstawien ? t.telefonZUstawien : t.telefonPodpowiedz}
-                    wartosc={telefon}
-                    onZmiana={setTelefon}
-                    typ="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    blad={bledy.telefon ?? null}
-                    szerokosc="srednia"
-                  />
-                  <PoleTekstowe
-                    id={ID_POLA.rachunek}
-                    etykieta={t.rachunek}
-                    podpowiedz={t.rachunekPodpowiedz}
-                    wartosc={rachunek}
-                    onZmiana={setRachunek}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    blad={bledy.rachunek ?? null}
-                  />
+              <CzescFormularza czesci={czesci} numer={1}>
+                <div className="grid gap-7.5 lg:grid-cols-2">
+                  <Karta tytul={t.kartaWnioskodawcy} bezLinii as="section">
+                    <Notatka>{t.notatkaDanych}</Notatka>
+                    <p className="m-0 my-4 text-body-strong">{t.stanNa({ data: formatujDate(kopia?.odczytano ?? dzis) })}</p>
+                    <ListaDefinicji
+                      szerokoscEtykiety="waska"
+                      pozycje={[
+                        { etykieta: t.imieINazwisko, wartosc: imieINazwisko },
+                        { etykieta: t.pesel, wartosc: kopia?.pesel ?? konto.pesel },
+                        { etykieta: t.adres, wartosc: kopia?.adres ?? t.brakDanej },
+                      ]}
+                    />
+                  </Karta>
+                  <Karta tytul={t.kartaPlatnika} bezLinii as="section">
+                    <p className="m-0 mb-4">{poUstaniu ? t.platnikPoUstaniu : t.platnikDzialalnosc}</p>
+                    <ListaDefinicji
+                      szerokoscEtykiety="waska"
+                      pozycje={[
+                        { etykieta: t.nazwaPlatnika, wartosc: platnik?.nazwa ?? t.brakDanej },
+                        { etykieta: t.nip, wartosc: platnik?.nip ?? t.brakDanej },
+                        { etykieta: t.regon, wartosc: platnik?.regon ?? t.brakDanej },
+                      ]}
+                    />
+                  </Karta>
                 </div>
-              </Karta>
-              <Karta tytul={t.kartaWypadku} bezLinii as="section">
-                <div className="flex flex-col gap-6">
-                  <GrupaOpcji
-                    nazwa="zas53-wypadek"
-                    legenda={t.pytanieWypadku}
-                    opcje={[
-                      { wartosc: 'tak', etykieta: t.tak },
-                      { wartosc: 'nie', etykieta: t.nie },
-                    ]}
-                    wartosc={wypadek}
-                    onZmiana={(w) => setWypadek(w as 'tak' | 'nie')}
-                    blad={bledy.wypadek ?? null}
-                    uklad="poziomo"
-                  />
-                  {wypadek === 'tak' ? (
-                    <>
+              </CzescFormularza>
+              <CzescFormularza czesci={czesci} numer={2}>
+                <Karta tytul={t.kartaWyplaty} bezLinii as="section">
+                  <div className="flex flex-col gap-6">
+                    <PoleTekstowe
+                      id={ID_POLA.telefon}
+                      etykieta={t.telefon}
+                      podpowiedz={numerZUstawien ? t.telefonZUstawien : t.telefonPodpowiedz}
+                      wartosc={telefon}
+                      onZmiana={setTelefon}
+                      typ="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      {...walidacja.pole('telefon')}
+                      szerokosc="srednia"
+                    />
+                    <PoleTekstowe
+                      id={ID_POLA.rachunek}
+                      etykieta={t.rachunek}
+                      podpowiedz={t.rachunekPodpowiedz}
+                      wartosc={rachunek}
+                      onZmiana={setRachunek}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      {...walidacja.pole('rachunek')}
+                    />
+                  </div>
+                </Karta>
+              </CzescFormularza>
+              <CzescFormularza czesci={czesci} numer={3}>
+                <Karta tytul={t.kartaWypadku} bezLinii as="section">
+                  <div className="flex flex-col gap-6">
+                    <GrupaOpcji
+                      nazwa={ID_POLA.wypadek}
+                      legenda={t.pytanieWypadku}
+                      opcje={[
+                        { wartosc: 'tak', etykieta: t.tak },
+                        { wartosc: 'nie', etykieta: t.nie },
+                      ]}
+                      wartosc={wypadek}
+                      onZmiana={(w) => setWypadek(w as 'tak' | 'nie')}
+                      {...walidacja.pole('wypadek')}
+                      uklad="poziomo"
+                    />
+                    {zWypadkiem ? (
                       <GrupaOpcji
-                        nazwa="zas53-przyczyna"
+                        nazwa={ID_POLA.przyczyna}
                         legenda={t.przyczyna}
                         opcje={(Object.keys(t.przyczyny) as Przyczyna[]).map((p) => ({ wartosc: p, etykieta: t.przyczyny[p] }))}
                         wartosc={przyczyna}
                         onZmiana={(p) => setPrzyczyna(p as Przyczyna)}
-                        blad={bledy.przyczyna ?? null}
+                        {...walidacja.pole('przyczyna')}
                         uklad="proste"
                       />
-                      <div className="flex flex-wrap gap-6">
-                        <PoleWyboru
-                          id={ID_POLA.rodzaj}
-                          etykieta={t.rodzajDokumentu}
-                          opcje={(Object.keys(t.rodzajeDokumentu) as RodzajDokumentu[]).map((r) => ({ wartosc: r, etykieta: t.rodzajeDokumentu[r] }))}
-                          wartosc={rodzaj}
-                          onZmiana={(r) => setRodzaj(r as RodzajDokumentu | '')}
-                          pustaOpcja={teksty.wspolne.przyciski.wybierz}
-                          blad={bledy.rodzaj ?? null}
-                          szerokosc="srednia"
-                        />
-                        <PoleTekstowe
-                          id={ID_POLA.numer}
-                          etykieta={t.numerDokumentu}
-                          wartosc={numer}
-                          onZmiana={(w) => setNumer(w.slice(0, 30))}
-                          maksDlugosc={30}
-                          autoComplete="off"
-                          blad={bledy.numer ?? null}
-                          szerokosc="srednia"
-                        />
-                        <PoleDaty
-                          id={ID_POLA.data}
-                          etykieta={t.dataDokumentu}
-                          podpowiedz={t.podpowiedzDaty}
-                          wartosc={data}
-                          onZmiana={setData}
-                          blad={bledy.data ?? null}
-                          szerokosc="srednia"
-                        />
-                      </div>
-                      <Notatka>{t.notatkaDokumentu}</Notatka>
-                    </>
-                  ) : (
-                    <Notatka>{t.notatkaWypadku}</Notatka>
-                  )}
-                </div>
-              </Karta>
+                    ) : (
+                      <Notatka>{t.notatkaWypadku}</Notatka>
+                    )}
+                  </div>
+                </Karta>
+              </CzescFormularza>
+              <CzescFormularza czesci={czesci} numer={4}>
+                <Karta tytul={t.kartaDokumentu} bezLinii as="section">
+                  <div className="flex flex-col gap-6">
+                    <div className="flex flex-wrap gap-6">
+                      <PoleWyboru
+                        id={ID_POLA.rodzaj}
+                        etykieta={t.rodzajDokumentu}
+                        opcje={(Object.keys(t.rodzajeDokumentu) as RodzajDokumentu[]).map((r) => ({ wartosc: r, etykieta: t.rodzajeDokumentu[r] }))}
+                        wartosc={rodzaj}
+                        onZmiana={(r) => setRodzaj(r as RodzajDokumentu | '')}
+                        pustaOpcja={teksty.wspolne.przyciski.wybierz}
+                        {...walidacja.pole('rodzaj')}
+                        szerokosc="srednia"
+                      />
+                      <PoleTekstowe
+                        id={ID_POLA.numer}
+                        etykieta={t.numerDokumentu}
+                        wartosc={numer}
+                        onZmiana={(w) => setNumer(w.slice(0, 30))}
+                        maksDlugosc={30}
+                        autoComplete="off"
+                        {...walidacja.pole('numer')}
+                        szerokosc="srednia"
+                      />
+                      <PoleDaty
+                        id={ID_POLA.data}
+                        etykieta={t.dataDokumentu}
+                        podpowiedz={t.podpowiedzDaty}
+                        wartosc={data}
+                        onZmiana={setData}
+                        {...walidacja.pole('data')}
+                        szerokosc="srednia"
+                      />
+                    </div>
+                    <Notatka>{t.notatkaDokumentu}</Notatka>
+                  </div>
+                </Karta>
+              </CzescFormularza>
               <AkcjeKreatoraZas53
-                wstecz={adresEkranuZas53(poprzedni, wniosek.idWniosku)}
+                onWstecz={() => czesci.wroc(() => przejdz(adresOstatniejCzesciZas53(poprzedni, wniosek.idWniosku, zWypadkiem)))}
                 onZapisz={zapiszDoDokonczenia}
                 onDalej={dalej}
+                zajety={zajety}
               />
             </form>
           }

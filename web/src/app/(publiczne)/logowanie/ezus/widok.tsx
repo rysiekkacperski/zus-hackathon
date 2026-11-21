@@ -2,7 +2,8 @@
 
 // ViewEzusLogin: makieta logowania loginem i hasłem eZUS (Story 3.1.1.1.2, KA-05, KA-07–KA-10;
 // wzory P01-05 i P01-06). Każdy niepusty login i niepuste hasło prowadzą do wyboru konta (R13),
-// a hasło znika ze stanu formularza przed przejściem dalej. Właściciel: u01.
+// a hasło znika ze stanu formularza przed przejściem dalej. Błąd pola pokazuje się po opuszczeniu pola
+// i po próbie logowania. Właściciel: u01.
 import { useRef, useState, type FormEvent } from 'react';
 import { NaglowekDemo } from '@/app/(publiczne)/_czesci/naglowek-demo';
 import type { KodKomunikatu } from '@/domena/typy';
@@ -10,6 +11,7 @@ import { Karta } from '@/komponenty/karta';
 import { Notatka } from '@/komponenty/notatka';
 import { PoleHasla, PoleTekstowe } from '@/komponenty/pole-tekstowe';
 import { Przycisk } from '@/komponenty/przycisk';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { useAkcjeMakiety } from '../_czesci/makieta-logowania';
 
@@ -18,13 +20,21 @@ const MAKS_DLUGOSC = 64;
 const ID_LOGINU = 'ezus-login';
 const ID_HASLA = 'ezus-haslo';
 
+interface DaneLogowania {
+  login: string;
+  haslo: string;
+}
+
 interface BledyLogowania {
   login?: KodKomunikatu;
   haslo?: KodKomunikatu;
 }
 
+// Kolejność pól na ekranie i cel fokusu pierwszego pola z błędem.
+const idPol = { login: ID_LOGINU, haslo: ID_HASLA } as const;
+
 /** Login i hasło makiety: pole wymagane, od 1 do 64 znaków (Walidacja Story 3.1.1.1.2). */
-function walidujLogowanie(login: string, haslo: string): BledyLogowania {
+function walidujLogowanie({ login, haslo }: DaneLogowania): BledyLogowania {
   const bledy: BledyLogowania = {};
   if (login.trim() === '') bledy.login = '0248';
   if (haslo === '') bledy.haslo = '0249';
@@ -32,23 +42,19 @@ function walidujLogowanie(login: string, haslo: string): BledyLogowania {
 }
 
 export function WidokLogowaniaEzus() {
-  const { potwierdz, przerwij } = useAkcjeMakiety('ezus');
+  const { potwierdz, przerwij, zajety } = useAkcjeMakiety('ezus');
   const [login, ustawLogin] = useState('');
   const [haslo, ustawHaslo] = useState('');
-  const [bledy, ustawBledy] = useState<BledyLogowania>({});
+  const walidacja = useWalidacjaNaBiezaco({ wartosci: { login, haslo }, waliduj: walidujLogowanie, pola: idPol });
   const formularz = useRef<HTMLFormElement>(null);
 
   const zaloguj = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const nowe = walidujLogowanie(login, haslo);
-    ustawBledy(nowe);
-    if (nowe.login || nowe.haslo) {
-      const idPola = nowe.login ? ID_LOGINU : ID_HASLA;
-      formularz.current?.querySelector<HTMLInputElement>(`#${idPola}`)?.focus();
-      return;
-    }
-    // Hasło służy wyłącznie symulacji: usuwamy je ze stanu i z pola przed przejściem dalej.
+    if (zajety || !walidacja.sprobujWyslac()) return;
+    // Hasło służy wyłącznie symulacji: usuwamy je ze stanu i z pola przed przejściem dalej. Walidacja wraca
+    // do stanu początkowego, więc puste pole hasła nie pokazuje błędu po powrocie na ekran.
     ustawHaslo('');
+    walidacja.resetuj();
     const pole = formularz.current?.querySelector<HTMLInputElement>(`#${ID_HASLA}`);
     if (pole) pole.value = '';
     potwierdz();
@@ -66,7 +72,7 @@ export function WidokLogowaniaEzus() {
               etykieta={tekst.login}
               wartosc={login}
               onZmiana={ustawLogin}
-              blad={bledy.login}
+              {...walidacja.pole('login')}
               maksDlugosc={MAKS_DLUGOSC}
               autoComplete="off"
               zwykla
@@ -77,7 +83,7 @@ export function WidokLogowaniaEzus() {
               etykieta={tekst.haslo}
               wartosc={haslo}
               onZmiana={ustawHaslo}
-              blad={bledy.haslo}
+              {...walidacja.pole('haslo')}
               maksDlugosc={MAKS_DLUGOSC}
               autoComplete="off"
               zwykla
@@ -92,10 +98,18 @@ export function WidokLogowaniaEzus() {
             </Notatka>
           </div>
           <div className="mt-7.5 flex flex-wrap gap-4">
-            <Przycisk type="submit" wariant="glowny" szerokosc="szeroka">
+            <Przycisk type="submit" wariant="glowny" szerokosc="szeroka" zajety={zajety}>
               {tekst.zaloguj}
             </Przycisk>
-            <Przycisk wariant="drugorzedny" onClick={przerwij}>
+            <Przycisk
+              wariant="drugorzedny"
+              disabled={zajety}
+              onClick={() => {
+                // Opuszczenie pola przy kliknięciu nie zostawia błędu na ekranie, do którego można wrócić.
+                walidacja.resetuj();
+                przerwij();
+              }}
+            >
               {tekst.przerwij}
             </Przycisk>
           </div>

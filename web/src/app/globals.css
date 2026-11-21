@@ -34,77 +34,106 @@
 
   --shadow-header: 0 4px 12px rgba(33, 81, 159, 0.2);
 
-  --spacing-header: 80px;
-  --spacing-sidebar: 320px;
-  --spacing-sidebar-zwiniety: 84px;
-  --spacing-nav-item: 54px;
-  --spacing-control: 46px;
-  --spacing-segment: 36px;
-  --spacing-tile: 70px;
-  --spacing-row: 50px;
-  --spacing-day: 36px;
-  --spacing-toggle: 40px;
-  --spacing-avatar: 48px;
-  --spacing-icon: 24px;
-  --spacing-ring: 224px;
-  --spacing-ring-stroke: 24px;
-  --spacing-empty-icon: 72px;
-  --spacing-login-column: 540px;
-  --spacing-method-icon: 40px;
-  --spacing-qr: 240px;
-  --spacing-progress: 8px;
+  --spacing-header: 5rem;
+  --spacing-sidebar: 20rem;
+  --spacing-sidebar-zwiniety: 5.25rem;
+  --spacing-nav-item: 3.375rem;
+  --spacing-control: 2.875rem;
+  --spacing-segment: 2.25rem;
+  --spacing-tile: 4.375rem;
+  --spacing-row: 3.125rem;
+  --spacing-day: 2.25rem;
+  --spacing-toggle: 2.5rem;
+  --spacing-avatar: 3rem;
+  --spacing-icon: 1.5rem;
+  --spacing-ring: 14rem;
+  --spacing-ring-stroke: 1.5rem;
+  --spacing-empty-icon: 4.5rem;
+  --spacing-login-column: 33.75rem;
+  --spacing-method-icon: 2.5rem;
+  --spacing-qr: 15rem;
+  --spacing-progress: 0.5rem;
 
-  --container-tresc: 1443px;
-  --container-okno: 640px;
-  --container-okno-szerokie: 960px;
-  --container-panel-asystenta: 480px;
+  --container-tresc: 90.1875rem;
+  --container-okno: 40rem;
+  --container-okno-szerokie: 60rem;
+  --container-panel-asystenta: 30rem;
 
-  --text-page-title: 24px;
-  --text-page-title--line-height: 32px;
+  --text-page-title: 1.5rem;
+  --text-page-title--line-height: 2rem;
   --text-page-title--font-weight: 600;
-  --text-page-title-home: 24px;
-  --text-page-title-home--line-height: 32px;
+  --text-page-title-home: 1.5rem;
+  --text-page-title-home--line-height: 2rem;
   --text-page-title-home--font-weight: 500;
   --text-page-title-home--letter-spacing: 0.06em;
-  --text-section-title: 20px;
-  --text-section-title--line-height: 28px;
+  --text-section-title: 1.25rem;
+  --text-section-title--line-height: 1.75rem;
   --text-section-title--font-weight: 600;
-  --text-widget-title: 20px;
-  --text-widget-title--line-height: 28px;
+  --text-widget-title: 1.25rem;
+  --text-widget-title--line-height: 1.75rem;
   --text-widget-title--font-weight: 500;
   --text-widget-title--letter-spacing: 0.06em;
-  --text-lead: 16px;
-  --text-lead--line-height: 24px;
+  --text-lead: 1rem;
+  --text-lead--line-height: 1.5rem;
   --text-lead--letter-spacing: 0.06em;
-  --text-body: 16px;
-  --text-body--line-height: 24px;
-  --text-body-strong: 16px;
-  --text-body-strong--line-height: 24px;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-body-strong: 1rem;
+  --text-body-strong--line-height: 1.5rem;
   --text-body-strong--font-weight: 600;
-  --text-tile-title: 18px;
-  --text-tile-title--line-height: 28px;
+  --text-tile-title: 1.125rem;
+  --text-tile-title--line-height: 1.75rem;
   --text-tile-title--font-weight: 600;
-  --text-small: 14px;
-  --text-small--line-height: 20px;
-  --text-small-strong: 14px;
-  --text-small-strong--line-height: 20px;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.25rem;
+  --text-small-strong: 0.875rem;
+  --text-small-strong--line-height: 1.25rem;
   --text-small-strong--font-weight: 600;
-  --text-amount: 24px;
-  --text-amount--line-height: 32px;
+  --text-amount: 1.5rem;
+  --text-amount--line-height: 2rem;
   --text-amount--font-weight: 600;
-  --text-logo: 18px;
-  --text-logo--line-height: 24px;
+  --text-logo: 1.125rem;
+  --text-logo--line-height: 1.5rem;
   --text-logo--font-weight: 700;
   --text-logo--letter-spacing: 0.02em;
 }
 
-@theme inline {
-  --font-sans: var(--font-open-sans-latin), var(--font-open-sans-latin-ext), "Noto Sans", Arial, sans-serif;
+/* Open Sans, krój zmienny 300–800: jedna rodzina z dwoma podzbiorami wybieranymi przez unicode-range.
+   Znaki polskie (ą, ć, ę, ł, ń, ś, ź, ż) pochodzą z pliku latin-ext, a ó, cudzysłowy i myślniki z pliku latin.
+   Pliki leżą w public/fonty/, a app/layout.tsx wczytuje je z wyprzedzeniem. */
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url("/fonty/open-sans-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url("/fonty/open-sans-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Arial dopasowany metrykami do Open Sans na czas wczytywania kroju (font-display: swap). */
+@font-face {
+  font-family: "Open Sans Fallback";
+  src: local("Arial");
+  ascent-override: 101.58%;
+  descent-override: 27.84%;
+  line-gap-override: 0%;
+  size-adjust: 105.22%;
+}
+
+@theme {
+  --font-sans: "Open Sans", "Open Sans Fallback", "Noto Sans", Arial, sans-serif;
 }
 
 @layer base {
-  html { background: var(--color-surface-page); color: var(--color-ink); }
-  body { margin: 0; font-family: var(--font-sans); font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased; }
+  html { font-size: 75%; background: var(--color-surface-page); color: var(--color-ink); }
+  body { margin: 0; font-family: var(--font-sans); font-size: 1rem; line-height: 1.5rem; -webkit-font-smoothing: antialiased; }
   a { color: var(--color-brand); }
   a:hover { color: var(--color-brand-deep); }
   :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }

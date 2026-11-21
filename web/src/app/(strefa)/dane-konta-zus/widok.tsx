@@ -2,6 +2,10 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  KartaOdczytuDanychZus,
+  OgloszenieOdczytuDanychZus,
+} from '@/app/(strefa)/profil-na-start/dane-z-konta-zus/_czesci/stan-odczytu-zus';
 import { DanePytania } from '@/app/(strefa)/pytania-do-zus/_czesci/karta-kontekstu';
 import { zrodloweDaneKonta } from '@/dane/konta-zus';
 import { adresEzus, odczytajDaneKontaUbezpieczonego } from '@/dane/magazyn/operacje/kanaly-zus-usc';
@@ -245,17 +249,19 @@ export function WidokDanychKontaZus() {
 
   const powrot = { href: adresPowrotu, etykieta: idSprawy ? t.powrotInstrukcja : t.powrotPlan };
 
+  // Ogłoszenie odczytu stoi w obu układach ekranu na tej samej pozycji, więc zostaje na ekranie po zapisaniu kopii.
+  const ogloszenieOdczytu = (
+    <OgloszenieOdczytuDanychZus trwa={odczyt.stan === 'trwa'} udany={odczyt.stan === 'gotowy'} />
+  );
+
   if (kopia === null) {
     const bezPolaczenia = odczyt.stan === 'blad';
     return (
       <>
+        {ogloszenieOdczytu}
         <NaglowekStrony tytul={t.naglowek} powrot={powrot} />
         <Stos odstep={7.5} className="max-w-tresc">
-          {odczyt.stan === 'trwa' ? (
-            <p role="status" className="m-0 text-body">
-              {t.odczytywanie}
-            </p>
-          ) : null}
+          {odczyt.stan === 'trwa' ? <KartaOdczytuDanychZus pesel={konto?.pesel} /> : null}
           {bezPolaczenia ? (
             <Komunikat
               kod={odczyt.kod === '0002' ? '0133' : odczyt.kod}
@@ -266,11 +272,13 @@ export function WidokDanychKontaZus() {
               }
             />
           ) : null}
-          <Karta tytul={t.pusta.tytul} bezLinii>
-            <StanPusty ikona="baza-danych" przerywany>
-              <p className="m-0">{t.pusta.opis}</p>
-            </StanPusty>
-          </Karta>
+          {odczyt.stan === 'trwa' ? null : (
+            <Karta tytul={t.pusta.tytul} bezLinii>
+              <StanPusty ikona="baza-danych" przerywany>
+                <p className="m-0">{t.pusta.opis}</p>
+              </StanPusty>
+            </Karta>
+          )}
           {stopka}
         </Stos>
       </>
@@ -279,14 +287,16 @@ export function WidokDanychKontaZus() {
 
   return (
     <>
+      {ogloszenieOdczytu}
       <NaglowekStrony tytul={t.naglowek} powrot={powrot} akcje={akcje} />
       <Stos odstep={7.5} className="max-w-tresc">
+        {odczyt.stan === 'trwa' ? <KartaOdczytuDanychZus pesel={konto?.pesel} /> : null}
         {odczyt.stan === 'blad' && odczyt.kod === '0002' ? (
           <Komunikat kod="0002" parametry={{ dataOdczytu: formatujDate(kopia.odczytano) }} />
         ) : null}
         {odczyt.stan === 'blad' && odczyt.kod !== '0002' ? <Komunikat kod={odczyt.kod} /> : null}
         {bladEzus ? <Komunikat kod={bladEzus} /> : null}
-        <div className="grid gap-2" aria-live="polite">
+        <div className="grid gap-2">
           <p className="m-0 text-body-strong">{t.stanNaCzas({ czas: formatujDateICzas(kopia.odczytano) })}</p>
           <p className="m-0 text-body">{t.wstep}</p>
         </div>

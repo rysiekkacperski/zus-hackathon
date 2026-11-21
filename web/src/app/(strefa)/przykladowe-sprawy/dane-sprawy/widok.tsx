@@ -2,11 +2,12 @@
 
 // ViewSampleCaseData (3.4.3.1.1–3.4.3.1.5): dane bieżącej przykładowej sprawy ze źródłem każdej wartości,
 // dokumenty sprawy z podglądem i dodawaniem, korekty, oczekiwane rozstrzygnięcie i zatwierdzenie danych
-// (wzory P13-02, P13-06, P13-09, P13-10, P13-11, P13-12).
-import { useRouter } from 'next/navigation';
+// (wzory P13-02, P13-06, P13-09, P13-10, P13-11, P13-12). Formularz dzieli grupy danych na części (?czesc=N),
+// a komunikaty odczytu i notatka stanu stoją nad pierwszą częścią, czyli nad dokumentami sprawy.
 import { useEffect, useState } from 'react';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { PrzyciskLink } from '@/komponenty/przycisk';
 import { Ikona } from '@/komponenty/ikona';
@@ -25,14 +26,13 @@ import { FormularzDanychSprawy } from './_czesci/formularz-sprawy';
 const t = teksty.ViewSampleCaseData;
 
 export function WidokDanychPrzykladowejSprawy() {
-  const router = useRouter();
   const sesja = useSesja();
   const stanSesji = useStanSesji();
   const teraz = useTeraz();
   const sprawa = stanSesji?.przykladowaSprawa;
   const [komunikaty, setKomunikaty] = useState<KodKomunikatu[]>([]);
   const [dodawanie, setDodawanie] = useState<string | null>(null);
-  const [usuwanie, setUsuwanie] = useState(false);
+  const { zajety: usuwanie, ustawZajety: ustawUsuwanie, przejdz } = useNawigacjaZLadowaniem();
 
   useEffect(() => {
     usunPlikiPo24h(pobierzKontekstOperacji());
@@ -67,10 +67,10 @@ export function WidokDanychPrzykladowejSprawy() {
   }
 
   async function usun() {
-    setUsuwanie(true);
+    ustawUsuwanie(true);
     const wynik = await usunSprawe(pobierzKontekstOperacji());
-    if (wynik.ok) router.push(trasy.ViewSampleCaseList());
-    else setUsuwanie(false);
+    if (wynik.ok) przejdz(trasy.ViewSampleCaseList());
+    else ustawUsuwanie(false);
   }
 
   const zespol = sprawa.zrodlo !== 'wgrane-dokumenty';
@@ -80,6 +80,18 @@ export function WidokDanychPrzykladowejSprawy() {
     ? t.wstepZespolu({ zrodlo: teksty.ViewSampleCaseList.zrodla[sprawa.zrodlo], sytuacja: malaLitera(sprawa.sytuacja ?? ''), czas: czasWyboru })
     : t.wstepWgranej({ czas: czasWyboru, stanNa: formatujDateICzas(teraz) });
   const kluczFormularza = `${sprawa.rozpoczeto}|${sprawa.dokumenty.map((d) => d.id).join(',')}`;
+  const wprowadzenie = komunikaty.length > 0 || zespol ? (
+    <Stos odstep={7.5}>
+      {komunikaty.length > 0 ? (
+        <Stos odstep={3}>
+          {komunikaty.map((kod) => (
+            <Komunikat key={kod} kod={kod} />
+          ))}
+        </Stos>
+      ) : null}
+      {zespol ? <Notatka>{t.notatkaStanu({ stanNa: formatujDateICzas(teraz) })}</Notatka> : null}
+    </Stos>
+  ) : null;
 
   return (
     <>
@@ -100,15 +112,7 @@ export function WidokDanychPrzykladowejSprawy() {
           </button>
         }
       />
-      <Stos odstep={7.5} className="max-w-tresc">
-        {komunikaty.length > 0 ? (
-          <Stos odstep={3}>
-            {komunikaty.map((kod) => (
-              <Komunikat key={kod} kod={kod} />
-            ))}
-          </Stos>
-        ) : null}
-        {zespol ? <Notatka>{t.notatkaStanu({ stanNa: formatujDateICzas(teraz) })}</Notatka> : null}
+      <div className="max-w-tresc">
         <FormularzDanychSprawy
           key={kluczFormularza}
           sprawa={sprawa}
@@ -116,8 +120,9 @@ export function WidokDanychPrzykladowejSprawy() {
           teraz={teraz}
           onDodajDokument={dodajDokument}
           dodawanie={dodawanie}
+          wprowadzenie={wprowadzenie}
         />
-      </Stos>
+      </div>
     </>
   );
 }

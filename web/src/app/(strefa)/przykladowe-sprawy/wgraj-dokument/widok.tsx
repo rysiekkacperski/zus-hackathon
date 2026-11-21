@@ -2,12 +2,13 @@
 
 // ViewSampleCaseUpload (3.4.3.1.2): wybór pliku od razu rozpoczyna wgranie i odczyt danych (wzory P13-03, P13-04, P13-05).
 // Format i wielkość pliku sprawdza pole (0103, 0104), a rozpoznanie i odczyt kończą się komunikatem strony (0105, 0106, 0108).
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { Karta } from '@/komponenty/karta';
 import { ListaKrokow } from '@/komponenty/kroki';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { BladPola, idBledu, klasyRamkiPolaWpisu, polaczOpisy } from '@/komponenty/pole';
@@ -29,12 +30,12 @@ function rozmiarMb(bajty: number): string {
 }
 
 export function WidokWgraniaDokumentu() {
-  const router = useRouter();
   const parametry = useSearchParams();
   const tryb: TrybWgraniaDokumentu = parametry.get('tryb') === 'dodaj' ? 'dodaj' : 'nowa';
   const pole = useRef<HTMLInputElement>(null);
-  const [plik, setPlik] = useState<File | null>(null);
-  const [trwa, setTrwa] = useState(false);
+  // Plik i odczyt wracają do stanu początkowego po przejściu do danych sprawy, więc powrót pokazuje pusty wybór pliku.
+  const [plik, setPlik] = useStanChwilowy<File | null>(null);
+  const { zajety: trwa, ustawZajety: setTrwa, przejdz } = useNawigacjaZLadowaniem();
   const [bladPola, setBladPola] = useState<KodKomunikatu | null>(null);
   const [bladStrony, setBladStrony] = useState<KodKomunikatu | null>(null);
 
@@ -46,12 +47,14 @@ export function WidokWgraniaDokumentu() {
     setBladStrony(null);
     setTrwa(true);
     const wynik = await wgrajDokument(wybrany, tryb, pobierzKontekstOperacji());
-    setTrwa(false);
     if (wynik.ok) {
       for (const kod of wynik.wartosc.komunikaty) ustawKomunikatPoPrzejsciu({ kod, dlaWidoku: 'ViewSampleCaseData' });
-      router.push(trasy.ViewSampleCaseData());
+      if (pole.current) pole.current.value = '';
+      // Odczyt trwa na ekranie do pokazania danych sprawy.
+      przejdz(trasy.ViewSampleCaseData());
       return;
     }
+    setTrwa(false);
     if (wynik.bledyPol?.plik) {
       setBladPola(wynik.bledyPol.plik);
       pole.current?.focus();

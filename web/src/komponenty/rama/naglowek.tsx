@@ -1,6 +1,6 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { Ikona } from '@/komponenty/ikona';
 import { PrzyciskIkona } from '@/komponenty/przycisk-ikona';
 import { KontoWNaglowku } from '@/komponenty/rama/konto-w-naglowku';
 import { teksty } from '@/teksty';
@@ -13,18 +13,25 @@ export interface LogoProps {
   href: string;
 }
 
-// pr-logo: znak w kole marki i nazwa przewodnika, poniżej md tekst 16 px.
+// pr-logo: logotyp ZUS Mama w wersji poziomej, a od md po pionowej kresce (ez-header__divider) nazwa przewodnika.
+// Nazwę dostępną daje aria-label linku, więc obraz ma pusty tekst alternatywny.
 export function Logo({ href }: LogoProps) {
   return (
     <Link
       href={href}
       aria-label={teksty.rama.logoEtykieta}
-      className="inline-flex min-w-0 items-center gap-2 text-brand no-underline hover:text-brand-deep md:gap-3"
+      className="inline-flex min-w-0 items-center gap-4 text-brand no-underline hover:text-brand-deep"
     >
-      <span className="grid size-10 flex-none place-items-center rounded-full bg-brand text-on-brand">
-        <Ikona nazwa="logo" rozmiar={24} />
-      </span>
-      <span className="truncate text-body font-bold tracking-[0.02em] md:text-logo">{teksty.rama.logo}</span>
+      <Image
+        src="/logo-zusmama-poziome.svg"
+        alt=""
+        width={232}
+        height={50}
+        loading="eager"
+        className="h-10 w-auto shrink-0 md:h-11"
+      />
+      <span aria-hidden="true" className="hidden h-10 w-px shrink-0 bg-ink md:block" />
+      <span className="hidden min-w-0 truncate text-logo md:block">{teksty.rama.logo}</span>
     </Link>
   );
 }

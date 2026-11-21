@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { FocusEvent, ReactNode } from 'react';
 import { Ikona } from '@/komponenty/ikona';
 import { teksty } from '@/teksty';
 
@@ -47,7 +47,7 @@ export const klasyRamkiPolaWpisu =
 
 export const klasyPolaWpisu = `h-control ${klasyRamkiPolaWpisu}`;
 
-export const klasyOdstepuPolaWpisu = 'px-3 focus:px-[11px]';
+export const klasyOdstepuPolaWpisu = 'px-3 focus:px-[0.6875rem]';
 
 export const klasySzerokosciPola = {
   pelna: 'w-full',
@@ -75,6 +75,12 @@ export function idPodpowiedzi(id: string) {
 
 export function idBledu(id: string) {
   return `${id}-blad`;
+}
+
+// Wyjście fokusu poza kontener (focusout z celem spoza kontenera), np. poza fieldset grupy wyboru.
+export function opuszczonoKontener(e: FocusEvent<HTMLElement>): boolean {
+  const cel = e.relatedTarget;
+  return !(cel instanceof Node && e.currentTarget.contains(cel));
 }
 
 export function polaczOpisy(...ids: (string | false | null | undefined)[]) {

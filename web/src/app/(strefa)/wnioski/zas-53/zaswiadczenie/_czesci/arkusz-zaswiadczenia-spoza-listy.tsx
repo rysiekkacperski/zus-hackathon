@@ -11,6 +11,7 @@ import { Notatka } from '@/komponenty/notatka';
 import { Arkusz } from '@/komponenty/okno';
 import { PoleDaty, PoleTekstowe } from '@/komponenty/pole-tekstowe';
 import { Przycisk } from '@/komponenty/przycisk';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 
 const t = teksty.SheetZas53ManualCertificate;
@@ -25,6 +26,10 @@ export interface ArkuszZaswiadczeniaSpozaListyProps {
 }
 
 type PoleArkusza = 'poczatek' | 'koniec';
+
+/** Przyklejona stopka arkusza: przyciski zostają widoczne przy przewijaniu treści arkusza. */
+const KLASY_STOPKI_ARKUSZA =
+  'sticky -bottom-5 z-10 -mx-5 -mb-5 flex flex-wrap justify-end gap-4 border-t border-line bg-surface-card px-5 pt-4 pb-5';
 
 export function walidujOkresAlternatywny(
   poczatek: string,
@@ -58,17 +63,19 @@ function FormularzArkusza({
   const [poczatek, setPoczatek] = useState(poczatkowe ? formatujDate(poczatkowe.od) : '');
   const [koniec, setKoniec] = useState(poczatkowe ? formatujDate(poczatkowe.do) : '');
   const [numer, setNumer] = useState(poczatkowe?.seriaINumer ?? '');
-  const [bledy, setBledy] = useState<Partial<Record<PoleArkusza, KodKomunikatu>>>({});
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { poczatek, koniec },
+    waliduj: (w: { poczatek: string; koniec: string }): Partial<Record<PoleArkusza, KodKomunikatu>> => {
+      const wynik = walidujOkresAlternatywny(w.poczatek, w.koniec);
+      return wynik.ok ? {} : wynik.bledy;
+    },
+    pola: { poczatek: 'zas53-poczatek', koniec: 'zas53-koniec' },
+  });
 
   const zapisz = () => {
+    if (!walidacja.sprobujWyslac()) return;
     const wynik = walidujOkresAlternatywny(poczatek, koniec);
-    if (!wynik.ok) {
-      setBledy(wynik.bledy);
-      const pierwsze = wynik.bledy.poczatek ? 'zas53-poczatek' : 'zas53-koniec';
-      document.getElementById(pierwsze)?.focus();
-      return;
-    }
-    setBledy({});
+    if (!wynik.ok) return;
     const seria = numer.trim().slice(0, MAKS_NUMERU);
     onZapisz?.({ zrodlo: 'tryb-alternatywny', ...(seria ? { seriaINumer: seria } : {}), od: wynik.od, do: wynik.do, kodyLiterowe: [] });
   };
@@ -89,7 +96,7 @@ function FormularzArkusza({
           podpowiedz={t.podpowiedzDaty}
           wartosc={poczatek}
           onZmiana={setPoczatek}
-          blad={bledy.poczatek ?? null}
+          {...walidacja.pole('poczatek')}
           szerokosc="srednia"
         />
         <PoleDaty
@@ -98,7 +105,7 @@ function FormularzArkusza({
           podpowiedz={t.podpowiedzDaty}
           wartosc={koniec}
           onZmiana={setKoniec}
-          blad={bledy.koniec ?? null}
+          {...walidacja.pole('koniec')}
           szerokosc="srednia"
         />
       </div>
@@ -113,7 +120,7 @@ function FormularzArkusza({
         szerokosc="srednia"
       />
       <Notatka>{t.notatka}</Notatka>
-      <div className="flex flex-wrap justify-end gap-4">
+      <div className={KLASY_STOPKI_ARKUSZA}>
         <Przycisk type="button" wariant="drugorzedny" onClick={onZamknij}>
           {t.anuluj}
         </Przycisk>

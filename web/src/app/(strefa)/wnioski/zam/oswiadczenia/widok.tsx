@@ -4,18 +4,20 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { formatujProcent } from '@/domena/kwoty';
-import type { KodKomunikatu } from '@/domena/typy';
-import { ekranPoZam, ekranPrzedZam } from '@/domena/wnioski/zam-nawigacja';
+import type { BledyPol, KodKomunikatu } from '@/domena/typy';
+import { ekranPoZam } from '@/domena/wnioski/zam-nawigacja';
 import { Karta } from '@/komponenty/karta';
 import { PoleZaznaczenia } from '@/komponenty/pole-zaznaczenia';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import {
-  adresEkranuZam,
+  adresPoprzedniegoKrokuZam,
   BrakWnioskuZam,
   KartaTwojWniosek,
   KomunikatBleduZapisu,
   PrzyciskiKreatora,
   RamaKreatoraZam,
+  useKrokiKreatoraZam,
   useWniosekZam,
   usePrzejscieDalej,
   useZapisDoDokonczenia,
@@ -26,13 +28,23 @@ import { OknoTresciOswiadczen } from './_czesci/okno-tresci-oswiadczen';
 const t = teksty.ViewZamStatements;
 const tk = teksty.ViewZamLeaveType.kreator;
 
+/** Potwierdzenie oświadczeń jest wymagane (0043). */
+function walidujOswiadczenia(f: { potwierdzone: boolean }): BledyPol<'potwierdzone'> {
+  return f.potwierdzone ? {} : { potwierdzone: '0043' };
+}
+
 function FormularzOswiadczen({ dane }: { dane: DaneWnioskuZam }) {
   const router = useRouter();
   const { wniosek, okresy } = dane;
-  const przejdzDalej = usePrzejscieDalej();
+  const { przejdzDalej, zajety } = usePrzejscieDalej();
   const zapiszDoDokonczenia = useZapisDoDokonczenia();
+  const kroki = useKrokiKreatoraZam(dane);
   const [potwierdzone, ustawPotwierdzone] = useState(wniosek.oswiadczeniaPotwierdzone);
-  const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
+  const walidacja = useWalidacjaNaBiezaco({
+    wartosci: { potwierdzone },
+    waliduj: walidujOswiadczenia,
+    pola: { potwierdzone: 'zam-oswiadczenia' },
+  });
   const [bladZapisu, ustawBladZapisu] = useState<KodKomunikatu | null>(null);
   const [oknoOtwarte, ustawOknoOtwarte] = useState(false);
   const zaZyciem = okresy.zaZyciem;
@@ -45,11 +57,7 @@ function FormularzOswiadczen({ dane }: { dane: DaneWnioskuZam }) {
         );
 
   const dalej = () => {
-    if (!potwierdzone) {
-      ustawBlad('0043');
-      document.getElementById('zam-oswiadczenia')?.focus();
-      return;
-    }
+    if (!walidacja.sprobujWyslac()) return;
     ustawBladZapisu(
       przejdzDalej(
         wniosek,
@@ -63,6 +71,7 @@ function FormularzOswiadczen({ dane }: { dane: DaneWnioskuZam }) {
     <RamaKreatoraZam
       ekran="ViewZamStatements"
       wniosek={wniosek}
+      kroki={kroki}
       komunikaty={<KomunikatBleduZapisu kod={bladZapisu} />}
       boczna={<KartaTwojWniosek dane={dane} pokazOkres pokazDziecko />}
     >
@@ -98,17 +107,15 @@ function FormularzOswiadczen({ dane }: { dane: DaneWnioskuZam }) {
             id="zam-oswiadczenia"
             etykieta={t.potwierdzam}
             zaznaczone={potwierdzone}
-            onZmiana={(z) => {
-              ustawPotwierdzone(z);
-              ustawBlad(null);
-            }}
-            blad={blad}
+            onZmiana={ustawPotwierdzone}
+            {...walidacja.pole('potwierdzone')}
           />
         </Karta>
         <PrzyciskiKreatora
-          onWstecz={() => router.push(adresEkranuZam(ekranPrzedZam(wniosek, 'ViewZamStatements') ?? 'ViewZamData', wniosek.idWniosku))}
+          onWstecz={() => router.push(adresPoprzedniegoKrokuZam(kroki, 'ViewZamStatements', wniosek.idWniosku, 'ViewZamData'))}
           onZapisz={() => ustawBladZapisu(zapiszDoDokonczenia(wniosek, { oswiadczeniaPotwierdzone: potwierdzone }, 'ViewZamStatements'))}
           onDalej={() => undefined}
+          zajety={zajety}
         />
       </form>
       <OknoTresciOswiadczen otwarte={oknoOtwarte} onZamknij={() => ustawOknoOtwarte(false)} wniosek={wniosek} zaZyciem={zaZyciem} />

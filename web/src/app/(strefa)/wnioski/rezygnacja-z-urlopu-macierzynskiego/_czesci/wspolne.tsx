@@ -152,7 +152,7 @@ export function ListaZalacznikow({
         const plik = pliki[p.rodzaj];
         return (
           <li key={p.rodzaj} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 py-3">
-            <span className="flex min-w-0 flex-[1_1_300px] items-start gap-3">
+            <span className="flex min-w-0 flex-[1_1_18.75rem] items-start gap-3">
               <Ikona nazwa="zalacznik" rozmiar={20} className="mt-0.5 shrink-0 text-brand" />
               <span className="min-w-0">
                 <span className="block text-body-strong">{p.tytul}</span>

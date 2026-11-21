@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useMemo, useState, type FormEvent } from 'react';
 import { KartaKontekstu } from '@/app/(strefa)/pytania-do-zus/_czesci/karta-kontekstu';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { wyslijPytanieDoZus } from '@/dane/magazyn/operacje/kanaly-zus-usc';
@@ -14,19 +14,24 @@ import { formatujDate } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Pole, klasyRamkiPolaWpisu } from '@/komponenty/pole';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { Stos, UkladDwuKolumnowy, Wiersz } from '@/komponenty/uklad';
+import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 
 const t = teksty.ViewZusQuestion;
 const ID_POLA = 'tresc-pytania';
 const ID_LICZNIKA = `${ID_POLA}-licznik`;
 
+function walidujPytanie(w: { tresc: string }) {
+  return { tresc: walidujTrescPytania(w.tresc) };
+}
+
 export function WidokPytaniaDoZus() {
-  const router = useRouter();
   const parametry = useSearchParams();
   const konto = useKonto();
   const rodzina = useRodzina();
@@ -53,10 +58,11 @@ export function WidokPytaniaDoZus() {
   const sprawa = kontekst.sprawa;
 
   const [tresc, setTresc] = useState('');
-  const [bladPola, setBladPola] = useState<KodKomunikatu | null>(null);
   const [bladWysylki, setBladWysylki] = useState<KodKomunikatu | null>(null);
-  const [wysylanie, setWysylanie] = useState(false);
-  const pole = useRef<HTMLTextAreaElement>(null);
+  const { zajety: wysylanie, ustawZajety: ustawWysylanie, przejdz } = useNawigacjaZLadowaniem();
+  const wartosci = useMemo(() => ({ tresc }), [tresc]);
+  const walidacja = useWalidacjaNaBiezaco({ wartosci, waliduj: walidujPytanie, pola: { tresc: ID_POLA } });
+  const bladPola = walidacja.blad('tresc');
 
   const adresInstrukcji = sprawa ? trasy.ViewCaseGuide({ idSprawy: sprawa.idSprawy }) : null;
   const adresPowrotu = adresInstrukcji ?? trasy.ViewFamilyPlan();
@@ -70,27 +76,23 @@ export function WidokPytaniaDoZus() {
   const wyslij = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (wysylanie) return;
-    const kod = walidujTrescPytania(tresc);
-    setBladPola(kod);
-    if (kod) {
+    if (!walidacja.sprobujWyslac()) {
       setBladWysylki(null);
-      pole.current?.focus();
       return;
     }
-    setWysylanie(true);
+    ustawWysylanie(true);
     const wynik = wyslijPytanieDoZus({ ...(sprawa ? { idSprawy: sprawa.idSprawy } : {}), tresc }, pobierzKontekstOperacji());
-    setWysylanie(false);
     if (!wynik.ok) {
+      ustawWysylanie(false);
       if (wynik.kod === '0129' || wynik.kod === '0130') {
-        setBladPola(wynik.kod);
-        pole.current?.focus();
+        walidacja.pokazBledy({ tresc: wynik.kod });
       } else {
         setBladWysylki(wynik.kod);
       }
       return;
     }
     ustawKomunikatPoPrzejsciu({ kod: '0131', dlaWidoku: 'ViewZusQuestionSent' });
-    router.push(trasy.ViewZusQuestionSent({ idPytania: wynik.wartosc.idPytania }));
+    przejdz(trasy.ViewZusQuestionSent({ idPytania: wynik.wartosc.idPytania }));
   };
 
   const formularz = (
@@ -111,13 +113,13 @@ export function WidokPytaniaDoZus() {
             {(aria) => (
               <textarea
                 {...aria}
-                ref={pole}
                 aria-describedby={[aria['aria-describedby'], ID_LICZNIKA].filter(Boolean).join(' ')}
                 name={ID_POLA}
                 rows={8}
                 value={tresc}
                 onChange={(e) => setTresc(e.target.value)}
-                className={`${klasyRamkiPolaWpisu} min-h-control resize-y px-3 py-2.5 focus:px-[11px] focus:py-[9px]`}
+                onBlur={() => walidacja.onOpuszczenie('tresc')}
+                className={`${klasyRamkiPolaWpisu} min-h-control resize-y px-3 py-2.5 focus:px-[0.6875rem] focus:py-[0.5625rem]`}
               />
             )}
           </Pole>

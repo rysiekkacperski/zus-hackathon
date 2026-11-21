@@ -3,8 +3,8 @@
 // Slot ViewGuideSettings „sekcja-danych-rodziny” w liście slotyUstawien (kontrakt, sekcja 12.4). Właściciel: u02.
 // Teksty: teksty.ViewGuideSettings.sekcjaDanychRodziny. Wzór: karta „Dane rodziny” w cz1/Ustawienia.dc.html.
 // Historyjka 3.1.1.2.1 (zadania 1, 5 i 6; KA-09 do KA-12).
-import { useState } from 'react';
 import { Karta } from '@/komponenty/karta';
+import { useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Przycisk } from '@/komponenty/przycisk';
 import { ArkuszUsunieciaDanychRodziny } from '../_czesci/arkusz-usuniecia-danych-rodziny';
 import { teksty } from '@/teksty';
@@ -13,7 +13,7 @@ import type { PropsSlotu } from './typy';
 const t = teksty.ViewGuideSettings.sekcjaDanychRodziny;
 
 export function SlotSekcjaDanychRodziny({ konto }: PropsSlotu<'sekcja'>) {
-  const [otwarte, ustawOtwarte] = useState(false);
+  const [otwarte, ustawOtwarte] = useStanChwilowy(false);
 
   // Konto administratora nie prowadzi danych rodziny.
   if (konto.rola === 'administrator') return null;
