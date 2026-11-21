@@ -311,6 +311,8 @@ Definition of Done określa standard wymagany przed zamknięciem pracy nad Story
 - wymagane testy przechodzą,
 - nie ma błędów krytycznych,
 - implementacja jest zgodna ze wzorami widoków,
+- każdy widok Story działa w szerokości okna od 320 do 1920 pikseli bez przewijania w poziomie i bez utraty treści albo funkcji, a tekst pozostaje czytelny po powiększeniu do 200%,
+- każdy widok Story spełnia WCAG 2.1 na poziomie AA,
 - zależności zostały poprawnie obsłużone,
 - dokumentacja została zaktualizowana,
 - rozwiązanie działa na środowisku demonstracyjnym.
