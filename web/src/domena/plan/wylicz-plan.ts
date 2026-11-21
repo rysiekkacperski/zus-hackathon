@@ -3,8 +3,9 @@
 // wyliczPlan wykonuje krokiPlanu w kolejności rejestru, a potem uzgadnia wynik z poprzednim planem:
 // sprawy złożone i załatwione zachowują status zawsze, także gdy ich warunek przestał być spełniony;
 // pozostałe sprawy bez spełnionego warunku znikają, a nowe trafiają do planu ze statusem do zrobienia.
-// Po potwierdzeniu daty porodu żadna sprawa nie ma oznaczenia po porodzie. Na końcu powstaje lista zmian,
-// oznaczenie „nowa w planie” i bieżący etap.
+// Sprawa powtarzalna załatwiona w poprzednim cyklu wraca do statusu do zrobienia w dniu powrotu z reguły
+// terminu (kontrakt, sekcja 6.7). Po potwierdzeniu daty porodu żadna sprawa nie ma oznaczenia po porodzie.
+// Na końcu powstaje lista zmian, oznaczenie „nowa w planie” i bieżący etap.
 import { dataZeZnacznika } from '@/domena/daty';
 import { ETAPY, indeksEtapu, wyznaczBiezacyEtap } from '@/domena/plan/etap';
 import { krokiPlanu } from '@/domena/plan/kroki';
@@ -12,7 +13,8 @@ import { czyStatusZachowywany } from '@/domena/plan/statusy';
 import { faktyRodziny } from '@/domena/plan/warunki';
 import { dodaneSprawy, porownajPlany } from '@/domena/plan/zmiany';
 import type { WejsciePlanu } from '@/domena/przeliczenie';
-import type { IdSprawy, PlanRodziny, PozycjaPlanu } from '@/domena/typy';
+import { czyWracaDoZrobienia } from '@/domena/terminy/wylicz-terminy';
+import type { DataISO, IdSprawy, PlanRodziny, PozycjaPlanu } from '@/domena/typy';
 
 /** Jedna sprawa na identyfikator: treść z ostatniego kroku, który ją zwrócił, miejsce z pierwszego. */
 function bezPowtorzen(pozycje: readonly PozycjaPlanu[]): PozycjaPlanu[] {
@@ -58,6 +60,20 @@ function uzgodnijZPoprzednim(pozycje: PozycjaPlanu[], poprzedni: PlanRodziny | n
   return [...uzgodnione, ...zachowane];
 }
 
+/**
+ * Sprawy powtarzalne (K13, K21) załatwione w poprzednim cyklu, których warunek nadal jest spełniony, wracają
+ * w dniu powrotu do statusu do zrobienia ze źródłem wyliczenie planu i bez daty oznaczenia poprzedniego cyklu.
+ */
+function reaktywujPowtarzalne(pozycje: PozycjaPlanu[], dzis: DataISO): PozycjaPlanu[] {
+  return pozycje.map((p) => {
+    if (p.zachowanaBezWarunku || !czyWracaDoZrobienia(p, dzis)) return p;
+    const wraca: PozycjaPlanu = { ...p, status: 'do-zrobienia', zrodloStatusu: 'wyliczenie-planu' };
+    delete wraca.dataOznaczenia;
+    delete wraca.poprzedniStatus;
+    return wraca;
+  });
+}
+
 /** Kolejność planu: etapy w stałej kolejności, w etapie kolejność kroków. */
 function uporzadkuj(pozycje: PozycjaPlanu[]): PozycjaPlanu[] {
   return pozycje
@@ -71,7 +87,7 @@ export function wyliczPlan(w: WejsciePlanu): PlanRodziny {
   const urodzone = faktyRodziny(w).urodzone;
 
   const zKrokow = krokiPlanu.reduce<PozycjaPlanu[]>((biezace, krok) => krok(biezace, w), []);
-  let pozycje = uzgodnijZPoprzednim(bezPowtorzen(zKrokow), poprzedni);
+  let pozycje = reaktywujPowtarzalne(uzgodnijZPoprzednim(bezPowtorzen(zKrokow), poprzedni), w.dzis);
   if (urodzone) {
     pozycje = pozycje.map((p) => {
       if (!p.poPorodzie) return p;
