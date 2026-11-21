@@ -1,35 +1,123 @@
 // Rezygnacja matki z części urlopu i przejęcie urlopu przez ojca (kontrakt, sekcja 6.5). Właściciel: u34 (Rezygnacja matki i wniosek ojca o zasiłek).
-// Zaślepka fundamentu: implementuje u34. Właściciel zastępuje treść z zachowaniem nazw eksportów i podpisów. Zaślepka zwraca 0003.
-/* eslint-disable @typescript-eslint/no-unused-vars -- parametry zaślepki; właściciel usuwa ten wiersz */
+// Szkic rezygnacji i wniosku ojca żyje we Wnioskach rodziny. Wysyłkę do pracodawcy prowadzi kreator
+// wniosków o urlop (u32), a wniosek ZAM kreator wniosku o zasiłek macierzyński (u27).
+import { formatujDate } from '@/domena/daty';
+import { idZLosowych } from '@/domena/numery';
 import type {
   DataISO,
   IdSprawy,
   IdWidoku,
   IdWniosku,
   KontekstOperacji,
+  Okres,
   RodzajSytuacjiSzczegolnej,
+  StanRodziny,
   Wniosek,
   WniosekOUrlop,
   WniosekZam,
   WynikOperacji,
 } from '@/domena/typy';
+import { terminWnioskuOjca, poczatekOchronyOjca } from '@/domena/wnioski/rezygnacja';
+import { losowyCiag } from '@/dane/magazyn/losowanie';
+import { utworzPowiadomienie } from '@/dane/magazyn/operacje/powiadomienia';
+import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
+import { rozpocznijLubWznowZam } from '@/dane/magazyn/operacje/wnioski-zam';
+import {
+  odczytajStanKonta,
+  odczytajZalogowanego,
+  osobyRodziny,
+  rodzinaKonta,
+  wykonajOperacjeZWynikiem,
+  zmienStanRodziny,
+} from '@/dane/magazyn/stan';
+import { teksty } from '@/teksty';
 
-/** Przyczyna i data zdarzenia przejęcia urlopu; kształt ustala właściciel (u34). */
+/** Przyczyna i data zdarzenia przejęcia urlopu. */
 export interface ParametryPrzejecia {
   przyczyna: 'rezygnacja' | RodzajSytuacjiSzczegolnej;
   dataZdarzenia?: DataISO;
 }
 
-export function rozpocznijRezygnacje(idSprawy: IdSprawy, ctx: KontekstOperacji): WynikOperacji<WniosekOUrlop> {
-  return { ok: false, kod: '0003' };
+interface Kontekst {
+  rodzina: StanRodziny;
+  pesel: string;
+  rola: WniosekOUrlop['rola'];
 }
 
+function kontekstZalogowanego(): Kontekst | null {
+  const zalogowany = odczytajZalogowanego();
+  if (zalogowany === null) return null;
+  const rodzina = rodzinaKonta(zalogowany.stanKonta.konto);
+  if (rodzina === null) return null;
+  return { rodzina, pesel: zalogowany.stanKonta.konto.pesel, rola: zalogowany.stanKonta.konto.rola };
+}
+
+function nowyWniosek(
+  k: Kontekst,
+  rodzaj: 'rezygnacja-z-czesci-zasilku' | 'wniosek-ojca-o-urlop',
+  idSprawy: IdSprawy,
+  ctx: KontekstOperacji,
+): WniosekOUrlop {
+  return {
+    idWniosku: idZLosowych('W', ctx.teraz, losowyCiag(6)),
+    rodzaj,
+    podrodzaj: rodzaj === 'rezygnacja-z-czesci-zasilku' ? 'rezygnacja-matki' : 'pozostala-czesc-macierzynskiego',
+    idSprawy,
+    konto: k.pesel,
+    rola: k.rola,
+    stan: 'szkic',
+    utworzono: ctx.teraz,
+    zaktualizowano: ctx.teraz,
+    adresat: 'pracodawca',
+    zalaczniki: [],
+    okresy: [],
+    oswiadczenia: {},
+  };
+}
+
+function rozpocznij(
+  rodzaj: 'rezygnacja-z-czesci-zasilku' | 'wniosek-ojca-o-urlop',
+  idSprawy: IdSprawy,
+  uzupelnij: (w: WniosekOUrlop) => WniosekOUrlop,
+  ctx: KontekstOperacji,
+): WynikOperacji<WniosekOUrlop> {
+  const k = kontekstZalogowanego();
+  if (k === null) return { ok: false, kod: '0003' };
+  const istniejacy = k.rodzina.wnioski.find(
+    (w): w is WniosekOUrlop => w.rodzaj === rodzaj && w.konto === k.pesel && w.stan === 'szkic',
+  );
+  if (istniejacy) return { ok: true, wartosc: istniejacy };
+  const wniosek = uzupelnij(nowyWniosek(k, rodzaj, idSprawy, ctx));
+  return wykonajOperacjeZWynikiem(() => {
+    zmienStanRodziny(k.rodzina.idRodziny, (s) => ({ ...s, wnioski: [...s.wnioski, wniosek] }));
+    return { ok: true, wartosc: wniosek };
+  });
+}
+
+/** Tworzy albo wznawia szkic rezygnacji matki z dalszej części urlopu macierzyńskiego. */
+export function rozpocznijRezygnacje(idSprawy: IdSprawy, ctx: KontekstOperacji): WynikOperacji<WniosekOUrlop> {
+  return rozpocznij('rezygnacja-z-czesci-zasilku', idSprawy, (w) => w, ctx);
+}
+
+/** Tworzy albo wznawia szkic wniosku ojca do pracodawcy o pozostałą część urlopu macierzyńskiego. */
 export function rozpocznijPrzejecie(
   idSprawy: IdSprawy,
   parametry: ParametryPrzejecia,
   ctx: KontekstOperacji,
 ): WynikOperacji<Wniosek> {
-  return { ok: false, kod: '0003' };
+  return rozpocznij(
+    'wniosek-ojca-o-urlop',
+    idSprawy,
+    (w) => ({
+      ...w,
+      wniosekOjca: {
+        przyczyna: parametry.przyczyna,
+        dniPrzedPorodem: 0,
+        ...(parametry.dataZdarzenia ? { dataZdarzenia: parametry.dataZdarzenia } : {}),
+      },
+    }),
+    ctx,
+  );
 }
 
 /** Zapis odpowiedzi z ekranu rezygnacji albo przejęcia i ostatniego ekranu. */
@@ -39,5 +127,97 @@ export function zapiszKrok(
   ekran: IdWidoku,
   ctx: KontekstOperacji,
 ): WynikOperacji<Wniosek> {
-  return { ok: false, kod: '0003' };
+  const k = kontekstZalogowanego();
+  if (k === null) return { ok: false, kod: '0003' };
+  const obecny = k.rodzina.wnioski.find((w) => w.idWniosku === id);
+  if (!obecny) return { ok: false, kod: '0003' };
+  const nowy = { ...obecny, ...zmiana, idWniosku: obecny.idWniosku, rodzaj: obecny.rodzaj, ostatniEkran: ekran, zaktualizowano: ctx.teraz } as Wniosek;
+  const wynik = wykonajOperacjeZWynikiem<Wniosek>(() => {
+    zmienStanRodziny(k.rodzina.idRodziny, (s) => ({
+      ...s,
+      wnioski: s.wnioski.map((w) => (w.idWniosku === id ? nowy : w)),
+    }));
+    return { ok: true, wartosc: nowy };
+  });
+  if (wynik.ok) przeliczRodzine(k.rodzina.idRodziny, ctx);
+  return wynik;
+}
+
+/**
+ * Wniosek ZAM matki wyłącznie o 14 tygodni: szkic kreatora ZAM (u27) z okresem od dnia porodu do ostatniego
+ * dnia 14. tygodnia i zasiłkiem 100% podstawy wymiaru. Wynik wskazuje wniosek do otwarcia na ViewZamPeriod.
+ */
+export function rozpocznijZamZa14Tygodni(
+  idSprawy: IdSprawy,
+  okres: Okres,
+  ctx: KontekstOperacji,
+): WynikOperacji<WniosekZam> {
+  const start = rozpocznijLubWznowZam(idSprawy, ctx);
+  if (!start.ok) return start;
+  const zmiana: Partial<WniosekZam> = {
+    rodzajUrlopu: 'macierzynski',
+    wariant: 'tylko-macierzynski',
+    okresy: [{ rodzajUrlopu: 'macierzynski', od: okres.od, do: okres.do, tygodnie: 14, stawka: 100 }],
+  };
+  const zapis = zapiszKrok(start.wartosc.idWniosku, zmiana, 'ViewZamPeriod', ctx);
+  if (!zapis.ok) return zapis;
+  return { ok: true, wartosc: zapis.wartosc as WniosekZam };
+}
+
+/**
+ * Skutki wysłania rezygnacji albo wniosku ojca do pracodawcy, wywoływane przez wysyłkę kreatora wniosków
+ * o urlop (u32) po zapisaniu wysyłki. Rezygnacja: powiadomienie konta Drugi rodzic „Możliwość przejęcia
+ * części urlopu macierzyńskiego”. Wniosek ojca: data początku szczególnej ochrony.
+ */
+export function poWyslaniuDoPracodawcy(id: IdWniosku, ctx: KontekstOperacji): WynikOperacji {
+  const k = kontekstZalogowanego();
+  if (k === null) return { ok: true, wartosc: undefined };
+  const wniosek = k.rodzina.wnioski.find((w): w is WniosekOUrlop => w.idWniosku === id && 'okresy' in w);
+  if (!wniosek) return { ok: true, wartosc: undefined };
+
+  if (wniosek.rodzaj === 'wniosek-ojca-o-urlop') {
+    const poczatek = wniosek.okresy[0]?.od;
+    if (!poczatek) return { ok: true, wartosc: undefined };
+    const ochrona = poczatekOchronyOjca(wniosek.dataZlozenia ?? ctx.dzis, poczatek);
+    return wykonajOperacjeZWynikiem(() => {
+      zmienStanRodziny(k.rodzina.idRodziny, (s) => ({
+        ...s,
+        wnioski: s.wnioski.map((w) => (w.idWniosku === id ? { ...w, dataPoczatkuOchrony: ochrona } : w)),
+      }));
+      return { ok: true, wartosc: undefined };
+    });
+  }
+
+  if (wniosek.rodzaj !== 'rezygnacja-z-czesci-zasilku') return { ok: true, wartosc: undefined };
+  const powrot = wniosek.rezygnacja?.dataPowrotu;
+  const koniec = wniosek.okresy[0]?.do;
+  const peselDrugiego = osobyRodziny(k.rodzina.daneRodziny).peselDrugiegoRodzica;
+  if (!powrot || !koniec || !peselDrugiego || peselDrugiego === k.pesel) return { ok: true, wartosc: undefined };
+
+  const stanDrugiego = odczytajStanKonta(peselDrugiego);
+  const ustawienia = stanDrugiego?.ustawienia ?? null;
+  const t = teksty.PowiadomieniaPrzejecieUrlopu;
+  const imieMatki = odczytajZalogowanego()?.stanKonta.konto.imie ?? '';
+  const wynik = utworzPowiadomienie(
+    {
+      elementTworzacy: 'kreatory-wnioskow',
+      rodzaj: 'mozliwosc-przejecia-urlopu',
+      idRodziny: k.rodzina.idRodziny,
+      idSprawy: 'K10',
+      kontoDocelowe: peselDrugiego,
+      planowanaWysylka: ctx.teraz,
+      kanal: ustawienia?.kanalSms && !ustawienia.kanalEmail ? 'sms' : 'email',
+      adresat: ustawienia?.adresEmail ?? stanDrugiego?.kopiaDanychZus?.emailEzus ?? '',
+      temat: t.temat,
+      tresc: t.tresc({
+        imieMatki,
+        dataPowrotu: formatujDate(powrot),
+        dataPoczatku: formatujDate(powrot),
+        dataKonca: formatujDate(koniec),
+        terminZlozeniaWniosku: formatujDate(terminWnioskuOjca(powrot)),
+      }),
+    },
+    ctx,
+  );
+  return wynik.ok ? { ok: true, wartosc: undefined } : wynik;
 }
