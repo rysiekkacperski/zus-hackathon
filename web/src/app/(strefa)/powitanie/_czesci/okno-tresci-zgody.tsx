@@ -1,0 +1,14 @@
+'use client';
+
+// ModalConsentText (kontrakt, tabela 2.3): okno modalne na SheetHealthDataConsent (okno nad arkuszem). Właściciel: u02.
+// Teksty: teksty.ModalConsentText.
+// Zaślepka fundamentu: właściciel zastępuje treść z zachowaniem nazwy eksportu i może rozszerzyć propsy.
+export interface OknoTresciZgodyProps {
+  otwarte: boolean;
+  onZamknij: () => void;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- zaślepka: propsy wykorzystuje właściciel
+export function OknoTresciZgody(props: OknoTresciZgodyProps) {
+  return null;
+}

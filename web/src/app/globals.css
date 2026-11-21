@@ -1,26 +1,115 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-brand: #21519f;
+  --color-brand-raised: #2860bd;
+  --color-brand-muted: #447ba5;
+  --color-brand-chart: #7897bc;
+  --color-brand-decor: #8dabd0;
+  --color-brand-tint: #e7eef5;
+  --color-brand-wash: #f4f8fd;
+  --color-brand-deep: #184068;
+  --color-surface-page: #f1f5fa;
+  --color-surface-method: #eef3f8;
+  --color-surface-card: #ffffff;
+  --color-surface-sunken: #fafbfe;
+  --color-ink: #393939;
+  --color-ink-strong: #222529;
+  --color-ink-max: #000000;
+  --color-ink-muted: #767676;
+  --color-on-brand: #ffffff;
+  --color-line: #ccdaee;
+  --color-line-row: #d2dfec;
+  --color-line-dashed: #dadee8;
+  --color-line-soft: #e7eef5;
+  --color-line-strong: #393939;
+  --color-success: #638436;
+  --color-success-text: #5b7a32;
+  --color-success-strong: #32421b;
+  --color-overlay: rgb(24 64 104 / 0.45);
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+
+  --shadow-header: 0 4px 12px rgba(33, 81, 159, 0.2);
+
+  --spacing-header: 80px;
+  --spacing-sidebar: 320px;
+  --spacing-sidebar-zwiniety: 84px;
+  --spacing-nav-item: 54px;
+  --spacing-control: 46px;
+  --spacing-segment: 36px;
+  --spacing-tile: 70px;
+  --spacing-row: 50px;
+  --spacing-day: 36px;
+  --spacing-toggle: 40px;
+  --spacing-avatar: 48px;
+  --spacing-icon: 24px;
+  --spacing-ring: 224px;
+  --spacing-ring-stroke: 24px;
+  --spacing-empty-icon: 72px;
+  --spacing-login-column: 540px;
+  --spacing-method-icon: 40px;
+  --spacing-qr: 240px;
+  --spacing-progress: 8px;
+
+  --container-tresc: 1443px;
+  --container-okno: 640px;
+  --container-okno-szerokie: 960px;
+  --container-panel-asystenta: 480px;
+
+  --text-page-title: 24px;
+  --text-page-title--line-height: 32px;
+  --text-page-title--font-weight: 600;
+  --text-page-title-home: 24px;
+  --text-page-title-home--line-height: 32px;
+  --text-page-title-home--font-weight: 500;
+  --text-page-title-home--letter-spacing: 0.06em;
+  --text-section-title: 20px;
+  --text-section-title--line-height: 28px;
+  --text-section-title--font-weight: 600;
+  --text-widget-title: 20px;
+  --text-widget-title--line-height: 28px;
+  --text-widget-title--font-weight: 500;
+  --text-widget-title--letter-spacing: 0.06em;
+  --text-lead: 16px;
+  --text-lead--line-height: 24px;
+  --text-lead--letter-spacing: 0.06em;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-body-strong: 16px;
+  --text-body-strong--line-height: 24px;
+  --text-body-strong--font-weight: 600;
+  --text-tile-title: 18px;
+  --text-tile-title--line-height: 28px;
+  --text-tile-title--font-weight: 600;
+  --text-small: 14px;
+  --text-small--line-height: 20px;
+  --text-small-strong: 14px;
+  --text-small-strong--line-height: 20px;
+  --text-small-strong--font-weight: 600;
+  --text-amount: 24px;
+  --text-amount--line-height: 32px;
+  --text-amount--font-weight: 600;
+  --text-logo: 18px;
+  --text-logo--line-height: 24px;
+  --text-logo--font-weight: 700;
+  --text-logo--letter-spacing: 0.02em;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-open-sans-latin), var(--font-open-sans-latin-ext), "Noto Sans", Arial, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html { background: var(--color-surface-page); color: var(--color-ink); }
+  body { margin: 0; font-family: var(--font-sans); font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased; }
+  a { color: var(--color-brand); }
+  a:hover { color: var(--color-brand-deep); }
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+  dialog::backdrop { background: var(--color-overlay); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
