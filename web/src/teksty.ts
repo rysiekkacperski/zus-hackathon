@@ -1006,6 +1006,122 @@ export const teksty = {
       // koniec sekcjaPrzyjecia
     },
     sekcjaDrugiegoRodzica: {
+      tytul: "Drugi rodzic",
+      tytulDrugiegoRodzica: "Drugi rodzic – Twoje dane",
+      zmien: "Zmień",
+      zmienEtykieta: "Zmień sekcję Drugi rodzic",
+      podpisTabeli: "Dane drugiego rodzica",
+      przewijanie: "Tabela danych drugiego rodzica",
+      kolumny: { dane: "Dane", wartosc: "Wartość", zrodlo: "Źródło" },
+      wiersze: {
+        imieINazwisko: "Imię i nazwisko",
+        rola: "Rola w przewodniku",
+        forma: "Forma zatrudnienia",
+        dobrowolne: "Dobrowolne ubezpieczenie chorobowe",
+        chorobowe: "Ubezpieczenie chorobowe",
+        podstawa: "Podstawa składek",
+        platnik: "Płatnik zasiłku",
+        platnikWyplaca: "Płatnik składek wypłaca zasiłki",
+        zasilki: "Wypłacone zasiłki",
+        dostep: "Dostęp do planu",
+      },
+      zrodla: {
+        "konto-zus": "Konto ZUS",
+        "pelnomocnictwo-pel": "Pełnomocnictwo PEL",
+        "odpowiedz-rodzica": "Odpowiedź rodzica",
+        brak: "-",
+      },
+      formy: {
+        "umowa-o-prace": "Umowa o pracę",
+        "umowa-zlecenia": "Umowa zlecenia",
+        jdg: "Jednoosobowa działalność gospodarcza",
+        "brak-tytulu": "Brak tytułu do ubezpieczenia",
+      },
+      formyWTekscie: {
+        "umowa-o-prace": "umowa o pracę",
+        "umowa-zlecenia": "umowa zlecenia",
+        jdg: "jednoosobowa działalność gospodarcza",
+        "brak-tytulu": "brak tytułu do ubezpieczenia",
+      },
+      zDobrowolnym: ({ forma }: { forma: string }) => `${forma} z dobrowolnym ubezpieczeniem chorobowym`,
+      bezDobrowolnego: ({ forma }: { forma: string }) => `${forma} bez dobrowolnego ubezpieczenia chorobowego`,
+      tak: "Tak",
+      nie: "Nie",
+      nieDotyczy: "Nie dotyczy",
+      nieDotyczyObowiazkowe: "Nie dotyczy – ubezpieczenie chorobowe obowiązkowe",
+      brakDanych: "-",
+      rodzajeChorobowego: {
+        obowiazkowe: "Obowiązkowe",
+        dobrowolne: "Dobrowolne",
+        brak: "Brak ubezpieczenia chorobowego",
+      },
+      platnicy: {
+        zus: "ZUS",
+        "platnik-skladek": "Płatnik składek",
+        nieustalony: "Nieustalony",
+        "brak-platnika": "Brak płatnika zasiłku",
+      },
+      wyplacaZasilki: {
+        tak: "Tak",
+        nie: "Nie",
+        "brak-informacji": "Brak informacji",
+        "nie-dotyczy": "Nie dotyczy",
+      },
+      formaZTytulem: ({ forma, tytul }: { forma: string; tytul: string }) => `${forma} – ${tytul}`,
+      tytuly: {
+        pracownik: ({ data }: { data: string }) => `tytuł pracownika od ${data}`,
+        zleceniobiorca: ({ data }: { data: string }) => `tytuł zleceniobiorcy od ${data}`,
+        dzialalnosc: ({ data }: { data: string }) => `działalność gospodarcza od ${data}`,
+      },
+      podstawaStala: ({ kwota }: { kwota: string }) => `${kwota} w każdym z ostatnich 12 miesięcy`,
+      podstawaOstatnia: ({ kwota, miesiac }: { kwota: string; miesiac: string }) => `${kwota} za ${miesiac}`,
+      brakPodstaw: "Brak podstaw składek",
+      brakZasilkow: "Brak wypłaconych zasiłków",
+      zasilek: ({ rodzaj, kwota, data }: { rodzaj: string; kwota: string; data: string }) =>
+        `${rodzaj}: ${kwota}, wypłata ${data}`,
+      nieDolaczyl: "Nie dołączył",
+      drugiRodzicOd: ({ data }: { data: string }) => `Drugi rodzic od ${data}`,
+      odlaczony: ({ data }: { data: string }) => `Odłączony ${data}`,
+      zrodloPelnomocnictwa: ({ imieINazwisko }: { imieINazwisko: string }) =>
+        `Źródło: pełnomocnictwo PEL od ${imieINazwisko}. Data odczytu:`,
+      odlaczonyOpis: ({ imieINazwisko }: { imieINazwisko: string }) =>
+        `${imieINazwisko} nie ma już dostępu do planu rodziny. Przypomnienia o jego sprawach, np. o urlopie ojcowskim, wysyłamy teraz na Twoje konto.`,
+      zaproszenie: {
+        naglowek: "Zaproś drugiego rodzica do planu",
+        naglowekPonownie: "Zaproś drugiego rodzica ponownie",
+        opis: "Drugi rodzic zobaczy Wasz wspólny plan i swoje uprawnienia, a przypomnienia o jego terminach trafią na jego konto.",
+        opisPonownie: "Po przyjęciu zaproszenia drugi rodzic znów zobaczy Wasz wspólny plan, a jego dane odczytamy z jego konta ZUS.",
+        opisPrzyDanychZPelnomocnictwa: "Po dołączeniu drugi rodzic zobaczy Wasz wspólny plan, a jego dane odczytamy bezpośrednio z jego konta ZUS.",
+        przycisk: "Zaproś drugiego rodzica",
+      },
+      pelnomocnictwo: {
+        naglowek: "Pobierz dane z pełnomocnictwa PEL",
+        naglowekPrzyDanych: "Pełnomocnictwo PEL",
+        opis: "Drugi rodzic nie dołączy do planu? Jeśli udzielił Ci w eZUS pełnomocnictwa PEL do roli Ubezpieczony, odczytamy dane jego ubezpieczenia do Waszego planu.",
+        opisPoOdlaczeniu: "Jeśli drugi rodzic udzielił Ci w eZUS pełnomocnictwa PEL do roli Ubezpieczony, odczytamy dane jego ubezpieczenia do Waszego planu.",
+        okres: ({ imieINazwisko, okres }: { imieINazwisko: string; okres: string }) =>
+          `Pełnomocnictwo od ${imieINazwisko} obowiązuje ${okres}.`,
+        przycisk: "Sprawdź pełnomocnictwo",
+      },
+      dolaczony: {
+        naglowek: ({ imieINazwisko }: { imieINazwisko: string }) => `${imieINazwisko} widzi Wasz plan`,
+        opis: ({ imie }: { imie: string }) =>
+          `${imie} ma dostęp do planu rodziny, terminów, swoich wniosków, kalkulatorów i asystenta. Przypomnienia o jego sprawach, np. o urlopie ojcowskim, trafiają na jego konto.`,
+        opisOdlaczenia: "Sytuacja rodziny się zmieniła? Możesz odłączyć drugiego rodzica od planu.",
+        przycisk: "Odłącz drugiego rodzica",
+      },
+      notatki: {
+        nieDolaczyl: "Urlop ojcowski i 9 tygodni urlopu rodzicielskiego przepadają, jeśli drugi rodzic z nich nie skorzysta. Dopóki nie dołączy do planu, przypomnienia o jego sprawach wysyłamy na Twoje konto.",
+        dolaczyl: ({ imieINazwisko }: { imieINazwisko: string }) =>
+          `Dane z konta ZUS ${imieINazwisko} zastąpiły Twoje odpowiedzi o drugim rodzicu. Plan rodziny wyliczyliśmy ponownie.`,
+        poOdlaczeniu: "Dane drugiego rodzica zostały w profilu jako Twoja odpowiedź. Sprawdź, czy są aktualne.",
+        zPelnomocnictwa: ({ odpowiedzi }: { odpowiedzi: string }) =>
+          `Twoje odpowiedzi o drugim rodzicu (${odpowiedzi}) zachowaliśmy. Przywrócimy je, gdy pełnomocnictwo wygaśnie albo zostanie odwołane.`,
+        zPelnomocnictwaBezOdpowiedzi: "Twoje odpowiedzi o drugim rodzicu zachowaliśmy. Przywrócimy je, gdy pełnomocnictwo wygaśnie albo zostanie odwołane.",
+        widokDrugiegoRodzica: ({ imieINazwisko, odpowiedz }: { imieINazwisko: string; odpowiedz: string }) =>
+          `Dane z Twojego konta ZUS zastąpiły odpowiedź ${imieINazwisko} o drugim rodzicu (${odpowiedz}). Plan rodziny wyliczyliśmy ponownie.`,
+        widokDrugiegoRodzicaBezOdpowiedzi: "Dane z Twojego konta ZUS zastąpiły odpowiedź rodzica o drugim rodzicu. Plan rodziny wyliczyliśmy ponownie.",
+      },
       // koniec sekcjaDrugiegoRodzica
     },
     sekcjaSytuacji: {
@@ -1025,6 +1141,81 @@ export const teksty = {
   ViewSecondParentPowerOfAttorney: {
     tytulStrony: "Pełnomocnictwo drugiego rodzica",
     naglowek: "Pełnomocnictwo drugiego rodzica",
+    powrot: "Profil rodziny",
+    tytulPelnomocnictwa: "Pełnomocnictwo PEL w eZUS",
+    tytulStanu: "Stan pełnomocnictwa",
+    przewijanie: "Tabela pełnomocnictwa PEL",
+    wiersze: {
+      stan: "Stan",
+      mocodawca: "Mocodawca",
+      pelnomocnik: "Pełnomocnik",
+      rola: "Rola",
+      zakres: "Zakres",
+      okres: "Okres obowiązywania",
+      wymaganaRola: "Wymagana rola",
+      wymaganyZakres: "Wymagany zakres",
+    },
+    ty: ({ imieINazwisko }: { imieINazwisko: string }) => `${imieINazwisko} (Ty)`,
+    stany: {
+      obowiazuje: "Obowiązuje",
+      ograniczone: "Ograniczone do korespondencji",
+      wygaslo: "Wygasło",
+      odwolane: "Odwołane",
+      brak: "Brak pełnomocnictwa",
+    },
+    obowiazujeOd: ({ data }: { data: string }) => `Obowiązuje od ${data}`,
+    rolaUbezpieczony: "Ubezpieczony",
+    zakresy: {
+      "bez-ograniczen": "Bez ograniczenia do korespondencji",
+      korespondencja: "Wyłącznie korespondencja",
+    },
+    okresDoOdwolania: ({ od }: { od: string }) => `od ${od} do odwołania`,
+    okresOdDo: ({ od, doDnia }: { od: string; doDnia: string }) => `od ${od} do ${doDnia}`,
+    opisOdczytu: ({ imieINazwisko }: { imieINazwisko: string }) =>
+      `Na podstawie tego pełnomocnictwa odczytamy dane ubezpieczenia ${imieINazwisko} z jego konta ZUS, zapiszemy je w profilu rodziny i ponownie wyliczymy plan.`,
+    opisBleduOdczytu: ({ imieINazwisko }: { imieINazwisko: string }) =>
+      `Danych ${imieINazwisko} nie zapisaliśmy. Twoje odpowiedzi o drugim rodzicu się nie zmieniły, a plan rodziny pozostał bez zmian.`,
+    opisPrzyszlej: ({ imieINazwisko, data }: { imieINazwisko: string; data: string }) =>
+      `Do tego dnia plan rodziny liczymy z Twoich odpowiedzi o drugim rodzicu. Dane ${imieINazwisko} odczytamy przy pierwszym otwarciu przewodnika od ${data} – nie musisz nic robić.`,
+    odczytajDane: "Odczytaj dane",
+    odczytajPonownie: "Odczytaj dane ponownie",
+    wrocDoProfilu: "Wróć do profilu rodziny",
+    daneKtoreOdczytamy: "Dane, które odczytamy",
+    zakresDanych: [
+      "Tytuły i okresy ubezpieczenia",
+      "Ubezpieczenie chorobowe",
+      "Podstawy składek",
+      "Informację, czy płatnik składek wypłaca zasiłki",
+      "Wypłacone zasiłki",
+    ],
+    notatkaEzla: "Innych danych z konta drugiego rodzica, np. zaświadczeń lekarskich e-ZLA, nie odczytujemy.",
+    notatkaOdswiezania: "Dane odczytamy ponownie przy każdym otwarciu przewodnika. Gdy pełnomocnictwo wygaśnie albo zostanie odwołane, usuniemy je i przywrócimy Twoje odpowiedzi o drugim rodzicu.",
+    instrukcja: {
+      tytul: "Jak udzielić pełnomocnictwa PEL w eZUS",
+      wstepBrak: "Pokaż tę instrukcję drugiemu rodzicowi. Pełnomocnictwo składa on na swoim koncie w eZUS.",
+      wstepOgraniczone: ({ imieINazwisko }: { imieINazwisko: string }) =>
+        `Na podstawie pełnomocnictwa do korespondencji nie odczytamy danych ubezpieczenia. ${imieINazwisko} zmieni zakres, składając ponownie wniosek PEL. Pokaż mu tę instrukcję.`,
+      wstepNowe: ({ imieINazwisko }: { imieINazwisko: string }) =>
+        `${imieINazwisko} udzieli nowego pełnomocnictwa, składając ponownie wniosek PEL. Pokaż mu tę instrukcję.`,
+      krok1: "Zaloguj się do eZUS na swoje konto.",
+      krok2: { przed: "Wybierz wniosek ", wyroznienie: "PEL", po: " – pełnomocnictwo." },
+      krok3: { przed: "Jako pełnomocnika wpisz: imię ", nazwisko: ", nazwisko ", pesel: ", numer PESEL ", po: "." },
+      krok4: { przed: "W sekcji eZUS zaznacz rolę ", rola: "Ubezpieczony", zakres: " bez ograniczenia do korespondencji", po: " i wyślij wniosek." },
+      poWyslaniuBrak: "Gdy drugi rodzic wyśle wniosek, sprawdź pełnomocnictwo ponownie.",
+      poWyslaniu: ({ imieINazwisko }: { imieINazwisko: string }) =>
+        `Gdy ${imieINazwisko} wyśle nowy wniosek, sprawdź pełnomocnictwo ponownie.`,
+      sprawdzPonownie: "Sprawdź ponownie",
+      przejdzDoEzus: "Przejdź do eZUS",
+    },
+    notatkaBrak: "Do czasu udzielenia pełnomocnictwa plan rodziny liczymy z Twoich odpowiedzi o drugim rodzicu.",
+    notatkaOgraniczone: "Plan rodziny liczymy z Twoich odpowiedzi o drugim rodzicu.",
+    notatkaWygaslo: "Danych z wygasłego pełnomocnictwa nie przechowujemy. Plan rodziny liczymy z Twoich odpowiedzi o drugim rodzicu.",
+    notatkaOdwolane: "Danych z odwołanego pełnomocnictwa nie przechowujemy. Plan rodziny liczymy z Twoich odpowiedzi o drugim rodzicu.",
+    sprawdzono: "Sprawdziliśmy pełnomocnictwo ponownie.",
+    bezAkcji: {
+      dolaczyl: "Drugi rodzic dołączył do Waszego planu, więc jego dane odczytujemy z jego konta ZUS.",
+      brakDrugiegoRodzica: "Profil rodziny nie zawiera drugiego rodzica.",
+    },
     // koniec ViewSecondParentPowerOfAttorney
   },
   ViewBirthPackage: {
@@ -1379,6 +1570,58 @@ export const teksty = {
   ViewInviteAccept: {
     tytulStrony: "Zaproszenie do planu rodziny",
     naglowek: "Zaproszenie do planu rodziny",
+    tytulKarty: ({ imie }: { imie: string }) => `${imie} zaprasza Cię do wspólnego planu rodziny`,
+    wstep: ({ imieINazwisko }: { imieINazwisko: string }) =>
+      `${imieINazwisko} zaprasza Cię do przewodnika rodzica jako drugiego rodzica. Po przyjęciu zaproszenia oboje będziecie widzieć wspólny plan rodziny.`,
+    poPrzyjeciu: "Po przyjęciu zaproszenia",
+    korzysci: [
+      "Zobaczysz wspólny plan rodziny i kalendarz terminów.",
+      "Poznasz swoje uprawnienia, m.in. urlop ojcowski i 9 tygodni urlopu rodzicielskiego, które przepadają, jeśli z nich nie skorzystasz.",
+      "Przypomnienia o Twoich sprawach będziemy wysyłać na Twoje konto.",
+      "Przygotujesz własne wnioski i skorzystasz z kalkulatorów oraz asystenta.",
+    ],
+    daneZus: "Dane z Twojego konta ZUS",
+    daneZusOpis: {
+      kobieta: ({ imie }: { imie: string }) =>
+        `Formę zatrudnienia, dobrowolne ubezpieczenie chorobowe i płatnika zasiłku odczytamy z Twojego konta ZUS. Zastąpią one odpowiedzi, które podała o Tobie ${imie}, a plan wyliczymy ponownie. W profilu rodziny zmienisz tylko swoje dane.`,
+      mezczyzna: ({ imie }: { imie: string }) =>
+        `Formę zatrudnienia, dobrowolne ubezpieczenie chorobowe i płatnika zasiłku odczytamy z Twojego konta ZUS. Zastąpią one odpowiedzi, które podał o Tobie ${imie}, a plan wyliczymy ponownie. W profilu rodziny zmienisz tylko swoje dane.`,
+    },
+    przyjmij: "Przyjmij zaproszenie",
+    odrzuc: "Odrzuć zaproszenie",
+    notatkaOdrzucenia: "Jeśli odrzucisz zaproszenie, Twoje konto się nie zmieni.",
+    szczegoly: "Szczegóły zaproszenia",
+    zaprasza: "Zaprasza",
+    rolaPoPrzyjeciu: "Twoja rola po przyjęciu",
+    rolaDrugiRodzic: "Drugi rodzic",
+    wazneDo: "Zaproszenie ważne do",
+    notatkaOdlaczenia: ({ imie }: { imie: string }) => `${imie} może w każdej chwili odłączyć Cię od planu.`,
+    bledy: {
+      "0066": {
+        tytul: "Zaproszenie nie działa",
+        akapity: [
+          "Link do zaproszenia działa przez 7 dni od utworzenia. Przestaje działać wcześniej, gdy rodzic utworzy nowe zaproszenie.",
+          "Poproś rodzica, który Cię zaprosił, o nowy link. Otworzysz go tak samo – w przeglądarce, po zalogowaniu przez mObywatela.",
+        ],
+        akcja: "Przejdź do strony głównej",
+      },
+      "0067": {
+        tytul: "To jest Twoje zaproszenie",
+        akapity: [
+          "Link otwiera zaproszenie tylko na koncie drugiego rodzica. Wyślij go dowolnym komunikatorem albo e-mailem.",
+          "Nie masz już linku? W profilu rodziny utwórz nowe zaproszenie. Poprzedni link przestanie wtedy działać.",
+        ],
+        akcja: "Przejdź do profilu rodziny",
+      },
+      "0068": {
+        tytul: "Nie dołączysz do tego planu",
+        akapity: [
+          "Masz w przewodniku własny plan rodziny, w którym jesteś rodzicem. Jedno konto należy tylko do jednej rodziny, więc z tego zaproszenia nie dołączysz do innego planu.",
+          "Twój plan rodziny się nie zmienił.",
+        ],
+        akcja: "Przejdź do swojego planu rodziny",
+      },
+    },
     // koniec ViewInviteAccept
   },
   ViewCatalogList: {
@@ -1539,10 +1782,32 @@ export const teksty = {
   },
   SheetInviteSecondParent: {
     tytul: "Zaproś drugiego rodzica",
+    opis: "Skopiuj link i wyślij go drugiemu rodzicowi dowolnym komunikatorem albo e-mailem. Drugi rodzic otworzy link w przeglądarce i zaloguje się przez mObywatela.",
+    etykietaLinku: "Link do zaproszenia",
+    waznyDo: "Link ważny do",
+    kopiuj: "Kopiuj link",
+    udostepnij: "Udostępnij link",
+    notatka: "Link jest jednorazowy. Gdy utworzysz nowe zaproszenie, ten link przestanie działać.",
+    skopiowano: "Skopiowaliśmy link do schowka.",
+    zaznaczono: "Zaznaczyliśmy link. Skopiuj go skrótem klawiszowym.",
+    tytulUdostepnienia: "Zaproszenie do planu rodziny",
+    trescUdostepnienia: "Zapraszam Cię do wspólnego planu rodziny w przewodniku rodzica.",
     // koniec SheetInviteSecondParent
   },
   SheetSecondParentRemoveConfirm: {
     tytul: "Odłączyć drugiego rodzica?",
+    opis: ({ imieINazwisko }: { imieINazwisko: string }) =>
+      `${imieINazwisko} przestanie widzieć plan Twojej rodziny i dostawać przypomnienia.`,
+    poOdlaczeniu: "Po odłączeniu",
+    skutki: {
+      rola: ({ imieINazwisko }: { imieINazwisko: string }) =>
+        `${imieINazwisko} straci rolę Drugi rodzic i dostęp do planu rodziny.`,
+      przypomnienia: "Przypomnienia o jego sprawach, np. o urlopie ojcowskim, będziemy wysyłać na Twoje konto.",
+      dane: "Jego dane zostaną w profilu jako Twoja odpowiedź. Możesz je potem zmienić.",
+    },
+    ponownie: "Drugiego rodzica możesz później zaprosić ponownie.",
+    potwierdz: "Odłącz drugiego rodzica",
+    anuluj: "Anuluj",
     // koniec SheetSecondParentRemoveConfirm
   },
   SheetSpecialSituationConfirm: {
