@@ -3,12 +3,13 @@
 // GET  /api/katalog            200 { edycje, trwaly } z edycjami Administratora wspólnymi dla wszystkich użytkowników.
 // GET  /api/katalog?zlozony=1  200 { edycje, trwaly, katalog } z katalogiem złożonym z wartości startowych i edycji,
 //                              czyli pozycjami, słownikami kwot, wymiarów i dokumentów oraz regułami świadczeń.
-// POST /api/katalog            treść { zmiana: ZmianaKatalogu }: dopisuje jedną zmianę Administratora i zwraca
+// POST /api/katalog            treść { zmiana: ZmianaKatalogu, sesjaDemo? }: dopisuje jedną zmianę Administratora i zwraca
 //                              200 { edycje, trwaly }; zmiana { rodzaj: 'przywrocenie' } przywraca katalog startowy.
-// PUT  /api/katalog            treść { edycje, bazowaWersja? }: zastępuje wszystkie edycje i zwraca 200 { edycje, trwaly };
-//                              przy bazowaWersja różnej od bieżącej wersji 409 { edycje } z bieżącymi edycjami.
-// Zapis (POST, PUT) wymaga roli Administrator: 401 bez potwierdzenia roli, 403 przy odrzuconym potwierdzeniu
-// (serwer/katalog/autoryzacja.ts). Błędny JSON albo układ danych daje 400, a treść ponad 1 MB daje 413.
+// PUT  /api/katalog            treść { edycje, bazowaWersja?, sesjaDemo? }: zastępuje wszystkie edycje i zwraca
+//                              200 { edycje, trwaly }; przy bazowaWersja różnej od bieżącej wersji 409 { edycje }.
+// Zapis (POST, PUT) wymaga roli Administrator potwierdzonej tokenem panelu albo polem `sesjaDemo` treści: 401 bez
+// potwierdzenia roli, 403 przy odrzuconym potwierdzeniu (serwer/katalog/autoryzacja.ts). Błędny JSON albo układ danych
+// daje 400, a treść ponad 1 MB daje 413.
 import { connection } from 'next/server';
 import { autoryzujAdministratora } from '@/serwer/katalog/autoryzacja';
 import { odczytajEdycje, odczytajKatalogZlozony, zapiszZmiane, zastapEdycje } from '@/serwer/katalog/magazyn';
@@ -44,10 +45,10 @@ export async function GET(zadanie: Request): Promise<Response> {
 
 export async function POST(zadanie: Request): Promise<Response> {
   await connection();
-  const autoryzacja = autoryzujAdministratora(zadanie);
-  if (!autoryzacja.ok) return blad(autoryzacja.status, 'brak-uprawnien');
   const wczytana = await trescJson(zadanie);
   if (!wczytana.ok) return wczytana.odpowiedz;
+  const autoryzacja = autoryzujAdministratora(zadanie, wczytana.tresc);
+  if (!autoryzacja.ok) return blad(autoryzacja.status, 'brak-uprawnien');
   const zmiana = (wczytana.tresc as { zmiana?: unknown } | null)?.zmiana;
   if (!czyZmianaKatalogu(zmiana)) return blad(400, 'bledna-zmiana');
   // Nowa wersja wartości dotyczy edytowalnego wpisu i podaje dodatnią liczbę dla każdego wariantu, który Administrator wpisuje.
@@ -63,10 +64,10 @@ export async function POST(zadanie: Request): Promise<Response> {
 
 export async function PUT(zadanie: Request): Promise<Response> {
   await connection();
-  const autoryzacja = autoryzujAdministratora(zadanie);
-  if (!autoryzacja.ok) return blad(autoryzacja.status, 'brak-uprawnien');
   const wczytana = await trescJson(zadanie);
   if (!wczytana.ok) return wczytana.odpowiedz;
+  const autoryzacja = autoryzujAdministratora(zadanie, wczytana.tresc);
+  if (!autoryzacja.ok) return blad(autoryzacja.status, 'brak-uprawnien');
   const tresc = wczytana.tresc as { edycje?: unknown; bazowaWersja?: unknown } | null;
   if (!czyEdycjeKatalogu(tresc?.edycje)) return blad(400, 'bledne-edycje');
   const bazowa = tresc.bazowaWersja;

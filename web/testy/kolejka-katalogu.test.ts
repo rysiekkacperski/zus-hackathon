@@ -30,7 +30,10 @@ const posty: number[] = [];
 g.fetch = async (adres: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => {
   if (!dziala) throw new TypeError('fetch failed');
   if (init?.method === 'POST') {
-    const autoryzacja = autoryzujAdministratora(new Request(`http://x${adres}`, { method: 'POST', headers: init.headers, body: init.body }));
+    // Sesja Administratora jedzie w polu sesjaDemo treści, a nagłówki żądania nie zawierają numeru PESEL.
+    assert.ok(!Object.values(init.headers ?? {}).some((w) => /\d{11}/.test(w)));
+    const tresc = JSON.parse(init.body ?? '{}') as unknown;
+    const autoryzacja = autoryzujAdministratora(new Request(`http://x${adres}`, { method: 'POST', headers: init.headers, body: init.body }), tresc);
     posty.push(autoryzacja.ok ? 200 : autoryzacja.status);
     if (!autoryzacja.ok) return new Response('{}', { status: autoryzacja.status });
     edycjeSerwera = zastosujZmiane(edycjeSerwera, (JSON.parse(init.body ?? '{}') as { zmiana: ZmianaKatalogu }).zmiana);

@@ -15,6 +15,8 @@ import type { EdycjeKatalogu, Katalog, ZmianaKatalogu } from '@/domena/typy';
 // Zapis trafia najpierw do pliku tymczasowego, a potem zastępuje plik docelowy, więc przerwany zapis zostawia
 // poprzednią treść. Gdy system plików odrzuca zapis (hosting bez trwałego dysku), edycje zostają w pamięci procesu,
 // a odpowiedź usługi podaje `trwaly: false`. Zapisy wykonują się po kolei w jednej kolejce obietnic.
+// GET /api/katalog jest publiczny, więc magazyn zapisuje i zwraca autora zmian jako znacznik 'administrator'
+// zamiast numeru PESEL Administratora (funkcja `bezPeselAutora`).
 
 const NAZWA_PLIKU = 'katalog.json';
 
@@ -44,11 +46,25 @@ function sciezkaPliku(): string {
   return path.join(katalogDanych(), NAZWA_PLIKU);
 }
 
+const AUTOR_NA_SERWERZE = 'administrator';
+
+/** Kopia danych, w której każde pole `przez` z numerem PESEL dostaje znacznik autora bez danych osobowych. */
+export function bezPeselAutora<T>(dane: T): T {
+  if (Array.isArray(dane)) return dane.map((w: unknown) => bezPeselAutora(w)) as T;
+  if (typeof dane !== 'object' || dane === null) return dane;
+  return Object.fromEntries(
+    Object.entries(dane).map(([klucz, wartosc]) => [
+      klucz,
+      klucz === 'przez' && typeof wartosc === 'string' && /^\d{11}$/.test(wartosc) ? AUTOR_NA_SERWERZE : bezPeselAutora(wartosc),
+    ]),
+  ) as T;
+}
+
 async function wczytajZPliku(): Promise<EdycjeKatalogu> {
   try {
     const zawartosc: unknown = JSON.parse(await readFile(sciezkaPliku(), 'utf8'));
     const edycje = (zawartosc as Partial<PlikKatalogu> | null)?.edycje;
-    if (czyEdycjeKatalogu(edycje)) return edycje;
+    if (czyEdycjeKatalogu(edycje)) return bezPeselAutora(edycje);
   } catch {
     // Brak pliku albo uszkodzony JSON: usługa startuje z katalogiem bez edycji.
   }
@@ -78,7 +94,8 @@ export async function odczytajEdycje(): Promise<{ edycje: EdycjeKatalogu; trwaly
     const zPliku = await wczytajZPliku();
     stan.edycje ??= zPliku;
   }
-  return { edycje: stan.edycje, trwaly: stan.trwaly };
+  // Edycje w pamięci procesu mogą pochodzić sprzed zapisu znacznika autora, więc odczyt też usuwa numer PESEL.
+  return { edycje: bezPeselAutora(stan.edycje), trwaly: stan.trwaly };
 }
 
 /** Katalog złożony z seedu i bieżących edycji. */
@@ -92,7 +109,8 @@ function wKolejce<T>(fn: () => Promise<T>): Promise<T> {
   return wynik;
 }
 
-async function utrwal(edycje: EdycjeKatalogu, zapisano: string): Promise<{ edycje: EdycjeKatalogu; trwaly: boolean }> {
+async function utrwal(zmienione: EdycjeKatalogu, zapisano: string): Promise<{ edycje: EdycjeKatalogu; trwaly: boolean }> {
+  const edycje = bezPeselAutora(zmienione);
   stan.edycje = edycje;
   stan.trwaly = await zapiszDoPliku(edycje, zapisano);
   return { edycje, trwaly: stan.trwaly };

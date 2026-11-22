@@ -26,38 +26,66 @@ test('POST /api/v1/kalkulator/zasilek-macierzynski odpowiada na przykład z opis
 });
 
 test('POST /api/katalog: 401 bez potwierdzenia roli, 403 dla konta rodzica, 200 dla Administratora', async () => {
-  const wyslij = (naglowki: Record<string, string>) =>
+  const wyslij = (sesja: Record<string, string>) =>
     uslugaKatalogu.POST(
       new Request('http://localhost/api/katalog', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', ...naglowki },
-        body: JSON.stringify({ zmiana: { rodzaj: 'nowa-wersja', idWpisu: 'swiadczenie-wychowawcze-800-plus', wersja: { od: '2027-01-01', wartosci: { kwota: 90000 } } } }),
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          zmiana: { rodzaj: 'nowa-wersja', idWpisu: 'swiadczenie-wychowawcze-800-plus', wersja: { od: '2027-01-01', wartosci: { kwota: 90000 } } },
+          ...sesja,
+        }),
       }),
     );
   assert.equal((await wyslij({})).status, 401);
-  assert.equal((await wyslij({ 'x-sesja-demo': 'test:93041231085' })).status, 403);
-  assert.equal((await wyslij({ 'x-sesja-demo': 'test:88031407319' })).status, 200);
+  assert.equal((await wyslij({ sesjaDemo: 'test:93041231085' })).status, 403);
+  assert.equal((await wyslij({ sesjaDemo: 'test:88031407319' })).status, 200);
   const odczyt = (await (await uslugaKatalogu.GET(new Request('http://localhost/api/katalog'))).json()) as { edycje: { noweWersje: unknown[] } };
   assert.equal(odczyt.edycje.noweWersje.length, 1);
 });
 
-test('GET /api/v1/zus/konto czyta PESEL z nagłówka X-Pesel, a adres go nie zawiera', async () => {
+test('GET /api/katalog nie zwraca numeru PESEL autora zmiany', async () => {
+  const zmiana = { rodzaj: 'zmiana-pozycji', zmiana: { id: 'K12', zmiany: { tytul: 'Świadczenie wychowawcze 800+' }, przez: '88031407319', czas: '2026-11-22T10:00:00' } };
+  const zapis = await uslugaKatalogu.POST(
+    new Request('http://localhost/api/katalog', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ zmiana, sesjaDemo: 'test:88031407319' }),
+    }),
+  );
+  assert.equal(zapis.status, 200);
+  assert.doesNotMatch(await zapis.text(), /\d{11}/);
+  const odczyt = await uslugaKatalogu.GET(new Request('http://localhost/api/katalog?zlozony=1'));
+  const tresc = await odczyt.text();
+  assert.doesNotMatch(tresc, /\d{11}/);
+  assert.match(tresc, /"przez":"administrator"/);
+});
+
+test('POST /api/v1/zus/konto przyjmuje PESEL wyłącznie w treści żądania', async () => {
   const konto = await import('@/app/api/v1/zus/konto/route');
   const rozliczenia = await import('@/app/api/v1/zus/konto/stan-rozliczen/route');
   const ezla = await import('@/app/api/v1/zus/konto/e-zla/route');
   for (const klucz of ['kontoZus', 'stanRozliczen', 'ezla'] as const) {
     const opis = endpointy.find((e) => e.klucz === klucz);
-    assert.ok(opis?.przykladNaglowkow?.['X-Pesel']);
-    assert.doesNotMatch(opis.sciezka + opis.przykladAdresu, /\d{11}|\{pesel\}/);
+    assert.equal(opis?.metoda, 'POST');
+    assert.match(String(opis.przykladZadania?.pesel), /^\d{11}$/);
+    assert.doesNotMatch(opis.sciezka + opis.przykladAdresu, /\d{11}|pesel/i);
   }
-  const zadanie = (adres: string, naglowki: Record<string, string> = {}) => new Request(`http://localhost${adres}`, { headers: naglowki });
-  const odczyt = await konto.GET(zadanie('/api/v1/zus/konto?postac=zrodlowe', { 'X-Pesel': '93041231085' }));
+  const zadanie = (adres: string, tresc: object) =>
+    new Request(`http://localhost${adres}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(tresc) });
+  const odczyt = await konto.POST(zadanie('/api/v1/zus/konto', { pesel: '93041231085', postac: 'zrodlowe' }));
   assert.equal(odczyt.status, 200);
   assert.equal(((await odczyt.json()) as { zrodlo: { pesel: string } }).zrodlo.pesel, '93041231085');
-  assert.equal((await konto.GET(zadanie('/api/v1/zus/konto'))).status, 400);
-  const bledny = await konto.GET(zadanie('/api/v1/zus/konto', { 'X-Pesel': '93041231086' }));
+  const brak = await konto.POST(zadanie('/api/v1/zus/konto', {}));
+  assert.equal(brak.status, 400);
+  assert.equal(((await brak.json()) as { kod: string }).kod, '0024');
+  const bledny = await konto.POST(zadanie('/api/v1/zus/konto', { pesel: '93041231086' }));
   assert.equal(bledny.status, 400);
   assert.equal(((await bledny.json()) as { kod: string }).kod, '0026');
-  assert.equal((await rozliczenia.GET(zadanie('/api/v1/zus/konto/stan-rozliczen?dzien=2026-11-22', { 'X-Pesel': '95082103460' }))).status, 200);
-  assert.equal((await ezla.GET(zadanie('/api/v1/zus/konto/e-zla?zgodaNaDaneZdrowia=tak', { 'X-Pesel': '93041231085' }))).status, 200);
+  // PESEL w nagłówku albo w adresie nie wystarcza: serwer czyta go wyłącznie z treści.
+  const wNaglowku = new Request('http://localhost/api/v1/zus/konto?pesel=93041231085', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'X-Pesel': '93041231085' }, body: '{}',
+  });
+  assert.equal((await konto.POST(wNaglowku)).status, 400);
+  assert.equal((await rozliczenia.POST(zadanie('/api/v1/zus/konto/stan-rozliczen', { pesel: '95082103460', dzien: '2026-11-22' }))).status, 200);
+  assert.equal((await ezla.POST(zadanie('/api/v1/zus/konto/e-zla', { pesel: '93041231085', zgodaNaDaneZdrowia: true }))).status, 200);
+  assert.equal((await ezla.POST(zadanie('/api/v1/zus/konto/e-zla', { pesel: '93041231085', zgodaNaDaneZdrowia: false }))).status, 403);
 });

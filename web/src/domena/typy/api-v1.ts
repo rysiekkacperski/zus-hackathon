@@ -191,11 +191,26 @@ export interface OdpowiedzWeryfikacjiSprawyApi extends CzasOdpowiedziApi {
 
 // --- Symulowany ZUS -----------------------------------------------------------------------------------
 
+/**
+ * Treść POST /api/v1/zus/konto. PESEL konta jedzie w treści żądania, którą szyfruje połączenie HTTPS, więc nie trafia
+ * do adresu, nagłówków, logów serwera ani historii przeglądarki. `zgodaNaDaneZdrowia: false` pomija zaświadczenia e-ZLA,
+ * `postac: 'zrodlowe'` zwraca dane źródłowe konta, a `kanal: 'pue-ezus'` oznacza odczyt przez PUE/eZUS.
+ */
+export interface ZadanieKontaZusApi extends CzasZadaniaApi, SymulacjeZadaniaApi {
+  pesel: Pesel;
+  zgodaNaDaneZdrowia?: boolean;
+  postac?: 'zrodlowe';
+  kanal?: 'pue-ezus';
+}
+/** Treść POST /api/v1/zus/konto/stan-rozliczen: PESEL konta i dzień stanu, domyślnie `dzis`. */
+export interface ZadanieStanuRozliczenApi extends CzasZadaniaApi, SymulacjeZadaniaApi { pesel: Pesel; dzien?: DataISO }
+/** Treść POST /api/v1/zus/konto/e-zla: PESEL konta i zgoda na dane dotyczące zdrowia, bez której API odpowiada kodem 0004. */
+export interface ZadanieEzlaApi extends CzasZadaniaApi, SymulacjeZadaniaApi { pesel: Pesel; zgodaNaDaneZdrowia: boolean }
 export interface OdpowiedzKontaZusApi { dane: DaneZKontaZus }
 /**
- * Odpowiedź GET /api/v1/zus/konto?postac=zrodlowe z nagłówkiem X-Pesel: dane źródłowe konta w symulowanym ZUS przed filtrami odczytu.
+ * Odpowiedź POST /api/v1/zus/konto z `postac: 'zrodlowe'`: dane źródłowe konta w symulowanym ZUS przed filtrami odczytu.
  * Przeglądarka nakłada na nie swój stan symulacji i przygotowuje kopię z oznaczeniem nowych dzieci względem poprzedniej kopii.
- * Przy `zgodaNaDaneZdrowia=nie` lista zaświadczeń e-ZLA jest pusta.
+ * Przy `zgodaNaDaneZdrowia: false` lista zaświadczeń e-ZLA jest pusta.
  */
 export interface OdpowiedzZrodlowychDanychKontaZusApi { zrodlo: ZrodloweDaneKontaZus }
 /**

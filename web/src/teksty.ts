@@ -10346,11 +10346,11 @@ export const teksty = {
       },
       kontoZus: {
         tytul: "Dane z konta ZUS",
-        opis: "Zwraca symulowany odczyt danych konta ZUS: tytuły ubezpieczenia z podstawami składek, członków rodziny, zasiłki, świadczenia rodzinne, wnioski, zaświadczenia e-ZLA przy zgodzie na dane dotyczące zdrowia i pełnomocnictwa. PESEL konta przekaż w nagłówku X-Pesel. Parametr postac=zrodlowe zwraca dane źródłowe konta przed filtrami odczytu, a kanal=pue-ezus oznacza odczyt przez PUE/eZUS.",
+        opis: "Zwraca symulowany odczyt danych konta ZUS: tytuły ubezpieczenia z podstawami składek, członków rodziny, zasiłki, świadczenia rodzinne, wnioski, zaświadczenia e-ZLA przy zgodzie na dane dotyczące zdrowia i pełnomocnictwa. PESEL konta przekaż w polu pesel treści żądania POST, którą szyfruje połączenie HTTPS. Pole postac z wartością zrodlowe zwraca dane źródłowe konta przed filtrami odczytu, a pole kanal z wartością pue-ezus oznacza odczyt przez PUE/eZUS.",
       },
       stanRozliczen: {
         tytul: "Stan rozliczeń składek",
-        opis: "Zwraca stan rozliczeń składek osoby prowadzącej działalność na wskazany dzień, rodzaj dokumentu, który ZUS wyda w tym dniu, i komunikaty o skutku zadłużenia dla prawa do świadczeń.",
+        opis: "Zwraca stan rozliczeń składek osoby prowadzącej działalność na wskazany dzień, rodzaj dokumentu, który ZUS wyda w tym dniu, i komunikaty o skutku zadłużenia dla prawa do świadczeń. PESEL konta i dzień przekaż w treści żądania POST.",
       },
       zaswiadczenie: {
         tytul: "Zaświadczenie o niezaleganiu w opłacaniu składek",
@@ -10358,7 +10358,7 @@ export const teksty = {
       },
       ezla: {
         tytul: "Zaświadczenia lekarskie e-ZLA",
-        opis: "Zwraca zaświadczenia lekarskie e-ZLA z ostatnich 12 miesięcy, od najnowszych. Potwierdź zgodę na dane dotyczące zdrowia parametrem zgodaNaDaneZdrowia=tak.",
+        opis: "Zwraca zaświadczenia lekarskie e-ZLA z ostatnich 12 miesięcy, od najnowszych. PESEL konta przekaż w treści żądania POST, a zgodę na dane dotyczące zdrowia potwierdź polem zgodaNaDaneZdrowia z wartością true.",
       },
       wnioski: {
         tytul: "Wysłanie wniosku do ZUS",
@@ -10386,10 +10386,10 @@ export const teksty = {
       opisDatyDemo: "Data demonstracyjna w formacie RRRR-MM-DD.",
       opisTeraz: "Chwila wyliczenia w formacie RRRR-MM-DDTHH:MM:SS.",
       opisSymulacji: "Przełączniki symulacji z ustawień demo, nazwy oddzielone przecinkami.",
-      opisPeselu: "Numer PESEL konta w symulowanym ZUS. Przekaż go w nagłówku żądania, dzięki czemu numer nie trafia do adresu, logów serwera ani historii przeglądarki.",
+      opisPeselu: "Numer PESEL konta w symulowanym ZUS. Przekaż go w treści żądania POST, którą szyfruje połączenie HTTPS. Adres i nagłówki żądania nie zawierają numeru PESEL.",
       opisRodzajuWalidacji: "Rodzaj walidacji.",
       opisDnia: "Dzień stanu rozliczeń w formacie RRRR-MM-DD.",
-      opisZgody: "Zgoda na dane dotyczące zdrowia: tak albo nie.",
+      opisZgody: "Zgoda na dane dotyczące zdrowia: true albo false.",
       opisPostaci: "Postać odpowiedzi: zrodlowe zwraca dane źródłowe konta przed filtrami odczytu.",
       opisKanalu: "Kanał odczytu: pue-ezus oznacza odczyt przez PUE/eZUS.",
       odpowiedzPoprawna: "Odpowiedź poprawna.",

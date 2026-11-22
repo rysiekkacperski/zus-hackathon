@@ -32,7 +32,7 @@ export interface ParametryWidokow {
   ViewDemoAccountPicker: BezParametrow;
   ViewDemoNewAccount: BezParametrow;
   ViewDemoSettings: BezParametrow;
-  ViewDemoInbox: Zapytanie<'konto'>;
+  ViewDemoInbox: BezParametrow;
   ViewGuideWelcome: BezParametrow;
   ViewGuideSettings: BezParametrow;
   ViewProfileZusData: Zapytanie<'powrot'>;

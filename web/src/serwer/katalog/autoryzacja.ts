@@ -8,12 +8,10 @@ import { kontoPrzykladowe } from '@/dane/konta-demo';
 // Prototyp trzyma sesję mZUS w przeglądarce, więc serwer przyjmuje dwa sposoby potwierdzenia roli:
 // 1. nagłówek `Authorization: Bearer <PANEL_TOKEN>`, gdy zmienna PANEL_TOKEN ma wartość; ten sposób służy
 //    systemom ZUS i skryptom, które zmieniają katalog bez przeglądarki;
-// 2. nagłówek `X-Sesja-Demo: <identyfikator sesji>:<PESEL>` z numerem PESEL konta demonstracyjnego z rolą
-//    Administrator; ten sposób działa w trybie demonstracyjnym, czyli dopóki zmienna KATALOG_TRYB_DEMO
-//    ma wartość inną niż `nie`.
+// 2. pole `sesjaDemo: '<identyfikator sesji>:<PESEL>'` w treści żądania z numerem PESEL konta demonstracyjnego
+//    z rolą Administrator; PESEL jedzie w treści, którą szyfruje połączenie HTTPS, a nie w nagłówku. Ten sposób działa
+//    w trybie demonstracyjnym, czyli dopóki zmienna KATALOG_TRYB_DEMO ma wartość inną niż `nie`.
 // Wdrożenie produkcyjne ustawia KATALOG_TRYB_DEMO=nie i PANEL_TOKEN albo zastępuje ten moduł autoryzacją mZUS.
-
-export const NAGLOWEK_SESJI_DEMO = 'x-sesja-demo';
 
 export type WynikAutoryzacji = { ok: true; przez: string } | { ok: false; status: 401 | 403 };
 
@@ -28,14 +26,24 @@ export function czyTrybDemoKatalogu(): boolean {
   return process.env.KATALOG_TRYB_DEMO?.trim().toLowerCase() !== 'nie';
 }
 
-/** Rozstrzyga, czy żądanie pochodzi od Administratora; `przez` to PESEL konta albo znacznik tokenu panelu. */
-export function autoryzujAdministratora(zadanie: Request): WynikAutoryzacji {
+/** Sesja demonstracyjna z pola `sesjaDemo` treści żądania; pusty tekst, gdy pola nie ma. */
+function sesjaZTresci(tresc: unknown): string {
+  if (typeof tresc !== 'object' || tresc === null) return '';
+  const sesja = (tresc as { sesjaDemo?: unknown }).sesjaDemo;
+  return typeof sesja === 'string' ? sesja.trim() : '';
+}
+
+/**
+ * Rozstrzyga, czy żądanie pochodzi od Administratora; `przez` to PESEL konta albo znacznik tokenu panelu.
+ * `tresc` to odczytana treść JSON żądania z polem `sesjaDemo`.
+ */
+export function autoryzujAdministratora(zadanie: Request, tresc: unknown): WynikAutoryzacji {
   const token = process.env.PANEL_TOKEN?.trim();
   const naglowek = zadanie.headers.get('authorization')?.trim() ?? '';
   if (token && naglowek.toLowerCase().startsWith('bearer ')) {
     return rowneTokeny(naglowek.slice(7).trim(), token) ? { ok: true, przez: 'panel-token' } : { ok: false, status: 403 };
   }
-  const sesja = zadanie.headers.get(NAGLOWEK_SESJI_DEMO)?.trim() ?? '';
+  const sesja = sesjaZTresci(tresc);
   if (sesja === '') return { ok: false, status: 401 };
   if (!czyTrybDemoKatalogu()) return { ok: false, status: 403 };
   const m = /^([A-Za-z0-9_-]{1,80}):(\d{11})$/.exec(sesja);

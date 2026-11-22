@@ -101,7 +101,7 @@ function zastosujStanSymulowany(dane: ZrodloweDaneKontaZus, symulowany: StanSymu
 
 /**
  * Nakłada stan symulowanego ZUS z przeglądarki na dane źródłowe konta odczytane z REST API symulowanego ZUS
- * (GET /api/v1/zus/konto?postac=zrodlowe z nagłówkiem X-Pesel). Serwer zwraca dane startowe rejestru bez stanu symulacji, więc
+ * (POST /api/v1/zus/konto z `postac: 'zrodlowe'` i numerem PESEL w treści żądania). Serwer zwraca dane startowe rejestru bez stanu symulacji, więc
  * przeglądarka uzupełnia je tak samo jak zrodloweDaneKonta: konto spoza rejestru dostaje imię i nazwisko z argumentu
  * `osoba` (bez niego z nadpisań stanu symulowanego), a potem nadpisania scenariuszy, dziecko z symulacji, wnioski
  * z przewodnika, zaświadczenia o stanie rozliczeń i korespondencję. Wynik jest głęboką kopią.

@@ -10,8 +10,7 @@ export const RODZAJE_WALIDACJI: readonly RodzajWalidacjiApi[] = ['pesel', 'imie'
 
 export type GrupaEndpointu = keyof typeof teksty.ViewApiDocs.grupy;
 export type KluczEndpointu = keyof typeof teksty.ViewApiDocs.endpointy;
-export type ParametrAdresu = 'pesel' | 'rodzaj' | 'dzien' | 'zgodaNaDaneZdrowia' | 'postac' | 'kanal' | 'dzis' | 'dataDemo' | 'teraz'
-  | 'symulacje';
+export type ParametrAdresu = 'rodzaj';
 
 export interface Endpoint {
   klucz: KluczEndpointu;
@@ -25,10 +24,8 @@ export interface Endpoint {
   statusSukcesu: 200 | 201;
   parametry: ParametrAdresu[];
   bledy: KodKomunikatu[];
-  /** Adres przykładowego wywołania (z parametrami) i treść przykładowego żądania POST. */
+  /** Adres przykładowego wywołania i treść przykładowego żądania POST; PESEL jedzie wyłącznie w treści. */
   przykladAdresu: string;
-  /** Nagłówki przykładowego wywołania, na przykład X-Pesel z PESEL konta, który nie trafia do adresu. */
-  przykladNaglowkow?: Record<string, string>;
   przykladZadania?: Record<string, unknown>;
   przykladOdpowiedzi: Record<string, unknown>;
 }
@@ -36,7 +33,6 @@ export interface Endpoint {
 const PESEL_JDG = '93041231085';
 const PESEL_ROZLICZEN = '95082103460';
 const PESEL_BEZ_ZADLUZENIA = '91113040407';
-const CZAS = ['dzis', 'dataDemo', 'teraz'] as const satisfies ParametrAdresu[];
 const ZRODLO_RODZICA = 'odpowiedz-rodzica';
 
 const profilRodziny = {
@@ -138,20 +134,19 @@ export const endpointy: readonly Endpoint[] = [
     },
   },
   {
-    klucz: 'kontoZus', metoda: 'GET', sciezka: '/api/v1/zus/konto', grupa: 'zus',
-    typOdpowiedzi: 'OdpowiedzKontaZusApi', statusSukcesu: 200,
-    parametry: ['pesel', 'zgodaNaDaneZdrowia', 'postac', 'kanal', ...CZAS, 'symulacje'],
-    bledy: ['0001', '0133', '0024', '0025', '0026', '0010'],
+    klucz: 'kontoZus', metoda: 'POST', sciezka: '/api/v1/zus/konto', grupa: 'zus',
+    typZadania: 'ZadanieKontaZusApi', typOdpowiedzi: 'OdpowiedzKontaZusApi', statusSukcesu: 200, parametry: [],
+    bledy: ['0001', '0133', '0006', '0024', '0025', '0026', '0010'],
     przykladAdresu: '/api/v1/zus/konto',
-    przykladNaglowkow: { 'X-Pesel': PESEL_JDG },
+    przykladZadania: { pesel: PESEL_JDG, dzis: '2026-11-22' },
     przykladOdpowiedzi: { dane: { pesel: PESEL_JDG, imie: 'Anna', nazwisko: 'Nowak', tytuly: [{ rodzaj: 'dzialalnosc', od: '2024-03-01' }] } },
   },
   {
-    klucz: 'stanRozliczen', metoda: 'GET', sciezka: '/api/v1/zus/konto/stan-rozliczen', grupa: 'zus',
-    typOdpowiedzi: 'OdpowiedzStanuRozliczenApi', statusSukcesu: 200, parametry: ['pesel', 'dzien', ...CZAS, 'symulacje'],
-    bledy: ['0010', '0024', '0025', '0026', '0133'],
-    przykladAdresu: '/api/v1/zus/konto/stan-rozliczen?dzien=2026-11-22',
-    przykladNaglowkow: { 'X-Pesel': PESEL_ROZLICZEN },
+    klucz: 'stanRozliczen', metoda: 'POST', sciezka: '/api/v1/zus/konto/stan-rozliczen', grupa: 'zus',
+    typZadania: 'ZadanieStanuRozliczenApi', typOdpowiedzi: 'OdpowiedzStanuRozliczenApi', statusSukcesu: 200, parametry: [],
+    bledy: ['0006', '0010', '0024', '0025', '0026', '0133'],
+    przykladAdresu: '/api/v1/zus/konto/stan-rozliczen',
+    przykladZadania: { pesel: PESEL_ROZLICZEN, dzien: '2026-11-22' },
     przykladOdpowiedzi: {
       pesel: PESEL_ROZLICZEN, dzien: '2026-11-22', stan: { dzien: '2026-11-22', kwotaZadluzenia: 2540, zadluzenieOd: '2026-11-21' },
       rodzajZaswiadczenia: 'o-wysokosci-zadluzenia',
@@ -167,11 +162,11 @@ export const endpointy: readonly Endpoint[] = [
     przykladOdpowiedzi: { zaswiadczenie: { rodzaj: 'o-niezaleganiu', dzienStanu: '2026-10-01', kwotaZadluzenia: 0, imie: 'Joanna', nazwisko: 'Mazur' } },
   },
   {
-    klucz: 'ezla', metoda: 'GET', sciezka: '/api/v1/zus/konto/e-zla', grupa: 'zus',
-    typOdpowiedzi: 'OdpowiedzEzlaApi', statusSukcesu: 200, parametry: ['pesel', 'zgodaNaDaneZdrowia', ...CZAS, 'symulacje'],
-    bledy: ['0001', '0004', '0024', '0025', '0026'],
-    przykladAdresu: '/api/v1/zus/konto/e-zla?zgodaNaDaneZdrowia=tak',
-    przykladNaglowkow: { 'X-Pesel': PESEL_JDG },
+    klucz: 'ezla', metoda: 'POST', sciezka: '/api/v1/zus/konto/e-zla', grupa: 'zus',
+    typZadania: 'ZadanieEzlaApi', typOdpowiedzi: 'OdpowiedzEzlaApi', statusSukcesu: 200, parametry: [],
+    bledy: ['0001', '0004', '0006', '0024', '0025', '0026'],
+    przykladAdresu: '/api/v1/zus/konto/e-zla',
+    przykladZadania: { pesel: PESEL_JDG, zgodaNaDaneZdrowia: true, dzis: '2026-11-22' },
     przykladOdpowiedzi: { pesel: PESEL_JDG, poczatekOkna: '2025-11-22', zaswiadczenia: [{ seriaINumer: 'ZY 2611207', od: '2026-11-21', do: '2026-12-04' }] },
   },
   {

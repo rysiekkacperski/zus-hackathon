@@ -123,9 +123,9 @@ Logika biznesowa przewodnika działa na serwerze jako REST API w wersji 1 pod ad
 | `POST /api/v1/plan` | Plan świadczeń rodziny z kalendarzem terminów. |
 | `POST /api/v1/swiadczenia-w-ciazy` | Prawo do zasiłku chorobowego, świadczenia rehabilitacyjnego, zasiłku w wysokości zasiłku macierzyńskiego i zasiłku macierzyńskiego w ciąży. |
 | `POST /api/v1/przykladowe-sprawy/weryfikacja` | Weryfikacja ubezpieczenia chorobowego przykładowej sprawy, wyliczenia świadczeń i porównanie z rozstrzygnięciem. |
-| `GET /api/v1/zus/konto` | Dane z konta ZUS symulowanego konta o PESEL z nagłówka `X-Pesel`. |
-| `GET /api/v1/zus/konto/stan-rozliczen` | Stan rozliczeń składek na wskazany dzień. |
-| `GET /api/v1/zus/konto/e-zla` | Zaświadczenia e-ZLA, wyłącznie ze zgodą na dane dotyczące zdrowia. |
+| `POST /api/v1/zus/konto` | Dane z konta ZUS symulowanego konta o PESEL z pola `pesel` w treści żądania. |
+| `POST /api/v1/zus/konto/stan-rozliczen` | Stan rozliczeń składek na wskazany dzień. |
+| `POST /api/v1/zus/konto/e-zla` | Zaświadczenia e-ZLA, wyłącznie ze zgodą na dane dotyczące zdrowia. |
 | `POST /api/v1/zus/zaswiadczenia-o-niezaleganiu` | Zaświadczenie o niezaleganiu albo o wysokości zadłużenia. |
 | `POST /api/v1/zus/wnioski` | Wysyłka wniosków ZAM, ZAS-53 i Z-15 z numerem potwierdzenia. |
 | `POST /api/v1/zus/pytania` | Pytanie do ZUS przez PUE/eZUS. |
@@ -149,7 +149,7 @@ Podstawę wymiaru z konta ZUS przeglądarka przekazuje jako podstawy składek ty
 
 Plan rodziny i kalendarz terminów przeglądarka przelicza na miejscu funkcją `przeliczRodzine` tymi samymi funkcjami domeny `wyliczPlan` i `wyliczTerminy`, z których korzysta `POST /api/v1/plan`. Przeliczenie wykonuje się w tej samej operacji zapisu co zmiana profilu, wniosku albo danych ZUS, bo kolejne kroki operacji, przypomnienia i ekran po zapisie korzystają od razu z nowego planu. Punkt końcowy `POST /api/v1/plan` udostępnia to samo wyliczenie systemom ZUS i innym aplikacjom.
 
-Serwer pełni w demo rolę systemu ZUS. Przeglądarka pobiera dane źródłowe konta przez `GET /api/v1/zus/konto?postac=zrodlowe` z numerem PESEL w nagłówku `X-Pesel`, więc numer nie trafia do adresu, logów serwera ani historii przeglądarki, a zaświadczenie o niezaleganiu, wnioski ZAM, ZAS-53 i Z-15 oraz pytania do ZUS wysyła żądaniami POST. Serwer nie zapisuje stanu symulacji, więc przeglądarka trzyma w localStorage to, co API zwróciło, razem z nadpisaniami scenariuszy demo, i nakłada te dane na dane konta przy każdym odczycie. Przełączniki symulacji z ustawień demo przeglądarka przekazuje w nagłówku `X-Symulacje`.
+Serwer pełni w demo rolę systemu ZUS. Przeglądarka pobiera dane źródłowe konta przez `POST /api/v1/zus/konto` z polem `postac: "zrodlowe"`, a zaświadczenie o niezaleganiu, wnioski ZAM, ZAS-53 i Z-15 oraz pytania do ZUS wysyła także żądaniami POST. Numer PESEL jedzie wyłącznie w treści żądania, którą szyfruje połączenie HTTPS, więc nie trafia do adresu, nagłówków, logów serwera ani historii przeglądarki. Serwer nie zapisuje stanu symulacji, więc przeglądarka trzyma w localStorage to, co API zwróciło, razem z nadpisaniami scenariuszy demo, i nakłada te dane na dane konta przy każdym odczycie. Przełączniki symulacji z ustawień demo przeglądarka przekazuje w nagłówku `X-Symulacje`.
 
 ## Funkcje oparte na AI
 
@@ -174,7 +174,7 @@ Ustaw w środowisku produkcyjnym klucz wybranego dostawcy modelu, `MODEL_DOSTAWC
 - Logowanie przez mObywatela, eZUS i mZUS to makiety. Aplikacja przyjmuje dowolny login i hasło i loguje wybranym kontem przykładowym.
 - Dane z konta ZUS, stan rozliczeń składek, zaświadczenia e-ZLA, wysyłka wniosków i odpowiedzi ZUS pochodzą z symulowanego ZUS z danymi zmyślonymi przez zespół. Numery potwierdzeń wniosków mają przedrostek demonstracyjny, na przykład `ZAM-DEMO`, a wnioski trafiają wyłącznie do symulacji.
 - Profil rodziny, plan, wnioski, wyniki kalkulacji i ustawienia demo przeglądarka zapisuje w localStorage. Dane zostają w tej przeglądarce i znikają po wyczyszczeniu danych witryny. Na serwerze zostają wyłącznie edycje katalogu świadczeń.
-- Zapis katalogu w trybie demonstracyjnym potwierdza rolę Administrator nagłówkiem sesji konta demonstracyjnego, a REST API w wersji 1 działa bez uwierzytelniania. W środowisku produkcyjnym zastąp oba sposoby autoryzacją mZUS.
+- Zapis katalogu w trybie demonstracyjnym potwierdza rolę Administrator polem `sesjaDemo` z sesją konta demonstracyjnego w treści żądania, a REST API w wersji 1 działa bez uwierzytelniania. W środowisku produkcyjnym zastąp oba sposoby autoryzacją mZUS.
 - Przejścia do Emp@tii, mObywatela, eZUS i serwisów instytucji prowadzą do ekranów symulacji kanałów albo do publicznych stron instytucji.
 - Asystent AI i odczyt dowolnego dokumentu wymagają klucza modelu. Odczyt pliku PDF przez DeepSeek korzysta z odpłatnego Files API.
 - Data demonstracyjna z `/demo/ustawienia` zmienia dzień, od którego aplikacja liczy terminy, plan i wyliczenia, także w żądaniach do REST API.

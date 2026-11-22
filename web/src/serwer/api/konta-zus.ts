@@ -1,7 +1,8 @@
 // Symulowany odczyt Danych z konta ZUS w REST API. Serwer czyta dane startowe kont z src/dane/konta-zus i przygotowuje kopię
 // tą samą funkcją domeny co odczyt w przeglądarce (`przygotujKopie` z rejestrem filtrów odczytu). Stan symulowanego ZUS
-// (wnioski wysłane z przewodnika i nadpisania scenariuszy demo) trzyma przeglądarka: GET zwraca dane startowe, a żądanie
-// POST może przekazać ten stan w polu `stanSymulowany`, który serwer nakłada funkcją `zrodloweDaneKonta`.
+// (wnioski wysłane z przewodnika i nadpisania scenariuszy demo) trzyma przeglądarka: odczyt konta zwraca dane startowe, a żądanie
+// może przekazać ten stan w polu `stanSymulowany`, który serwer nakłada funkcją `zrodloweDaneKonta`.
+// PESEL konta przychodzi wyłącznie w treści żądania POST, którą szyfruje połączenie HTTPS.
 import { zrodloweDaneKonta, type OsobaKontaZus } from '@/dane/konta-zus';
 import { przygotujKopie } from '@/domena/dane-zus/odczyt';
 import { walidujPesel } from '@/domena/pesel';
@@ -13,7 +14,7 @@ import type {
   ZnacznikCzasu,
   ZrodloweDaneKontaZus,
 } from '@/domena/typy';
-import { czyObiekt, czytajObiekt, czytajTekst, type BledyWejscia } from '@/serwer/api/walidacja';
+import { czyObiekt, czytajObiekt, czytajTekst, type BledyWejscia, type Obiekt } from '@/serwer/api/walidacja';
 
 export type WynikPeselu = { ok: true; pesel: Pesel } | { ok: false; kod: KodKomunikatu };
 
@@ -23,13 +24,10 @@ export function sprawdzPesel(tekst: unknown): WynikPeselu {
   return wynik.ok ? { ok: true, pesel: wynik.pesel } : { ok: false, kod: wynik.kod };
 }
 
-/** Nagłówek żądania z PESEL konta. PESEL nie trafia do adresu, więc nie zapisują go logi serwera ani historia przeglądarki. */
-export const NAGLOWEK_PESEL = 'X-Pesel';
-
-/** PESEL konta z nagłówka X-Pesel żądania GET; brak nagłówka daje kod 0024, a błędny PESEL kod z walidacji. */
-export function peselZNaglowka(zadanie: Request): WynikPeselu {
-  const wartosc = zadanie.headers.get(NAGLOWEK_PESEL);
-  return sprawdzPesel(wartosc === null ? undefined : wartosc.trim());
+/** PESEL konta z pola `pesel` treści żądania POST; brak pola daje kod 0024, a błędny PESEL kod z walidacji. */
+export function peselZTresci(tresc: Obiekt): WynikPeselu {
+  const wartosc = tresc.pesel;
+  return sprawdzPesel(typeof wartosc === 'string' ? wartosc.trim() : wartosc);
 }
 
 /**

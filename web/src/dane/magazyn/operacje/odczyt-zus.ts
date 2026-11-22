@@ -2,7 +2,7 @@
 //
 // Przebieg odczytu konta z rolą Nowy użytkownik, Rodzic albo Drugi rodzic:
 // 1. stan odczytu `trwa`; przeglądarka pobiera dane źródłowe konta z REST API symulowanego ZUS
-//    (GET /api/v1/zus/konto?postac=zrodlowe z nagłówkiem X-Pesel). W trybie demonstracyjnym odczyt trwa co najmniej czas
+//    (POST /api/v1/zus/konto z PESEL w treści żądania). W trybie demonstracyjnym odczyt trwa co najmniej czas
 //    `opoznienieOdczytuZusMs`, a interfejs pokazuje przez cały ten czas jedną kartę odczytu w toku z paskiem
 //    postępu liczonym od chwili rozpoczęcia odczytu (przebiegOdczytuDanychZus);
 // 2. włączone przełączniki symulacji ZUS idą do API w nagłówku X-Symulacje. Przy `daneZusNiedostepne` (0001),
