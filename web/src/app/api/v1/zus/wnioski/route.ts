@@ -5,6 +5,7 @@
 // 422 { kod: '0038' } po terminie 21 dni na wariant 81,5% we wniosku ZAM (przy podanych danych ciąży i planie),
 // 400 z kodami pól struktury (0006, 0010, 0024–0026, 0040, 0041, 0124), 503 { kod: '0044' } przy symulacji
 // wysylkaDoZusNiedostepna i po awarii obsługi. Serwer niczego nie zapisuje: wniosek wraca w stanie wysłanym.
+// Pole ostatniNumerPotwierdzenia (NNNN ostatniego numeru dnia z przeglądarki) podnosi numer kolejnego potwierdzenia.
 import { normalizujRachunek, walidujRachunek, walidujTelefon } from '@/domena/walidacje';
 import { czyMinalTerminWariantu } from '@/domena/wnioski/zam-okresy';
 import type { PlanRodziny, Zalacznik } from '@/domena/typy';
@@ -34,7 +35,7 @@ export function POST(zadanie: Request): Promise<Response> {
   return obsluzZadanie('0044', async () => {
     const k = await przygotujPost(zadanie);
     if (k instanceof Response) return k;
-    const { tresc, czas } = k;
+    const { tresc, czas, katalog } = k;
     const bledy: BledyWejscia = {};
     const o = czytajObiekt(tresc.wniosek, 'wniosek', bledy, { wymagane: true });
     if (o === undefined) return odpowiedzBledowPol(bledy) as Response;
@@ -79,12 +80,14 @@ export function POST(zadanie: Request): Promise<Response> {
       });
     }
     if (wniosek.rodzaj === 'zam' && daneCiazy !== null && plan !== undefined
-      && czyMinalTerminWariantu({ wniosek, daneCiazy, plan: plan as unknown as PlanRodziny }, czas.dzis)) {
+      && czyMinalTerminWariantu({ wniosek, daneCiazy, plan: plan as unknown as PlanRodziny, katalog }, czas.dzis)) {
       return odpowiedzBledu('0038', { pola: { 'wniosek.wariant': '0038' } });
     }
     if (symulacjeZadania(zadanie, tresc).has('wysylkaDoZusNiedostepna')) return odpowiedzBledu('0044');
 
-    const potwierdzenie = nastepnyNumerPotwierdzenia(PREFIKSY[wniosek.rodzaj], czas.dzis);
+    const ostatni = tresc.ostatniNumerPotwierdzenia;
+    const ostatniZnany = typeof ostatni === 'number' && Number.isInteger(ostatni) && ostatni >= 0 && ostatni <= 9999 ? ostatni : 0;
+    const potwierdzenie = nastepnyNumerPotwierdzenia(PREFIKSY[wniosek.rodzaj], czas.dzis, ostatniZnany);
     const idWniosku = typeof o.idWniosku === 'string' && o.idWniosku !== '' ? o.idWniosku : identyfikator('W', czas.teraz);
     const wyslany = {
       ...wniosek,

@@ -1,6 +1,7 @@
 // Narodziny dziecka: data porodu, dane dziecka, wymiar urlopów i pakiet narodzin (kontrakt, sekcja 7.2).
 // Właściciel: u19 (Pakiet narodzin). Czyste funkcje bez zegara: datę „dzisiaj” dostają jako argument.
 import { dodajMiesiace, porownajDaty } from '@/domena/daty';
+import type { ProgiUzupelniajacego } from '@/domena/kalkulatory/okresy';
 import type {
   BledyPol,
   CzlonekRodzinyZus,
@@ -141,6 +142,7 @@ export function czyUzupelniajacyUrlopMozliwy(forma: FormaZatrudnienia | null, ch
  * - do 8 tygodni: tydzień od 28 do 36, masa powyżej 1000 g i pobyt w szpitalu po porodzie;
  * - do 8 tygodni: tydzień od 37, masa powyżej 1000 g i co najmniej 2 kolejne dni pobytu od 5. do 28. dnia.
  * Bez odpowiedzi o pobycie (dane sprzed pola) pobyt wynika z liczby dni hospitalizacji większej od 0.
+ * Progi `progi` pochodzą ze słownika wymiarów (progiUzupelniajacego z katalogu w dniu porodu).
  */
 export function wyznaczUzupelniajacyUrlop(
   forma: FormaZatrudnienia | null,
@@ -149,13 +151,15 @@ export function wyznaczUzupelniajacyUrlop(
   masa: number | undefined,
   dni: number | undefined,
   pobytWSzpitalu?: boolean,
+  progi?: Pick<ProgiUzupelniajacego, 'tydzienCiazy' | 'masaG' | 'tydzienWTerminie' | 'najkrotszyPobyt'>,
 ): WymiarUzupelniajacegoUrlopu {
   if (tydzien === undefined || masa === undefined) return 'nie-sprawdzono';
+  const p = progi ?? { tydzienCiazy: 28, masaG: MASA_NISKA_URODZENIOWA, tydzienWTerminie: TYDZIEN_PRZEDWCZESNEGO_PORODU + 1, najkrotszyPobyt: 2 };
   if (!czyUzupelniajacyUrlopMozliwy(forma, chorobowe)) return 'brak';
   const pobyt = pobytWSzpitalu ?? (dni ?? 0) > 0;
-  if (tydzien <= 27 || masa <= MASA_NISKA_URODZENIOWA) return pobyt ? 'do-15' : 'brak';
-  if (tydzien <= TYDZIEN_PRZEDWCZESNEGO_PORODU) return pobyt ? 'do-8' : 'brak';
-  if ((dni ?? 0) >= 2) return 'do-8';
+  if (tydzien < p.tydzienCiazy || masa <= p.masaG) return pobyt ? 'do-15' : 'brak';
+  if (tydzien < p.tydzienWTerminie) return pobyt ? 'do-8' : 'brak';
+  if ((dni ?? 0) >= p.najkrotszyPobyt) return 'do-8';
   return 'brak';
 }
 

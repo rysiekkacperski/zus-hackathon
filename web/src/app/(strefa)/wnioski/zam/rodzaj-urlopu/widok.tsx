@@ -17,7 +17,7 @@ import {
   sprawdzPrawoDoWnioskuZam,
 } from '@/domena/wnioski/zam';
 import { ekranPoZam, nastepnyEkranZam } from '@/domena/wnioski/zam-nawigacja';
-import { parametryOkresuZam, TYGODNIE_URLOPU_MACIERZYNSKIEGO } from '@/domena/wnioski/zam-okresy';
+import { parametryOkresuZam } from '@/domena/wnioski/zam-okresy';
 import { GrupaOpcji, type OpcjaGrupy } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
@@ -95,7 +95,7 @@ function opisRodzaju(rodzaj: RodzajUrlopu, dane: DaneWnioskuZam, dzis: string): 
   const k = dane.okresy;
   const p = parametryOkresuZam(k, dzis);
   const przy = tk.przyLiczbieDzieci[k.liczbaDzieci];
-  const tygodnie = TYGODNIE_URLOPU_MACIERZYNSKIEGO[k.liczbaDzieci];
+  const tygodnie = p.tygodnieMacierzynskiego;
   switch (rodzaj) {
     case 'macierzynski':
       return k.przedPorodem || !k.dataPorodu

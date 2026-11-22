@@ -69,9 +69,15 @@ async function zapiszDoPliku(edycje: EdycjeKatalogu, zapisano: string): Promise<
   }
 }
 
-/** Bieżące edycje katalogu: kopia w pamięci, a przy pierwszym odczycie plik magazynu. */
+/**
+ * Bieżące edycje katalogu: kopia w pamięci, a przy pierwszym odczycie plik magazynu. Odczyt pliku działa poza kolejką
+ * zapisów, więc wynik pliku trafia do pamięci wyłącznie wtedy, gdy w czasie odczytu żaden zapis nie ustawił edycji.
+ */
 export async function odczytajEdycje(): Promise<{ edycje: EdycjeKatalogu; trwaly: boolean }> {
-  if (stan.edycje === null) stan.edycje = await wczytajZPliku();
+  if (stan.edycje === null) {
+    const zPliku = await wczytajZPliku();
+    stan.edycje ??= zPliku;
+  }
   return { edycje: stan.edycje, trwaly: stan.trwaly };
 }
 

@@ -34,6 +34,7 @@ export const ID_WYMIAROW = {
   obnizenieWymiaruUrlopWychowawczy: 'obnizenie-wymiaru-czasu-pracy-w-okresie-urlopu-wychowawczego',
   okresSwiadczeniaRodzicielskiego: 'okres-swiadczenia-rodzicielskiego',
   wydluzenieOkresuSwiadczeniaRodzicielskiego: 'wydluzenie-okresu-swiadczenia-rodzicielskiego',
+  okresPodstawyWymiaruZasilku: 'okres-podstawy-wymiaru-zasilku',
 } as const;
 
 /** Początek obowiązywania wartości słownika wymiarów i okresów (3.5.1.1.2). */
@@ -540,5 +541,18 @@ export const wpisySlownikaWymiarow: readonly WpisSlownika[] = [
     edytowalny: true,
     reguly: ['zasilek-po-ustaniu'],
     kolejnosc: 24,
+  },
+  // Podstawa wymiaru zasiłku: art. 36 ust. 1 i 2 ustawy z 25 czerwca 1999 r. o świadczeniach pieniężnych
+  // z ubezpieczenia społecznego w razie choroby i macierzyństwa.
+  {
+    id: ID_WYMIAROW.okresPodstawyWymiaruZasilku,
+    slownik: 'wymiary-i-okresy',
+    nazwa: 'Okres, z którego liczymy podstawę wymiaru zasiłku',
+    warianty: [{ klucz: 'miesiace', etykieta: 'Pełne miesiące kalendarzowe przed miesiącem powstania prawa', jednostka: 'miesiace' }],
+    wersje: [{ od: OD_URUCHOMIENIA, wartosci: { miesiace: 12 } }],
+    szablonOpisu:
+      'przeciętne miesięczne wynagrodzenie albo przychód z {miesiace} pełnych miesięcy kalendarzowych przed miesiącem powstania prawa do zasiłku, a przy krótszym ubezpieczeniu z pełnych miesięcy ubezpieczenia',
+    edytowalny: true,
+    kolejnosc: 25,
   },
 ];

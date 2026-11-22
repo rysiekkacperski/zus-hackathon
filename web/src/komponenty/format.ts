@@ -43,6 +43,15 @@ export function formatujLiczbe(liczba: number): string {
   return zapiszDziesietnie(liczba, 2);
 }
 
+// Rozmiar pliku: 512 → '512 B', 2048 → '2 KB', 1572864 → '1,5 MB' (kilobajty w całości, megabajty z jednym miejscem).
+export function formatujRozmiarPliku(bajty: number): string {
+  const t = teksty.wspolne.rozmiarPliku;
+  const b = Math.max(0, bajty);
+  if (b < 1024) return t.b({ liczba: String(Math.round(b)) });
+  if (b < 1048576) return t.kb({ liczba: zapiszDziesietnie(Math.round(b / 1024), 0) });
+  return t.mb({ liczba: zapiszDziesietnie(b / 1048576, 1) });
+}
+
 // '2026-11-21' albo '2026-11-21T14:05:00' → '21.11.2026'.
 export function formatujDate(data: DataISO | ZnacznikCzasu): string {
   const [rok, miesiac, dzien] = data.slice(0, 10).split('-');

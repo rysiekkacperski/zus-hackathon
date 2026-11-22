@@ -35,13 +35,21 @@ import {
   wybierzDokumentyIAdresata,
   wybierzKanal,
 } from '@/domena/przewodnik/kanaly';
+import { rodzicKontaWRodzinie } from '@/domena/wnioski/zam';
 import type { KodKomunikatu, Pochodzenie, StatusSprawy } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { etapZeSlugu, PARAMETR_ETAPU } from '@/app/(strefa)/plan-rodziny/_czesci/sciezka-etapu';
 import { sekcjeInstrukcji } from './_sekcje';
 import { ArkuszOznaczeniaSprawy } from './_czesci/arkusz-oznaczenia-sprawy';
 import { KafelkiInformacji, type KafelekInformacji } from './_czesci/kafelki-informacji';
-import { etykietaAkcjiZewnetrznej, kafelkiKanalu, notatkaKanalu, zdanieKanalu } from './_czesci/opis-kanalu';
+import {
+  etykietaAkcjiZewnetrznej,
+  kafelkiKanalu,
+  notatkaKanalu,
+  osobaRodzicaSprawy,
+  wstepFormy as zdanieWstepuFormy,
+  zdanieKanalu,
+} from './_czesci/opis-kanalu';
 
 const t = teksty.ViewCaseGuide;
 const POCHODZENIA: readonly Pochodzenie[] = ['plan', 'terminy', 'wnioski', 'asystent'];
@@ -97,6 +105,12 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
       tytul: pozycja?.tytul ?? tytulSprawy(katalog, sprawa.idSprawy),
       termin: rodzina.kalendarz?.terminy.find((x) => x.idSprawy === sprawa.idSprawy),
       forma: rodzicSprawy.forma,
+      // Sprawę drugiego z rodziców opisujemy w trzeciej osobie z jego nazwą, sprawę rodzica konta w drugiej osobie.
+      osoba: osobaRodzicaSprawy(
+        rodzicSprawy.rodzic,
+        rodzicKontaWRodzinie(kontekst.konto, rodzina),
+        rodzina.daneRodziny.drugiRodzic.imie,
+      ),
       nazwaPracodawcy: rodzicSprawy.dane.platnikZasilku?.nazwaPlatnika,
       wybor: wybierzKanal(sprawa, rodzina.daneRodziny, katalog, {
         demonstracyjny: parametry.trybDemonstracyjny,
@@ -164,7 +178,7 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
     );
   }
 
-  const { pozycja, idPozycji, tytul, termin, forma, wybor, dokumenty, sprawaK16, nazwaPracodawcy } = dane;
+  const { pozycja, idPozycji, tytul, termin, forma, osoba, wybor, dokumenty, sprawaK16, nazwaPracodawcy } = dane;
   const sciezkaInstrukcji = sciezkaWidoku('ViewCaseGuide', { idSprawy, z: pochodzenie, [PARAMETR_ETAPU]: etapPowrotu });
   const informacja = sprawa.rodzaj === 'informacja';
   const swiadczenie = rodzajOznaczenia(sprawa.rodzaj) === 'zlozona';
@@ -227,7 +241,7 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
         : termin?.kotwica
           ? termin.szacowany
             ? t.terminSzacowany({ opis: termin.kotwica.opis })
-            : termin.kotwica.opis
+            : t.terminWyliczony({ opis: termin.kotwica.opis })
           : undefined,
   };
   const kafelekStatusu: KafelekInformacji = {
@@ -243,15 +257,15 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
         ? t.oznaczono({ data: formatujDate(sprawa.dataOznaczenia) })
         : t.rodzajSprawy({ rodzaj: t.rodzajePozycji[sprawa.rodzaj] }),
   };
-  const kafelkiKanaluSprawy = kafelkiKanalu({ wybor, forma, dokumenty, pozycja, nazwaPracodawcy });
-  const kafelki: KafelekInformacji[] = [kafelekTerminu, ...kafelkiKanaluSprawy, kafelekStatusu];
-  const zdanieInstytucjiIKanalu = zdanieKanalu(kafelkiKanaluSprawy);
+  const wejscieKanalu = { wybor, forma, dokumenty, pozycja, nazwaPracodawcy };
+  const kafelki: KafelekInformacji[] = [kafelekTerminu, ...kafelkiKanalu(wejscieKanalu), kafelekStatusu];
+  const zdanieInstytucjiIKanalu = zdanieKanalu({ ...wejscieKanalu, osoba });
 
   const kroki = pozycja?.instrukcja.kroki ?? [];
   const daneIDokumenty = pozycja?.instrukcja.daneIDokumenty ?? [];
   const odnosniki = pozycja?.instrukcja.odnosniki ?? [];
   const pokazCoPrzygotowac = daneIDokumenty.length > 0 || dokumenty.typ !== 'nie-dotyczy';
-  const wstepFormy = forma === null ? null : t.wstepFormy[forma];
+  const wstepFormy = zdanieWstepuFormy(forma, osoba);
   const etykietaOznaczenia = swiadczenie ? t.oznaczJakoZlozona : t.oznaczJakoZalatwiona;
 
   const coPrzygotowac = pokazCoPrzygotowac ? (
@@ -404,7 +418,7 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
                 </>
               )}
             </div>
-            <Notatka id={ID_NOTATKI_KANALU}>{notatkaKanalu({ wybor, forma, oznaczona, informacja })}</Notatka>
+            <Notatka id={ID_NOTATKI_KANALU}>{notatkaKanalu({ wybor, forma, oznaczona, informacja, osoba })}</Notatka>
           </Stos>
         </Karta>
 

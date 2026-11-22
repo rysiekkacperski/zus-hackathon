@@ -25,8 +25,12 @@ function plik(sciezka) {
   return null;
 }
 
+// Pakiet next nie ma pola `exports`, więc import podścieżki bez rozszerzenia wskazuje plik z rozszerzeniem `.js`.
+const PODSCIEZKI_NEXT = { 'next/navigation': 'next/navigation.js' };
+
 export function resolve(specyfikator, kontekst, nastepny) {
   if (specyfikator in ZASLEPKI) return { url: ZASLEPKI[specyfikator], shortCircuit: true };
+  if (specyfikator in PODSCIEZKI_NEXT) return nastepny(PODSCIEZKI_NEXT[specyfikator], kontekst);
   if (specyfikator.startsWith('@/')) {
     const p = plik(path.join(SRC, specyfikator.slice(2)));
     if (p) return { url: pathToFileURL(p).href, shortCircuit: true };

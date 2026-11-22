@@ -29,6 +29,7 @@ import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
 import { porownajDaty } from '@/domena/daty';
 import { laczeniaScenariusza } from '@/domena/kalkulatory';
+import { stawkiZasilku } from '@/domena/kalkulatory/wariant';
 import type { LaczenieZPraca, ParametryScenariusza, RodzicWRodzinie } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA } from '../../_czesci/arkusz';
@@ -173,7 +174,9 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawyApi, onZ
       : [];
   const stawkaCzesci =
     wierszeCzesci.find((o) => o.rodzaj === 'wydluzenie-rodzicielskiego' || o.rodzaj === 'rodzicielski')?.stawka ??
-    (p.wariant === '81-5' && czesc?.rodzic === 'matka' ? 81.5 : 70);
+    (p.wariant === '81-5' && czesc?.rodzic === 'matka'
+      ? stawkiZasilku(katalog, dataZdarzenia(d) ?? dzis).s815
+      : stawkiZasilku(katalog, dataZdarzenia(d) ?? dzis).s70);
   const ktoPracuje = nazwy[czesc?.rodzic ?? pracownicy[0] ?? 'matka'].mianownik;
 
   const zapisz = () => {

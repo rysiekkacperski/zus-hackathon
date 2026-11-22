@@ -3,7 +3,7 @@
 import { dodajDni, porownajDaty } from '@/domena/daty';
 import { walidujEmail, walidujPlik } from '@/domena/walidacje';
 import type { BledyPol, DataISO, KodKomunikatu, OkresWniosku, WniosekOUrlop } from '@/domena/typy';
-import { DNI_TERMINU_81_5, przeliczStawki, type DaneKreatora } from '@/domena/wnioski/urlopy';
+import { przeliczStawki, wymiaryDanych, type DaneKreatora } from '@/domena/wnioski/urlopy';
 
 /** Pola formularza wysyłki ViewLeaveRequestSummary. */
 export interface FormularzWysylki {
@@ -55,13 +55,13 @@ export function komunikatWyslania(
 /** Ponowne sprawdzenie terminu 81,5% w dniu wysłania (R-16); zwraca nowe okresy i kod, gdy termin minął. */
 export function sprawdzTermin815(
   wniosek: WniosekOUrlop,
-  dane: Pick<DaneKreatora, 'dataPorodu' | 'przyjecie'>,
+  dane: Pick<DaneKreatora, 'dataPorodu' | 'przyjecie' | 'wymiary'>,
   dzis: DataISO,
 ): { okresy: OkresWniosku[]; kod: KodKomunikatu } | null {
   if (wniosek.wariant !== '81-5') return null;
   const poczatek = dane.przyjecie?.dataPrzyjecia ?? dane.dataPorodu;
   if (!poczatek) return null;
-  if (porownajDaty(dzis, dodajDni(poczatek, DNI_TERMINU_81_5)) <= 0) return null;
+  if (porownajDaty(dzis, dodajDni(poczatek, wymiaryDanych(dane).dniTerminu815)) <= 0) return null;
   return { okresy: przeliczStawki(wniosek.okresy, '100-70'), kod: dane.przyjecie ? '0165' : '0038' };
 }
 

@@ -34,7 +34,7 @@ Plik `.env.example` opisuje każdą zmienną, a kopia `.env.local` zostaje poza 
 | `KATALOG_TRYB_DEMO` | Wartość `nie` wyłącza zapis katalogu nagłówkiem sesji konta Administrator ZUS. |
 | `PRZYKLADOWE_SPRAWY_ZUS_KATALOG` | Lokalny folder z plikami JSON zestawów spraw ZUS dla `GET /api/przykladowe-sprawy/zestawy`. |
 
-Bez klucza modelu asystent AI pokazuje komunikat 0071, a odczyt dokumentu przykładowego z `public/przyklady/` zwraca wynik z fikstur odczytu.
+Bez klucza modelu asystent AI pokazuje komunikat 0071, a odczyt dokumentu komunikat 0108. Dokument przykładowy z `public/przyklady/` odczytasz wtedy z fikstur odczytu po wybraniu w `/demo/ustawienia` opcji „Wynik odczytu zapisany w prototypie”.
 
 ## Struktura kodu
 

@@ -88,10 +88,13 @@ export function SlotAkcjeUrlopow(props: PropsSlotu<'wynik'>) {
               const praca = okresyPracyMiedzyUrlopami(wynik, rodzic);
               const laczenie = okresyLaczenia(wynik, rodzic);
               const forma = formaRodzica(d, rodzic).wartosc;
-              // Po stracie wszystkich dzieci i przy przyjęciu dziecka na wychowanie wynik pomija przerwy na karmienie K20, tak jak wyliczenie w domenie.
-              const uprawnienia = uprawnieniaPoPowrocie(rodzic, forma.forma, forma.dobrowolne)
-                .filter((id) => !(id === 'K20' && (bezUrlopuRodzicielskiego || d.zdarzenie.wartosc === 'przyjecie')))
-                .filter(czyUprawnienie);
+              // Po stracie wszystkich dzieci wynik pomija uprawnienia po powrocie K20–K23, jak plan rodziny po stracie,
+              // a przy przyjęciu dziecka na wychowanie pomija przerwy na karmienie K20, tak jak wyliczenie w domenie.
+              const uprawnienia = bezUrlopuRodzicielskiego
+                ? []
+                : uprawnieniaPoPowrocie(rodzic, forma.forma, forma.dobrowolne)
+                    .filter((id) => !(id === 'K20' && d.zdarzenie.wartosc === 'przyjecie'))
+                    .filter(czyUprawnienie);
               const opisPracy = praca.map((o) => t.okres({ od: formatujDate(o.od), do_: formatujDate(o.do) })).join(', ');
               return (
                 <section key={rodzic} aria-labelledby={`powrot-${rodzic}`} className="flex flex-col gap-3 border-t border-line-soft pt-4 first:border-t-0 first:pt-0">
@@ -128,6 +131,7 @@ export function SlotAkcjeUrlopow(props: PropsSlotu<'wynik'>) {
                       })}
                     </p>
                   ))}
+                  {bezUrlopuRodzicielskiego ? null : (
                   <div className="flex flex-col gap-2">
                     <p className="m-0 text-body-strong text-ink">{t.uprawnienia}</p>
                     {uprawnienia.length === 0 ? (
@@ -154,6 +158,7 @@ export function SlotAkcjeUrlopow(props: PropsSlotu<'wynik'>) {
                       </ul>
                     )}
                   </div>
+                  )}
                 </section>
               );
             })}

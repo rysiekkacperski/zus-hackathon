@@ -240,8 +240,8 @@ function FormularzDanych({ dane }: { dane: DaneWnioskuZam }) {
   const kartaWnioskodawcy = (
     <Karta tytul={t.wnioskodawca.tytul} bezLinii>
       <p className="m-0">{t.wnioskodawca.wstep}</p>
-      <p className="m-0 mt-2 mb-6 text-small text-ink-muted">{teksty.wspolne.stanNa({ data: formatujDate(dzis) })}</p>
-      <dl className="m-0 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <p className="m-0 mt-1 mb-4 text-small text-ink-muted">{teksty.wspolne.stanNa({ data: formatujDate(dzis) })}</p>
+      <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-3">
         <div>
           <dt className="text-body-strong">{t.wnioskodawca.imieINazwisko}</dt>
           <dd className="m-0">{rodzic ? `${rodzic.imie} ${rodzic.nazwisko}` : `${kontekst.konto.imie} ${kontekst.konto.nazwisko}`}</dd>
@@ -251,22 +251,22 @@ function FormularzDanych({ dane }: { dane: DaneWnioskuZam }) {
           <dd className="m-0">{rodzic?.pesel ?? kontekst.konto.pesel}</dd>
         </div>
         {adresWnioskodawcy ? (
-          <div className="sm:col-span-2">
+          <div>
             <dt className="text-body-strong">{t.wnioskodawca.adres}</dt>
             <dd className="m-0">{adresWnioskodawcy}</dd>
           </div>
         ) : null}
         {objecieChorobowym ? (
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-3">
             <dt className="text-body-strong">{t.wnioskodawca.chorobowe}</dt>
             <dd className="m-0">{t.wnioskodawca.chorobowePodlegam}</dd>
           </div>
         ) : null}
       </dl>
       {platnikSkladek ? (
-        <div className="mt-6">
-          <h3 className="m-0 mb-4 text-body-strong">{t.platnikSkladek.tytul}</h3>
-          <dl className="m-0 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mt-4">
+          <h3 className="m-0 mb-2 text-body-strong">{t.platnikSkladek.tytul}</h3>
+          <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-3">
             <div>
               <dt className="text-body-strong">{t.platnikSkladek.nazwa}</dt>
               <dd className="m-0">{platnikSkladek.nazwa}</dd>
@@ -282,7 +282,7 @@ function FormularzDanych({ dane }: { dane: DaneWnioskuZam }) {
           </dl>
         </div>
       ) : null}
-      <div className="mt-6">
+      <div className="mt-4">
         <PoleTekstowe
           id={ID_TELEFONU}
           etykieta={t.wnioskodawca.telefon}

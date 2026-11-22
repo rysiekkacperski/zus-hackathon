@@ -8,10 +8,10 @@ import { czyWychowawczy, dataSzesciuMiesiecyZatrudnienia } from '@/domena/wniosk
 import type { KodKomunikatu, PodrodzajWnioskuOUrlop } from '@/domena/typy';
 import {
   idSprawyWniosku,
-  otworzKreatorWnioskow,
   pozycjaSprawyWniosku,
   rodzajeWniosku,
   stawkaZasilku,
+  wymiaryDanych,
 } from '@/domena/wnioski/urlopy';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import {
@@ -28,11 +28,12 @@ import { Komunikat } from '@/komponenty/komunikat';
 import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Przycisk } from '@/komponenty/przycisk';
-import { sciezkaWidoku, trasy } from '@/komponenty/rama/trasy';
+import { trasy } from '@/komponenty/rama/trasy';
 import { SzkieletWidoku } from '@/komponenty/szkielet-widoku';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { teksty } from '@/teksty';
 import { KartaDanychZProfilu, RamaKreatora, useKreatorUrlopu } from '../_czesci/kreator';
+import { przekierowanieZKreatoraUrlopu } from '../_czesci/przekierowanie-do-zam';
 
 const t = teksty.ViewLeaveRequestType;
 const tf = teksty.ViewLeaveRequestForm;
@@ -44,11 +45,10 @@ export function WidokRodzajuWnioskuOUrlop() {
   const sprawaWejscia = parametry.get('sprawa');
   const scenariusz = parametry.get('scenariusz');
 
-  const przekierowanie = useMemo(() => {
-    if (stan === null) return null;
-    const wynik = otworzKreatorWnioskow(stan.kontekst.konto, stan.kontekst.rodzina, sprawaWejscia ?? undefined);
-    return wynik.cel === 'ViewLeaveRequestType' ? null : wynik;
-  }, [stan, sprawaWejscia]);
+  const przekierowanie = useMemo(
+    () => (stan === null ? null : przekierowanieZKreatoraUrlopu(stan.kontekst.konto, stan.kontekst.rodzina, sprawaWejscia)),
+    [stan, sprawaWejscia],
+  );
 
   const wniosekWejscia = useMemo(() => {
     if (stan === null) return null;
@@ -65,13 +65,13 @@ export function WidokRodzajuWnioskuOUrlop() {
     if (przekierowanie === null || przekierowano.current) return;
     przekierowano.current = true;
     if (przekierowanie.kod) ustawKomunikatPoPrzejsciu({ kod: przekierowanie.kod, dlaWidoku: przekierowanie.cel });
-    router.replace(sciezkaWidoku(przekierowanie.cel, przekierowanie.cel === 'ViewZamLeaveType' ? { sprawa: sprawaWejscia } : {}));
-  }, [przekierowanie, router, sprawaWejscia]);
+    router.replace(przekierowanie.sciezka);
+  }, [przekierowanie, router]);
 
   const rodzaje = useMemo(() => {
     if (stan === null) return [];
     const { kontekst } = stan;
-    const wszystkie = rodzajeWniosku(kontekst.rola, kontekst.rodzina, kontekst.rodzina.plan, kontekst.rodzina.wnioski, kontekst.dzis);
+    const wszystkie = rodzajeWniosku(kontekst.rola, kontekst.rodzina, kontekst.rodzina.plan, kontekst.rodzina.wnioski, kontekst.dzis, wymiaryDanych(stan.dane));
     // Sprawa K23 Urlop wychowawczy prowadzi do wniosków o urlop wychowawczy i o obniżenie wymiaru czasu pracy (3.9.6.1.5).
     const sprawa = sprawaWejscia ?? wniosekWejscia?.idSprawy ?? '';
     const zK23 = sprawa.startsWith('K23');
@@ -93,7 +93,7 @@ export function WidokRodzajuWnioskuOUrlop() {
   // Urlop wychowawczy i obniżenie wymiaru czasu pracy po 6 miesiącach zatrudnienia (3.9.6.1.5, KA-02 i KA-03).
   const dataStazu = rodzaje.some((r) => czyWychowawczy(r)) ? dataSzesciuMiesiecyZatrudnienia(dane.okresyZatrudnienia) : null;
   const przedStazem = dataStazu !== null && porownajDaty(dataStazu, kontekst.dzis) > 0;
-  const termin = stawkaZasilku({ zakres: 'z-calym-rodzicielskim', dzis: kontekst.dzis, dataPorodu: dane.dataPoroduPotwierdzona ? dane.dataPorodu : undefined, przyjecie: dane.przyjecie });
+  const termin = stawkaZasilku({ zakres: 'z-calym-rodzicielskim', dzis: kontekst.dzis, dataPorodu: dane.dataPoroduPotwierdzona ? dane.dataPorodu : undefined, przyjecie: dane.przyjecie, wymiary: dane.wymiary });
 
   function zapisz(cel: 'dalej' | 'dokonczenie') {
     if (stan === null) return;

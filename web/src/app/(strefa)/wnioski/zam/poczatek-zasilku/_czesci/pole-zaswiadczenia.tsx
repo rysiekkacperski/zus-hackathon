@@ -3,7 +3,7 @@
 import type { Ref } from 'react';
 import { Ikona } from '@/komponenty/ikona';
 import { BladPola, Pole, klasyRamkiPolaWpisu } from '@/komponenty/pole';
-import { formatujLiczbe } from '@/komponenty/format';
+import { formatujRozmiarPliku } from '@/komponenty/format';
 import { Przycisk } from '@/komponenty/przycisk';
 import type { KodKomunikatu } from '@/domena/typy';
 import { teksty } from '@/teksty';
@@ -22,12 +22,6 @@ function opisTypu(typ: string, nazwa: string): string {
   return 'JPG';
 }
 
-/** Rozmiar pliku w bajtach, kilobajtach (zaokrąglony do całości) albo megabajtach (z jednym miejscem po przecinku). */
-function opisRozmiaru(rozmiar: number): string {
-  if (rozmiar < 1024) return t.rozmiarB({ liczba: String(Math.max(0, Math.round(rozmiar))) });
-  if (rozmiar < 1048576) return t.rozmiarKb({ liczba: formatujLiczbe(Math.round(rozmiar / 1024)) });
-  return t.rozmiarMb({ liczba: formatujLiczbe(Math.round((rozmiar / 1048576) * 10) / 10) });
-}
 
 export interface PoleZaswiadczeniaProps {
   id: string;
@@ -49,7 +43,7 @@ export function PoleZaswiadczenia({ id, plik, blad, onWybor, onUsun, ref }: Pole
             <Ikona nazwa="plik" className="flex-none text-brand" />
             <div className="min-w-0">
               <p className="m-0 text-body-strong break-words">{plik.nazwa}</p>
-              <p className="m-0">{t.opisPliku({ typ: opisTypu(plik.typ, plik.nazwa), rozmiar: opisRozmiaru(plik.rozmiar) })}</p>
+              <p className="m-0">{t.opisPliku({ typ: opisTypu(plik.typ, plik.nazwa), rozmiar: formatujRozmiarPliku(plik.rozmiar) })}</p>
             </div>
           </div>
           <Przycisk wariant="drugorzedny" ikona="usun" onClick={onUsun} aria-label={t.usunPlikEtykieta({ nazwa: plik.nazwa })}>

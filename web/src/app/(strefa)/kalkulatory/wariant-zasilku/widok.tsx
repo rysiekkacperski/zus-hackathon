@@ -26,6 +26,7 @@ import { formatujKwote, formatujKwoteBezWaluty, parsujKwote } from '@/domena/kwo
 import { useStanRoboczy } from '@/app/(strefa)/kalkulator-zasilku/_czesci/stan-roboczy';
 import {
   daneDzieckaDoKalkulatora,
+  etykietyStawekZasilku,
   matkaMaPrawoDoZasilku,
   sprawaWariantu,
   tygodnieRodzicielskiegoJednegoRodzica,
@@ -118,6 +119,8 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
   const podstawaZus = stanPodstawy.rodzaj === 'wyliczona' ? stanPodstawy.podstawa : null;
   const tygM = tygodnieUrlopuMacierzynskiego(dziecko.liczbaDzieci, katalog, dataPorodu);
   const maks = tygodnieRodzicielskiegoJednegoRodzica(dziecko.liczbaDzieci, dziecko.zaZyciem, katalog, dataPorodu);
+  // Stawki w etykietach z katalogu w dniu porodu, tak jak w silniku porównania.
+  const st = etykietyStawekZasilku(katalog, dataPorodu);
   const zapisany = ostatniePorownanie(rodzina.wynikiKalkulacji, sprawa);
   const wybranyWPlanie = wybranyWariantSprawy(rodzina.plan, sprawa);
   const wybrany: Wariant | null = wybranyWPlanie && 'wariant' in wybranyWPlanie ? wybranyWPlanie.wariant : (zapisany?.decyzja ?? null);
@@ -220,11 +223,11 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
             <Komunikat
               tresc={
                 sprawa === 'K07'
-                  ? zapisano === '81-5' ? t.zapisanoK07 : t.zapisanoK07Wariant100
-                  : zapisano === '81-5' ? t.zapisanoK08 : t.zapisanoK08Wariant100
+                  ? zapisano === '81-5' ? t.zapisanoK07(st) : t.zapisanoK07Wariant100(st)
+                  : zapisano === '81-5' ? t.zapisanoK08(st) : t.zapisanoK08Wariant100(st)
               }
             />
-            <Karta tytul={t.wyborTytul({ wariant: t.nazwaWariantu[zapisano] })} bezLinii>
+            <Karta tytul={t.wyborTytul({ wariant: t.nazwaWariantu(zapisano, st) })} bezLinii>
               <div className="flex flex-wrap items-start gap-7.5">
                 <div className="flex min-w-0 grow basis-105 flex-col gap-4">
                   <p className="m-0 text-body">
@@ -246,7 +249,7 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
                     <Ikona nazwa="kalendarz" rozmiar={20} className="mt-0.5 shrink-0 text-brand" />
                     <span>
                       <strong>{sprawa === 'K07' ? t.wyborTerminK07({ termin: formatujDate(s.termin) }) : t.wyborTerminK08({ termin: formatujDate(s.termin) })}</strong>
-                      {sprawa === 'K07' ? t.wyborTerminK07Dopisek : t.wyborTerminK08Dopisek}
+                      {sprawa === 'K07' ? t.wyborTerminK07Dopisek(st) : t.wyborTerminK08Dopisek(st)}
                     </span>
                   </p>
                   <div className="flex flex-wrap gap-4">
@@ -262,7 +265,7 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
                   <p className="m-0 text-body-strong">{t.zapisaneWWynikach({ data: formatujDate(dzis) })}</p>
                   <div>
                     <p className="m-0 text-body">{t.wariantZasilku}</p>
-                    <p className="m-0 text-body-strong">{t.nazwaWariantu[zapisano]}</p>
+                    <p className="m-0 text-body-strong">{t.nazwaWariantu(zapisano, st)}</p>
                   </div>
                   <div>
                     <p className="m-0 text-body">{t.podstawaWymiaru}</p>
@@ -378,7 +381,7 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
           <>
             <Karta tytul={poTerminie ? t.poTerminieTytul : t.porownanieTytul} bezLinii>
               <p className="m-0 mb-4 text-body">
-                {poTerminie ? t.poTerminieOpis({ termin: formatujDate(s.termin) }) : null}
+                {poTerminie ? t.poTerminieOpis({ termin: formatujDate(s.termin), s815: st.s815 }) : null}
                 {s.tygodnieRodzicielskiego === 0
                   ? t.wynikZero({ powrot: formatujDate(wynik.dataPowrotu) })
                   : s.tygodnieRodzicielskiego === s.tygodnieRodzicielskiegoMaks
@@ -394,7 +397,7 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
                 />
               ) : null}
               {s.tygodnieRodzicielskiego === 0 && !poTerminie ? (
-                <Komunikat tresc={t.informacjaWyrownanie({ kwota: formatujKwote(s.wariant81.wyrownanie) })} className="mb-4" />
+                <Komunikat tresc={t.informacjaWyrownanie({ kwota: formatujKwote(s.wariant81.wyrownanie), ...st })} className="mb-4" />
               ) : null}
               {!poTerminie && zapisano === null ? (
                 <p className="m-0 mb-6 flex items-start gap-2 text-body">
@@ -409,8 +412,8 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
               {!poTerminie && zapisano === null && s.tygodnieRodzicielskiego === s.tygodnieRodzicielskiegoMaks && wynik.roznica > 0 ? (
                 <Notatka className="mt-6">
                   {wejscie?.podstawa.zrodlo === 'konto-zus'
-                    ? t.roznicaPelny({ kwota: formatujKwote(wynik.roznica) })
-                    : t.roznicaPelnyRodzic({ kwota: formatujKwote(wynik.roznica) })}
+                    ? t.roznicaPelny({ kwota: formatujKwote(wynik.roznica), ...st })
+                    : t.roznicaPelnyRodzic({ kwota: formatujKwote(wynik.roznica), ...st })}
                 </Notatka>
               ) : null}
             </Karta>

@@ -1,7 +1,10 @@
 // Wnioski o urlop do pracodawcy: kreator, rodzaje, okresy, stawka, terminy, załączniki (kontrakt, sekcja 7.2).
 // Właściciel: u28 (Wnioski o urlop do pracodawcy: rdzeń). Epik 3.9.6, analiza 24, reguły R-1 do R-13 i R-15.
 // Czyste funkcje: data bieżąca przychodzi jako argument `dzis`.
+import { ID_WYMIAROW } from '@/dane/katalog/slownik-wymiarow';
 import { dodajDni, dodajLata, dodajMiesiace, porownajDaty, roznicaDni } from '@/domena/daty';
+import { PARAMETRY, parametr, type KluczParametru } from '@/domena/kalkulatory/slowniki';
+import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import type {
   DaneCiazyIDziecka,
   DaneRodzica,
@@ -10,6 +13,7 @@ import type {
   DataISO,
   IdSprawy,
   IdWidoku,
+  Katalog,
   KodKomunikatu,
   KontoPrzewodnika,
   LiczbaDzieci,
@@ -31,21 +35,81 @@ import type {
 
 // --- Słownik wymiarów i okresów (wartości obowiązujące w dniu porodu albo przyjęcia dziecka) -----
 
-/** Urlop macierzyński i urlop na warunkach urlopu macierzyńskiego w tygodniach według liczby dzieci. */
-export const WYMIAR_MACIERZYNSKIEGO_TYGODNI: Record<LiczbaDzieci, number> = { 1: 20, 2: 31, 3: 33, 4: 35, 5: 37 };
-/** Część urlopu macierzyńskiego przed porodem: najwyżej 6 tygodni przed przewidywanym terminem porodu. */
-export const DNI_PRZED_PORODEM = 42;
-/** Nieprzenoszalna część urlopu rodzicielskiego każdego rodzica. */
-export const TYGODNIE_NIEPRZENOSZALNE = 9;
-/** Najwięcej części urlopu rodzicielskiego. */
-export const MAKS_CZESCI_RODZICIELSKIEGO = 5;
-/** Urlop ojcowski w dniach i najkrótsza część. */
-export const DNI_OJCOWSKIEGO = 14;
-export const MIN_DNI_CZESCI_OJCOWSKIEGO = 7;
-/** Termin wniosku w wariancie 81,5%: 21 dni od porodu albo przyjęcia dziecka. */
-export const DNI_TERMINU_81_5 = 21;
-/** Urlop na warunkach urlopu macierzyńskiego trwa co najmniej 9 tygodni. */
-export const MIN_TYGODNI_NA_WARUNKACH = 9;
+/** Wymiary i terminy urlopów z Katalogu świadczeń obowiązujące w dniu porodu albo przyjęcia dziecka. */
+export interface WymiaryUrlopow {
+  /** Urlop macierzyński w tygodniach według liczby dzieci (20, 31, 33, 35, 37). */
+  macierzynski: Record<LiczbaDzieci, number>;
+  /** Urlop na warunkach urlopu macierzyńskiego w tygodniach według liczby przyjętych dzieci. */
+  naWarunkach: Record<LiczbaDzieci, number>;
+  /** Urlop na warunkach urlopu macierzyńskiego trwa co najmniej tyle tygodni (9). */
+  minTygodniNaWarunkach: number;
+  /** Część urlopu macierzyńskiego przed porodem: najwyżej tyle dni przed przewidywanym terminem porodu (6 tygodni). */
+  dniPrzedPorodem: number;
+  /** Łączny urlop rodzicielski w tygodniach: jedno dziecko, więcej dzieci, z zaświadczeniem „Za życiem” (41, 43, 65, 67). */
+  rodzicielski: { jednoDziecko: number; wiecejDzieci: number; jednoDzieckoZaZyciem: number; wiecejDzieciZaZyciem: number };
+  /** Nieprzenoszalna część urlopu rodzicielskiego każdego rodzica w tygodniach (9). */
+  nieprzenoszalne: number;
+  /** Najwięcej części urlopu rodzicielskiego (5). */
+  maksCzesciRodzicielskiego: number;
+  /** Urlop rodzicielski do 31 grudnia roku, w którym dziecko kończy tyle lat (6). */
+  lataRodzicielskiego: number;
+  /** Urlop ojcowski w dniach, najkrótsza część w dniach i wiek dziecka w miesiącach (14, 7, 12). */
+  dniOjcowskiego: number;
+  minDniCzesciOjcowskiego: number;
+  miesiaceOjcowskiego: number;
+  /** Termin wniosku w wariancie 81,5% w dniach od porodu albo przyjęcia dziecka (21). */
+  dniTerminu815: number;
+  /** Wiek dziecka przy urlopie na warunkach urlopu macierzyńskiego w latach (7, 10, 14). */
+  wiekPrzyjecia: { rodzinaZastepcza: number; odroczenie: number; przysposobienie: number };
+}
+
+/**
+ * Wymiary urlopów z Katalogu świadczeń w dniu `dzien` tymi samymi odczytami co kalkulator (`parametr`).
+ * Bez katalogu albo bez wpisu w katalogu obowiązują wartości domyślne parametrów kalkulatora.
+ */
+export function wymiaryUrlopow(katalog: Katalog | undefined, dzien: DataISO): WymiaryUrlopow {
+  const o = (klucz: KluczParametru): number =>
+    katalog === undefined ? PARAMETRY[klucz].domyslna : parametr(katalog, klucz, dzien).wartosc;
+  const minDniOjcowskiego = katalog === undefined
+    ? null
+    : wartoscObowiazujaca(katalog, ID_WYMIAROW.urlopOjcowski, dzien, 'dniCzesci')?.wartosc ?? null;
+  return {
+    macierzynski: { 1: o('urlopMacierzynski1'), 2: o('urlopMacierzynski2'), 3: o('urlopMacierzynski3'), 4: o('urlopMacierzynski4'), 5: o('urlopMacierzynski5') },
+    naWarunkach: { 1: o('naWarunkach1'), 2: o('naWarunkach2'), 3: o('naWarunkach3'), 4: o('naWarunkach4'), 5: o('naWarunkach5') },
+    minTygodniNaWarunkach: o('naWarunkachMinimum'),
+    dniPrzedPorodem: 7 * o('czescPrzedPorodem'),
+    rodzicielski: {
+      jednoDziecko: o('rodzicielski1'),
+      wiecejDzieci: o('rodzicielskiWiecej'),
+      jednoDzieckoZaZyciem: o('rodzicielskiZaZyciem1'),
+      wiecejDzieciZaZyciem: o('rodzicielskiZaZyciemWiecej'),
+    },
+    nieprzenoszalne: o('nieprzenoszalna'),
+    maksCzesciRodzicielskiego: o('liczbaCzesci'),
+    lataRodzicielskiego: o('wykorzystanieRodzicielskiego'),
+    dniOjcowskiego: o('ojcowskiDni'),
+    minDniCzesciOjcowskiego: minDniOjcowskiego ?? MIN_DNI_CZESCI_OJCOWSKIEGO_DOMYSLNIE,
+    miesiaceOjcowskiego: o('ojcowskiMiesiace'),
+    dniTerminu815: o('terminWariantu815'),
+    wiekPrzyjecia: { rodzinaZastepcza: o('wiekRodzinaZastepcza'), odroczenie: o('wiekOdroczenie'), przysposobienie: o('wiekPrzysposobienie') },
+  };
+}
+
+/** Najkrótsza część urlopu ojcowskiego, gdy katalog nie ma wariantu „dniCzesci” wpisu urlopu ojcowskiego. */
+const MIN_DNI_CZESCI_OJCOWSKIEGO_DOMYSLNIE = 7;
+
+/** Wymiary z wartości domyślnych parametrów kalkulatora (stan katalogu startowego). */
+export const WYMIARY_DOMYSLNE: WymiaryUrlopow = wymiaryUrlopow(undefined, '2026-01-01');
+
+/** Wymiary urlopów z danych kreatora; bez odczytu z katalogu wartości domyślne. */
+export function wymiaryDanych(dane: { wymiary?: WymiaryUrlopow }): WymiaryUrlopow {
+  return dane.wymiary ?? WYMIARY_DOMYSLNE;
+}
+
+/** Dzień, w którym obowiązują wymiary urlopów: przyjęcie dziecka, poród, przewidywany termin porodu albo dziś. */
+export function dzienWymiarow(w: { przyjecie?: PrzyjecieDziecka; dataPorodu?: DataISO; przewidywanyTerminPorodu?: DataISO }, dzis: DataISO): DataISO {
+  return w.przyjecie?.dataPrzyjecia ?? w.dataPorodu ?? w.przewidywanyTerminPorodu ?? dzis;
+}
 
 /** Rodzaje wniosku w kolejności listy na ViewLeaveRequestType. */
 export const KOLEJNOSC_RODZAJOW: readonly PodrodzajWnioskuOUrlop[] = [
@@ -127,6 +191,8 @@ export interface DaneKreatora {
   wyslane: { wniosek: WniosekOUrlop; rodzic: RodzicWRodzinie }[];
   /** Propozycje z zapisanego scenariusza kalkulatora w Wynikach kalkulacji (R-18). */
   scenariusz?: PropozycjeScenariusza;
+  /** Wymiary urlopów z Katalogu świadczeń w dniu porodu albo przyjęcia dziecka. */
+  wymiary?: WymiaryUrlopow;
 }
 
 export interface PropozycjeScenariusza {
@@ -180,6 +246,10 @@ export function zbierzDaneKreatora(w: {
   /** Wyniki kalkulacji konta, gdy scenariusz zapisano poza rodziną. */
   wynikiKonta?: WynikiKalkulacji;
   numerScenariusza?: number;
+  /** Katalog świadczeń, z którego pochodzą wymiary urlopów; bez katalogu wartości domyślne. */
+  katalog?: Katalog;
+  /** Dzień odczytu wymiarów, gdy profil nie ma daty porodu, przyjęcia ani przewidywanego terminu porodu. */
+  dzis?: DataISO;
 }): DaneKreatora {
   const { konto, rodzina, daneZus } = w;
   const daneRodziny = rodzina.daneRodziny;
@@ -218,6 +288,9 @@ export function zbierzDaneKreatora(w: {
       rodzic,
       w.numerScenariusza,
     ),
+    wymiary: w.katalog === undefined
+      ? undefined
+      : wymiaryUrlopow(w.katalog, dzienWymiarow(ciaza ?? {}, w.dzis ?? w.katalog.dataUruchomienia ?? '2026-01-01')),
   };
 }
 
@@ -254,6 +327,7 @@ export function rodzajeWniosku(
   plan: PlanRodziny | null,
   wnioski: Wniosek[],
   dzis?: DataISO,
+  wymiary: WymiaryUrlopow = WYMIARY_DOMYSLNE,
 ): PodrodzajWnioskuOUrlop[] {
   if (rodzina === null) return [];
   const daneRodziny = rodzina.daneRodziny;
@@ -282,7 +356,7 @@ export function rodzajeWniosku(
       wynik.add('czesc-przed-porodem');
     }
   } else if (ciaza?.dataPoroduPotwierdzona && ciaza.dataPorodu) {
-    const granica = dodajDni(dodajMiesiace(ciaza.dataPorodu, 12), -1);
+    const granica = dodajDni(dodajMiesiace(ciaza.dataPorodu, wymiary.miesiaceOjcowskiego), -1);
     if (dzis === undefined || porownajDaty(dzis, granica) <= 0) wynik.add('ojcowski');
     wynik.add('rodzicielski');
   }
@@ -342,27 +416,34 @@ export function czyWyslanieZamykaSprawe(podrodzaj: PodrodzajWnioskuOUrlop | unde
 
 // --- R-3 do R-6 Okresy ----------------------------------------------------------------------------
 
-export function okresUrlopuMacierzynskiego(dane: Pick<DaneKreatora, 'dataPorodu' | 'liczbaDzieci' | 'wyslane'>): Okres | null {
+export function okresUrlopuMacierzynskiego(dane: Pick<DaneKreatora, 'dataPorodu' | 'liczbaDzieci' | 'wyslane' | 'wymiary'>): Okres | null {
   if (!dane.dataPorodu) return null;
   const przedPorodem = dane.wyslane.find((w) => w.rodzic === 'matka' && w.wniosek.podrodzaj === 'czesc-przed-porodem');
   const od = przedPorodem?.wniosek.okresy[0]?.od ?? dane.dataPorodu;
-  return { od, do: koniecPoTygodniach(od, WYMIAR_MACIERZYNSKIEGO_TYGODNI[dane.liczbaDzieci]) };
+  return { od, do: koniecPoTygodniach(od, wymiaryDanych(dane).macierzynski[dane.liczbaDzieci]) };
 }
 
 /** Zakres daty początku części urlopu macierzyńskiego przed porodem (R-4). */
-export function zakresPrzedPorodem(ptp: DataISO): Okres {
-  return { od: dodajDni(ptp, -DNI_PRZED_PORODEM), do: dodajDni(ptp, -1) };
+export function zakresPrzedPorodem(ptp: DataISO, wymiary: WymiaryUrlopow = WYMIARY_DOMYSLNE): Okres {
+  return { od: dodajDni(ptp, -wymiary.dniPrzedPorodem), do: dodajDni(ptp, -1) };
 }
 
 /** Wymiar urlopu rodzicielskiego: całkowity i na rodzica (R-5). */
-export function wymiarRodzicielskiego(liczba: LiczbaDzieci, zaZyciem: boolean): { calkowity: number; naRodzica: number } {
-  const calkowity = (liczba > 1 ? 43 : 41) + (zaZyciem ? 24 : 0);
-  return { calkowity, naRodzica: calkowity - TYGODNIE_NIEPRZENOSZALNE };
+export function wymiarRodzicielskiego(
+  liczba: LiczbaDzieci,
+  zaZyciem: boolean,
+  wymiary: WymiaryUrlopow = WYMIARY_DOMYSLNE,
+): { calkowity: number; naRodzica: number } {
+  const r = wymiary.rodzicielski;
+  const calkowity = liczba > 1
+    ? (zaZyciem ? r.wiecejDzieciZaZyciem : r.wiecejDzieci)
+    : (zaZyciem ? r.jednoDzieckoZaZyciem : r.jednoDziecko);
+  return { calkowity, naRodzica: calkowity - wymiary.nieprzenoszalne };
 }
 
-/** 31 grudnia roku, w którym dziecko kończy 6 lat. */
-export function granicaRodzicielskiego(dataUrodzenia: DataISO): DataISO {
-  const rok = Number(dataUrodzenia.slice(0, 4)) + 6;
+/** 31 grudnia roku, w którym dziecko kończy 6 lat (wymiar z katalogu). */
+export function granicaRodzicielskiego(dataUrodzenia: DataISO, wymiary: WymiaryUrlopow = WYMIARY_DOMYSLNE): DataISO {
+  const rok = Number(dataUrodzenia.slice(0, 4)) + wymiary.lataRodzicielskiego;
   return `${rok}-12-31`;
 }
 
@@ -394,7 +475,7 @@ export function wykorzystanieRodzicielskiego(dane: DaneKreatora): WykorzystanieR
   ).sort((a, b) => porownajDaty(a.od, b.od));
   const wlasne = czesci.filter((c) => c.rodzic === dane.rodzic).reduce((s, c) => s + c.tygodnie, 0);
   const oboje = czesci.reduce((s, c) => s + c.tygodnie, 0);
-  const { calkowity, naRodzica } = wymiarRodzicielskiego(dane.liczbaDzieci, dane.zaZyciem);
+  const { calkowity, naRodzica } = wymiarRodzicielskiego(dane.liczbaDzieci, dane.zaZyciem, wymiaryDanych(dane));
   const pozostalo = Math.max(0, Math.min(naRodzica - wlasne, calkowity - oboje));
   return { czesci, wlasne, oboje, numerCzesci: czesci.length + 1, limitRodzica: naRodzica, pozostalo };
 }
@@ -413,10 +494,11 @@ export function stawkaZasilku(w: {
   dzis: DataISO;
   dataPorodu?: DataISO;
   przyjecie?: PrzyjecieDziecka;
+  wymiary?: WymiaryUrlopow;
 }): { stawka: '81-5' | '100-70' | null; kod?: KodKomunikatu; termin?: DataISO; zostaloDni?: number } {
   const poczatek = dzienTerminu815(w);
   if (poczatek === null) return { stawka: null };
-  const termin = dodajDni(poczatek, DNI_TERMINU_81_5);
+  const termin = dodajDni(poczatek, wymiaryDanych(w).dniTerminu815);
   const zostaloDni = roznicaDni(w.dzis, termin);
   const poTerminie = zostaloDni < 0;
   const kodPoTerminie: KodKomunikatu = w.przyjecie ? '0165' : '0038';
@@ -540,16 +622,17 @@ export function wyliczOkresyUrlopu(
   const okres = (rodzajUrlopu: RodzajUrlopu, od: DataISO, doDnia: DataISO, extra: Partial<OkresWniosku>): OkresWniosku => ({
     rodzajUrlopu, od, do: doDnia, rodzic: dane.rodzic, stawka: stawkaOkresu(rodzajUrlopu, w.wariant), ...extra,
   });
-  const { naRodzica } = wymiarRodzicielskiego(dane.liczbaDzieci, dane.zaZyciem);
+  const wymiary = wymiaryDanych(dane);
+  const { naRodzica } = wymiarRodzicielskiego(dane.liczbaDzieci, dane.zaZyciem, wymiary);
   switch (podrodzaj) {
     case 'czesc-przed-porodem': {
-      const tygodnie = WYMIAR_MACIERZYNSKIEGO_TYGODNI[dane.liczbaDzieci];
+      const tygodnie = wymiary.macierzynski[dane.liczbaDzieci];
       return [okres('czesc-przed-porodem', w.od, koniecPoTygodniach(w.od, tygodnie), { tygodnie })];
     }
     case 'macierzynski-z-rodzicielskim': {
       const mac = okresUrlopuMacierzynskiego(dane);
       if (!mac) return [];
-      const tygodnie = WYMIAR_MACIERZYNSKIEGO_TYGODNI[dane.liczbaDzieci];
+      const tygodnie = wymiary.macierzynski[dane.liczbaDzieci];
       const lista = [okres('macierzynski', mac.od, mac.do, { tygodnie })];
       if (w.zakres === 'z-calym-rodzicielskim') {
         const od = dodajDni(mac.do, 1);
@@ -585,7 +668,8 @@ export function nazwaPlikuWniosku(podrodzaj: PodrodzajWnioskuOUrlop | undefined)
 }
 
 /** Granica wieku dziecka przy urlopie na warunkach urlopu macierzyńskiego: dzień przed ukończeniem 7, 10 albo 14 lat. */
-export function granicaWiekuPrzyjecia(przyjecie: PrzyjecieDziecka): DataISO {
-  const lata = przyjecie.forma === 'przysposobienie' ? 14 : przyjecie.odroczenieObowiazkuSzkolnego ? 10 : 7;
+export function granicaWiekuPrzyjecia(przyjecie: PrzyjecieDziecka, wymiary: WymiaryUrlopow = WYMIARY_DOMYSLNE): DataISO {
+  const wiek = wymiary.wiekPrzyjecia;
+  const lata = przyjecie.forma === 'przysposobienie' ? wiek.przysposobienie : przyjecie.odroczenieObowiazkuSzkolnego ? wiek.odroczenie : wiek.rodzinaZastepcza;
   return dodajDni(dodajLata(przyjecie.dataUrodzeniaDziecka, lata), -1);
 }

@@ -87,6 +87,8 @@ export function useKreatorUrlopu(): StanKreatora | null {
       rodzina: kontekst.rodzina,
       daneZus: kontekst.daneZusKonta,
       numerScenariusza: wniosek?.numerScenariusza,
+      katalog: kontekst.katalog,
+      dzis: kontekst.dzis,
     });
     return { kontekst, dane, wniosek };
   }, [kontekst, idWniosku]);

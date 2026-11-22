@@ -6,25 +6,35 @@ import { teksty } from '@/teksty';
 
 const tk = teksty.ViewDeadlines.kotwice;
 
-test('opis terminu od przewidywanego terminu porodu ma imiesłów rodzaju męskiego', () => {
+test('opis terminu od przewidywanego terminu porodu podaje odstęp i datę kotwiczącą w nawiasie', () => {
   assert.equal(
     tk.plusDni({ nazwa: tk.nazwy.ptpZamiastPorodu, data: '22.03.2027', liczba: '21' }),
-    'przewidywany termin porodu 22.03.2027 powiększony o 21 dni',
+    '21 dni od przewidywanego terminu porodu (22.03.2027)',
   );
   assert.equal(
     tk.plus12MinusDni({ nazwa: tk.nazwy.ptpZamiastPorodu, data: '22.03.2027' }),
-    'przewidywany termin porodu 22.03.2027 powiększony o 12 miesięcy i pomniejszony o 14 dni',
+    '14 dni przed upływem 12 miesięcy od przewidywanego terminu porodu (22.03.2027)',
+  );
+  assert.equal(
+    teksty.ViewCaseGuide.terminSzacowany({ opis: tk.plusDni({ nazwa: tk.nazwy.ptpZamiastPorodu, data: '22.03.2027', liczba: '21' }) }),
+    'Termin szacowany: 21 dni od przewidywanego terminu porodu (22.03.2027)',
   );
 });
 
-test('opis terminu od daty porodu ma imiesłów rodzaju żeńskiego', () => {
-  assert.equal(
-    tk.plusDni({ nazwa: tk.nazwy.dataPorodu, data: '22.03.2027', liczba: '21' }),
-    'data porodu 22.03.2027 powiększona o 21 dni',
-  );
+test('opis terminu od daty porodu i daty przyjęcia odmienia liczbę dni, tygodni i miesięcy', () => {
+  assert.equal(tk.plusDni({ nazwa: tk.nazwy.dataPorodu, data: '22.03.2027', liczba: '21' }), '21 dni od daty porodu (22.03.2027)');
+  assert.equal(tk.plusDni({ nazwa: tk.nazwy.dataPorodu, data: '22.03.2027', liczba: '1' }), '1 dzień od daty porodu (22.03.2027)');
   assert.equal(
     tk.plusMiesiace({ nazwa: tk.nazwy.dataPrzyjecia, data: '01.04.2027', liczba: '12' }),
-    'data przyjęcia dziecka 01.04.2027 powiększona o 12 miesięcy',
+    '12 miesięcy od daty przyjęcia dziecka (01.04.2027)',
+  );
+  assert.equal(
+    tk.plusMiesiace({ nazwa: tk.nazwy.dataPrzyjecia, data: '01.04.2027', liczba: '3' }),
+    '3 miesiące od daty przyjęcia dziecka (01.04.2027)',
+  );
+  assert.equal(
+    tk.plusTygodnie({ nazwa: tk.nazwy.dataPorodu, data: '22.03.2027', liczba: '22' }),
+    '22 tygodnie urlopu macierzyńskiego od daty porodu (22.03.2027)',
   );
 });
 

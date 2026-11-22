@@ -35,6 +35,7 @@ export const ID_KWOT = {
   progZadluzeniaJdg: 'prog-zadluzenia-z-tytulu-skladek-jdg',
   oplataSkarbowaOdpis: 'oplata-skarbowa-odpis-aktu-urodzenia',
   zasilekChorobowyBezKoduB: 'zasilek-chorobowy-bez-kodu-b',
+  wynagrodzenieChoroboweBezKoduB: 'wynagrodzenie-chorobowe-bez-kodu-b',
 } as const;
 
 /** Początek obowiązywania wartości bez okresu w tabeli wymagania Słownik kwot i progów (3.5.1.1.2). */
@@ -355,5 +356,18 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
     edytowalny: true,
     reguly: ['zasilek-chorobowy'],
     kolejnosc: 23,
+  },
+  // Wynagrodzenie chorobowe za niezdolność do pracy poza ciążą: art. 92 § 1 pkt 1 Kodeksu pracy. Stawka jest
+  // minimum ustawowym, a przepisy prawa pracy u pracodawcy mogą przewidywać wyższą stawkę.
+  {
+    id: ID_KWOT.wynagrodzenieChoroboweBezKoduB,
+    slownik: 'kwoty-i-progi',
+    nazwa: 'Wynagrodzenie chorobowe z zaświadczeniem lekarskim bez kodu B',
+    warianty: [{ klucz: 'stawka', etykieta: 'Stawka wynagrodzenia', jednostka: 'procent' }],
+    wersje: [{ od: OD_URUCHOMIENIA, wartosci: { stawka: 80 } }],
+    szablonOpisu: '{stawka} wynagrodzenia, gdy zaświadczenie lekarskie nie ma kodu B oznaczającego ciążę',
+    edytowalny: true,
+    reguly: ['wynagrodzenie-chorobowe'],
+    kolejnosc: 24,
   },
 ];

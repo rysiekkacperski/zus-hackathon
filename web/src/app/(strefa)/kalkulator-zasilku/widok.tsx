@@ -358,7 +358,7 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
                   onZmiana={(w) => zmien('formaPrzyjecia', w)}
                   {...pole('formaPrzyjecia')}
                 />
-                <ZrodloPola zrodlo={f.formaPrzyjecia.zrodlo} />
+                {f.formaPrzyjecia.wartosc !== null ? <ZrodloPola zrodlo={f.formaPrzyjecia.zrodlo} /> : null}
                 {informacja('formaPrzyjecia')}
               </div>
               {f.formaPrzyjecia.wartosc === 'rodzina-zastepcza-niezawodowa' ? (
@@ -603,7 +603,7 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
                 <PoleWyboru<OpcjaFormyMatki>
                   id={idPola('formaMatki')}
                   etykieta={etykietaMatki}
-                  opcje={OPCJE_FORMY_MATKI.map((w) => ({ wartosc: w, etykieta: t.formy[w] }))}
+                  opcje={OPCJE_FORMY_MATKI.filter((w) => zdarzenie !== 'przyjecie' || w !== 'umowa-o-prace-ustala-w-ciazy').map((w) => ({ wartosc: w, etykieta: t.formy[w] }))}
                   wartosc={f.formaMatki.wartosc}
                   onZmiana={(w) => zmien('formaMatki', w)}
                   pustaOpcja={t.wybierz}

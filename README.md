@@ -71,7 +71,7 @@ Serwer deweloperski działa pod adresem http://localhost:3000. Plik `web/.env.lo
 | Zmienna | Znaczenie |
 | --- | --- |
 | `MODEL_DOSTAWCA` | Dostawca modelu językowego asystenta AI i odczytu dokumentów: `deepseek` albo `anthropic`. Puste pole oznacza `deepseek`. |
-| `DEEPSEEK_API_KEY` | Klucz API DeepSeek. Bez klucza asystent pokazuje komunikat 0071, a odczyt dokumentów przykładowych korzysta z fikstur odczytu. |
+| `DEEPSEEK_API_KEY` | Klucz API DeepSeek. Bez klucza asystent pokazuje komunikat 0071, a odczyt dokumentu komunikat 0108; dokumenty przykładowe odczytasz wtedy z fikstur po wybraniu w `/demo/ustawienia` opcji „Wynik odczytu zapisany w prototypie”. |
 | `DEEPSEEK_MODEL` | Model DeepSeek, domyślnie `deepseek-flash`. Obrazy i pliki PDF czyta zawsze `deepseek-flash`. |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Klucz i model Claude, opcjonalne. Serwer używa ich wyłącznie przy `MODEL_DOSTAWCA=anthropic`. |
 | `KATALOG_DANE_KATALOG` | Folder, w którym usługa `/api/katalog` zapisuje plik `katalog.json` z edycjami Administratora. Puste pole oznacza `web/.dane/`. |
@@ -156,7 +156,7 @@ Serwer pełni w demo rolę systemu ZUS. Przeglądarka pobiera dane źródłowe k
 Aplikacja korzysta z modelu językowego przez LangChain i LangGraph. Dostawcę wybiera zmienna `MODEL_DOSTAWCA`: domyślnie DeepSeek, a opcjonalnie Claude od Anthropic. Klucze czyta wyłącznie kod serwera.
 
 - Asystent AI odpowiada na pytania rodzica na podstawie planu rodziny. Graf LangGraph w `web/src/serwer/asystent/` klasyfikuje pytanie, zbiera fakty z planu deterministycznie, formułuje odpowiedź modelem i sprawdza ją przed wysłaniem. Pytanie spoza zakresu przewodnika dostaje komunikat 0070 z przejściem do właściwego kanału, a niedostępny model komunikat 0071.
-- Odczyt dokumentów przykładowych spraw w `web/src/serwer/odczyt-dokumentow/` rozpoznaje rodzaj dokumentu, odczytuje pola i zastępuje dane osobowe danymi losowymi. Przeglądarka dostaje wyłącznie dane zastępcze i klucz powiązania, czyli skrót SHA-256 odczytanego numeru PESEL albo imienia i nazwiska, a serwer nie zapisuje pliku. Odczyt trwa najwyżej 30 sekund. Dokument przykładowy z `web/public/przyklady/` bez klucza modelu, po błędzie modelu albo po przekroczeniu czasu dostaje wynik z fikstur odczytu.
+- Odczyt dokumentów przykładowych spraw w `web/src/serwer/odczyt-dokumentow/` rozpoznaje rodzaj dokumentu, odczytuje pola i zastępuje dane osobowe danymi losowymi. Przeglądarka dostaje wyłącznie dane zastępcze i klucz powiązania, czyli skrót SHA-256 odczytanego numeru PESEL albo imienia i nazwiska, a serwer nie zapisuje pliku. Odczyt trwa najwyżej 30 sekund. Bez klucza modelu, po błędzie modelu albo po przekroczeniu czasu odczyt kończy się komunikatem 0108. Po wybraniu w `/demo/ustawienia` opcji „Wynik odczytu zapisany w prototypie” dokument przykładowy z `web/public/przyklady/` dostaje wynik z fikstur odczytu.
 
 Zespół tworzy dokumentację i kod aplikacji razem z agentem AI Claude Code, który pracuje według zasad z plików `CLAUDE.md`.
 

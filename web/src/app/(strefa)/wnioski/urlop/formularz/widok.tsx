@@ -7,10 +7,10 @@ import { formatujDate } from '@/domena/daty';
 import { formatujProcent } from '@/domena/kwoty';
 import type { OkresWniosku, PodrodzajWnioskuOUrlop, WniosekOUrlop } from '@/domena/typy';
 import {
-  WYMIAR_MACIERZYNSKIEGO_TYGODNI,
   listaZalacznikow,
   propozycjeFormularza,
   wymiarRodzicielskiego,
+  wymiaryDanych,
 } from '@/domena/wnioski/urlopy';
 import { Ikona } from '@/komponenty/ikona';
 import {
@@ -347,7 +347,7 @@ function FormularzWniosku({
             <Karta tytul={t.okresTytul} bezLinii>
               {mac ? (
                 <DaneNaTle
-                  pozycje={[{ etykieta: t.rodzajeUrlopu.macierzynski, wartosc: t.okresOpis({ od: formatujDate(mac.od), do: formatujDate(mac.do), opis: t.odDniaPorodu({ tygodnie: t.liczbaTygodni({ n: WYMIAR_MACIERZYNSKIEGO_TYGODNI[dane.liczbaDzieci] }) }) }) }]}
+                  pozycje={[{ etykieta: t.rodzajeUrlopu.macierzynski, wartosc: t.okresOpis({ od: formatujDate(mac.od), do: formatujDate(mac.do), opis: t.odDniaPorodu({ tygodnie: t.liczbaTygodni({ n: wymiaryDanych(dane).macierzynski[dane.liczbaDzieci] }) }) }) }]}
                 />
               ) : null}
               <div className={mac ? 'mt-6' : undefined}>{zakresWniosku(false)}</div>
@@ -355,7 +355,7 @@ function FormularzWniosku({
           );
         }
         if (nazwaSekcji === 'wyniki') {
-          const { calkowity } = wymiarRodzicielskiego(dane.liczbaDzieci, dane.zaZyciem);
+          const { calkowity } = wymiarRodzicielskiego(dane.liczbaDzieci, dane.zaZyciem, wymiaryDanych(dane));
           return kartaWynikow(<Notatka>{t.notatkaRodzicielski({ tygodnie: t.liczbaTygodni({ n: calkowity }) })}</Notatka>);
         }
         if (nazwaSekcji === 'oswiadczenie') return odp.zakres !== 'wylacznie-macierzynski' ? kartaZamiaru : null;

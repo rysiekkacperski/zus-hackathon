@@ -6,6 +6,7 @@ import { Tabela } from '@/komponenty/tabela';
 import { dodajDni, formatujDate } from '@/domena/daty';
 import { formatujKwote, formatujProcent } from '@/domena/kwoty';
 import type { WynikPodzialu } from '@/domena/kalkulatory/podzial';
+import type { EtykietyStawek } from '@/domena/kalkulatory/wariant';
 import { teksty } from '@/teksty';
 
 const t = teksty.ViewCalcParentalSplit;
@@ -30,19 +31,21 @@ export interface WynikPodzialuProps {
   bezPrawa: boolean;
   imieMatki: string;
   imieDrugiego: string;
+  /** Stawki z katalogu w dniu porodu. */
+  stawki: EtykietyStawek;
 }
 
 /** Kafle, pasek podziału, tygodnie nieprzenoszalne i tabela „Szacunkowe miesięczne wypłaty” (wzory P20-02..P20-05, P20-11). */
-export function WynikPodzialuUrlopu({ wynik, tygodnieMatki: M, tygodnieDrugiego: D, wariantMatki, zaZyciem, bezPrawa, imieMatki, imieDrugiego }: WynikPodzialuProps) {
+export function WynikPodzialuUrlopu({ wynik, tygodnieMatki: M, tygodnieDrugiego: D, wariantMatki, zaZyciem, bezPrawa, imieMatki, imieDrugiego, stawki }: WynikPodzialuProps) {
   const L = wynik.wymiar;
   const N = wynik.nieprzenoszalne;
   const P = wynik.przepadajace;
   const pula = L - 2 * N;
   const procent = (n: number) => (n / L) * 100;
   const w815 = wariantMatki === '81-5';
-  const stawkaDopisek = w815 ? `, ${formatujProcent(81.5)}` : '';
+  const stawkaDopisek = w815 ? `, ${stawki.s815}` : '';
   const drugiPonad = Math.max(0, D - N);
-  const nazwaWariantu = t.nazwaWariantu[wariantMatki];
+  const nazwaWariantu = t.nazwaWariantu(wariantMatki, stawki);
 
   const kafle = [
     { id: 'matka', etykieta: t.kafelMatka, wartosc: tyg(M), klasa: 'bg-brand-chart' },
@@ -146,7 +149,7 @@ export function WynikPodzialuUrlopu({ wynik, tygodnieMatki: M, tygodnieDrugiego:
               </span>
               <span className="text-body">
                 <strong>{t.kafelDrugi}</strong>
-                {t.legendaDrugi({ tygodnie: String(Math.min(D, N)), stawka: `, ${formatujProcent(70)}` })}
+                {t.legendaDrugi({ tygodnie: String(Math.min(D, N)), stawka: `, ${stawki.s70}` })}
               </span>
             </>
           ) : (

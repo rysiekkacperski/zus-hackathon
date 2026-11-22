@@ -20,6 +20,7 @@ import { zapiszRezygnacjeZZasilku } from '@/dane/magazyn/operacje/rezygnacja';
 import type { DataISO, KodKomunikatu, WniosekOUrlop } from '@/domena/typy';
 import type { UrlopMacierzynski } from '@/domena/wnioski/rezygnacja';
 import {
+  ojciecZRezygnacji,
   walidujDateRezygnacjiZZasilku,
   walidujRezygnacjeZZasilku,
   zakresRezygnacjiZZasilku,
@@ -136,7 +137,7 @@ export function FormularzRezygnacjiZZasilku(p: FormularzZasilkuProps) {
         wniosek={zapisany}
         adresat={p.adresat}
         matka={p.matka}
-        ojciec={formularz.ojciec}
+        ojciec={ojciecZRezygnacji(zapisany, formularz.ojciec)}
         nazwaPlatnika={p.nazwaPlatnika}
       />
     );

@@ -32,6 +32,35 @@ export function pelneEdycje(e: EdycjeKatalogu): Required<EdycjeKatalogu> {
 
 type ElementZId = { id: string };
 
+/**
+ * Wolny identyfikator dla elementu z identyfikatorem `id` zajętym w `zajete`: ten sam przedrostek i kolejny numer
+ * po najwyższym numerze z tym przedrostkiem, z tą samą liczbą cyfr, na przykład 'K40' przy zajętych K40 i K41 daje 'K42'.
+ */
+export function wolnyIdentyfikator(id: string, zajete: readonly string[]): string {
+  const m = /^(.*?)(\d+)$/.exec(id);
+  const przedrostek = m ? m[1] : `${id}-`;
+  const cyfry = m ? m[2].length : 1;
+  const numery = [id, ...zajete]
+    .filter((z) => z.startsWith(przedrostek))
+    .map((z) => /^\d+$/.exec(z.slice(przedrostek.length)))
+    .filter((d): d is RegExpExecArray => d !== null)
+    .map((d) => Number(d[0]));
+  const nastepny = (numery.length === 0 ? 1 : Math.max(...numery)) + 1;
+  return `${przedrostek}${String(nastepny).padStart(cyfry, '0')}`;
+}
+
+/**
+ * Dodaje nowy element do listy. Element równy już zapisanemu elementowi (poza identyfikatorem) jest powtórzeniem
+ * tej samej zmiany i lista zostaje bez zmian. Inny element z zajętym identyfikatorem, na przykład pozycja dodana
+ * w tym samym czasie przez drugiego Administratora, dostaje kolejny wolny identyfikator.
+ */
+function dodajNowy<T extends ElementZId>(lista: readonly T[], element: T): T[] {
+  const zajety = lista.some((p) => p.id === element.id);
+  if (!zajety) return [...lista, element];
+  if (lista.some((p) => JSON.stringify({ ...element, id: p.id }) === JSON.stringify(p))) return [...lista];
+  return [...lista, { ...element, id: wolnyIdentyfikator(element.id, lista.map((p) => p.id)) }];
+}
+
 /** Nowy element trafia na koniec dodanych; zmieniony zastępuje element dodany albo wcześniejszą zmianę o tym samym id. */
 function dodajAlboZmien<T extends ElementZId>(
   lista: { dodane: T[]; zmienione: T[] },
@@ -39,7 +68,7 @@ function dodajAlboZmien<T extends ElementZId>(
   nowy: boolean,
 ): { dodane: T[]; zmienione: T[] } {
   const { dodane, zmienione } = lista;
-  if (nowy) return dodane.some((p) => p.id === element.id) ? lista : { dodane: [...dodane, element], zmienione };
+  if (nowy) return { dodane: dodajNowy(dodane, element), zmienione };
   if (dodane.some((p) => p.id === element.id)) {
     return { dodane: dodane.map((p) => (p.id === element.id ? element : p)), zmienione };
   }
@@ -54,9 +83,7 @@ export function zastosujZmiane(edycje: EdycjeKatalogu, z: ZmianaKatalogu): Edycj
     case 'nowa-wersja':
       return { ...e, wersja, noweWersje: [...e.noweWersje, { idWpisu: z.idWpisu, wersja: z.wersja }] };
     case 'nowa-pozycja':
-      return e.nowePozycje.some((p) => p.id === z.pozycja.id)
-        ? { ...e, wersja }
-        : { ...e, wersja, nowePozycje: [...e.nowePozycje, z.pozycja] };
+      return { ...e, wersja, nowePozycje: dodajNowy(e.nowePozycje, z.pozycja) };
     case 'zmiana-pozycji':
       return { ...e, wersja, zmienionePozycje: [...e.zmienionePozycje, z.zmiana] };
     case 'podmiot':
@@ -64,10 +91,28 @@ export function zastosujZmiane(edycje: EdycjeKatalogu, z: ZmianaKatalogu): Edycj
     case 'dokument':
       return { ...e, wersja, dokumenty: dodajAlboZmien<WpisSlownikaDokumentow>(e.dokumenty, z.dokument, z.nowy) };
     case 'nowy-wpis':
-      return e.noweWpisy.some((w) => w.id === z.wpis.id) ? { ...e, wersja } : { ...e, wersja, noweWpisy: [...e.noweWpisy, z.wpis] };
+      return { ...e, wersja, noweWpisy: dodajNowy(e.noweWpisy, z.wpis) };
     case 'przywrocenie':
       return edycjePuste(wersja);
   }
+}
+
+/**
+ * Zmiany, które odtwarzają edycje `edycje` na edycjach bez zmian Administratora. Przeglądarka wysyła je do usługi,
+ * gdy przechowuje edycje zapisane przed synchronizacją z usługą katalogu.
+ */
+export function zmianyOdtwarzajaceEdycje(edycje: EdycjeKatalogu): ZmianaKatalogu[] {
+  const e = pelneEdycje(edycje);
+  return [
+    ...e.nowePozycje.map((pozycja): ZmianaKatalogu => ({ rodzaj: 'nowa-pozycja', pozycja })),
+    ...e.noweWpisy.map((wpis): ZmianaKatalogu => ({ rodzaj: 'nowy-wpis', wpis })),
+    ...e.noweWersje.map((n): ZmianaKatalogu => ({ rodzaj: 'nowa-wersja', idWpisu: n.idWpisu, wersja: n.wersja })),
+    ...e.zmienionePozycje.map((zmiana): ZmianaKatalogu => ({ rodzaj: 'zmiana-pozycji', zmiana })),
+    ...e.podmioty.dodane.map((podmiot): ZmianaKatalogu => ({ rodzaj: 'podmiot', podmiot, nowy: true })),
+    ...e.podmioty.zmienione.map((podmiot): ZmianaKatalogu => ({ rodzaj: 'podmiot', podmiot, nowy: false })),
+    ...e.dokumenty.dodane.map((dokument): ZmianaKatalogu => ({ rodzaj: 'dokument', dokument, nowy: true })),
+    ...e.dokumenty.zmienione.map((dokument): ZmianaKatalogu => ({ rodzaj: 'dokument', dokument, nowy: false })),
+  ];
 }
 
 // --- Sprawdzenie danych z sieci ------------------------------------------------------------------

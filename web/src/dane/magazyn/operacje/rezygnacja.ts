@@ -200,7 +200,7 @@ export function zapiszRezygnacjeZZasilku(
       ? { dataZlozenia: ctx.dzis, potwierdzenie: nastepnyNumerPotwierdzenia('ZAS23-DEMO', ctx.dzis) }
       : { dataPrzygotowania: ctx.dzis }),
     okresy: [{ rodzajUrlopu: 'przejety-macierzynski', od: dane.dataRezygnacji, do: dane.koniecZasilku, rodzic: 'drugi-rodzic' }],
-    rezygnacja: { dataPowrotu: dane.dataRezygnacji, zOrzeczeniem: dane.zOrzeczeniem },
+    rezygnacja: { dataPowrotu: dane.dataRezygnacji, zOrzeczeniem: dane.zOrzeczeniem, ojciec: dane.ojciec.trim() },
     zalaczniki: [
       {
         id: 'oswiadczenie-ojca',

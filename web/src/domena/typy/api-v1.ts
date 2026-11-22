@@ -227,6 +227,8 @@ export interface ZadanieWnioskuDoZusApi extends CzasZadaniaApi, SymulacjeZadania
   /** Wniosek ZAM: dane ciąży i plan rodziny do ponownego sprawdzenia terminu 21 dni na wariant 81,5% (0038). */
   daneCiazy?: DaneCiazyIDziecka | null;
   plan?: PlanRodziny | null;
+  /** Ostatni numer dnia (NNNN z numeru potwierdzenia), który klient dostał dla tego rodzaju wniosku; serwer nadaje wyższy. */
+  ostatniNumerPotwierdzenia?: number;
 }
 export interface OdpowiedzWnioskuDoZusApi {
   idWniosku: IdWniosku; rodzaj: WniosekDoZusApi['rodzaj']; stan: 'wyslany'; adresat: AdresatWniosku;

@@ -88,6 +88,8 @@ export type ZmianaKatalogu =
   | { rodzaj: 'dokument'; dokument: WpisSlownikaDokumentow; nowy: boolean }
   | { rodzaj: 'nowy-wpis'; wpis: WpisSlownika }
   | { rodzaj: 'przywrocenie' };
+/** Zmiana czekająca w przeglądarce na zapis w usłudze /api/katalog z potwierdzeniem roli Administrator z chwili zapisu. */
+export type ZmianaKataloguWKolejce = ZmianaKatalogu & { sesjaDemo?: string };
 export interface Katalog {                        // seed złożony z edycjami Administratora
   wersja: number; pozycje: PozycjaKatalogu[]; slowniki: WpisSlownika[];
   reguly: RegulaSwiadczenia[]; dokumenty: WpisSlownikaDokumentow[]; podmiotyWsparcia: PodmiotWsparcia[];

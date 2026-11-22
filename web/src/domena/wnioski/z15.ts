@@ -8,6 +8,7 @@ import type {
   DniWRokuZ15,
   Grosze,
   IdWidoku,
+  Katalog,
   KategoriaLimituZ15,
   KontoPrzewodnika,
   OkresOpiekiZ15,
@@ -21,6 +22,8 @@ import type {
   Zalacznik,
   ZaswiadczenieEzla,
 } from '@/domena/typy';
+import { minimalnaPodstawaPracownika } from '@/domena/kalkulatory/podstawa';
+import { parametr } from '@/domena/kalkulatory/slowniki';
 import { czyKontoMatki } from '@/domena/wnioski/zas53';
 
 export const PARAMETRY_Z15 = {
@@ -31,11 +34,7 @@ export const PARAMETRY_Z15 = {
   dniPowiadomieniaOZamknieciu: 7,
   dniOsmiuTygodni: 56,
   miesiacePrzedawnienia: 6,
-  potracenieSkladek: 0.1371,
   stawka: 0.8,
-  minimalnaPodstawa2026: 414710 as Grosze,
-  minimalnaPodstawa2027: 427136 as Grosze,
-  dataZmianyMinimalnejPodstawy: '2027-01-01' as DataISO,
 } as const;
 
 // --- Dostęp ---------------------------------------------------------------------------------------
@@ -340,20 +339,21 @@ export function limityWRoku(wniosek: WniosekZ15, wnioski: Wniosek[]): DniWRokuZ1
 
 // --- Kwota ----------------------------------------------------------------------------------------
 
-/** Podstawa wymiaru: średnia podstaw składek z 12 miesięcy przed miesiącem prawa, minus 13,71%, z minimalną podstawą pracownika. */
-export function podstawaWymiaruZ15(tytul: TytulUbezpieczenia | undefined, pierwszyDzien: DataISO): Grosze | null {
+/**
+ * Podstawa wymiaru: średnia podstaw składek z 12 miesięcy przed miesiącem prawa pomniejszona o składki, z minimalną
+ * podstawą pracownika. Procent pomniejszenia i minimalną podstawę czyta z Katalogu świadczeń w pierwszym dniu opieki
+ * tymi samymi funkcjami co kalkulator zasiłku macierzyńskiego.
+ */
+export function podstawaWymiaruZ15(tytul: TytulUbezpieczenia | undefined, pierwszyDzien: DataISO, katalog: Katalog): Grosze | null {
   if (!tytul) return null;
   const miesiacPrawa = pierwszyDzien.slice(0, 7);
   const podstawy = tytul.podstawySkladek.filter((p) => p.miesiac < miesiacPrawa).slice(-12);
   if (podstawy.length === 0) return null;
   const srednia = podstawy.reduce((s, p) => s + p.kwota, 0) / podstawy.length;
-  const podstawa = Math.round(srednia * (1 - PARAMETRY_Z15.potracenieSkladek));
+  const potracenie = parametr(katalog, 'pomniejszenie', pierwszyDzien).wartosc / 100;
+  const podstawa = Math.round(srednia * (1 - potracenie));
   if (tytul.rodzaj !== 'pracownik') return podstawa;
-  const minimalna =
-    porownajDaty(pierwszyDzien, PARAMETRY_Z15.dataZmianyMinimalnejPodstawy) >= 0
-      ? PARAMETRY_Z15.minimalnaPodstawa2027
-      : PARAMETRY_Z15.minimalnaPodstawa2026;
-  return Math.max(podstawa, minimalna);
+  return Math.max(podstawa, minimalnaPodstawaPracownika(katalog, pierwszyDzien));
 }
 
 export function stawkaDziennaZ15(podstawa: Grosze): Grosze {

@@ -21,7 +21,7 @@ import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { zapiszPlanPodzialu } from '@/dane/magazyn/operacje/kalkulacje-decyzje';
 import { formatujDate } from '@/domena/daty';
 import { formatujKwote, parsujKwote } from '@/domena/kwoty';
-import { daneDzieckaDoKalkulatora, maPrawoDoZasilku, walidujPodstawe, walidujTygodnie } from '@/domena/kalkulatory/wariant';
+import { daneDzieckaDoKalkulatora, etykietyStawekZasilku, maPrawoDoZasilku, walidujPodstawe, walidujTygodnie } from '@/domena/kalkulatory/wariant';
 import { wartosciStartowe, zasadyPodzialu } from '@/domena/kalkulatory/podzial';
 import type { BledyPol, KodKomunikatu, PodstawaWymiaru, RodzicWRodzinie } from '@/domena/typy';
 import { teksty } from '@/teksty';
@@ -72,6 +72,7 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
   const dziecko = daneDzieckaDoKalkulatora(rodzina.daneCiazy);
   const dzien = dziecko.dataPorodu ?? dzis;
   const z = zasadyPodzialu(dziecko.liczbaDzieci, dziecko.zaZyciem, katalog, dzien);
+  const st = etykietyStawekZasilku(katalog, dzien);
   const formaDrugiego = dane.drugiRodzic.formaZatrudnienia?.wartosc ?? null;
   const bezPrawa = formaDrugiego !== null && !maPrawoDoZasilku(formaDrugiego, dane.drugiRodzic.dobrowolneChorobowe?.wartosc);
   const { wariant: wariantMatki, sprawa: sprawaWariantu, zapisano: wariantZapisano } = wariantMatkiZPlanu(rodzina.plan);
@@ -230,8 +231,8 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
       ? dziecko.zaZyciem ? t.jednoDzieckoZaZyciem : t.jednoDziecko
       : dziecko.zaZyciem ? t.wiecejDzieciZaZyciem({ liczba: dziecko.liczbaDzieci }) : t.wiecejDzieci({ liczba: dziecko.liczbaDzieci });
   const wariantOpis = sprawaWariantu && wariantZapisano
-    ? t.wariantWybrany({ wariant: t.nazwaWariantu[wariantMatki], data: formatujDate(wariantZapisano), sprawa: sprawaWariantu === 'K07' ? t.sprawaK07 : t.sprawaK08 })
-    : t.wariantZPlanu({ wariant: t.nazwaWariantu[wariantMatki] });
+    ? t.wariantWybrany({ wariant: t.nazwaWariantu(wariantMatki, st), data: formatujDate(wariantZapisano), sprawa: sprawaWariantu === 'K07' ? t.sprawaK07 : t.sprawaK08 })
+    : t.wariantZPlanu({ wariant: t.nazwaWariantu(wariantMatki, st) });
   const formaOpis = formaDrugiego
     ? `${t.formy[formaDrugiego]}${
         formaDrugiego === 'umowa-zlecenia' || formaDrugiego === 'jdg'
@@ -386,10 +387,11 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
                 bezPrawa={bezPrawa}
                 imieMatki={imieMatki}
                 imieDrugiego={bezPrawa ? '' : imieDrugiego}
+                stawki={st}
               />
               <div className="mt-6 flex flex-col gap-3">
-                {!bezPrawa ? <Notatka>{t.notatkaStawki}</Notatka> : null}
-                {wyliczenie.wynik.ponadPoUrodzinach ? <Notatka>{t.notatkaPoUrodzinach}</Notatka> : null}
+                {!bezPrawa ? <Notatka>{t.notatkaStawki(st)}</Notatka> : null}
+                {wyliczenie.wynik.ponadPoUrodzinach ? <Notatka>{t.notatkaPoUrodzinach(st)}</Notatka> : null}
                 <Notatka>
                   {t.notatkaCzesci}{' '}
                   <Odnosnik href={trasy.ViewCalcMaternityResult()} wTekscie>{t.kalkulatorzeZasilku}</Odnosnik>

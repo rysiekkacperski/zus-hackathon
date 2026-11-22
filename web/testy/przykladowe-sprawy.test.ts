@@ -48,3 +48,22 @@ test('sprawa bez okresu urlopu z wniosku: zasiłek macierzyński od dnia porodu 
   const prawo = porownanie.swiadczenia.find((s) => s.swiadczenie === 'zasilek-macierzynski')?.pozycje.find((p) => p.pole === 'prawo');
   assert.equal(prawo?.wyliczenie, 'Przysługuje');
 });
+
+test('stałe prawne weryfikacji, stawek i uzupełniającego urlopu czytane z katalogu po zmianie jednej wartości', async () => {
+  const { wartosciSlownikow } = await import('@/domena/przykladowe-sprawy/weryfikacja');
+  const { stawkiChorobowe } = await import('@/domena/zasilki/prawo-w-ciazy');
+  const { wyznaczUzupelniajacyUrlop } = await import('@/domena/rodzina/narodziny');
+  const { progiUzupelniajacego } = await import('@/domena/kalkulatory/okresy');
+  const dzien = '2026-11-10';
+  const start = wartosciSlownikow(katalog, dzien);
+  assert.deepEqual(
+    [start.przerwaLaczenia.wartosc, start.zasilekPoUstaniuDni.wartosc, start.zasilekPoUstaniuMinDni.wartosc, start.miesiaceSplatyZadluzenia.wartosc, start.miesiacePodstawy.wartosc],
+    [30, 14, 30, 6, 12],
+  );
+  assert.equal(wartosciSlownikow(katalogZWartosciami({ 'okres-podstawy-wymiaru-zasilku': { miesiace: 6 } }), dzien).miesiacePodstawy.wartosc, 6);
+  assert.equal(stawkiChorobowe(katalog, dzien).wynagrodzenieBezKoduB, 80);
+  assert.equal(stawkiChorobowe(katalogZWartosciami({ 'wynagrodzenie-chorobowe-bez-kodu-b': { stawka: 90 } }), dzien).wynagrodzenieBezKoduB, 90);
+  const uzupelniajacy = (k: typeof katalog) => wyznaczUzupelniajacyUrlop('umowa-o-prace', true, 29, 1500, 0, true, progiUzupelniajacego(k, dzien));
+  assert.equal(uzupelniajacy(katalog), 'do-8');
+  assert.equal(uzupelniajacy(katalogZWartosciami({ 'uzupelniajacy-urlop-macierzynski': { tydzienCiazy: 30 } })), 'do-15');
+});

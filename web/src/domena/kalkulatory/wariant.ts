@@ -16,7 +16,7 @@ import {
   type CzescPodstawy as CzescPodstawyWymiaru,
 } from '@/domena/kalkulatory/podstawa';
 import { formatujDate } from '@/domena/daty';
-import { formatujKwote } from '@/domena/kwoty';
+import { formatujKwote, formatujProcent } from '@/domena/kwoty';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import { wymiarMacierzynskiego, wymiarRodzicielskiego } from '@/domena/kalkulatory/okresy';
 import type {
@@ -140,6 +140,15 @@ export function stawkiZasilku(k: Katalog, dzien: DataISO): StawkiZasilku {
     s815: wartoscSlownika(k, 'zasilek-macierzynski-wariant-81-5', 'stawka', dzien, DOMYSLNE.stawka815),
     s70: wartoscSlownika(k, 'zasilek-macierzynski-wariant-100-70', 'rodzicielski', dzien, DOMYSLNE.stawka70),
   };
+}
+
+/** Stawki zasiłku sformatowane do etykiet, na przykład { s815: '81,5%', s100: '100%', s70: '70%' }. */
+export interface EtykietyStawek { s815: string; s100: string; s70: string }
+
+/** Etykiety stawek wariantów zasiłku z katalogu w dniu zdarzenia, żeby zmiana w panelu Administratora zmieniała teksty. */
+export function etykietyStawekZasilku(k: Katalog, dzien: DataISO): EtykietyStawek {
+  const s = stawkiZasilku(k, dzien);
+  return { s815: formatujProcent(s.s815), s100: formatujProcent(s.s100), s70: formatujProcent(s.s70) };
 }
 
 /** Termin decyzji o wariancie 81,5%: data porodu + 21 dni. */

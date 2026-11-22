@@ -27,6 +27,7 @@ import { Przycisk } from '@/komponenty/przycisk';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
 import type { CzescUrlopuRodzicielskiego, ParametryScenariusza, RodzicWRodzinie } from '@/domena/typy';
+import { etykietyStawekZasilku } from '@/domena/kalkulatory/wariant';
 import { teksty } from '@/teksty';
 import { KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA } from '../../_czesci/arkusz';
 import { useScenariuszApi } from '../../_czesci/wyliczenie-api';
@@ -54,6 +55,7 @@ function TrescArkuszaPowrotu({ daneWejsciowe: d, parametry: p, podstawyApi, wyni
   const nazwy = useNazwyRodzicow(d.zdarzenie.wartosc === 'przyjecie');
   const katalog = useKatalog();
   const dzis = useDzis();
+  const st = etykietyStawekZasilku(katalog, dataZdarzenia(d) ?? dzis);
   const adres = useSearchParams();
   const rodzic: RodzicWRodzinie = adres.get('rodzic') === 'drugi-rodzic' ? 'drugi-rodzic' : 'matka';
   const drugi: RodzicWRodzinie = rodzic === 'matka' ? 'drugi-rodzic' : 'matka';
@@ -205,8 +207,8 @@ function TrescArkuszaPowrotu({ daneWejsciowe: d, parametry: p, podstawyApi, wyni
                   <p className="m-0 text-body-strong text-ink">{t.sumaWyplat({ kogo: kto.dopelniacz })}</p>
                   <ListaDefinicji
                     pozycje={[
-                      { etykieta: p.wariant === '100-70' ? t.wariant100Wybrany : t.wariant100, wartosc: formatujKwote(sumy['100-70']) },
-                      { etykieta: p.wariant === '81-5' ? t.wariant81Wybrany : t.wariant81, wartosc: formatujKwote(sumy['81-5']) },
+                      { etykieta: p.wariant === '100-70' ? t.wariant100Wybrany(st) : t.wariant100(st), wartosc: formatujKwote(sumy['100-70']) },
+                      { etykieta: p.wariant === '81-5' ? t.wariant81Wybrany(st) : t.wariant81(st), wartosc: formatujKwote(sumy['81-5']) },
                     ]}
                   />
                 </>

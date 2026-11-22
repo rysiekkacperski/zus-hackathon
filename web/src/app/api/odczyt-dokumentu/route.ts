@@ -3,7 +3,8 @@
 // Właściciel: u05. Pole `tryb` = 'fikstura' zwraca wynik dokumentu przykładowego z dane/przykladowe-sprawy/fikstury-odczytu.ts,
 // rozpoznanego po identyfikatorze w treści pliku albo po nazwie pliku (serwer/odczyt-dokumentow/fikstury.ts).
 // W trybie modelu plik czyta dostawca z MODEL_DOSTAWCA (DEEPSEEK_API_KEY albo ANTHROPIC_API_KEY). Bez klucza dostawcy,
-// po błędzie modelu albo po 30 s dokument przykładowy dostaje wynik z fikstury, a każdy inny plik odpowiedź 503.
+// po błędzie modelu albo po 30 s trasa odpowiada 503, a klient pokazuje komunikat 0108 i zostawia Dokumenty sprawy
+// bez zmian (KA-08 i KA-09 historyjki 3.4.3.1.2).
 // Serwer zastępuje dane osobowe przed odpowiedzią i nie zapisuje pliku.
 import { walidujPlik } from '@/domena/walidacje';
 import type { BladOdczytuDokumentu, PowiazanieZastepcze, WynikOdczytuDokumentu } from '@/domena/typy';
@@ -56,7 +57,8 @@ export async function POST(zadanie: Request): Promise<Response> {
   const znanePowiazania = odczytajPowiazania(powiazania);
   const bajty = new Uint8Array(await plik.arrayBuffer());
 
-  if (formularz.get('tryb') === 'fikstura' || !czyModelDostepny()) return odpowiedzZFikstury(plik.name, bajty, znanePowiazania);
+  if (formularz.get('tryb') === 'fikstura') return odpowiedzZFikstury(plik.name, bajty, znanePowiazania);
+  if (!czyModelDostepny()) return niedostepny();
 
   // Limit 30 s obejmuje wgranie PDF do Files API DeepSeek, parsowanie dokumentu i oba wywołania modelu.
   const dane: PlikDoOdczytu = {
@@ -67,6 +69,6 @@ export async function POST(zadanie: Request): Promise<Response> {
     const wynik = await odczytajDokumentModelem(dane, znanePowiazania, AbortSignal.timeout(LIMIT_CZASU_MS));
     return Response.json(wynik);
   } catch {
-    return odpowiedzZFikstury(plik.name, bajty, znanePowiazania);
+    return niedostepny();
   }
 }

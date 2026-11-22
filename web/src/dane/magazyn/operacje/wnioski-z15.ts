@@ -16,7 +16,7 @@ import type {
   WniosekZ15,
   WynikOperacji,
 } from '@/domena/typy';
-import { wyslijWniosekDoZus } from '@/dane/api/klient';
+import { wyslijWniosekDoZusZNumeracja } from '@/dane/magazyn/operacje/numeracja-wnioskow-zus';
 import { opcjeSymulowanegoZus } from '@/dane/api/symulowany-zus';
 import { losowyCiag } from '@/dane/magazyn/losowanie';
 import { ustawStatusSprawy } from '@/dane/magazyn/operacje/plan';
@@ -165,8 +165,9 @@ export async function wyslijZ15(id: IdWniosku, wymaganeZalaczniki: string[], ctx
     ...obecny,
     zalaczniki: obecny.zalaczniki.map((z) => (wymaganeZalaczniki.includes(z.id) ? z : { ...z, wymagany: false })),
   };
-  const odpowiedz = await wyslijWniosekDoZus({ wniosek: doWyslania, wymaganeZalaczniki, teraz: ctx.teraz }, opcjeSymulowanegoZus());
-  if (!odpowiedz.ok) return { ok: false, kod: odpowiedz.kod === '0043' || odpowiedz.kod === '0149' ? odpowiedz.kod : '0044' };
+  const odpowiedz = await wyslijWniosekDoZusZNumeracja({ wniosek: doWyslania, wymaganeZalaczniki, teraz: ctx.teraz }, opcjeSymulowanegoZus());
+  // Kod, pola i parametry z odpowiedzi API; klient daje 0044 po błędzie sieci albo odpowiedzi bez kodu.
+  if (!odpowiedz.ok) return odpowiedz;
   const { potwierdzenie, dataZlozenia } = odpowiedz.wartosc;
   const pliki = obecny.zalaczniki.flatMap((z) => (z.plik ? [z.plik.idPliku] : []));
   const wynik = wykonajOperacjeZWynikiem<{ potwierdzenie: string }>(() => {

@@ -15,7 +15,7 @@ import {
   tytulZChorobowymZ15,
   zalacznikiZ15,
 } from '@/domena/wnioski/z15';
-import { useDzis } from '@/dane/magazyn/hooki';
+import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
 import { dolaczPlikZ15, przygotujZ15DlaPlatnika, wyslijZ15, zapiszKrokZ15 } from '@/dane/magazyn/operacje/wnioski-z15';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { Komunikat } from '@/komponenty/komunikat';
@@ -48,6 +48,7 @@ export function WidokPodsumowaniaZ15() {
 
 function Podsumowanie({ kontekst: { wniosek, rodzina, kopia } }: { kontekst: NonNullable<ReturnType<typeof useWniosekZ15>> }) {
   const dzis = useDzis();
+  const katalog = useKatalog();
   const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const [zakladka, ustawZakladke] = useZakladkaWAdresie<Zakladka>(ZAKLADKI);
   const [potwierdzone, setPotwierdzone] = useState(wniosek.oswiadczeniePotwierdzone);
@@ -61,7 +62,7 @@ function Podsumowanie({ kontekst: { wniosek, rodzina, kopia } }: { kontekst: Non
   const platnikTekst = doZus ? t.adresatZus : nazwaPlatnika;
   const { dni } = dniWnioskuPoWylaczeniach(wniosek, rodzina.wnioski);
   const pierwszy = [...wniosek.okresy].sort((a, b) => porownajDaty(a.od, b.od))[0];
-  const podstawa = pierwszy ? podstawaWymiaruZ15(tytul, pierwszy.od) : null;
+  const podstawa = pierwszy ? podstawaWymiaruZ15(tytul, pierwszy.od, katalog) : null;
   const stawka = podstawa === null ? null : stawkaDziennaZ15(podstawa);
   const kwota = stawka === null ? null : stawka * dni.length;
   const zalaczniki = zalacznikiZ15(wniosek);

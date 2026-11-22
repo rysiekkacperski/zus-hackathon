@@ -143,7 +143,7 @@ export function SekcjaTerminIKoszt({ sprawa, termin, kontekst }: PropsSlotu<'sek
             {
               data: termin.drugiTermin.data,
               klucz: termin.drugiTermin.kluczEtykiety,
-              opis: opisKotwicy && termin.kotwica ? opisKotwicy.replace(/o \d+ dni$/, `o ${roznicaDni(termin.kotwica.data, termin.drugiTermin.data)} dni`) : undefined,
+              opis: opisKotwicy && termin.kotwica ? opisKotwicy.replace(/^\d+ (dni|dzień) /, `${roznicaDni(termin.kotwica.data, termin.drugiTermin.data)} dni `) : undefined,
             },
           ]
             .sort((a, b) => (a.data < b.data ? -1 : 1))

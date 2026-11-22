@@ -1,12 +1,14 @@
 import type { IdWidoku } from '@/domena/typy';
 
-/** Nazwa daty kotwiczącej rodzaju męskiego. Pozostałe nazwy dat kotwiczących są rodzaju żeńskiego. */
-const NAZWA_PTP_ZAMIAST_PORODU = "przewidywany termin porodu";
-
-/** Imiesłów zgodny z rodzajem nazwy daty kotwiczącej, na przykład „powiększona” albo „powiększony”. */
-function zgodnyZKotwica(nazwa: string, rdzen: "powiększon" | "pomniejszon"): string {
-  return `${rdzen}${nazwa === NAZWA_PTP_ZAMIAST_PORODU ? "y" : "a"}`;
+/** Liczba z rzeczownikiem w formie zgodnej z liczbą, na przykład „1 dzień”, „3 miesiące” albo „12 miesięcy”. */
+function zLiczba(liczba: string, [jeden, kilka, wiele]: readonly [string, string, string]): string {
+  const n = Number(liczba);
+  const formaKilku = n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14);
+  return `${liczba} ${n === 1 ? jeden : formaKilku ? kilka : wiele}`;
 }
+const DNI = ["dzień", "dni", "dni"] as const;
+const MIESIACE = ["miesiąc", "miesiące", "miesięcy"] as const;
+const TYGODNIE = ["tydzień", "tygodnie", "tygodni"] as const;
 
 export const teksty = {
   wspolne: {
@@ -50,6 +52,11 @@ export const teksty = {
     zl: "zł",
     stanNa: ({ data }: { data: string }) => `Stan na ${data}`,
     zDnia: ({ data }: { data: string }) => `z dnia ${data}`,
+    rozmiarPliku: {
+      b: ({ liczba }: { liczba: string }) => `${liczba} B`,
+      kb: ({ liczba }: { liczba: string }) => `${liczba} KB`,
+      mb: ({ liczba }: { liczba: string }) => `${liczba} MB`,
+    },
     miesiace: [
       "styczeń",
       "luty",
@@ -3734,7 +3741,7 @@ export const teksty = {
       K33: "Zasiłek macierzyński w rodzinie zastępczej zawodowej.",
       K34: "Zasiłek macierzyński po stracie dziecka.",
       K35: "Organizacje, które pomagają rodzicom w trudnej sytuacji.",
-      K36: "Odpis skrócony dołączysz do wniosku o zasiłek macierzyński.",
+      K36: "Odpis skrócony dołączysz do wniosków składanych u pracodawcy albo płatnika składek, a do wniosku o zasiłek wypłacany przez ZUS akt urodzenia pobierze ZUS.",
       K37: "Rodzic na umowie o pracę może łączyć urlop rodzicielski z pracą.",
     } as Readonly<Record<string, string>>,
     wizytaOdbyta: ({ data, koniec }: { data: string; koniec: string }) =>
@@ -3743,7 +3750,7 @@ export const teksty = {
       "Dobrowolne ubezpieczenie chorobowe ustaje od pierwszego dnia prawa do zasiłku macierzyńskiego. Nie musisz się z niego wyrejestrowywać. Składkę zdrowotną płacisz dalej, chyba że zasiłek nie przekracza kwoty świadczenia rodzicielskiego.",
     oplacenie: {
       tytul: ({ miesiac }: { miesiac: string }) => `Opłacenie składek za ${miesiac}`,
-      termin: ({ termin }: { termin: string }) => `Termin: ${termin}. Kogo dotyczy: matka.`,
+      termin: ({ termin }: { termin: string }) => `Składki opłać do ${termin}. Sprawa dotyczy matki.`,
       zrodloZus: ({ data }: { data: string }) => `Źródło: konto ZUS, stan rozliczeń składek z ${data} bez zadłużenia.`,
       zrodloRodzica: ({ data }: { data: string }) => `Źródło: Twoja odpowiedź z ${data}.`,
       nastepna: ({ miesiac, utworzenie, termin }: { miesiac: string; utworzenie: string; termin: string }) =>
@@ -4802,15 +4809,92 @@ export const teksty = {
       jdg: "Prowadzisz jednoosobową działalność gospodarczą.",
       "brak-tytulu": "Nie masz tytułu do ubezpieczenia.",
     },
-    // Zdanie akapitu Najważniejsze informacje z instytucją i kanałem dla formy zatrudnienia rodzica sprawy.
-    zdanieInstytucjiIKanalu: ({ instytucja, kanal }: { instytucja: string; kanal: string }) =>
-      `Instytucja: ${instytucja}. Kanał: ${kanal}.`,
-    zdanieInstytucjiIKanaluLacznie: ({ wartosc }: { wartosc: string }) =>
-      `Instytucja i kanał: ${wartosc}${wartosc.endsWith(".") ? "" : "."}`,
+    // Rodzic sprawy, gdy sprawę ogląda drugi z rodziców; drugiego rodzica nazywamy imieniem z profilu, gdy je znamy.
+    osobaSprawy: {
+      matka: "Mama",
+      drugiRodzic: "Drugi rodzic",
+    },
+    wstepFormyDrugiegoRodzica: {
+      "umowa-o-prace": ({ osoba }: { osoba: string }) => `${osoba} pracuje na umowie o pracę.`,
+      "umowa-zlecenia": ({ osoba }: { osoba: string }) => `${osoba} wykonuje umowę zlecenia.`,
+      jdg: ({ osoba }: { osoba: string }) => `${osoba} prowadzi jednoosobową działalność gospodarczą.`,
+      "brak-tytulu": ({ osoba }: { osoba: string }) => `${osoba} nie ma tytułu do ubezpieczenia.`,
+      bezFormy: ({ osoba }: { osoba: string }) => `${osoba} prowadzi tę sprawę.`,
+    },
+    // Zdania akapitu Najważniejsze informacje o instytucji i kanale dla formy zatrudnienia rodzica sprawy.
+    zdaniaKanalu: {
+      instytucja: {
+        zus: "Sprawę załatwiasz w ZUS.",
+        platnikSkladek: "Wniosek trafi do płatnika składek, który wypłaca Ci zasiłek.",
+        platnikSkladekNazwa: ({ nazwa }: { nazwa: string }) =>
+          `Wniosek trafi do płatnika składek, który wypłaca Ci zasiłek (${nazwa}).`,
+        platnikNieustalony: "Zasiłek wypłaci Ci ZUS albo płatnik składek.",
+        platnikAlboZus: "Sprawę załatwiasz u płatnika składek albo w ZUS.",
+        pracodawca: "Sprawę załatwiasz u pracodawcy.",
+        zleceniodawca: "Sprawę załatwiasz u zleceniodawcy.",
+        gmina: "Sprawę załatwiasz w gminie albo w MOPS w miejscu zamieszkania.",
+        urzadStanuCywilnego: "Sprawę załatwiasz w urzędzie stanu cywilnego.",
+      },
+      kanal: {
+        zam: "Wniosek o zasiłek macierzyński (ZAM) przygotujesz w kreatorze w przewodniku.",
+        z15: "Wniosek o zasiłek opiekuńczy (Z-15) przygotujesz w kreatorze w przewodniku.",
+        zas53: "Wniosek o zasiłek chorobowy (ZAS-53) przygotujesz w kreatorze w przewodniku.",
+        ezus: "Wniosek złożysz przez internet w eZUS.",
+        ezusZam: "Wniosek o zasiłek macierzyński (ZAM) złożysz przez internet w eZUS.",
+        empatia: "Wniosek złożysz przez internet w Emp@tii albo osobiście w urzędzie.",
+        mobywatel: "Załatwisz ją w mObywatelu, na gov.pl albo osobiście w urzędzie.",
+        "gov-rejestr-stanu-cywilnego": "Wniosek złożysz na gov.pl albo osobiście w urzędzie.",
+        pracodawca: "Wniosek złożysz w dziale kadr, osobiście albo w sposób przyjęty w firmie.",
+        pracodawcaK23:
+          "Wniosek o urlop wychowawczy albo o obniżenie wymiaru czasu pracy przygotujesz w kreatorze wniosków do pracodawcy.",
+        zleceniodawca: "Zgłoś ją osobie, która prowadzi Twoją umowę.",
+      },
+      informacja: "Przeczytaj informację w przewodniku. Nie składasz wniosku.",
+      // Opis z katalogu świadczeń, gdy sprawa nie ma akcji przejścia do kanału.
+      zKatalogu: ({ wartosc }: { wartosc: string }) => {
+        const tekst = /^\p{Lu}\p{Ll}/u.test(wartosc) ? `${wartosc.charAt(0).toLowerCase()}${wartosc.slice(1)}` : wartosc;
+        return `Gdzie załatwisz sprawę: ${tekst}${tekst.endsWith(".") ? "" : "."}`;
+      },
+    },
+    // Te same zdania w trzeciej osobie, gdy rodzic sprawy jest drugim z rodziców wobec rodzica konta.
+    zdaniaKanaluDrugiegoRodzica: {
+      instytucja: {
+        zus: "Sprawę załatwia w ZUS.",
+        platnikSkladek: "Wniosek trafi do płatnika składek, który wypłaca zasiłek.",
+        platnikSkladekNazwa: ({ nazwa }: { nazwa: string }) =>
+          `Wniosek trafi do płatnika składek, który wypłaca zasiłek (${nazwa}).`,
+        platnikNieustalony: "Zasiłek wypłaci ZUS albo płatnik składek.",
+        platnikAlboZus: "Sprawę załatwia u płatnika składek albo w ZUS.",
+        pracodawca: "Sprawę załatwia u pracodawcy.",
+        zleceniodawca: "Sprawę załatwia u zleceniodawcy.",
+        gmina: "Sprawę załatwia w gminie albo w MOPS w miejscu zamieszkania.",
+        urzadStanuCywilnego: "Sprawę załatwia w urzędzie stanu cywilnego.",
+      },
+      kanal: {
+        zam: "Wniosek o zasiłek macierzyński (ZAM) przygotuje w kreatorze w przewodniku.",
+        z15: "Wniosek o zasiłek opiekuńczy (Z-15) przygotuje w kreatorze w przewodniku.",
+        zas53: "Wniosek o zasiłek chorobowy (ZAS-53) przygotuje w kreatorze w przewodniku.",
+        ezus: "Wniosek złoży przez internet w eZUS.",
+        ezusZam: "Wniosek o zasiłek macierzyński (ZAM) złoży przez internet w eZUS.",
+        empatia: "Wniosek złoży przez internet w Emp@tii albo osobiście w urzędzie.",
+        mobywatel: "Załatwi ją w mObywatelu, na gov.pl albo osobiście w urzędzie.",
+        "gov-rejestr-stanu-cywilnego": "Wniosek złoży na gov.pl albo osobiście w urzędzie.",
+        pracodawca: "Wniosek złoży w dziale kadr, osobiście albo w sposób przyjęty w firmie.",
+        pracodawcaK23:
+          "Wniosek o urlop wychowawczy albo o obniżenie wymiaru czasu pracy przygotuje w kreatorze wniosków do pracodawcy.",
+        zleceniodawca: "Zgłosi ją osobie, która prowadzi umowę zlecenia.",
+      },
+      informacja: "Przeczytaj informację w przewodniku. Sprawa nie wymaga wniosku.",
+      zKatalogu: ({ wartosc }: { wartosc: string }) => {
+        const tekst = /^\p{Lu}\p{Ll}/u.test(wartosc) ? `${wartosc.charAt(0).toLowerCase()}${wartosc.slice(1)}` : wartosc;
+        return `Gdzie załatwi sprawę: ${tekst}${tekst.endsWith(".") ? "" : "."}`;
+      },
+    },
     termin: "Termin",
     bezTerminu: "Bez terminu",
     sprawaBezTerminu: "Sprawa nie ma terminu w kalendarzu",
-    terminSzacowany: ({ opis }: { opis: string }) => `Szacowany, ${opis}`,
+    terminSzacowany: ({ opis }: { opis: string }) => `Termin szacowany: ${opis}`,
+    terminWyliczony: ({ opis }: { opis: string }) => `${opis.charAt(0).toUpperCase()}${opis.slice(1)}`,
     nieprzypominamyZlozona: "Nie przypominamy, wniosek złożony",
     nieprzypominamyZalatwiona: "Nie przypominamy, sprawa załatwiona",
     instytucja: "Instytucja",
@@ -4937,6 +5021,8 @@ export const teksty = {
       "Na telefonie z aplikacją mObywatel otworzy się aplikacja. Bez aplikacji usługa zgłoszenia urodzenia otworzy się w nowej karcie przeglądarki. Gdy wrócisz, zapytamy, czy udało się zgłosić urodzenie.",
     notatkaPracodawca: "Tę sprawę załatwiasz bezpośrednio u pracodawcy.",
     notatkaZleceniodawca: "Tę sprawę załatwiasz bezpośrednio u zleceniodawcy.",
+    notatkaPracodawcaDrugiegoRodzica: "Tę sprawę załatwia bezpośrednio u swojego pracodawcy.",
+    notatkaZleceniodawcaDrugiegoRodzica: "Tę sprawę załatwia bezpośrednio u swojego zleceniodawcy.",
     notatkaK05Pracownik:
       "Przekaż pracodawcy albo zleceniodawcy dane dziecka: imię, nazwisko, datę urodzenia i numer PESEL. Pracodawca albo zleceniodawca zgłosi dziecko do ubezpieczenia zdrowotnego w ZUS.",
     notatkaK36BezOplaty:
@@ -5111,20 +5197,21 @@ export const teksty = {
         `ostatni dzień 10. tygodnia ciąży ${data}, czyli przewidywany termin porodu ${ptp} pomniejszony o 211 dni`,
       ptp: ({ data }: { data: string }) => `przewidywany termin porodu ${data}`,
       ptpMinus1: ({ data }: { data: string }) => `dzień poprzedzający przewidywany termin porodu ${data}`,
+      // Parametr nazwa to nazwa daty kotwiczącej w dopełniaczu z grupy nazwy, na przykład „daty porodu”.
       plusDni: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) =>
-        `${nazwa} ${data} ${zgodnyZKotwica(nazwa, "powiększon")} o ${liczba} dni`,
+        `${zLiczba(liczba, DNI)} od ${nazwa} (${data})`,
       plusMiesiace: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) =>
-        `${nazwa} ${data} ${zgodnyZKotwica(nazwa, "powiększon")} o ${liczba} miesięcy`,
+        `${zLiczba(liczba, MIESIACE)} od ${nazwa} (${data})`,
       plus12MinusDni: ({ nazwa, data }: { nazwa: string; data: string }) =>
-        `${nazwa} ${data} ${zgodnyZKotwica(nazwa, "powiększon")} o 12 miesięcy i ${zgodnyZKotwica(nazwa, "pomniejszon")} o 14 dni`,
+        `14 dni przed upływem 12 miesięcy od ${nazwa} (${data})`,
       plus12MinusDniUmowa: ({ nazwa, data }: { nazwa: string; data: string }) =>
-        `${nazwa} ${data} ${zgodnyZKotwica(nazwa, "powiększon")} o 12 miesięcy i ${zgodnyZKotwica(nazwa, "pomniejszon")} o 21 dni, czyli ostatni dzień złożenia pracodawcy wniosku o urlop ojcowski`,
+        `21 dni przed upływem 12 miesięcy od ${nazwa} (${data}), czyli ostatni dzień złożenia pracodawcy wniosku o urlop ojcowski`,
       plusTygodnie: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) =>
-        `${nazwa} ${data} ${zgodnyZKotwica(nazwa, "powiększon")} o ${liczba} tygodni urlopu macierzyńskiego`,
+        `${zLiczba(liczba, TYGODNIE)} urlopu macierzyńskiego od ${nazwa} (${data})`,
       k11KoniecOkresu: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) =>
-        `ostatni dzień okresu zasiłku za ${liczba} tygodni urlopu macierzyńskiego od dnia ${nazwa} ${data}`,
+        `ostatni dzień okresu zasiłku za ${zLiczba(liczba, TYGODNIE)} urlopu macierzyńskiego od ${nazwa} (${data})`,
       k11Umowa: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) =>
-        `ostatni dzień ${liczba} tygodni urlopu macierzyńskiego od dnia ${nazwa} ${data} pomniejszony o 21 dni, czyli ostatni dzień złożenia pracodawcy wniosku o uzupełniający urlop macierzyński`,
+        `21 dni przed końcem urlopu macierzyńskiego, który trwa ${zLiczba(liczba, TYGODNIE)} od ${nazwa} (${data}), czyli ostatni dzień złożenia pracodawcy wniosku o uzupełniający urlop macierzyński`,
       k10: ({ data, rok, dni }: { data: string; rok: string; dni: string }) =>
         `31 grudnia ${rok} roku, w którym dziecko urodzone ${data} kończy 6 lat, pomniejszony o ${dni} dni`,
       k10Przyjecie: ({ data, lata, dni }: { data: string; lata: string; dni: string }) =>
@@ -5142,17 +5229,18 @@ export const teksty = {
       k21: ({ od, doRoku }: { od: string; doRoku: string }) =>
         `31 grudnia każdego roku, od roku urodzenia dziecka (${od}) do roku, w którym dziecko kończy 14 lat (${doRoku})`,
       k09Przysposobienie: ({ data, limit }: { data: string; limit: string }) =>
-        `data uprawomocnienia się orzeczenia ${data} powiększona o 12 miesięcy i pomniejszona o 13 dni, nie później niż ${limit}`,
+        `13 dni przed upływem 12 miesięcy od daty uprawomocnienia się orzeczenia (${data}), nie później niż ${limit}`,
       k09PrzysposobienieUmowa: ({ data, limit }: { data: string; limit: string }) =>
-        `data uprawomocnienia się orzeczenia ${data} powiększona o 12 miesięcy i pomniejszona o 20 dni, nie później niż ${limit}, czyli ostatni dzień złożenia pracodawcy wniosku o urlop ojcowski`,
+        `20 dni przed upływem 12 miesięcy od daty uprawomocnienia się orzeczenia (${data}), nie później niż ${limit}, czyli ostatni dzień złożenia pracodawcy wniosku o urlop ojcowski`,
       oplacenieSkladek: ({ miesiac }: { miesiac: string }) =>
         `20. dzień miesiąca następującego po miesiącu ${miesiac}, a gdy przypada w sobotę, niedzielę albo w dniu ustawowo wolnym od pracy, najbliższy następny dzień roboczy`,
+      // Nazwy dat kotwiczących w dopełniaczu, do zdań typu „21 dni od daty porodu (22.03.2027)”.
       nazwy: {
-        dataPorodu: "data porodu",
-        ptpZamiastPorodu: NAZWA_PTP_ZAMIAST_PORODU,
-        dataPrzyjecia: "data przyjęcia dziecka",
-        dataUprawomocnienia: "data uprawomocnienia się orzeczenia",
-        kotwica: "data kotwicząca",
+        dataPorodu: "daty porodu",
+        ptpZamiastPorodu: "przewidywanego terminu porodu",
+        dataPrzyjecia: "daty przyjęcia dziecka",
+        dataUprawomocnienia: "daty uprawomocnienia się orzeczenia",
+        kotwica: "daty kotwiczącej",
       },
     },
     etykietyDrugiegoTerminu: {
@@ -5978,7 +6066,7 @@ export const teksty = {
       matka: "matka",
       rodzicPrzyjmujacy: "rodzic, który przyjął dziecko",
       drugiRodzic: "drugi rodzic",
-      warianty: { "81-5": "81,5%", "100-70": "100% i 70%" },
+      warianty: (w: "81-5" | "100-70", st: { s815: string; s100: string; s70: string }) => (w === "81-5" ? st.s815 : `${st.s100} i ${st.s70}`),
       // Tryb gościa: scenariusze w tej karcie przeglądarki, plan rodziny i wnioski po zalogowaniu.
       opisGosc: "Zapisany scenariusz zostaje w tej karcie przeglądarki do jej zamknięcia. Porównasz go z innymi scenariuszami z tej karty.",
       zapisanyGosc: ({ data, wariant }: { data: string; wariant: string }) =>
@@ -6059,20 +6147,26 @@ export const teksty = {
     wariantLegenda: "Wybierz wariant",
     warianty: {
       "100-70": {
-        tytul: "100% i 70%",
-        opis: "100% za urlop macierzyński i urlop ojcowski, 70% za urlop rodzicielski",
+        tytul: ({ s100, s70 }: { s815: string; s100: string; s70: string }) => `${s100} i ${s70}`,
+        opis: ({ s100, s70 }: { s815: string; s100: string; s70: string }) => `${s100} za urlop macierzyński i urlop ojcowski, ${s70} za urlop rodzicielski`,
       },
       "81-5": {
-        tytul: "81,5%",
-        opis: "81,5% za urlop macierzyński i urlop rodzicielski matki, 70% za 9 tygodni drugiego rodzica",
+        tytul: ({ s815 }: { s815: string; s100: string; s70: string }) => s815,
+        opis: ({ s815, s70 }: { s815: string; s100: string; s70: string }) => `${s815} za urlop macierzyński i urlop rodzicielski matki, ${s70} za 9 tygodni drugiego rodzica`,
       },
     },
+    opisyWariantowPrzyjecie: {
+      "100-70": ({ s100, s70 }: { s815: string; s100: string; s70: string }) =>
+        `${s100} za urlop na warunkach urlopu macierzyńskiego i urlop ojcowski, ${s70} za urlop rodzicielski`,
+      "81-5": ({ s815, s70 }: { s815: string; s100: string; s70: string }) =>
+        `${s815} za urlop na warunkach urlopu macierzyńskiego i urlop rodzicielski rodzica, który przyjął dziecko, ${s70} za 9 tygodni drugiego rodzica`,
+    },
     razemWariant: ({ kwota }: { kwota: string }) => `Oboje rodzice razem: ${kwota}`,
-    terminWariantuPorod: ({ data }: { data: string }) => `Wariant 81,5% możesz wybrać do ${data}, czyli 21. dnia po dniu porodu.`,
-    terminWariantuPrzewidywany: ({ data }: { data: string }) =>
-      `Wariant 81,5% wybierzesz we wniosku do 21. dnia po dniu porodu. Przy przewidywanym terminie to ${data}.`,
-    terminWariantuPrzyjecie: ({ data }: { data: string }) =>
-      `Wariant 81,5% możesz wybrać do ${data}, czyli 21. dnia po dniu przyjęcia dziecka.`,
+    terminWariantuPorod: ({ data, s815 }: { data: string; s815: string }) => `Wariant ${s815} możesz wybrać do ${data}, czyli 21. dnia po dniu porodu.`,
+    terminWariantuPrzewidywany: ({ data, s815 }: { data: string; s815: string }) =>
+      `Wariant ${s815} wybierzesz we wniosku do 21. dnia po dniu porodu. Przy przewidywanym terminie to ${data}.`,
+    terminWariantuPrzyjecie: ({ data, s815 }: { data: string; s815: string }) =>
+      `Wariant ${s815} możesz wybrać do ${data}, czyli 21. dnia po dniu przyjęcia dziecka.`,
     kartaOkresow: "Okresy urlopów i wypłaty",
     tygodniePrzed: "Część urlopu macierzyńskiego przed porodem (tygodnie)",
     tygodniePrzedPodpowiedz: "Od 0 do 6 tygodni.",
@@ -6106,7 +6200,7 @@ export const teksty = {
     tygodnie: ({ liczba }: { liczba: number }) =>
       `${liczba} ${liczba === 1 ? "tydzień" : liczba % 10 >= 2 && liczba % 10 <= 4 && (liczba % 100 < 12 || liczba % 100 > 14) ? "tygodnie" : "tygodni"}`,
     podwyzszenie: "Podwyższenie do kwoty świadczenia rodzicielskiego",
-    wyrownanie: "Wyrównanie zasiłku za urlop macierzyński do 100%, jednorazowo, na wniosek",
+    wyrownanie: ({ s100 }: { s100: string }) => `Wyrównanie zasiłku za urlop macierzyński do ${s100}, jednorazowo, na wniosek`,
     sumaMatki: "Suma matki",
     sumaRodzicaPrzyjmujacego: "Suma rodzica, który przyjął dziecko",
     sumaDrugiego: "Suma drugiego rodzica",
@@ -6140,11 +6234,11 @@ export const teksty = {
     miesiac: "Miesiąc",
     razem: "Razem",
     suma: "Suma",
-    wyrownanieWiersz: "Wyrównanie do 100%, na wniosek",
+    wyrownanieWiersz: ({ s100 }: { s100: string }) => `Wyrównanie do ${s100}, na wniosek`,
     brak: "-",
     kartaZasilkuPoStracie: "Zasiłek macierzyński",
-    okresPoStracie: ({ tygodnie, od, do: doDnia }: { tygodnie: string; od: string; do: string }) =>
-      `Przysługuje Ci urlop macierzyński przez ${tygodnie} od dnia porodu, od ${od} do ${doDnia}. Zasiłek wynosi 100% podstawy wymiaru.`,
+    okresPoStracie: ({ tygodnie, od, do: doDnia, s100 }: { tygodnie: string; od: string; do: string; s100: string }) =>
+      `Przysługuje Ci urlop macierzyński przez ${tygodnie} od dnia porodu, od ${od} do ${doDnia}. Zasiłek wynosi ${s100} podstawy wymiaru.`,
     zasilekZaDni: ({ dni }: { dni: string }) => `Zasiłek za ${dni} dni`,
     miesiecznieZaliczka: ({ kwota }: { kwota: string }) => `Miesięcznie ${kwota}, przed potrąceniem zaliczki na podatek`,
     bezRodzicielskiegoPoStracie:
@@ -6203,7 +6297,7 @@ export const teksty = {
     przejdzDoKalkulatora: "Przejdź do kalkulatora zasiłku",
     matka: "matka",
     drugiRodzic: "drugi rodzic",
-    warianty: { "81-5": "81,5%", "100-70": "100% i 70%" },
+    warianty: (w: "81-5" | "100-70", st: { s815: string; s100: string; s70: string }) => (w === "81-5" ? st.s815 : `${st.s100} i ${st.s70}`),
     dzieci: { 1: "jedno dziecko", 2: "dwoje dzieci", 3: "troje dzieci", 4: "czworo dzieci", 5: "pięcioro albo więcej dzieci" },
     // Tryb gościa: scenariusze zapisane w tej karcie przeglądarki.
     opisGosc: "Widzisz scenariusze zapisane w tej karcie przeglądarki.",
@@ -6278,8 +6372,8 @@ export const teksty = {
     zPodstawa: ({ kwota, zrodlo }: { kwota: string; zrodlo: string }) => ` Podstawa wymiaru: ${kwota}, źródło: ${zrodlo}.`,
     terminWyboru: ({ termin }: { termin: string }) => `Wybierz wariant do ${termin}`,
     terminWyboruDopisek: ({ dni }: { dni: string }) => `, czyli 21. dnia po porodzie. Zostało ${dni}.`,
-    informacjaWyrownanie: ({ kwota }: { kwota: string }) =>
-      `Gdy nie wykorzystasz żadnego dnia urlopu rodzicielskiego, w wariancie 81,5% otrzymasz wyrównanie zasiłku za urlop macierzyński do 100% podstawy w kwocie ${kwota}. Dlatego obie sumy są równe.`,
+    informacjaWyrownanie: ({ kwota, s815, s100 }: { kwota: string; s815: string; s100: string }) =>
+      `Gdy nie wykorzystasz żadnego dnia urlopu rodzicielskiego, w wariancie ${s815} otrzymasz wyrównanie zasiłku za urlop macierzyński do ${s100} podstawy w kwocie ${kwota}. Dlatego obie sumy są równe.`,
     wariant81: ({ s815 }: { s815: string }) => `Wariant ${s815}`,
     wariant81Opis: "Równe wypłaty przez cały urlop.",
     wariant81OpisZero: "Równe wypłaty i wyrównanie po urlopie macierzyńskim.",
@@ -6301,10 +6395,10 @@ export const teksty = {
     zmienNa100: ({ s100, s70 }: { s100: string; s70: string }) => `Zmień na wariant ${s100} i ${s70}`,
     twojWybor: "Twój wybór",
     wybranyWariant: "Wybrany wariant",
-    roznicaPelny: ({ kwota }: { kwota: string }) =>
-      `Przy pełnym urlopie wariant 100% i 70% daje o ${kwota} więcej. Im wcześniej wrócisz do pracy w czasie urlopu rodzicielskiego, tym większa różnica. Zmień liczbę tygodni w danych do wyliczenia, żeby to sprawdzić.`,
-    roznicaPelnyRodzic: ({ kwota }: { kwota: string }) =>
-      `Przy pełnym urlopie wariant 100% i 70% daje o ${kwota} więcej. Wyliczenie opiera się na podstawie, którą wpisujesz. ZUS ustali ją z Twoich dokumentów przy wniosku.`,
+    roznicaPelny: ({ kwota, s100, s70 }: { kwota: string; s100: string; s70: string }) =>
+      `Przy pełnym urlopie wariant ${s100} i ${s70} daje o ${kwota} więcej. Im wcześniej wrócisz do pracy w czasie urlopu rodzicielskiego, tym większa różnica. Zmień liczbę tygodni w danych do wyliczenia, żeby to sprawdzić.`,
+    roznicaPelnyRodzic: ({ kwota, s100, s70 }: { kwota: string; s100: string; s70: string }) =>
+      `Przy pełnym urlopie wariant ${s100} i ${s70} daje o ${kwota} więcej. Wyliczenie opiera się na podstawie, którą wpisujesz. ZUS ustali ją z Twoich dokumentów przy wniosku.`,
     okresyTytul: "Wypłaty w okresach urlopu",
     wykresPodpis: "Miesięczna wypłata w każdym okresie",
     wykresMacierzynski: ({ tygodnie }: { tygodnie: string }) => `Urlop macierzyński: ${tygodnie}`,
@@ -6337,20 +6431,20 @@ export const teksty = {
     notatkaKalkulator: "Liczymy według tych samych reguł co kalkulator zasiłku. Wypłaty w każdym miesiącu, urlopy drugiego rodzica i datę powrotu do pracy zobaczysz w",
     notatkaKalkulatorPowrot: "Liczymy według tych samych reguł co kalkulator zasiłku. Datę powrotu do pracy i niewykorzystane tygodnie urlopu zaplanujesz w",
     kropka: ".",
-    zapisanoK08: "Zapisaliśmy wariant 81,5% w planie rodziny przy sprawie Wniosek o zasiłek macierzyński. W kreatorze wniosku ten wariant będzie już zaznaczony.",
-    zapisanoK08Wariant100: "Zapisaliśmy wariant 100% i 70% w planie rodziny przy sprawie Wniosek o zasiłek macierzyński. W kreatorze wniosku ten wariant będzie już zaznaczony.",
-    zapisanoK07: "Zapisaliśmy wariant 81,5% w planie rodziny przy sprawie Wniosek o urlop macierzyński i rodzicielski u pracodawcy. Pracujesz na umowie o pracę, więc wariant wskażesz we wniosku do pracodawcy.",
-    zapisanoK07Wariant100: "Zapisaliśmy wariant 100% i 70% w planie rodziny przy sprawie Wniosek o urlop macierzyński i rodzicielski u pracodawcy. Pracujesz na umowie o pracę, więc wariant wskażesz we wniosku do pracodawcy.",
+    zapisanoK08: ({ s815 }: { s815: string }) => `Zapisaliśmy wariant ${s815} w planie rodziny przy sprawie Wniosek o zasiłek macierzyński. W kreatorze wniosku ten wariant będzie już zaznaczony.`,
+    zapisanoK08Wariant100: ({ s100, s70 }: { s100: string; s70: string }) => `Zapisaliśmy wariant ${s100} i ${s70} w planie rodziny przy sprawie Wniosek o zasiłek macierzyński. W kreatorze wniosku ten wariant będzie już zaznaczony.`,
+    zapisanoK07: ({ s815 }: { s815: string }) => `Zapisaliśmy wariant ${s815} w planie rodziny przy sprawie Wniosek o urlop macierzyński i rodzicielski u pracodawcy. Pracujesz na umowie o pracę, więc wariant wskażesz we wniosku do pracodawcy.`,
+    zapisanoK07Wariant100: ({ s100, s70 }: { s100: string; s70: string }) => `Zapisaliśmy wariant ${s100} i ${s70} w planie rodziny przy sprawie Wniosek o urlop macierzyński i rodzicielski u pracodawcy. Pracujesz na umowie o pracę, więc wariant wskażesz we wniosku do pracodawcy.`,
     wyborTytul: ({ wariant }: { wariant: string }) => `Twój wybór: wariant ${wariant}`,
-    nazwaWariantu: { "81-5": "81,5%", "100-70": "100% i 70%" },
+    nazwaWariantu: (w: "81-5" | "100-70", st: { s815: string; s100: string; s70: string }) => (w === "81-5" ? st.s815 : `${st.s100} i ${st.s70}`),
     wyborOpis81: ({ kwota, tygodnie, od, do: koniec, suma }: { kwota: string; tygodnie: string; od: string; do: string; suma: string }) =>
       `Otrzymasz ${kwota} miesięcznie przez ${tygodnie}, od ${od} do ${koniec}, razem ${suma}.`,
     wyborOpis100: ({ kwotaM, kwotaR, suma }: { kwotaM: string; kwotaR: string; suma: string }) =>
       `Otrzymasz ${kwotaM} miesięcznie w czasie urlopu macierzyńskiego i ${kwotaR} miesięcznie w czasie urlopu rodzicielskiego, razem ${suma}.`,
     wyborTerminK08: ({ termin }: { termin: string }) => `Złóż wniosek do ${termin}`,
-    wyborTerminK08Dopisek: ", żeby objąć nim cały urlop rodzicielski z zasiłkiem 81,5%. Do tego dnia możesz też zmienić wariant.",
+    wyborTerminK08Dopisek: ({ s815 }: { s815: string }) => `, żeby objąć nim cały urlop rodzicielski z zasiłkiem ${s815}. Do tego dnia możesz też zmienić wariant.`,
     wyborTerminK07: ({ termin }: { termin: string }) => `Złóż pracodawcy wniosek do ${termin}`,
-    wyborTerminK07Dopisek: " o urlop macierzyński i cały urlop rodzicielski bezpośrednio po nim. Tylko wtedy zasiłek wyniesie 81,5% za cały okres.",
+    wyborTerminK07Dopisek: ({ s815 }: { s815: string }) => ` o urlop macierzyński i cały urlop rodzicielski bezpośrednio po nim. Tylko wtedy zasiłek wyniesie ${s815} za cały okres.`,
     wypelnijWniosek: "Wypełnij wniosek",
     zobaczInstrukcjePracodawcy: "Zobacz instrukcję wniosku u pracodawcy",
     zapisaneWWynikach: ({ data }: { data: string }) => `Zapisane w wynikach kalkulacji ${data}`,
@@ -6360,7 +6454,7 @@ export const teksty = {
     urlopPrzedPowrotem: "Urlop rodzicielski przed powrotem do pracy",
     sprawaWPlanie: "Sprawa w planie rodziny",
     poTerminieTytul: "Twój wariant zasiłku",
-    poTerminieOpis: ({ termin }: { termin: string }) => `Termin na wariant 81,5% minął ${termin}, 21. dnia po porodzie. `,
+    poTerminieOpis: ({ termin, s815 }: { termin: string; s815: string }) => `Termin na wariant ${s815} minął ${termin}, 21. dnia po porodzie. `,
     // koniec ViewCalcMaternityVariant
   },
   ViewCalcParentalSplit: {
@@ -6455,8 +6549,10 @@ export const teksty = {
     wierszPonad: ({ tygodnie }: { tygodnie: string }) => `${tygodnie} ponad swoje 9, stawka z wariantu matki`,
     wierszBezPrawa: "Zasiłek nie przysługuje",
     brakWartosci: "-",
-    notatkaStawki: "Za 9 tygodni tylko dla drugiego rodzica zasiłek wynosi 70% jego podstawy. Za tygodnie ponad 9 stosujemy stawkę urlopu rodzicielskiego z wariantu matki: 70% w wariancie 100% i 70% albo 81,5% w wariancie 81,5%, gdy co najmniej jeden dzień tego urlopu przypada przed pierwszymi urodzinami dziecka.",
-    notatkaPoUrodzinach: "Tygodnie drugiego rodzica ponad 9 przypadają po pierwszych urodzinach dziecka, dlatego liczymy je po 70% podstawy. Przyjmujemy, że drugi rodzic zaczyna urlop po urlopie macierzyńskim i tygodniach urlopu rodzicielskiego matki.",
+    notatkaStawki: ({ s815, s100, s70 }: { s815: string; s100: string; s70: string }) =>
+      `Za 9 tygodni tylko dla drugiego rodzica zasiłek wynosi ${s70} jego podstawy. Za tygodnie ponad 9 stosujemy stawkę urlopu rodzicielskiego z wariantu matki: ${s70} w wariancie ${s100} i ${s70} albo ${s815} w wariancie ${s815}, gdy co najmniej jeden dzień tego urlopu przypada przed pierwszymi urodzinami dziecka.`,
+    notatkaPoUrodzinach: ({ s70 }: { s70: string }) =>
+      `Tygodnie drugiego rodzica ponad 9 przypadają po pierwszych urodzinach dziecka, dlatego liczymy je po ${s70} podstawy. Przyjmujemy, że drugi rodzic zaczyna urlop po urlopie macierzyńskim i tygodniach urlopu rodzicielskiego matki.`,
     podstawaOdZmiany: (p: { kwota: string; data: string }) => `od ${p.data}: ${p.kwota}`,
     podstawaPrzedZmiana: (p: { data: string }) => `do ${p.data}: `,
     notatkaCzesci: "Liczymy według tych samych reguł co kalkulator zasiłku. Urlop możecie wykorzystać jednocześnie, na zmianę albo po kolei, w najwyżej 5 częściach. Daty części ułożysz w",
@@ -6465,7 +6561,7 @@ export const teksty = {
     zapisz: "Zapisz plan podziału",
     zapiszOpis: "Plan zobaczycie oboje w planie rodziny i przy sprawie Urlop rodzicielski drugiego rodzica.",
     wrocDoPlanu: "Wróć do planu rodziny",
-    nazwaWariantu: { "81-5": "81,5%", "100-70": "100% i 70%" },
+    nazwaWariantu: (w: "81-5" | "100-70", st: { s815: string; s100: string; s70: string }) => (w === "81-5" ? st.s815 : `${st.s100} i ${st.s70}`),
     sprawaK07: "Wniosek o urlop macierzyński i rodzicielski u pracodawcy",
     sprawaK08: "Wniosek o zasiłek macierzyński",
     // koniec ViewCalcParentalSplit
@@ -6543,7 +6639,6 @@ export const teksty = {
       trwaOdczyt: ({ nazwa }: { nazwa: string }) => `Odczytujemy dane z pliku ${nazwa}. Odczyt trwa najdłużej 30 sekund.`,
       nieOdczytany: ({ nazwa, rozmiar }: { nazwa: string; rozmiar: string }) =>
         `Nie udało się odczytać pliku ${nazwa} (${rozmiar}). Dane sprawy są bez zmian. Wybierz plik ponownie.`,
-      rozmiarMb: ({ liczba }: { liczba: string }) => `${liczba} MB`,
       notatka: "Prowadzisz już sprawę? Wgranie dokumentu zacznie nową sprawę, a dokumenty i dane poprzedniej usuniemy. Kolejne dokumenty tej samej sprawy dodasz na ekranie danych sprawy.",
     },
     wrocDoListy: "Wróć do listy spraw",
@@ -7223,6 +7318,8 @@ export const teksty = {
         "laczenie-z-praca": "urlopu łączonego z pracą",
       },
       macierzynskiZCalym: "Urlop macierzyński z całym urlopem rodzicielskim",
+      macierzynskiPrzedPorodem: "Urlop macierzyński przed porodem",
+      macierzynskiPrzedPorodemZCalym: "Urlop macierzyński przed porodem z całym urlopem rodzicielskim",
       okres: ({ od, do_ }: { od: string; do_: string }) => `${od} – ${do_}`,
       stawka: ({ stawka }: { stawka: string }) => `${stawka} podstawy`,
       stawkaZaCalyOkres: ({ stawka }: { stawka: string }) => `${stawka} podstawy za cały okres`,
@@ -7331,9 +7428,6 @@ export const teksty = {
       opis: "Zasiłek wypłaca ZUS, więc dołącz zaświadczenie. Wyślemy je razem z wnioskiem. Po wysłaniu usuniemy plik z przewodnika i zachowamy tylko jego nazwę.",
       dolaczonyPlik: "Dołączony plik",
       opisPliku: ({ typ, rozmiar }: { typ: string; rozmiar: string }) => `${typ}, ${rozmiar}`,
-      rozmiarB: ({ liczba }: { liczba: string }) => `${liczba} B`,
-      rozmiarKb: ({ liczba }: { liczba: string }) => `${liczba} KB`,
-      rozmiarMb: ({ liczba }: { liczba: string }) => `${liczba} MB`,
       usunPlik: "Usuń plik",
       usunPlikEtykieta: ({ nazwa }: { nazwa: string }) => `Usuń plik ${nazwa}`,
       etykietaPola: "Plik zaświadczenia",
@@ -8501,8 +8595,6 @@ export const teksty = {
     plikDolaczony: ({ nazwa, rozmiar }: { nazwa: string; rozmiar: string }) => `${nazwa}, ${rozmiar}`,
     usunPlik: "Usuń plik",
     usunPlikEtykieta: ({ nazwa }: { nazwa: string }) => `Usuń plik ${nazwa}`,
-    rozmiarMb: ({ mb }: { mb: string }) => `${mb} MB`,
-    rozmiarKb: ({ kb }: { kb: string }) => `${kb} KB`,
     adresatTytul: "Adresat",
     adresat: ({ nazwa }: { nazwa: string }) => `Pracodawca: ${nazwa}`,
     adresatBezNazwy: "Pracodawca",
@@ -10639,10 +10731,10 @@ export const teksty = {
     urlopDrugiegoBezZmian: ({ kogo }: { kogo: string }) => `Urlop rodzicielski ${kogo} bez zmian`,
     dataPowrotuKogo: ({ kogo }: { kogo: string }) => `Data powrotu ${kogo}`,
     sumaWyplat: ({ kogo }: { kogo: string }) => `Suma wypłat ${kogo}`,
-    wariant100: "Wariant 100% i 70%",
-    wariant100Wybrany: "Wariant 100% i 70% (wybrany)",
-    wariant81: "Wariant 81,5%",
-    wariant81Wybrany: "Wariant 81,5% (wybrany)",
+    wariant100: ({ s100, s70 }: { s100: string; s70: string }) => `Wariant ${s100} i ${s70}`,
+    wariant100Wybrany: ({ s100, s70 }: { s100: string; s70: string }) => `Wariant ${s100} i ${s70} (wybrany)`,
+    wariant81: ({ s815 }: { s815: string }) => `Wariant ${s815}`,
+    wariant81Wybrany: ({ s815 }: { s815: string }) => `Wariant ${s815} (wybrany)`,
     zaplanuj: "Zaplanuj niewykorzystane tygodnie w podziale urlopów",
     brakZakresu: "Najpierw zaplanuj urlop tego rodzica w podziale urlopów, a potem zmienisz datę powrotu.",
     anuluj: "Anuluj",
