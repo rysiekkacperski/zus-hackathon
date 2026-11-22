@@ -1,5 +1,6 @@
-// GET /api/v1/zus/konto/stan-rozliczen?dzien=RRRR-MM-DD z PESEL w nagłówku X-Pesel: stan rozliczeń składek osoby prowadzącej
-// pozarolniczą działalność na wskazany dzień (epik 3.4.5), domyślnie na dzień `dzis`. → 200 OdpowiedzStanuRozliczenApi
+// POST /api/v1/zus/konto/stan-rozliczen z treścią ZadanieStanuRozliczenApi { pesel, dzien? }: stan rozliczeń składek osoby
+// prowadzącej pozarolniczą działalność na wskazany dzień (epik 3.4.5), domyślnie na dzień `dzis`. PESEL jedzie wyłącznie
+// w treści żądania, którą szyfruje połączenie HTTPS. → 200 OdpowiedzStanuRozliczenApi
 // ze stanem, rodzajem dokumentu, który ZUS wyda w tym dniu, i komunikatami karty dnia (0083, 0116, 0117, 0182–0187);
 // konto z działalnością bez dostępnego stanu albo z symulacją stanRozliczenNiedostepny: 200 ze `stan: null` i komunikatem 0150,
 // konto bez działalności: 200 ze `stan: null` i pustą listą komunikatów.
@@ -9,22 +10,22 @@
 import type { OdpowiedzStanuRozliczenApi } from '@/domena/typy/api-v1';
 import { komunikatyStanu, okresSplatyZKatalogu, progZadluzenia, rodzajZaswiadczenia, stanNaDzien } from '@/domena/zasilki/stan-rozliczen';
 import '@/domena/zasilki/rozszerzenia-typow';
-import { peselZNaglowka, zrodloKontaZus } from '@/serwer/api/konta-zus';
-import { przygotujGet } from '@/serwer/api/obsluga';
+import { peselZTresci, zrodloKontaZus } from '@/serwer/api/konta-zus';
+import { przygotujPost } from '@/serwer/api/obsluga';
 import { obsluzZadanie, odpowiedzBledu, odpowiedzDanych } from '@/serwer/api/odpowiedzi';
 import { symulacjeZadania } from '@/serwer/api/symulacje';
 import { czyDataISO } from '@/serwer/api/walidacja';
 
-export function GET(zadanie: Request): Promise<Response> {
+export function POST(zadanie: Request): Promise<Response> {
   return obsluzZadanie('0133', async () => {
-    const pesel = peselZNaglowka(zadanie);
-    if (!pesel.ok) return odpowiedzBledu(pesel.kod, { pola: { pesel: pesel.kod } });
-    const k = await przygotujGet(zadanie);
+    const k = await przygotujPost(zadanie);
     if (k instanceof Response) return k;
-    const zadanyDzien = new URL(zadanie.url).searchParams.get('dzien');
-    if (zadanyDzien !== null && zadanyDzien !== '' && !czyDataISO(zadanyDzien)) return odpowiedzBledu('0010', { pola: { dzien: '0010' } });
-    const dzien = zadanyDzien || k.czas.dzis;
-    const symulacje = symulacjeZadania(zadanie);
+    const pesel = peselZTresci(k.tresc);
+    if (!pesel.ok) return odpowiedzBledu(pesel.kod, { pola: { pesel: pesel.kod } });
+    const zadanyDzien = k.tresc.dzien;
+    if (zadanyDzien !== undefined && zadanyDzien !== '' && !czyDataISO(zadanyDzien)) return odpowiedzBledu('0010', { pola: { dzien: '0010' } });
+    const dzien = czyDataISO(zadanyDzien) ? zadanyDzien : k.czas.dzis;
+    const symulacje = symulacjeZadania(zadanie, k.tresc);
     if (symulacje.has('pueEzusNiedostepne')) return odpowiedzBledu('0133');
 
     const zrodlo = zrodloKontaZus(pesel.pesel);

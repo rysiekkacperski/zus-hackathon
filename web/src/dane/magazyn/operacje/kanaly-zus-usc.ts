@@ -2,7 +2,7 @@
 // Właściciel: u29 (Pytanie do ZUS, dane konta i odpis aktu urodzenia).
 // PUE/eZUS symuluje REST API symulowanego ZUS: pytanie wysyła POST /api/v1/zus/pytania, a magazyn zapisuje pytanie
 // z odpowiedzi w korespondencji konta w symulowanym ZUS i w kopii danych konta ZUS. Dane konta ubezpieczonego czyta
-// GET /api/v1/zus/konto (PESEL w nagłówku X-Pesel) z kanałem PUE/eZUS. Wniosek o odpis przyjmuje albo odrzuca symulowany rejestr.
+// POST /api/v1/zus/konto (PESEL w treści żądania) z kanałem PUE/eZUS. Wniosek o odpis przyjmuje albo odrzuca symulowany rejestr.
 import { wyslijPytanieDoZus as wyslijPytanieDoZusApi } from '@/dane/api/klient';
 import { opcjeSymulowanegoZus } from '@/dane/api/symulowany-zus';
 import { gminy } from '@/dane/gminy';
@@ -114,7 +114,7 @@ export async function wyslijPytanieDoZus(dane: DanePytaniaDoZus, ctx: KontekstOp
 
 /**
  * Odczyt danych konta ubezpieczonego przy otwarciu ViewZusAccountData i przy ponowieniu (R8) przez PUE/eZUS, czyli
- * GET /api/v1/zus/konto (PESEL w nagłówku X-Pesel) z kanałem pue-ezus: udany odczyt zastępuje kopię; nieudany (pueEzusNiedostepne,
+ * POST /api/v1/zus/konto (PESEL w treści żądania) z kanałem pue-ezus: udany odczyt zastępuje kopię; nieudany (pueEzusNiedostepne,
  * daneZusNiedostepne albo błąd sieci) kończy się po czasie symulowanego odczytu i z kopią daje 0002, bez kopii 0133.
  */
 export async function odczytajDaneKontaUbezpieczonego(ctx: KontekstOperacji): Promise<WynikOperacji> {

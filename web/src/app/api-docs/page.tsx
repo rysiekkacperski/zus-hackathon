@@ -40,9 +40,6 @@ function PunktKoncowy({ e }: { e: Endpoint }) {
           <h4 className="m-0 mb-2 text-body-strong">{T.etykiety.zadanie}</h4>
           <p className="m-0 mb-2 text-small break-all text-ink-muted">
             <code>{`${e.metoda} ${e.przykladAdresu}`}</code>
-            {Object.entries(e.przykladNaglowkow ?? {}).map(([nazwa, wartosc]) => (
-              <code key={nazwa} className="block">{`${nazwa}: ${wartosc}`}</code>
-            ))}
           </p>
           {e.przykladZadania ? <Json dane={e.przykladZadania} /> : <p className="m-0 text-small text-ink-muted">{T.etykiety.bezTresci}</p>}
         </div>

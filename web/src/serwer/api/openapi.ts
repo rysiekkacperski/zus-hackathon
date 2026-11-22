@@ -26,17 +26,11 @@ function obiektDomeny(): Schemat {
 }
 
 const PARAMETRY: Record<ParametrAdresu, Schemat> = {
-  pesel: { name: 'X-Pesel', in: 'header', required: true, description: I.opisPeselu, schema: PESEL },
   rodzaj: { name: 'rodzaj', in: 'path', required: true, description: I.opisRodzajuWalidacji, schema: { type: 'string', enum: RODZAJE_WALIDACJI } },
-  dzien: { name: 'dzien', in: 'query', description: I.opisDnia, schema: DATA },
-  zgodaNaDaneZdrowia: { name: 'zgodaNaDaneZdrowia', in: 'query', description: I.opisZgody, schema: { type: 'string', enum: ['tak', 'nie'] } },
-  postac: { name: 'postac', in: 'query', description: I.opisPostaci, schema: { type: 'string', enum: ['zrodlowe'] } },
-  kanal: { name: 'kanal', in: 'query', description: I.opisKanalu, schema: { type: 'string', enum: ['pue-ezus'] } },
-  dzis: { name: 'dzis', in: 'query', description: I.opisDzis, schema: DATA },
-  dataDemo: { name: 'dataDemo', in: 'query', description: I.opisDatyDemo, schema: DATA },
-  teraz: { name: 'teraz', in: 'query', description: I.opisTeraz, schema: ZNACZNIK },
-  symulacje: { name: 'symulacje', in: 'query', description: I.opisSymulacji, schema: { type: 'string' } },
 };
+
+/** PESEL konta jako pole treści żądania POST; adres i nagłówki żądania go nie zawierają. */
+const PESEL_W_TRESCI: Schemat = { ...PESEL, description: I.opisPeselu };
 
 const NAGLOWKI: Schemat[] = [
   { name: 'X-Data-Demo', in: 'header', description: I.opisDatyDemo, schema: DATA },
@@ -54,7 +48,10 @@ const SCHEMATY: Record<string, Schemat> = {
     },
   },
   KomunikatApi: { type: 'object', required: ['kod'], properties: { kod: ref('KodKomunikatu'), parametry: { type: 'object', additionalProperties: { type: 'string' } } } },
-  CzasZadaniaApi: { type: 'object', properties: { dzis: DATA, dataDemo: DATA, teraz: ZNACZNIK } },
+  CzasZadaniaApi: {
+    type: 'object',
+    properties: { dzis: { ...DATA, description: I.opisDzis }, dataDemo: { ...DATA, description: I.opisDatyDemo }, teraz: { ...ZNACZNIK, description: I.opisTeraz } },
+  },
   SymulacjeZadaniaApi: {
     type: 'object',
     properties: {
@@ -141,7 +138,29 @@ const SCHEMATY: Record<string, Schemat> = {
       },
     }],
   },
-  ZadanieZaswiadczeniaApi: { allOf: [ref('CzasZadaniaApi'), ref('SymulacjeZadaniaApi'), { type: 'object', required: ['pesel'], properties: { pesel: PESEL, dzien: DATA } }] },
+  ZadanieKontaZusApi: {
+    allOf: [ref('CzasZadaniaApi'), ref('SymulacjeZadaniaApi'), {
+      type: 'object', required: ['pesel'],
+      properties: {
+        pesel: PESEL_W_TRESCI,
+        zgodaNaDaneZdrowia: { type: 'boolean', description: I.opisZgody },
+        postac: { type: 'string', enum: ['zrodlowe'], description: I.opisPostaci },
+        kanal: { type: 'string', enum: ['pue-ezus'], description: I.opisKanalu },
+      },
+    }],
+  },
+  ZadanieStanuRozliczenApi: {
+    allOf: [ref('CzasZadaniaApi'), ref('SymulacjeZadaniaApi'), {
+      type: 'object', required: ['pesel'], properties: { pesel: PESEL_W_TRESCI, dzien: { ...DATA, description: I.opisDnia } },
+    }],
+  },
+  ZadanieEzlaApi: {
+    allOf: [ref('CzasZadaniaApi'), ref('SymulacjeZadaniaApi'), {
+      type: 'object', required: ['pesel', 'zgodaNaDaneZdrowia'],
+      properties: { pesel: PESEL_W_TRESCI, zgodaNaDaneZdrowia: { type: 'boolean', description: I.opisZgody } },
+    }],
+  },
+  ZadanieZaswiadczeniaApi: { allOf: [ref('CzasZadaniaApi'), ref('SymulacjeZadaniaApi'), { type: 'object', required: ['pesel'], properties: { pesel: PESEL_W_TRESCI, dzien: DATA } }] },
   ZadanieWnioskuDoZusApi: {
     allOf: [ref('CzasZadaniaApi'), ref('SymulacjeZadaniaApi'), {
       type: 'object', required: ['wniosek'],
@@ -189,7 +208,7 @@ function operacja(e: Endpoint): Schemat {
     summary: opis.tytul,
     description: opis.opis,
     parameters: [
-      ...e.parametry.map((p) => (p === 'pesel' && e.przykladNaglowkow?.['X-Pesel'] ? { ...PARAMETRY.pesel, example: e.przykladNaglowkow['X-Pesel'] } : PARAMETRY[p])),
+      ...e.parametry.map((p) => PARAMETRY[p]),
       ...(e.klucz === 'openApi' ? [] : NAGLOWKI),
     ],
     ...(e.metoda === 'POST' && e.typZadania

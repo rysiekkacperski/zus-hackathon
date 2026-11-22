@@ -22,9 +22,12 @@ import type {
   OdpowiedzZrodlowychDanychKontaZusApi,
   RodzajWalidacjiApi,
   SymulacjaApi,
+  ZadanieEzlaApi,
+  ZadanieKontaZusApi,
   ZadaniePlanuApi,
   ZadaniePodzialuUrlopuApi,
   ZadaniePytaniaDoZusApi,
+  ZadanieStanuRozliczenApi,
   ZadanieSwiadczenWCiazyApi,
   ZadanieWalidacjiApi,
   ZadanieWariantuApi,
@@ -63,11 +66,10 @@ async function wywolaj<T>(
   kodZastepczy: KodKomunikatu,
   tresc: object | undefined,
   o: OpcjeWywolania = {},
-  pesel?: Pesel,
 ): Promise<WynikOperacji<T>> {
+  // PESEL i inne dane osobowe jadą wyłącznie w treści żądania POST, którą szyfruje połączenie HTTPS;
+  // adres i nagłówki żądania nie zawierają danych osobowych.
   const naglowki: Record<string, string> = { Accept: 'application/json' };
-  // PESEL konta jedzie w nagłówku, więc nie trafia do adresu, logów serwera ani historii przeglądarki.
-  if (pesel !== undefined) naglowki['X-Pesel'] = pesel;
   if (tresc !== undefined) naglowki['Content-Type'] = 'application/json';
   if (o.symulacje && o.symulacje.length > 0) naglowki['X-Symulacje'] = o.symulacje.join(',');
   if (o.dataDemo) naglowki['X-Data-Demo'] = o.dataDemo;
@@ -101,11 +103,13 @@ async function wywolaj<T>(
   return { ok: true, wartosc: dane as T };
 }
 
-function zapytanie(parametry: Record<string, string | undefined>): string {
-  const p = new URLSearchParams();
-  for (const [klucz, wartosc] of Object.entries(parametry)) if (wartosc !== undefined && wartosc !== '') p.set(klucz, wartosc);
-  const tekst = p.toString();
-  return tekst === '' ? '' : `?${tekst}`;
+/** Pola czasu żądania (`dzis`, `dataDemo`, `teraz`) bez pustych wartości. */
+function czasZadania(p: CzasZadaniaApi): CzasZadaniaApi {
+  return {
+    ...(p.dzis ? { dzis: p.dzis } : {}),
+    ...(p.dataDemo ? { dataDemo: p.dataDemo } : {}),
+    ...(p.teraz ? { teraz: p.teraz } : {}),
+  };
 }
 
 // --- Kalkulatory decyzji ----------------------------------------------------------------------------
@@ -143,10 +147,8 @@ export function zweryfikujPrzykladowaSprawe(z: ZadanieWeryfikacjiSprawyApi, o?: 
 export interface ParametryOdczytuKonta extends CzasZadaniaApi { zgodaNaDaneZdrowia?: boolean }
 
 export function odczytajDaneKontaZus(pesel: Pesel, p: ParametryOdczytuKonta = {}, o?: OpcjeWywolania) {
-  const parametry = zapytanie({
-    zgodaNaDaneZdrowia: p.zgodaNaDaneZdrowia === false ? 'nie' : undefined, dzis: p.dzis, dataDemo: p.dataDemo, teraz: p.teraz,
-  });
-  return wywolaj<OdpowiedzKontaZusApi>('GET', `/zus/konto${parametry}`, '0001', undefined, o, pesel);
+  const z: ZadanieKontaZusApi = { pesel, ...czasZadania(p), ...(p.zgodaNaDaneZdrowia === false ? { zgodaNaDaneZdrowia: false } : {}) };
+  return wywolaj<OdpowiedzKontaZusApi>('POST', '/zus/konto', '0001', z, o);
 }
 
 /** Parametry odczytu danych źródłowych konta; `kanal: 'pue-ezus'` oznacza odczyt przez PUE/eZUS (0133 przy niedostępnym PUE/eZUS). */
@@ -154,26 +156,25 @@ export interface ParametryOdczytuZrodla extends CzasZadaniaApi { zgodaNaDaneZdro
 
 /** Dane źródłowe konta przed filtrami odczytu; bez zgody na dane dotyczące zdrowia odpowiedź nie zawiera zaświadczeń e-ZLA. */
 export function odczytajZrodloweDaneKontaZus(pesel: Pesel, p: ParametryOdczytuZrodla, o?: OpcjeWywolania) {
-  const parametry = zapytanie({
+  const z: ZadanieKontaZusApi = {
+    pesel,
     postac: 'zrodlowe',
-    zgodaNaDaneZdrowia: p.zgodaNaDaneZdrowia ? undefined : 'nie',
-    kanal: p.kanal,
-    dzis: p.dzis,
-    dataDemo: p.dataDemo,
-    teraz: p.teraz,
-  });
-  return wywolaj<OdpowiedzZrodlowychDanychKontaZusApi>('GET', `/zus/konto${parametry}`, '0001', undefined, o, pesel);
+    ...czasZadania(p),
+    ...(p.zgodaNaDaneZdrowia ? {} : { zgodaNaDaneZdrowia: false }),
+    ...(p.kanal ? { kanal: p.kanal } : {}),
+  };
+  return wywolaj<OdpowiedzZrodlowychDanychKontaZusApi>('POST', '/zus/konto', '0001', z, o);
 }
 
 export function odczytajStanRozliczen(pesel: Pesel, p: CzasZadaniaApi & { dzien?: DataISO } = {}, o?: OpcjeWywolania) {
-  const parametry = zapytanie({ dzien: p.dzien, dzis: p.dzis, dataDemo: p.dataDemo, teraz: p.teraz });
-  return wywolaj<OdpowiedzStanuRozliczenApi>('GET', `/zus/konto/stan-rozliczen${parametry}`, '0133', undefined, o, pesel);
+  const z: ZadanieStanuRozliczenApi = { pesel, ...czasZadania(p), ...(p.dzien ? { dzien: p.dzien } : {}) };
+  return wywolaj<OdpowiedzStanuRozliczenApi>('POST', '/zus/konto/stan-rozliczen', '0133', z, o);
 }
 
 /** Zaświadczenia e-ZLA wymagają zgody na dane dotyczące zdrowia; bez zgody API odpowiada kodem 0004. */
 export function odczytajZaswiadczeniaEzla(pesel: Pesel, p: CzasZadaniaApi & { zgodaNaDaneZdrowia: boolean }, o?: OpcjeWywolania) {
-  const parametry = zapytanie({ zgodaNaDaneZdrowia: p.zgodaNaDaneZdrowia ? 'tak' : 'nie', dzis: p.dzis, dataDemo: p.dataDemo, teraz: p.teraz });
-  return wywolaj<OdpowiedzEzlaApi>('GET', `/zus/konto/e-zla${parametry}`, '0001', undefined, o, pesel);
+  const z: ZadanieEzlaApi = { pesel, zgodaNaDaneZdrowia: p.zgodaNaDaneZdrowia, ...czasZadania(p) };
+  return wywolaj<OdpowiedzEzlaApi>('POST', '/zus/konto/e-zla', '0001', z, o);
 }
 
 export function zawnioskujOZaswiadczenieONiezaleganiu(z: ZadanieZaswiadczeniaApi, o?: OpcjeWywolania) {

@@ -41,23 +41,28 @@ export type KanalPozycji =
 export interface InstrukcjaPozycji { kroki: string[]; daneIDokumenty: string[]; adresKanalu?: string; odnosniki: { etykieta: string; url: string }[] }
 export interface WarunekStrukturalny { formyZatrudnienia: FormaZatrudnienia[]; ubezpieczenieChorobowe: 'wymagane' | 'brak' | 'bez-znaczenia';
   warunekEtapu: 'dziecko-nie-urodzilo-sie' | 'dziecko-urodzilo-sie' }
+/**
+ * Autor zmiany w katalogu: PESEL Administratora w kolejce zmian przeglądarki albo znacznik 'administrator' w katalogu,
+ * który serwer zapisuje i udostępnia publicznie przez GET /api/katalog bez numeru PESEL.
+ */
+export type AutorZmianyKatalogu = Pesel | 'administrator';
 export interface PozycjaKatalogu {
   id: IdPozycji; tytul: string; rodzaj: RodzajPozycji; etap: Etap; rodzic: RodzicPozycji;
   warunekOpis: string; warunekStrukturalny?: WarunekStrukturalny;   // pozycje dodane w panelu
   instytucjaIKanal: string; kanaly: Partial<Record<FormaZatrudnienia | 'kazda', KanalPozycji>>;
   regulaTerminu: RegulaTerminu; kosztSpoznienia: KosztSpoznieniaPozycji; instrukcja: InstrukcjaPozycji;
-  dodano?: { przez: Pesel; czas: ZnacznikCzasu };
+  dodano?: { przez: AutorZmianyKatalogu; czas: ZnacznikCzasu };
   wylaczona?: boolean;                            // pozycja wyłączona przez Administratora: plan rodziny jej nie pokazuje
-  zmieniono?: { przez: Pesel; czas: ZnacznikCzasu; regulaTerminu: boolean };   // ostatnia zmiana pozycji w panelu
+  zmieniono?: { przez: AutorZmianyKatalogu; czas: ZnacznikCzasu; regulaTerminu: boolean };   // ostatnia zmiana pozycji w panelu
 }
 /** Pola pozycji katalogu, które Administrator zmienia w panelu (ViewCatalogItemEdit). */
 export interface ZmianyPolPozycji { tytul?: string; warunekOpis?: string; instytucjaIKanal?: string;
   daneIDokumenty?: string[]; kroki?: string[]; regulaTerminu?: RegulaTerminu; wylaczona?: boolean }
-export interface ZmianaPozycjiKatalogu { id: IdPozycji; zmiany: ZmianyPolPozycji; przez: Pesel; czas: ZnacznikCzasu }
+export interface ZmianaPozycjiKatalogu { id: IdPozycji; zmiany: ZmianyPolPozycji; przez: AutorZmianyKatalogu; czas: ZnacznikCzasu }
 export type RodzajSlownika = 'kwoty-i-progi' | 'wymiary-i-okresy';
 export type JednostkaWariantu = 'zl' | 'procent' | 'tygodnie' | 'dni' | 'miesiace' | 'lata' | 'osoby' | 'czesci' | 'g' | 'procent-etatu';
 export interface WariantWpisu { klucz: string; etykieta: string; jednostka: JednostkaWariantu; wyprowadzony?: { zWpisu: IdWpisuSlownika; zWariantu: string; mnoznik?: number; pomniejszenieProcent?: number } }
-export interface WersjaWpisu { od: DataISO; do?: DataISO; wartosci: Record<string, number>; dodano?: { przez: Pesel; czas: ZnacznikCzasu } }
+export interface WersjaWpisu { od: DataISO; do?: DataISO; wartosci: Record<string, number>; dodano?: { przez: AutorZmianyKatalogu; czas: ZnacznikCzasu } }
 export interface WpisSlownika { id: IdWpisuSlownika; slownik: RodzajSlownika; nazwa: string; warianty: WariantWpisu[];
   wersje: WersjaWpisu[]; szablonOpisu: string; edytowalny: boolean; reguly?: IdRegulySwiadczenia[]; kolejnosc: number }
 export type IdRegulySwiadczenia = 'podleganie' | 'okres-wyczekiwania' | 'wyjatki-wyczekiwania' | 'wynagrodzenie-chorobowe'

@@ -31,7 +31,7 @@ Plik `.env.example` opisuje każdą zmienną, a kopia `.env.local` zostaje poza 
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Klucz i model Claude przy `MODEL_DOSTAWCA=anthropic`. |
 | `KATALOG_DANE_KATALOG` | Folder pliku `katalog.json` z edycjami Administratora, domyślnie `.dane/` w tym folderze. |
 | `PANEL_TOKEN` | Token zapisu katalogu w nagłówku `Authorization: Bearer <token>`. |
-| `KATALOG_TRYB_DEMO` | Wartość `nie` wyłącza zapis katalogu nagłówkiem sesji konta Administrator ZUS. |
+| `KATALOG_TRYB_DEMO` | Wartość `nie` wyłącza zapis katalogu z polem `sesjaDemo` konta Administrator ZUS w treści żądania. |
 | `PRZYKLADOWE_SPRAWY_ZUS_KATALOG` | Lokalny folder z plikami JSON zestawów spraw ZUS dla `GET /api/przykladowe-sprawy/zestawy`. |
 
 Bez klucza modelu asystent AI pokazuje komunikat 0071, a odczyt dokumentu komunikat 0108. Dokument przykładowy z `public/przyklady/` odczytasz wtedy z fikstur odczytu po wybraniu w `/demo/ustawienia` opcji „Wynik odczytu zapisany w prototypie”.
@@ -62,7 +62,7 @@ Bez klucza modelu asystent AI pokazuje komunikat 0071, a odczyt dokumentu komuni
 
 Trasy `src/app/api/v1/**/route.ts` czytają żądanie modułami `src/serwer/api/`, wołają funkcje domeny z katalogiem świadczeń serwera i zwracają odpowiedź albo błąd `{ kod, pola, parametry }`. Rejestr `src/serwer/api/endpointy.ts` opisuje każdy punkt końcowy, a z niego powstaje opis OpenAPI w `GET /api/v1/openapi.json` i strona `/api-docs`. Status HTTP błędu pochodzi z kolumny Kod HTTP tablicy komunikatów i leży w `src/serwer/api/statusy-http.ts`.
 
-Numer PESEL nie trafia do adresu żądania, bo adresy zapisują logi serwera i historia przeglądarki. Żądania GET konta ZUS, czyli `GET /api/v1/zus/konto`, `GET /api/v1/zus/konto/stan-rozliczen` i `GET /api/v1/zus/konto/e-zla`, przekazują PESEL w nagłówku `X-Pesel`, który czyta funkcja `peselZNaglowka` z `src/serwer/api/konta-zus.ts`. Brak nagłówka daje błąd 400 z kodem 0024, a błędny PESEL błąd 400 z kodem 0025 albo 0026. Żądania POST przekazują PESEL w treści.
+Numer PESEL jedzie wyłącznie w treści żądania POST, którą szyfruje połączenie HTTPS, więc nie trafia do adresu, nagłówków, logów serwera ani historii przeglądarki. Odczyty konta ZUS, czyli `POST /api/v1/zus/konto`, `POST /api/v1/zus/konto/stan-rozliczen` i `POST /api/v1/zus/konto/e-zla`, czytają PESEL z pola `pesel` funkcją `peselZTresci` z `src/serwer/api/konta-zus.ts`. Brak pola daje błąd 400 z kodem 0024, a błędny PESEL błąd 400 z kodem 0025 albo 0026. Zapis katalogu `/api/katalog` przyjmuje sesję Administratora z numerem PESEL w polu `sesjaDemo` treści żądania.
 
 Przeglądarka pobiera wspólny katalog świadczeń z `GET /api/katalog` raz przy otwarciu aplikacji, potem najwyżej co 60 s, gdy karta jest widoczna, po powrocie do karty i po odzyskaniu sieci. Odpowiedź na zapis zmiany w panelu niesie aktualne edycje katalogu, a zmiany zapisane bez sieci czekają w kolejce `zmianyKataloguDoWyslania`. Zasady pobierania opisuje funkcja `czyPobracKatalog` z `src/dane/magazyn/katalog-serwer.ts`.
 

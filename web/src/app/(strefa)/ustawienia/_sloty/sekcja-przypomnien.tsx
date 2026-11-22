@@ -361,7 +361,7 @@ function SekcjaPrzypomnien({ stanKonta }: { stanKonta: StanKonta }) {
             </Przycisk>
             {trybDemo ? (
               <Link
-                href={trasy.ViewDemoInbox({ konto: stanKonta.konto.pesel })}
+                href={trasy.ViewDemoInbox()}
                 className="text-brand underline hover:text-brand-deep"
               >
                 {t.skrzynka}

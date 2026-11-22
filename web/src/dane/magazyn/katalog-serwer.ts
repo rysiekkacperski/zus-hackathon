@@ -25,7 +25,6 @@ import { czyEdycjeKatalogu, zastosujZmiane, zmianyOdtwarzajaceEdycje } from '@/d
 import type { EdycjeKatalogu, OdpowiedzKatalogu, ZmianaKatalogu, ZmianaKataloguWKolejce } from '@/domena/typy';
 
 const ADRES_USLUGI = '/api/katalog';
-const NAGLOWEK_SESJI_DEMO = 'X-Sesja-Demo';
 /** Najkrótszy odstęp między okresowymi pobraniami katalogu i pobraniem przy otwarciu panelu. */
 export const ODSTEP_POBIERANIA_MS = 60_000;
 /** Najkrótszy odstęp między pobraniami po powrocie do karty, który chroni przed seriami przełączeń kart. */
@@ -67,7 +66,7 @@ function kolejka(): ZmianaKataloguWKolejce[] {
   return odczytajGlobalne().zmianyKataloguDoWyslania ?? [];
 }
 
-/** Potwierdzenie roli dla nagłówka X-Sesja-Demo z sesji zalogowanego Administratora; undefined dla innej sesji. */
+/** Potwierdzenie roli dla pola `sesjaDemo` treści żądania z sesji zalogowanego Administratora; undefined dla innej sesji. */
 function sesjaAdministratora(): string | undefined {
   const sesja = odczytajSesje();
   const administrator = odczytajZalogowanego()?.stanKonta.konto.rola === 'administrator';
@@ -118,14 +117,13 @@ function zdejmijPierwszaZmiane(): void {
 /**
  * Potwierdzenie roli Administrator dla usługi w trybie demonstracyjnym: sesja Administratora z chwili zapisu zmiany,
  * a dla zmiany bez niej sesja zalogowanego Administratora. Przywrócenie katalogu startowego z ustawień demo potwierdza
- * konto Administrator ZUS, bo ustawienia demo działają bez logowania.
+ * konto Administrator ZUS, bo ustawienia demo działają bez logowania. Sesja zawiera PESEL, więc jedzie w polu
+ * `sesjaDemo` treści żądania, którą szyfruje połączenie HTTPS, a nie w nagłówku.
  */
-function naglowkiZapisu(zmiana: ZmianaKataloguWKolejce): Record<string, string> {
-  const naglowki: Record<string, string> = { 'Content-Type': 'application/json' };
+function sesjaZapisu(zmiana: ZmianaKataloguWKolejce): string | undefined {
   const sesja = zmiana.sesjaDemo ?? sesjaAdministratora();
-  if (sesja !== undefined) naglowki[NAGLOWEK_SESJI_DEMO] = sesja;
-  else if (zmiana.rodzaj === 'przywrocenie') naglowki[NAGLOWEK_SESJI_DEMO] = `ustawienia-demo:${PESEL_ADMINISTRATORA_ZUS}`;
-  return naglowki;
+  if (sesja !== undefined) return sesja;
+  return zmiana.rodzaj === 'przywrocenie' ? `ustawienia-demo:${PESEL_ADMINISTRATORA_ZUS}` : undefined;
 }
 
 type WynikWysylki = { rodzaj: 'przyjeta'; odpowiedz: OdpowiedzKatalogu } | { rodzaj: 'odrzucona' } | { rodzaj: 'niedostepna' };
@@ -137,8 +135,8 @@ async function wyslijZmiane(wKolejce: ZmianaKataloguWKolejce): Promise<WynikWysy
   try {
     odpowiedz = await fetch(ADRES_USLUGI, {
       method: 'POST',
-      headers: naglowkiZapisu(wKolejce),
-      body: JSON.stringify({ zmiana: zmiana as ZmianaKatalogu }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zmiana: zmiana as ZmianaKatalogu, sesjaDemo: sesjaZapisu(wKolejce) }),
       cache: 'no-store',
     });
   } catch {

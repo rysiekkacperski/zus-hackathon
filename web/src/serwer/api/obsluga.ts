@@ -17,13 +17,6 @@ export async function przygotujPost(zadanie: Request): Promise<KontekstZadania |
   return { tresc: odczyt.tresc, czas: czas.czas, katalog: await katalogSerwera() };
 }
 
-/** Czas i katalog żądania GET z parametrów adresu albo gotowa odpowiedź błędu. */
-export async function przygotujGet(zadanie: Request): Promise<KontekstZadania | Response> {
-  const czas = await czasZadania(zadanie);
-  if (!czas.ok) return odpowiedzBledowPol(czas.bledy) as Response;
-  return { tresc: {}, czas: czas.czas, katalog: await katalogSerwera() };
-}
-
 export function czasOdpowiedzi(k: KontekstZadania): CzasOdpowiedziApi {
   return { dzis: k.czas.dzis, teraz: k.czas.teraz, wersjaKatalogu: k.katalog.wersja };
 }

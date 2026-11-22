@@ -2,7 +2,8 @@
 
 // ViewDemoInbox (P, kontrakt 2.2 i 13.2 pkt 3): skrzynka demonstracyjna e-maili i SMS-ów konta w trybie
 // demonstracyjnym, z doręczeniem wiadomości zaplanowanych do bieżącej chwili. Właściciel: u18.
-import { useSearchParams } from 'next/navigation';
+// Skrzynka pokazuje konto zalogowanej sesji, a inne konto wybrane z listy trzyma w stanie widoku: PESEL konta
+// nie trafia do adresu strony ani historii przeglądarki.
 import { useEffect, useMemo, useState } from 'react';
 import { formatujDateICzas } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
@@ -45,9 +46,8 @@ export function WidokSkrzynkiDemo() {
   const sesja = useSesja();
   const katalog = useKatalog();
   const teraz = useTeraz();
-  const zapytanie = useSearchParams();
-  const kontoZAdresu = zapytanie.get('konto') ?? undefined;
-  const pesel = kontoZAdresu ?? sesja?.pesel ?? konta[0]?.pesel;
+  const [wybraneKonto, ustawWybraneKonto] = useState<string | undefined>(undefined);
+  const pesel = wybraneKonto ?? sesja?.pesel ?? konta[0]?.pesel;
   const stanKonta = useStanKontaWTrybieDemo(pesel);
   const [wynikDoreczenia, ustawWynikDoreczenia] = useState<number | null>(null);
 
@@ -90,7 +90,7 @@ export function WidokSkrzynkiDemo() {
 
   function wybierzKonto(wybrane: string) {
     if (wybrane === '') return;
-    window.history.replaceState(null, '', `?konto=${encodeURIComponent(wybrane)}`);
+    ustawWybraneKonto(wybrane);
     ustawWynikDoreczenia(null);
   }
 
