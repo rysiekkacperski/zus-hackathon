@@ -1,0 +1,12 @@
+# Pliki, których Vercel CLI nie wysyła przy wdrożeniu z lokalnego folderu web/.
+# Sekrety trafiają do zmiennych środowiskowych projektu na Vercel, a nie do wysyłanych plików.
+.env
+.env.*
+!.env.example
+.dane/
+.next/
+node_modules/
+coverage/
+*.tsbuildinfo
+*.log
+.DS_Store
