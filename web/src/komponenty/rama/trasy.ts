@@ -44,7 +44,7 @@ export interface ParametryWidokow {
   ViewProfileEmploymentChange: BezParametrow;
   ViewProfileFamily: BezParametrow;
   ViewProfileSecondParent: BezParametrow;
-  ViewProfileSummary: { tryb?: TrybyWidokow['ViewProfileSummary'] };
+  ViewProfileSummary: { tryb?: TrybyWidokow['ViewProfileSummary']; zakladka?: 'drugi-rodzic' };
   ViewBirthDetails: { tryb?: TrybyWidokow['ViewBirthDetails'] };
   ViewSecondParentPowerOfAttorney: BezParametrow;
   ViewBirthPackage: BezParametrow;
