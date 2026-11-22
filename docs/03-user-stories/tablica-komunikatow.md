@@ -15,10 +15,10 @@
 | ID | Nazwa | Typ | Kod HTTP | Wiadomość |
 | --- | --- | --- | --- | --- |
 | 0001 | Brak połączenia z danymi konta ZUS | ERROR | 503 | Nie udało się pobrać Twoich danych z ZUS. Spróbuj ponownie za chwilę. |
-| 0002 | Nieaktualne dane z konta ZUS | WARNING | 200 | Pokazujemy dane z ZUS z dnia [data odczytu]. Odświeżymy je przy następnym otwarciu przewodnika. |
+| 0002 | Nieaktualne dane konta ZUS | WARNING | 200 | Pokazujemy dane z ZUS z dnia [data odczytu]. Odświeżymy je przy następnym otwarciu przewodnika. |
 | 0003 | Błąd zapisu danych | ERROR | 500 | Nie udało się zapisać zmian. Spróbuj ponownie. |
-| 0004 | Brak zgody na dane dotyczące zdrowia | WARNING | 403 | Bez Twojej zgody nie zapiszemy danych o ciąży i dziecku. Plan pokaże sprawy, które od nich nie zależą. |
-| 0005 | Zgoda na dane dotyczące zdrowia wycofana | INFO | 200 | Zgoda wycofana. Dane o ciąży i dziecku usuniemy w ciągu 30 dni. |
+| 0004 | Brak zgody na dane dotyczące zdrowia | WARNING | 403 | Bez Twojej zgody nie zapiszemy danych o ciąży, zdrowiu i zaświadczeniach lekarskich. Plan pokaże sprawy, które od nich nie zależą. |
+| 0005 | Zgoda na dane dotyczące zdrowia wycofana | INFO | 200 | Zgoda wycofana. Dane o ciąży, zdrowiu i zaświadczeniach lekarskich usuniemy w ciągu 30 dni. |
 | 0006 | Brak wyboru z listy | ERROR | 400 | Wybierz jedną z opcji. |
 | 0007 | Puste pole przewidywanego terminu porodu | ERROR | 400 | Podaj przewidywany termin porodu. |
 | 0008 | Przewidywany termin porodu w przeszłości | ERROR | 400 | Ten termin już minął. Jeśli dziecko się urodziło, podaj datę porodu. |
@@ -46,7 +46,7 @@
 | 0030 | Niedozwolone znaki w imieniu lub nazwisku | ERROR | 400 | Imię i nazwisko mogą zawierać litery, spację, łącznik i apostrof. |
 | 0031 | Puste pole miejsca urodzenia | ERROR | 400 | Podaj miejscowość, w której urodziło się dziecko. |
 | 0032 | Nowe dziecko w danych ZUS | INFO | 200 | W Twoich danych w ZUS pojawiło się dziecko. Potwierdź datę porodu, a przygotujemy sprawy na najbliższe tygodnie. |
-| 0033 | Sprawa oznaczona jako załatwiona | INFO | 200 | Gotowe. Nie będziemy już przypominać o tej sprawie. |
+| 0033 | Sprawa oznaczona jako złożona albo załatwiona | INFO | 200 | Gotowe. Nie będziemy już przypominać o tej sprawie. |
 | 0034 | Cofnięcie oznaczenia sprawy | INFO | 200 | Sprawa wróciła do listy spraw do zrobienia. |
 | 0035 | Błąd otwarcia kanału instytucji | ERROR | 502 | Nie udało się otworzyć serwisu instytucji. Spróbuj ponownie. |
 | 0036 | Wniosek ZAM niedostępny dla pracownika | INFO | 200 | Jako pracownik wnioskujesz o urlop u pracodawcy. Pokażemy Ci, jak to zrobić. |
@@ -83,7 +83,7 @@
 | 0067 | Zaproszenie do własnej rodziny | ERROR | 409 | To zaproszenie jest przeznaczone dla drugiego rodzica. Przekaż mu link. |
 | 0068 | Konto należy już do innej rodziny | ERROR | 409 | Twoje konto jest już połączone z inną rodziną w przewodniku. |
 | 0069 | Drugi rodzic dołączył | INFO | 200 | Drugi rodzic dołączył do Waszego planu. |
-| 0070 | Pytanie poza zakresem asystenta | INFO | 200 | Na to pytanie odpowie konsultant ZUS. Możesz napisać wiadomość do ZUS, umówić e-wizytę albo napisać na mama@zus.pl. |
+| 0070 | Pytanie poza zakresem asystenta | INFO | 200 | Na to pytanie odpowie konsultant ZUS. Możesz napisać wiadomość do ZUS, umówić e-wizytę, napisać na mama@zus.pl albo zadzwonić na infolinię 22 560 16 00. |
 | 0071 | Asystent niedostępny | ERROR | 503 | Asystent jest chwilowo niedostępny. Spróbuj ponownie za chwilę albo skorzystaj z planu. |
 | 0072 | Przerwane logowanie przez mObywatela | WARNING | 401 | Logowanie przez mObywatela zostało przerwane. Zaloguj się ponownie, żeby otworzyć przewodnik. |
 | 0073 | Puste pole daty zmiany zatrudnienia | ERROR | 400 | Podaj datę rozpoczęcia albo zakończenia pracy. |
@@ -91,7 +91,7 @@
 | 0075 | Data ustania zatrudnienia przed datą rozpoczęcia | ERROR | 400 | Data zakończenia pracy nie może być wcześniejsza niż data jej rozpoczęcia. |
 | 0076 | Naruszenie przepisów bez prawomocnego wyroku | INFO | 200 | Po rozwiązaniu umowy z naruszeniem przepisów zasiłek macierzyński po porodzie przysługuje, gdy naruszenie potwierdzi prawomocny wyrok sądu. |
 | 0077 | Puste pole wymiaru | ERROR | 400 | Podaj wymiar. |
-| 0078 | Nieprawidłowy wymiar | ERROR | 400 | Podaj liczbę całkowitą większą od zera. |
+| 0078 | Nieprawidłowy wymiar | ERROR | 400 | Podaj liczbę całkowitą od 1 do 999. |
 | 0079 | Nieprawidłowa stawka | ERROR | 400 | Podaj stawkę w procentach, większą od zera i najwyżej 100, z najwyżej dwoma miejscami po przecinku. |
 | 0080 | Puste pole tytułu pozycji katalogu | ERROR | 400 | Podaj tytuł sprawy. |
 | 0081 | Tytuł pozycji katalogu już istnieje | ERROR | 409 | W katalogu jest już pozycja o tym tytule. |
@@ -126,15 +126,15 @@
 | 0110 | Data końca okresu przed datą początku | ERROR | 400 | Data końca okresu nie może być wcześniejsza niż data jego początku. |
 | 0111 | Wyliczenie zgodne z rozstrzygnięciem | INFO | 200 | Wyliczenie jest zgodne z rozstrzygnięciem sprawy. |
 | 0112 | Wyliczenie różne od rozstrzygnięcia | WARNING | 200 | Wyliczenie różni się od rozstrzygnięcia sprawy. Sprawdź dane sprawy i zastosowane reguły. |
-| 0113 | Dokument sprawy usunięty | INFO | 410 | Dokument tej sprawy został usunięty po 24 godzinach. Wgraj go ponownie. |
+| 0113 | Dokument sprawy usunięty | WARNING | 410 | Dokument tej sprawy został usunięty po 24 godzinach. Wgraj go ponownie. |
 | 0114 | Brak zaświadczeń lekarskich e-ZLA | INFO | 200 | Nie masz zaświadczeń lekarskich z ostatnich 12 miesięcy. |
-| 0115 | Okres zasiłkowy bliski wyczerpania | WARNING | 200 | Do końca okresu zasiłkowego zostało [liczba dni] dni. |
+| 0115 | Okres zasiłkowy bliski wyczerpania | WARNING | 200 | Do końca okresu zasiłkowego zostało [liczba dni] dni. Jeśli niezdolność do pracy potrwa dłużej, złóż wniosek o świadczenie rehabilitacyjne co najmniej 6 tygodni przed końcem okresu zasiłkowego. |
 | 0116 | Zadłużenie z tytułu składek | WARNING | 200 | Na dzień [data] masz zadłużenie z tytułu składek w kwocie [kwota]. Sprawdź, jak wpływa ono na prawo do zasiłku. |
 | 0117 | Brak zadłużenia z tytułu składek | INFO | 200 | Na dzień [data] nie masz zadłużenia z tytułu składek. |
-| 0118 | Zaświadczenie o stanie rozliczeń wystawione | INFO | 201 | Zaświadczenie o stanie rozliczeń jest gotowe do pobrania. |
+| 0118 | Zaświadczenie o niezaleganiu wydane | INFO | 201 | Zaświadczenie o niezaleganiu w opłacaniu składek jest gotowe do pobrania. |
 | 0119 | Tytuł ubezpieczenia podjęty w ciąży | WARNING | 200 | Twoja umowa albo działalność zaczęła się w czasie ciąży. ZUS może sprawdzić, czy zgłoszenie do ubezpieczenia służyło wyłącznie uzyskaniu zasiłku. |
 | 0120 | Brak ubezpieczenia chorobowego w dniu porodu | WARNING | 200 | Twoje ubezpieczenie chorobowe skończy się [data], przed przewidywanym terminem porodu. Bez ubezpieczenia w dniu porodu zasiłek macierzyński nie przysługuje. |
-| 0121 | Umowa przedłużona do dnia porodu | INFO | 200 | Twoja umowa przedłuży się do dnia porodu. |
+| 0121 | Umowa przedłużona do dnia porodu | INFO | 200 | Twoja umowa przedłuży się do dnia porodu, czyli do [data]. |
 | 0122 | Puste pole nazwy organizacji | ERROR | 400 | Podaj nazwę organizacji. |
 | 0123 | Nieprawidłowy adres strony organizacji | ERROR | 400 | Podaj adres strony zaczynający się od https://. |
 | 0124 | Nieprawidłowy numer telefonu | ERROR | 400 | Podaj numer telefonu z 9 cyframi. |
@@ -167,7 +167,7 @@
 | 0151 | Puste pole stawki | ERROR | 400 | Podaj stawkę. |
 | 0152 | Puste pole instytucji i kanału | ERROR | 400 | Podaj instytucję i kanał, w którym rodzic załatwia sprawę. |
 | 0153 | Nieprawidłowe przesunięcie terminu | ERROR | 400 | Podaj liczbę całkowitą od -366 do 366 dni albo od -36 do 36 miesięcy. |
-| 0154 | Zadłużenie z tytułu składek ponad próg przy świadczeniu | INFO | 200 | Na dzień [data] zadłużenie z tytułu składek wynosi [kwota] i przekracza [próg]. Świadczenie przysługuje po spłacie całego zadłużenia, a spłata w ciągu 6 miesięcy daje świadczenie za cały okres. |
+| 0154 | Zadłużenie z tytułu składek ponad próg przy świadczeniu | WARNING | 200 | Na dzień [data] zadłużenie z tytułu składek wynosi [kwota] i przekracza [próg]. Świadczenie przysługuje po spłacie całego zadłużenia, a spłata w ciągu 6 miesięcy daje świadczenie za cały okres. |
 | 0155 | Prawo do świadczenia zależne od opłacenia składek | INFO | 200 | Świadczenie przysługuje, jeżeli w dniu powstania prawa zadłużenie z tytułu składek nie przekracza [próg]. Sprawdź stan rozliczeń składek przed złożeniem wniosku. |
 | 0156 | Świadczenia w ciąży ustalone z profilu rodziny | INFO | 200 | Wynik ustaliliśmy z odpowiedzi w profilu rodziny. Wynik z danymi z konta ZUS matka zobaczy po zalogowaniu na swoim koncie. |
 | 0157 | Umowa bez przedłużenia do dnia porodu | INFO | 200 | Twoja umowa skończy się [data] i nie przedłuży się do dnia porodu. Sprawdź, jak zachować ubezpieczenie chorobowe w dniu porodu. |
@@ -175,7 +175,7 @@
 | 0159 | Brak podmiotów wsparcia dla sytuacji | INFO | 200 | Pokazujemy wszystkie organizacje, które wspierają rodziców w trudnych chwilach. Możesz wybrać sytuację, w której szukasz pomocy. |
 | 0160 | Puste pole zakresu pomocy organizacji | ERROR | 400 | Opisz, w czym organizacja pomaga rodzicom. |
 | 0161 | Organizacja istniejąca w słowniku | ERROR | 409 | W słowniku jest już organizacja o tej nazwie. |
-| 0162 | Brak potwierdzenia charakteru charytatywnego organizacji | ERROR | 400 | Potwierdź, że organizacja działa wyłącznie charytatywnie. |
+| 0162 | Brak potwierdzenia charakteru charytatywnego organizacji | ERROR | 400 | Potwierdź, że organizacja ma status organizacji pożytku publicznego w Krajowym Rejestrze Sądowym. |
 | 0163 | Puste pole daty urodzenia dziecka | ERROR | 400 | Podaj datę urodzenia dziecka. |
 | 0164 | Nieprawidłowa liczba dni pobytu dziecka w szpitalu | ERROR | 400 | Podaj liczbę dni od 0 do [liczba dni]. |
 | 0165 | Minął termin na wariant 81,5% po przyjęciu dziecka | INFO | 200 | Minęło 21 dni od przyjęcia dziecka na wychowanie, więc zasiłek za okres urlopu rodzicielskiego otrzymasz w wysokości 70%. |
@@ -207,7 +207,7 @@
 | 0191 | Data urodzenia dziecka w przyszłości | ERROR | 400 | Data urodzenia dziecka nie może być późniejsza niż dzisiejsza. |
 | 0192 | Brak daty uprawomocnienia przysposobienia | INFO | 200 | Termin urlopu ojcowskiego policzymy od dnia uprawomocnienia się orzeczenia o przysposobieniu. Dopisz tę datę w profilu, gdy ją poznasz. |
 | 0193 | Puste pole daty zdarzenia | ERROR | 400 | Podaj datę zdarzenia. |
-| 0194 | Zaświadczenie o martwym urodzeniu przy poronieniu | INFO | 200 | Lekarz albo położna wystawia zaświadczenie o martwym urodzeniu bez względu na tydzień ciąży. Zaświadczenie jest potrzebne do zasiłku macierzyńskiego. |
+| 0194 | Poronienie potwierdzone zaświadczeniem o martwym urodzeniu | INFO | 200 | Na podstawie zaświadczenia o martwym urodzeniu przysługuje Ci urlop macierzyński i zasiłek macierzyński na zasadach urodzenia martwego dziecka. |
 | 0195 | Puste pole adresu do doręczenia | ERROR | 400 | Podaj adres, na który urząd wyśle odpis. |
 | 0196 | Brak kodu pocztowego w adresie | ERROR | 400 | Podaj adres z kodem pocztowym w formacie 00-000. |
 | 0197 | Pierwszy odpis skrócony bezpłatnie | INFO | 200 | Pierwszy odpis skrócony aktu urodzenia urząd stanu cywilnego wydaje bezpłatnie osobie, która zgłosiła urodzenie. |
@@ -220,12 +220,12 @@
 | 0204 | Wniosek o urlop na warunkach urlopu macierzyńskiego później niż 7 dni od przyjęcia dziecka | WARNING | 200 | Wniosek o urlop na warunkach urlopu macierzyńskiego składasz w ciągu 7 dni od przyjęcia dziecka. Uzgodnij termin z pracodawcą. |
 | 0205 | Wniosek o łączenie urlopu rodzicielskiego z pracą później niż 21 dni przed podjęciem pracy | WARNING | 200 | Wniosek o łączenie urlopu rodzicielskiego z pracą składasz co najmniej 21 dni przed podjęciem pracy. Wybierz późniejszą datę albo uzgodnij termin z pracodawcą. |
 | 0206 | Rezygnacja bez drugiego rodzica w profilu | INFO | 200 | Z dalszej części urlopu macierzyńskiego rezygnujesz, gdy pozostałą część urlopu przejmie ojciec dziecka. Dodaj drugiego rodzica do profilu rodziny. |
-| 0207 | Rezygnacja z części zasiłku macierzyńskiego w eZUS | INFO | 200 | Rezygnację z dalszej części zasiłku macierzyńskiego złożysz w eZUS wnioskiem ZAS-23 o skrócenie okresu wypłaty zasiłku macierzyńskiego, razem z oświadczeniem, od kiedy ojciec dziecka przejmie zasiłek. Złóż je przed dniem, od którego rezygnujesz. Pozostałą część zasiłku drugi rodzic otrzyma na swój wniosek. |
+| 0207 | Rezygnacja z części zasiłku macierzyńskiego w eZUS | INFO | 200 | Rezygnację z dalszej części zasiłku macierzyńskiego złożysz w eZUS wnioskiem ZAS-23 o skrócenie okresu wypłaty zasiłku macierzyńskiego. Oświadczenie, od kiedy ojciec dziecka przejmie zasiłek, dostarcz do placówki ZUS osobiście albo pocztą. Złóż oba dokumenty przed dniem, od którego rezygnujesz. Pozostałą część zasiłku drugi rodzic otrzyma na swój wniosek. |
 | 0208 | Wniosek o pozostałą część urlopu macierzyńskiego później niż 14 dni przed urlopem | WARNING | 200 | Wniosek o pozostałą część urlopu macierzyńskiego składasz co najmniej 14 dni przed jej rozpoczęciem. Uzgodnij termin z pracodawcą. |
 | 0209 | Rezygnacja z orzeczeniem przed upływem 8 tygodni | ERROR | 400 | Przy orzeczeniu o niezdolności do samodzielnej egzystencji rezygnujesz z dalszej części urlopu macierzyńskiego po wykorzystaniu co najmniej 8 tygodni po porodzie. |
 | 0210 | Sytuacja szczególna przed upływem 8 tygodni od porodu | INFO | 200 | W pierwszych 8 tygodniach życia dziecka możesz otrzymać zasiłek opiekuńczy na czas osobistej opieki nad dzieckiem. Część urlopu macierzyńskiego przejmiesz od [data]. |
 | 0211 | PESEL dziecka niezgodny z datą urodzenia przyjętego dziecka | ERROR | 400 | Data urodzenia zapisana w numerze PESEL różni się od daty urodzenia dziecka w Twoim profilu. |
-| 0212 | Wygaśnięcie sesji | WARNING | 401 | Sesja wygasła po 15 minutach bez działania. Zaloguj się ponownie przez mObywatela, żeby wrócić do przewodnika. |
+| 0212 | Wygaśnięcie sesji | WARNING | 401 | Sesja wygasła po 15 minutach bez działania. Zaloguj się ponownie, żeby wrócić do przewodnika. |
 | 0213 | Puste pole numeru telefonu | ERROR | 400 | Podaj numer telefonu, na który wyślemy przypomnienia SMS. |
 | 0214 | Brak wybranego kanału przypomnień | ERROR | 400 | Wybierz e-mail, SMS albo oba kanały przypomnień. |
 | 0215 | Wysłany kod weryfikacyjny SMS | INFO | 200 | Wysłaliśmy kod SMS na numer [numer telefonu]. Wpisz go w ciągu 10 minut. |
@@ -244,8 +244,8 @@
 | 0228 | Brak zaświadczenia o przewidywanej dacie porodu | ERROR | 400 | Dołącz zaświadczenie lekarskie o przewidywanej dacie porodu. |
 | 0229 | Wniosek przed porodem | INFO | 200 | Zasiłek przed porodem możesz zacząć najwcześniej [data], czyli 6 tygodni przed przewidywanym terminem porodu. Możesz też pracować do porodu i złożyć wniosek po porodzie. |
 | 0230 | Wniosek przed porodem przygotowany dla płatnika | INFO | 201 | Wniosek jest gotowy. Przekaż go płatnikowi razem z zaświadczeniem lekarskim o przewidywanej dacie porodu, a po porodzie dostarcz płatnikowi skrócony odpis aktu urodzenia dziecka. |
-| 0231 | Dane dziecka do przekazania ZUS | INFO | 200 | Przekaż ZUS dane dziecka do wniosku o zasiłek macierzyński złożonego przed porodem, żeby ZUS ustalił zasiłek za okres po porodzie. |
-| 0232 | Dane dziecka przekazane ZUS | INFO | 201 | Przekazaliśmy ZUS dane dziecka do Twojego wniosku o zasiłek macierzyński. |
+| 0231 | Dane dziecka do przekazania ZUS | INFO | 200 | Wyślij ZUS kolejny wniosek o zasiłek macierzyński z danymi dziecka do wniosku złożonego przed porodem, żeby ZUS ustalił zasiłek za okres po porodzie. Wyślij go najpóźniej [data], czyli 21 dni po porodzie. |
+| 0232 | Dane dziecka przekazane ZUS | INFO | 201 | Wysłaliśmy ZUS kolejny wniosek o zasiłek macierzyński z danymi dziecka. Uzupełnia on Twój wniosek złożony przed porodem. |
 | 0233 | Wniosek ZAS-53 dla pracownika i zleceniobiorcy w okresie ubezpieczenia | INFO | 200 | Wniosek o zasiłek chorobowy składa osoba prowadząca działalność albo osoba po ustaniu ubezpieczenia. Twój zasiłek ustali płatnik składek albo ZUS na podstawie zaświadczenia lekarskiego, więc poinformuj płatnika o niezdolności do pracy. |
 | 0234 | Zaświadczenie bez kodu B | INFO | 200 | Zaświadczenie nie ma kodu B, który oznacza ciążę, więc zasiłek wyniesie 80% podstawy wymiaru. Jeśli niezdolność przypada w ciąży, skontaktuj się z lekarzem, który wystawił zaświadczenie. |
 | 0235 | Niezdolność po ustaniu ubezpieczenia powstała później niż 14 dni | INFO | 200 | Ubezpieczenie ustało [data ustania], a niezdolność do pracy zaczęła się [data], czyli później niż 14 dni po ustaniu. Zasiłek chorobowy za ten okres nie przysługuje. |
@@ -275,3 +275,76 @@
 | 0259 | Brak daty uprawomocnienia przysposobienia przy zgłoszeniu do ubezpieczenia zdrowotnego | INFO | 200 | Dziecko zgłosisz do ubezpieczenia zdrowotnego w ciągu 7 dni od dnia uprawomocnienia się orzeczenia o przysposobieniu. Dopisz tę datę w profilu, gdy ją poznasz. |
 | 0260 | Zaświadczenie płatnika składek Z-3a do wniosku o zasiłek macierzyński | INFO | 200 | Do wniosku o zasiłek macierzyński potrzebne jest zaświadczenie płatnika składek Z-3a. Wypełnia je Twój zleceniodawca, który może przekazać je do ZUS przez eZUS. Poproś zleceniodawcę o to zaświadczenie. |
 | 0261 | Rezygnacja z części zasiłku macierzyńskiego u zleceniodawcy | INFO | 200 | Zasiłek macierzyński wypłaca Ci zleceniodawca. Z dalszej części zasiłku zrezygnujesz pisemnym wnioskiem złożonym zleceniodawcy, z datą, od której rezygnujesz, razem z oświadczeniem, od kiedy ojciec dziecka przejmie zasiłek. Złóż je przed dniem, od którego rezygnujesz. Pozostałą część zasiłku drugi rodzic otrzyma na swój wniosek. |
+| 0262 | Decyzja o odmowie wydania zaświadczenia o niezaleganiu | WARNING | 201 | Na dzień [data] masz zadłużenie z tytułu składek w kwocie [kwota], dlatego ZUS wydaje decyzję o odmowie wydania zaświadczenia o niezaleganiu w opłacaniu składek. Decyzja jest gotowa do pobrania. |
+| 0263 | Dzieci po wieku granicznym poza wymiarem urlopu | INFO | 200 | Wymiar urlopu na warunkach urlopu macierzyńskiego i urlopu rodzicielskiego liczymy dla [liczba dzieci] przyjętych dzieci, które w dniu przyjęcia nie ukończyły [wiek] lat. |
+| 0264 | Uzyskanie zaświadczenia o martwym urodzeniu po poronieniu | INFO | 200 | Poproś lekarza albo położną o zaświadczenie o martwym urodzeniu. Lekarz albo położna wystawia je bez względu na czas trwania ciąży, a zaświadczenie jest podstawą urlopu macierzyńskiego i zasiłku macierzyńskiego po poronieniu. Gdy je otrzymasz, dopisz je w przewodniku do zapisanego poronienia. |
+| 0265 | Prawo do urlopu i zasiłku po poronieniu po przedstawieniu zaświadczenia | INFO | 200 | Prawo do urlopu macierzyńskiego i zasiłku macierzyńskiego po poronieniu powstaje po przedstawieniu zaświadczenia o martwym urodzeniu. Dopisz zaświadczenie w przewodniku, a pokażemy okres zasiłku. |
+| 0266 | Zasiłek chorobowy i zasiłek w wysokości zasiłku macierzyńskiego za ten sam okres | INFO | 200 | Za ten sam okres otrzymasz jeden zasiłek. Gdy ZUS przyzna Ci zasiłek w wysokości zasiłku macierzyńskiego, zaliczy na jego poczet zasiłek chorobowy wypłacony za ten okres. |
+| 0267 | Wyrównanie zasiłku do 100% po przyjęciu dziecka | INFO | 200 | Urlop rodzicielski zaczyna się po pierwszych urodzinach dziecka, więc zasiłek za ten urlop wyniesie 70%, a za urlop na warunkach urlopu macierzyńskiego otrzymasz na wniosek jednorazowe wyrównanie do 100%. |
+| 0268 | Uzupełniający urlop macierzyński drugiego rodzica | ERROR | 400 | Z zasiłku za okres uzupełniającego urlopu macierzyńskiego korzysta jedno z rodziców. Wniosek złożysz, gdy drugi rodzic z niego nie korzysta. |
+| 0269 | Wniosek o zasiłek za uzupełniający urlop macierzyński po końcu urlopu macierzyńskiego | WARNING | 409 | Wniosek o zasiłek za okres uzupełniającego urlopu macierzyńskiego składasz najpóźniej w ostatnim dniu zasiłku za urlop macierzyński, czyli do [data]. Zapytaj ZUS o swoją sytuację. |
+| 0270 | Nieprawidłowa liczba hektarów przeliczeniowych | ERROR | 400 | Podaj liczbę hektarów przeliczeniowych większą od 0, z najwyżej dwoma miejscami po przecinku. |
+| 0271 | Zbyt długi tekst pola | ERROR | 400 | Tekst może mieć najwyżej [liczba znaków] znaków. |
+| 0272 | Płatnik zasiłku przewidywany | INFO | 200 | Kto wypłaci zasiłek od [rok początku zasiłku], zależy od liczby osób zgłoszonych przez płatnika do ubezpieczenia chorobowego według stanu na 30 listopada [rok poprzedzający rok początku zasiłku]. Do czasu odczytu tej informacji z konta ZUS pokazujemy płatnika według stanu na 30 listopada [rok stanu w danych konta ZUS]. |
+| 0273 | Pusta data wystąpienia do sądu o przysposobienie | ERROR | 400 | Podaj datę złożenia w sądzie wniosku o przysposobienie dziecka. |
+| 0274 | Data wystąpienia do sądu o przysposobienie zbyt odległa | ERROR | 400 | Podaj datę złożenia w sądzie wniosku o przysposobienie przypadającą najpóźniej za 12 miesięcy od dziś. |
+| 0275 | Pytanie medyczne do asystenta | INFO | 200 | Na pytania o zdrowie, leki i przebieg ciąży odpowie lekarz albo położna, którzy opiekują się Tobą i dzieckiem. W nagłej sytuacji zadzwoń pod numer alarmowy 112. |
+| 0276 | Pytanie podatkowe do asystenta | INFO | 200 | Na pytania o podatki odpowie Krajowa Informacja Skarbowa. |
+| 0277 | Brak zgody matki na dane dotyczące zdrowia | WARNING | 403 | Tę sytuację zapisze mama albo zapiszesz ją po udzieleniu przez mamę zgody na dane dotyczące zdrowia w przewodniku. Wniosek o część urlopu macierzyńskiego złożysz u pracodawcy albo w ZUS także bez zapisu w przewodniku. |
+| 0278 | Niezdolność do pracy w czasie urlopu wychowawczego albo bezpłatnego | INFO | 200 | Za niezdolność do pracy w czasie urlopu wychowawczego albo bezpłatnego zasiłek chorobowy nie przysługuje. Jeżeli urodzisz dziecko w czasie urlopu wychowawczego, przysługuje Ci zasiłek macierzyński. |
+| 0279 | Praca zarobkowa w czasie zwolnienia lekarskiego | INFO | 200 | W czasie zwolnienia lekarskiego powstrzymaj się od pracy zarobkowej, także w swojej firmie. Praca zarobkowa w czasie zwolnienia odbiera zasiłek za cały okres zwolnienia, z wyjątkiem incydentalnych czynności wymaganych istotnymi okolicznościami innymi niż polecenie pracodawcy. |
+| 0280 | Nieprawidłowy numer KRS organizacji | ERROR | 400 | Podaj numer KRS organizacji z 10 cyframi. |
+| 0281 | Wniosek o urlop wychowawczy później niż 21 dni przed urlopem | WARNING | 200 | Wniosek o urlop wychowawczy składasz co najmniej 21 dni przed jego rozpoczęciem. Po wniosku złożonym później pracodawca udzieli urlopu najpóźniej od dnia, w którym upływa 21 dni od złożenia wniosku. |
+| 0282 | Wniosek o obniżenie wymiaru czasu pracy później niż 21 dni przed obniżeniem | WARNING | 200 | Wniosek o obniżenie wymiaru czasu pracy składasz co najmniej 21 dni przed rozpoczęciem pracy w obniżonym wymiarze. Po wniosku złożonym później pracodawca obniży wymiar czasu pracy najpóźniej od dnia, w którym upływa 21 dni od złożenia wniosku. |
+| 0283 | Przekroczony wymiar urlopu wychowawczego | ERROR | 400 | Ten okres razem z wykorzystanym urlopem wychowawczym przekracza przysługujący wymiar. Do wykorzystania zostało [pozostały wymiar]. |
+| 0284 | Nieprawidłowy wymiar czasu pracy po obniżeniu | ERROR | 400 | Podaj wymiar czasu pracy od 50% do 99% pełnego wymiaru. |
+| 0285 | Okres obniżenia wymiaru czasu pracy dłuższy niż pozostały urlop wychowawczy | ERROR | 400 | Po wykorzystaniu części urlopu wychowawczego pracujesz w obniżonym wymiarze najwyżej przez okres pozostałego urlopu, czyli [pozostały wymiar]. Podaj krótszy okres. |
+| 0286 | Wniosek o obniżenie wymiaru czasu pracy wysłany | INFO | 201 | Wniosek trafił do pracodawcy [data]. Pracodawca obniży Twój wymiar czasu pracy zgodnie z wnioskiem, a szczególna ochrona przed wypowiedzeniem przysługuje Ci od [data początku ochrony] do [data końca ochrony]. |
+| 0287 | Urlop wychowawczy przed 6 miesiącami zatrudnienia | INFO | 200 | Wniosek o urlop wychowawczy i o obniżenie wymiaru czasu pracy przygotujesz po 6 miesiącach zatrudnienia, czyli od [data]. Do 6 miesięcy wliczamy także poprzednie okresy zatrudnienia. |
+| 0288 | Przekroczona liczba części urlopu wychowawczego | ERROR | 400 | Urlop wychowawczy na dziecko wykorzystujecie najwyżej w 5 częściach, a ten wniosek byłby szóstą częścią. |
+| 0289 | Nieprawidłowa liczba dni pobytu dziecka w szpitalu po porodzie | ERROR | 400 | Podaj liczbę dni od 0 do 52. |
+| 0290 | Ostatni dzień urlopu rodzicielskiego w wymiarze 38 albo 62 tygodni | INFO | 200 | Urlop rodzicielski w wymiarze [wymiar] tygodni wykorzystacie najpóźniej do [data]. Urlop przypadający po tym dniu przepada. Zaplanuj wszystkie części urlopu do tego dnia, a w sprawie późniejszego terminu skontaktuj się z ZUS. |
+| 0291 | Zaświadczenie według stanu w dniu wydania | INFO | 200 | ZUS wyda zaświadczenie według stanu rozliczeń w dniu wydania, czyli na [data]. Stan rozliczeń na dzień powstania prawa do zasiłku, [data powstania prawa], sprawdzisz w stanie rozliczeń składek. |
+| 0292 | Rezygnacja z części zasiłku po wniosku ZAM o 14 tygodni | INFO | 200 | Wniosek o zasiłek macierzyński za 14 tygodni po porodzie jest wysłany. Żeby [imię i nazwisko ojca] pobierał zasiłek macierzyński od [data rezygnacji], złóż w eZUS wniosek ZAS-23 o skrócenie okresu wypłaty zasiłku macierzyńskiego od tego dnia. Oświadczenie, że od [data rezygnacji] zasiłek macierzyński będzie pobierał ojciec dziecka, dostarcz do placówki ZUS osobiście albo pocztą. Zrób to od razu, najpóźniej [termin]. |
+| 0293 | Dodatek z tytułu urodzenia dziecka po zgonie dziecka | INFO | 200 | Wniosek o dodatek z tytułu urodzenia dziecka złóż na każde dziecko urodzone żywo, także na dziecko, które zmarło. O dodatku na to dziecko decyduje gmina albo MOPS. Złóż wniosek do [data], a w razie pytań skontaktuj się z gminą albo MOPS. |
+| 0294 | Nieprawidłowy wymiar etatu | ERROR | 400 | Podaj wymiar etatu jako ułamek mniejszy od pełnego etatu, na przykład 1/2 albo 3/4. |
+| 0295 | Brak adresu do e-Doręczeń wnioskodawcy | WARNING | 409 | Wniosek o odpis przez internet wymaga Twojego adresu do e-Doręczeń, na który urząd wyśle potwierdzenie złożenia wniosku. Załóż adres do e-Doręczeń na gov.pl albo złóż wniosek w urzędzie stanu cywilnego osobiście lub listownie. |
+| 0296 | Wymiar urlopu rodzicielskiego dla jednego przyjętego dziecka | INFO | 200 | Od [data], gdy kolejne przyjęte dziecko kończy [wiek] lat, urlop rodzicielski liczymy dla jednego dziecka, a wymiar urlopu rodzicielskiego obojga rodziców wynosi [liczba tygodni] tygodni. Przed złożeniem wniosku potwierdź wymiar urlopu w ZUS. |
+| 0297 | Świadczenie za okres życia dziecka po zgonie dziecka | INFO | 200 | Za czas, kiedy dziecko żyło, możesz otrzymać to świadczenie, gdy złożysz wniosek do [data]. W razie pytań skontaktuj się z [instytucja]. |
+| 0298 | Brak ubezpieczenia chorobowego przy zasiłku opiekuńczym | INFO | 200 | Zasiłek opiekuńczy przysługuje osobie, która podlega ubezpieczeniu chorobowemu. Twoje konto ZUS nie pokazuje tego ubezpieczenia w ostatnich 6 miesiącach. Zobacz w swoim planie, z czego możesz skorzystać. |
+| 0299 | Brak zaświadczenia lekarskiego na opiekę nad wybraną osobą | INFO | 200 | Na Twoim koncie ZUS nie ma zaświadczenia lekarskiego na opiekę nad tą osobą. Jeśli lekarz wystawił zaświadczenie na wydrukowanym formularzu, dodaj okres opieki z serią i numerem tego zaświadczenia. |
+| 0300 | Kolejny okres opieki nad tą samą osobą | INFO | 200 | Ten okres przedłuża opiekę, za którą wniosek jest już złożony. Jeśli okoliczności się nie zmieniły, wnioskiem za ten okres jest wcześniejszy wniosek. Gdy coś się zmieniło, złóż nowy wniosek. |
+| 0301 | Dni bez ubezpieczenia chorobowego w okresie opieki | INFO | 200 | Od [data] do [data] nie podlegasz ubezpieczeniu chorobowemu, więc za te dni zasiłek opiekuńczy nie przysługuje. Wyłączyliśmy je z okresu opieki. |
+| 0302 | Zamknięcie placówki zapowiedziane co najmniej 7 dni wcześniej | ERROR | 400 | Zasiłek przysługuje, gdy o zamknięciu placówki dowiedziałeś się mniej niż 7 dni przed dniem zamknięcia. Sprawdź datę powiadomienia. |
+| 0303 | Wiek dziecka poza sytuacją opieki | ERROR | 400 | W tej sytuacji zasiłek przysługuje na dziecko do ukończenia [wiek] lat. Dziecko kończy [wiek] lat [data], więc okres opieki kończy się przed tym dniem. |
+| 0304 | Brak okresu opieki | ERROR | 400 | Wybierz zaświadczenie lekarskie albo dodaj okres opieki. |
+| 0305 | Puste pole daty we wniosku o zasiłek opiekuńczy | ERROR | 400 | Podaj datę. |
+| 0306 | Własny urlop w okresie opieki | INFO | 200 | Od [data] do [data] jesteś na urlopie [rodzaj urlopu], więc za te dni zasiłek opiekuńczy nie przysługuje. Wyłączyliśmy je z okresu wniosku. |
+| 0307 | Dni opieki drugiego rodzica nad tą samą osobą | INFO | 200 | Za dni od [data] do [data] wniosek o zasiłek opiekuńczy na tę samą osobę złożył drugi rodzic, [imię i nazwisko]. Za ten sam dzień zasiłek otrzymuje jeden rodzic, dlatego wyłączyliśmy te dni z okresu wniosku. |
+| 0308 | Przekroczony limit dni zasiłku opiekuńczego | ERROR | 400 | W [rok] zostało do wykorzystania [liczba dni] dni zasiłku opiekuńczego na tę opiekę, a okresy wniosku obejmują [liczba dni wniosku] dni. Skróć okresy opieki na poprzednim ekranie. |
+| 0309 | Drugi rodzic na urlopie w okresie opieki | WARNING | 200 | Od [data] do [data] [imię i nazwisko] jest na [rodzaj urlopu] i może zapewnić opiekę. Zasiłek opiekuńczy przysługuje, gdy nie ma domownika, który może zapewnić opiekę. Odpowiedz na oświadczenie o domowniku zgodnie z prawdą i przed złożeniem wniosku skontaktuj się z ZUS. |
+| 0310 | Dni zwolnienia od pracy z wynagrodzeniem wyłączone z wniosku | INFO | 200 | Za [liczba dni] dni zwolnienia od pracy zachowujesz wynagrodzenie, więc zasiłek opiekuńczy za te dni nie przysługuje. Wyłączyliśmy je z okresu wniosku, a limit dni zasiłku pozostaje bez zmian. |
+| 0311 | Własna niezdolność do pracy w okresie opieki | INFO | 200 | Od [data] do [data] masz zaświadczenie lekarskie [seria i numer] o własnej niezdolności do pracy. Za te dni przysługuje Ci zasiłek chorobowy, dlatego wyłączyliśmy je z okresu wniosku. |
+| 0312 | Dni opieki objęte innym wnioskiem | INFO | 200 | [liczba dni] dni z okresu wniosku obejmuje już Twój wniosek o zasiłek opiekuńczy na [imię i nazwisko]. Za te dni zasiłek przysługuje raz, dlatego liczymy je do limitu raz. |
+| 0313 | Wniosek bez dni zasiłku opiekuńczego | ERROR | 409 | Po wyłączeniu dni, za które zasiłek opiekuńczy nie przysługuje, wniosek obejmuje 0 dni. Zmień okresy opieki albo odpowiedzi na oświadczenia. |
+| 0314 | Brak wspólnego gospodarstwa domowego z osobą pod opieką | ERROR | 409 | Zasiłek opiekuńczy na chore dziecko w wieku powyżej 14 lat bez orzeczenia i na chorego małżonka przysługuje, gdy w okresie opieki pozostajesz z nim we wspólnym gospodarstwie domowym. |
+| 0315 | Nieprawidłowa liczba dni zasiłku opiekuńczego | ERROR | 400 | Podaj liczbę dni od 0 do [liczba dni]. |
+| 0316 | Liczba dni mniejsza niż dni z wniosków w przewodniku | ERROR | 400 | W przewodniku są zapisane wnioski i zasiłki [imię i nazwisko] na [liczba dni] dni zasiłku opiekuńczego w [rok]. Podaj co najmniej [liczba dni] dni. |
+| 0317 | Przekroczona liczba dni zwolnienia od pracy | ERROR | 400 | Zwolnienie od pracy tego rodzaju przysługuje najwyżej przez 2 dni w roku kalendarzowym. |
+| 0318 | Szacunkowa kwota zasiłku opiekuńczego | INFO | 200 | Szacunkowy zasiłek opiekuńczy za [liczba dni] dni wynosi [kwota] zł brutto przy stawce [stawka dzienna] zł za dzień opieki. Kwotę zasiłku ustali [płatnik zasiłku]. |
+| 0319 | Zasiłek opiekuńczy bez podstawy wymiaru w przewodniku | INFO | 200 | Za każdy dzień opieki otrzymasz 80% podstawy wymiaru zasiłku podzielonej przez 30. Podstawę wymiaru i kwotę zasiłku ustali [płatnik zasiłku]. |
+| 0320 | Termin złożenia wniosku o zasiłek opiekuńczy | INFO | 200 | Złóż wniosek o zasiłek za okres od [data] do [data] najpóźniej [data]. Po tym dniu roszczenie o wypłatę zasiłku za ten okres przedawnia się. |
+| 0321 | Przedawnienie zasiłku opiekuńczego za okres opieki | WARNING | 200 | Termin złożenia wniosku o zasiłek za okres od [data] do [data] minął [data]. Jeśli nie mogłeś złożyć wniosku z przyczyn od Ciebie niezależnych, skontaktuj się z ZUS przed wysłaniem wniosku. |
+| 0322 | Zaświadczenie płatnika składek do wniosku o zasiłek opiekuńczy | INFO | 200 | Do wniosku o zasiłek opiekuńczy potrzebne jest zaświadczenie płatnika składek [Z-3 albo Z-3a]. Wypełnia je [nazwa płatnika składek], który może przekazać je do ZUS przez eZUS. Poproś płatnika o to zaświadczenie. |
+| 0323 | Wniosek o zasiłek opiekuńczy przygotowany dla płatnika | INFO | 201 | Wniosek jest gotowy. Podpisz go i przekaż płatnikowi składek [nazwa płatnika składek] w postaci papierowej albo elektronicznej, na przykład e-mailem, razem z dokumentami z listy. |
+| 0324 | Płatnik zasiłku nieustalony we wniosku o zasiłek opiekuńczy | INFO | 200 | Przygotujemy wniosek dla płatnika składek [nazwa płatnika składek]. Jeśli płatnik nie wypłaca zasiłków, przekaże wniosek do ZUS w ciągu 7 dni. |
+| 0325 | Wypłata zasiłku opiekuńczego przez płatnika składek | INFO | 200 | Zasiłek wypłaci płatnik składek [nazwa płatnika składek] w terminie wypłaty wynagrodzenia. |
+| 0326 | Wniosek o zasiłek opiekuńczy przekazany płatnikowi | INFO | 200 | Zapisaliśmy przekazanie wniosku płatnikowi [data]. Sprawa ma w planie status złożona. |
+| 0327 | Sytuacja matki po upływie 8 tygodni od porodu | ERROR | 400 | Dodatkowy zasiłek opiekuńczy przysługuje, gdy sytuacja mamy wystąpiła najpóźniej [data], w ostatnim dniu 8. tygodnia życia dziecka. Po tym dniu możesz przejąć część urlopu macierzyńskiego, a akcję przejęcia znajdziesz w planie rodziny. |
+| 0328 | Data porzucenia dziecka przed dniem porodu | ERROR | 400 | Data porzucenia dziecka przypada w dniu porodu [data] albo później. |
+| 0329 | Data wypisu matki ze szpitala poza zakresem | ERROR | 400 | Podaj datę wypisu mamy ze szpitala z zakresu od [data] do dzisiaj. |
+| 0330 | Okres poza dodatkowym zasiłkiem opiekuńczym | ERROR | 400 | Dodatkowy zasiłek opiekuńczy przysługuje za dni od [data początku] do [data końca]. Popraw okres opieki. |
+| 0331 | Matka bez zasiłku macierzyńskiego w 8 tygodniach po porodzie | WARNING | 409 | Dodatkowy zasiłek opiekuńczy przysługuje, gdy mama podlega ubezpieczeniu chorobowemu i pobiera zasiłek macierzyński w pierwszych 8 tygodniach po porodzie. Sprawdź w planie rodziny przejęcie urlopu macierzyńskiego albo skontaktuj się z ZUS. |
+| 0332 | Ojciec bez przerwy w pracy | WARNING | 409 | Dodatkowy zasiłek opiekuńczy przysługuje, gdy przerwiesz pracę albo działalność zarobkową, żeby osobiście opiekować się dzieckiem. |
+| 0333 | Dodatkowy zasiłek opiekuńczy poza limitem dni | INFO | 200 | Dni dodatkowego zasiłku opiekuńczego na nowo narodzone dziecko liczymy poza rocznym limitem zasiłku opiekuńczego, więc w tym roku nadal masz [liczba] dni zasiłku opiekuńczego. |
+| 0334 | Pobyt matki w szpitalu bez daty wypisu | INFO | 200 | Dodatkowy zasiłek opiekuńczy przysługuje za dni pobytu mamy w szpitalu. Gdy mama wróci ze szpitala, poinformuj płatnika zasiłku o dniu wypisu. |

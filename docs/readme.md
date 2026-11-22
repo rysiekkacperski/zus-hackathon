@@ -1,6 +1,6 @@
 # Dokumentacja projektu Zasiłkowy Przewodnik Przyszłego Rodzica
 
-Folder zawiera dokumentację projektu Zasiłkowy Przewodnik Przyszłego Rodzica z kampanii „Przewodnik przyszłej mamy”, prowadzoną według wzoru opisanego w [docs_blueprint.md](docs_blueprint.md). Ten plik opisuje wyłącznie sposób organizacji folderu, nie zasady tworzenia treści poszczególnych stron.
+Folder zawiera dokumentację projektu Zasiłkowy Przewodnik Przyszłego Rodzica z kampanii „Przewodnik przyszłej mamy”, prowadzoną według wzoru opisanego w [docs_blueprint.md](docs_blueprint.md). Ten plik opisuje sposób organizacji folderu.
 
 ## Struktura folderów
 
@@ -25,4 +25,4 @@ Folder `materialy-zrodlowe` zawiera treść zadania hackatonowego, research praw
 
 Gałąź `main` zawiera aktualną, kompletną wersję dokumentacji.
 
-Nową gałąź tworzymy pod konkretną zmianę, na przykład nowy Epik, nowe Story albo edycję istniejącej strony, i scalamy ją do `main` po przeglądzie. Gałęzie nie żyją dłużej niż trwa praca nad daną zmianą.
+Nową gałąź tworzymy pod konkretną zmianę, na przykład nowy Epik, nowe Story albo edycję istniejącej strony, i scalamy ją do `main` po przeglądzie. Gałąź usuwamy po scaleniu zmiany do `main`.
