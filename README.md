@@ -24,31 +24,11 @@ ZUS Mama to moduł aplikacji mZUS dla przyszłych i świeżo upieczonych rodzic�
 
 ## Jak sprawdzić rozwiązanie
 
-1. Proszę otworzyć [/demo/wybor-konta](https://zus-mama.vercel.app/demo/wybor-konta) i przy koncie Anny Nowak kliknąć „Symuluj stworzenie profilu”. Przewodnik utworzy profil z danymi przykładowymi i otworzy plan na etapie Ciąża: ścieżkę w pięciu etapach z liczbą spraw w każdym etapie i trzy najbliższe terminy.
-2. Na etapie Ciąża warto zajrzeć do [świadczeń w ciąży](https://zus-mama.vercel.app/plan-rodziny/swiadczenia-w-ciazy). Ekran pokazuje prawo do zasiłku chorobowego, świadczenia rehabilitacyjnego i zasiłku w wysokości zasiłku macierzyńskiego, okres zasiłkowy z e-ZLA i ostrzeżenia przed utratą prawa.
-3. W sprawie [Wniosek o zasiłek macierzyński](https://zus-mama.vercel.app/sprawy/K08/instrukcja) proszę kliknąć „Wypełnij wniosek”. Przed porodem kreator zapyta o dzień początku zasiłku, najwcześniej 6 tygodni przed przewidywanym terminem porodu, i o zaświadczenie lekarskie o terminie porodu. Wystarczy dołączyć dowolny PDF z dokumentów przykładowych. Kreator wyśle wniosek do symulowanego ZUS i nada mu numer `ZAM-DEMO-…`.
-4. Następnie zapraszam do [kalkulatora zasiłku](https://zus-mama.vercel.app/kalkulator-zasilku), który bez logowania jest też dostępny na stronie startowej pod „Policz zasiłek macierzyński”. Można w nim sprawdzić poród, bliźnięta, zaświadczenie „Za życiem”, przyjęcie dziecka (przysposobienie albo rodzina zastępcza niezawodowa), stratę dziecka, podział urlopu między rodziców i porównanie wariantu 81,5% z wariantem 100% i 70%. Łączenie urlopu z pracą kalkulator policzy, gdy co najmniej jeden rodzic ma umowę o pracę.
-5. W [przykładowych sprawach](https://zus-mama.vercel.app/przykladowe-sprawy) proszę wybrać sprawę wzorcową S01 do S11 albo pobrać [dokumenty przykładowe](https://zus-mama.vercel.app/przyklady/dokumenty-przykladowe.zip) i wgrać zestaw jednej osoby, na przykład `zam-kowalczyk.pdf`, `z3-kowalczyk.pdf` i `zrzut-kowalczyk.png`. Zrzut z systemu ZUS zawiera rozstrzygnięcie, z którym przewodnik porówna wynik. Można też wgrać dokumenty z zestawów ZUS. Model AI odczyta dokument, serwer zastąpi dane osobowe losowymi, a przewodnik sprawdzi ubezpieczenie chorobowe, policzy świadczenia i porówna je z rozstrzygnięciem.
-6. Na koncie Anny proszę sprawdzić symulowane systemy ZUS: [dane z konta ZUS](https://zus-mama.vercel.app/dane-konta-zus), [zaświadczenia e-ZLA](https://zus-mama.vercel.app/zaswiadczenia-e-zla), [stan rozliczeń składek](https://zus-mama.vercel.app/stan-rozliczen-skladek) na dzień powstania prawa z wnioskiem o zaświadczenie o niezaleganiu i [pytanie do ZUS](https://zus-mama.vercel.app/pytania-do-zus/nowe) przez PUE/eZUS. Ikona czatu w prawym dolnym rogu otwiera asystenta AI, którego można zapytać na przykład o najbliższe terminy.
-7. Po kliknięciu w planie „Zgłoś narodziny” i podaniu daty porodu oraz danych dziecka plan przeliczy się od daty porodu, a [wniosek o odpis aktu urodzenia](https://zus-mama.vercel.app/wnioski/odpis-aktu-urodzenia) otworzy formularz.
-8. Panel administratora jest dostępny po powrocie do [/demo/wybor-konta](https://zus-mama.vercel.app/demo/wybor-konta) i zalogowaniu się jako Administrator ZUS. Proszę dopisać w panelu katalogu świadczeń nową stawkę wariantu 81,5% z datą początku wcześniejszą niż data porodu z kroku 7, a następnie zalogować się ponownie jako Anna Nowak: kalkulator i plan policzą zasiłek według nowej stawki. Zmiana dotyczy wszystkich użytkowników demo, dlatego po teście proszę kliknąć „Przywróć katalog początkowy” w [ustawieniach demo](https://zus-mama.vercel.app/demo/ustawienia).
-9. W [ustawieniach demo](https://zus-mama.vercel.app/demo/ustawienia) można ustawić datę, od której liczą się plan, terminy i wyliczenia, wczytać scenariusze z kryteriów akceptacji (na przykład zadłużenie składkowe albo ustanie umowy w ciąży) i włączyć symulacje awarii. Wysłane e-maile i SMS-y z przypomnieniami pokazuje [skrzynka demo](https://zus-mama.vercel.app/demo/skrzynka).
+1. Proszę otworzyć [kalkulator zasiłku](https://zus-mama.vercel.app/kalkulator-zasilku), który działa bez logowania, i policzyć zasiłek macierzyński obojga rodziców. Wynik pokazuje podział urlopu między rodziców i porównanie wariantu 81,5% z wariantem 100% i 70%.
+2. Na [/demo/wybor-konta](https://zus-mama.vercel.app/demo/wybor-konta) proszę kliknąć przy koncie Anny Nowak „Symuluj stworzenie profilu”. Przewodnik otworzy plan świadczeń rodziny z najbliższymi terminami. W sprawie [Wniosek o zasiłek macierzyński](https://zus-mama.vercel.app/sprawy/K08/instrukcja) przycisk „Wypełnij wniosek” uruchamia kreator ZAM, a jako zaświadczenie lekarskie wystarczy dowolny PDF z [dokumentów przykładowych](https://zus-mama.vercel.app/przyklady/dokumenty-przykladowe.zip).
+3. W [przykładowych sprawach](https://zus-mama.vercel.app/przykladowe-sprawy) proszę wybrać sprawę wzorcową, na przykład S01, albo wgrać z dokumentów przykładowych pliki `zam-kowalczyk.pdf`, `z3-kowalczyk.pdf` i `zrzut-kowalczyk.png`. Przewodnik sprawdzi ubezpieczenie chorobowe, policzy świadczenia i porówna wynik z rozstrzygnięciem ZUS.
 
-### Konta przykładowe
-
-| Konto | Sytuacja |
-| --- | --- |
-| Anna Nowak | Jednoosobowa działalność gospodarcza z dobrowolnym ubezpieczeniem chorobowym |
-| Magdalena Wójcik, Tomasz Nowak | Umowa o pracę |
-| Karolina Lis | Umowa zlecenia z dobrowolnym ubezpieczeniem chorobowym |
-| Joanna Mazur | Jednoosobowa działalność gospodarcza bez dobrowolnego ubezpieczenia chorobowego |
-| Ewa Kamińska | Umowa o pracę, która ustała w ciąży |
-| Paulina Wrona | Jednoosobowa działalność gospodarcza rozpoczęta w ciąży, z dobrowolnym ubezpieczeniem chorobowym |
-| Piotr Wójcik | Umowa o pracę. Po przyjęciu zaproszenia dołącza do rodziny Magdaleny Wójcik jako drugi rodzic |
-| Marcin Lis | Jednoosobowa działalność gospodarcza z dobrowolnym ubezpieczeniem chorobowym. Po przyjęciu zaproszenia dołącza do rodziny Karoliny Lis jako drugi rodzic |
-| Administrator ZUS | Panel katalogu świadczeń |
-
-„Zaloguj się” otwiera konto w obecnym stanie. Konto bez profilu rodziny zaczyna od powitania z pytaniem o zgodę na dane o zdrowiu, a potem przechodzi do profilu na start z odczytem danych z ZUS. „Przywróć stan początkowy” czyści dane konta.
+Pozostałe funkcje i ich adresy zawiera tabela [Funkcje a wymagania wyzwania](#funkcje-a-wymagania-wyzwania). Inne formy zatrudnienia pokazują konta Magdaleny Wójcik z umową o pracę, Karoliny Lis z umową zlecenia i Joanny Mazur z działalnością bez dobrowolnego ubezpieczenia chorobowego, a panel katalogu świadczeń konto Administrator ZUS.
 
 ## Funkcje a wymagania wyzwania
 
