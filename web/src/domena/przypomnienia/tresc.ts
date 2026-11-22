@@ -24,9 +24,15 @@ const ODPOWIEDNIKI: Record<string, string> = {
   Ą: 'A', Ć: 'C', Ę: 'E', Ł: 'L', Ń: 'N', Ó: 'O', Ś: 'S', Ź: 'Z', Ż: 'Z',
 };
 
-/** Tekst SMS bez polskich znaków diakrytycznych; twarda spacja staje się zwykłą spacją. */
+/**
+ * Tekst SMS bez polskich znaków diakrytycznych, z cudzysłowami „ i ” zamienionymi na prosty cudzysłów "
+ * (historyjka 3.2.1.1.3, wymaganie Treść SMS); twarda spacja staje się zwykłą spacją.
+ */
 export function transliterujSms(tekst: string): string {
-  return tekst.replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, (znak) => ODPOWIEDNIKI[znak] ?? znak).replace(/ /g, ' ');
+  return tekst
+    .replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, (znak) => ODPOWIEDNIKI[znak] ?? znak)
+    .replace(/[„”“]/g, '"')
+    .replace(/ /g, ' ');
 }
 
 /** Tytuł skrócony do `maks` pierwszych znaków (w SMS 40), bez wielokropka. */
@@ -40,9 +46,12 @@ export function adresInstrukcji(idSprawy: IdSprawy): string {
   return `/sprawy/${encodeURIComponent(idSprawy)}/instrukcja`;
 }
 
-/** Krótki adres instrukcji sprawy w SMS; prowadzi do tej samej instrukcji co adres pełny. */
+/** Najwyższa długość skróconego adresu instrukcji sprawy w SMS (historyjka 3.2.1.1.3, wymaganie Treść SMS). */
+export const MAKS_ADRES_SMS = 30;
+
+/** Skrócony adres instrukcji sprawy w SMS, najwyżej 30 znaków; prowadzi do tej samej instrukcji co adres pełny. */
 export function adresKrotkiSms(idSprawy: IdSprawy): string {
-  return `/s/${encodeURIComponent(idSprawy)}`;
+  return `/s/${encodeURIComponent(idSprawy)}`.slice(0, MAKS_ADRES_SMS);
 }
 
 /** Kwota w SMS: złote bez separatora tysięcy, grosze po przecinku tylko wtedy, gdy są (2400, 1234,50). */

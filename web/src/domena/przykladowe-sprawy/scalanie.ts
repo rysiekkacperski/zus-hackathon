@@ -23,7 +23,7 @@ import type {
 export const SCIEZKI_DANYCH_SPRAWY = [
   'ubezpieczony.imie', 'ubezpieczony.nazwisko', 'ubezpieczony.pesel', 'ubezpieczony.rola',
   'tytul.rodzaj', 'tytul.od', 'tytul.dataUstania',
-  'wymiarCzasuPracy',
+  'wymiarCzasuPracy', 'wymiarEtatu',
   'ubezpieczenieChorobowe.rodzaj', 'ubezpieczenieChorobowe.okresy', 'ubezpieczenieChorobowe.dataUstaniaPrzyTrwajacymTytule',
   'liczbaUbezpieczonychPlatnika',
   'ustanieZatrudnienia.przyczyna', 'ustanieZatrudnienia.inneZatrudnienie',
@@ -78,6 +78,7 @@ export function pusteDaneSprawy(): DaneSprawy {
     ubezpieczony: { imie: pusta(), nazwisko: pusta(), pesel: pusta(), rola: pusta() },
     tytul: { rodzaj: pusta(), od: pusta(), dataUstania: pusta() },
     wymiarCzasuPracy: pusta(),
+    wymiarEtatu: pusta(),
     ubezpieczenieChorobowe: { rodzaj: pusta(), okresy: pusta(), dataUstaniaPrzyTrwajacymTytule: pusta() },
     liczbaUbezpieczonychPlatnika: pusta(),
     ustanieZatrudnienia: { przyczyna: pusta(), inneZatrudnienie: pusta() },

@@ -120,7 +120,7 @@ export function RamaAplikacji({ children }: { children: React.ReactNode }) {
         </Suspense>
         <div
           ref={kontenerPrzyciskuMenu}
-          className="relative grid min-h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] lg:grid-cols-[auto_minmax(0,1fr)]"
+          className="group/rama relative grid min-h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] lg:grid-cols-[auto_minmax(0,1fr)]"
         >
           <LinkDoTresci />
           <Naglowek
@@ -142,7 +142,8 @@ export function RamaAplikacji({ children }: { children: React.ReactNode }) {
             />
           </Suspense>
           <main id="tresc" className="min-w-0 px-4 pt-6 pb-16 lg:px-16">
-            <div className="max-w-tresc min-w-0">
+            {/* Przy zwiniętym menu bocznym kolumna treści stoi na środku obszaru treści. */}
+            <div className="max-w-tresc min-w-0 lg:group-has-[[data-menu-zwiniete]]/rama:mx-auto">
               <StrazDostepu>{children}</StrazDostepu>
             </div>
           </main>

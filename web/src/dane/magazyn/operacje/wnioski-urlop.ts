@@ -46,12 +46,17 @@ export function rozpocznijLubWznowWniosekOUrlop(
   scenariusz: number | undefined,
   ctx: KontekstOperacji,
 ): WynikOperacji<WniosekOUrlop> {
-  void scenariusz;
   return wykonajOperacjeZWynikiem<WniosekOUrlop>(() => {
     const k = kontekstKonta();
     if (k === null) return { ok: false, kod: '0003' };
     const istniejacy = szkicDlaSprawy(k.rodzina, k.pesel, idSprawy);
-    if (istniejacy) return { ok: true, wartosc: istniejacy };
+    if (istniejacy && (scenariusz === undefined || istniejacy.numerScenariusza === scenariusz)) return { ok: true, wartosc: istniejacy };
+    if (istniejacy) {
+      // Nowy scenariusz kalkulatora: szkic bez okresów przyjmuje propozycje z tego scenariusza.
+      const odswiezony: WniosekOUrlop = { ...istniejacy, numerScenariusza: scenariusz, okresy: [], zakres: undefined, laczenie: undefined, zaktualizowano: ctx.teraz };
+      zmienStanRodziny(k.rodzina.idRodziny, (s) => ({ ...s, wnioski: s.wnioski.map((w) => (w.idWniosku === istniejacy.idWniosku ? odswiezony : w)) }));
+      return { ok: true, wartosc: odswiezony };
+    }
     const nowy: WniosekOUrlop = {
       idWniosku: idZLosowych('W', ctx.teraz, losowyCiag(6)),
       rodzaj: 'urlop-do-pracodawcy',
@@ -66,6 +71,7 @@ export function rozpocznijLubWznowWniosekOUrlop(
       zalaczniki: [],
       okresy: [],
       oswiadczenia: {},
+      ...(scenariusz !== undefined ? { numerScenariusza: scenariusz } : {}),
     };
     zmienStanRodziny(k.rodzina.idRodziny, (s) => ({ ...s, wnioski: [...s.wnioski, nowy] }));
     przeliczRodzine(k.rodzina.idRodziny, ctx);

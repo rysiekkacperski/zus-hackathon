@@ -160,6 +160,7 @@ function TrescWyniku({
         : null,
     [wariant81, dane, podstawyWyliczenia, parametry, katalog, dzis],
   );
+  const brakPodstawyZPrawem = (['matka', 'drugi-rodzic'] as const).some((r) => podstawy[r].prawo && !podstawy[r].efektywna);
 
   // Każda zmiana na wyniku zapisuje stan roboczy; bez niego tworzy go z bieżących danych.
   function zmienStan(zmiana: (s: StanRoboczyKalkulatora) => StanRoboczyKalkulatora) {
@@ -183,14 +184,17 @@ function TrescWyniku({
     });
   }
 
+  // Wynik przykładowej sprawy podpisujemy rolą, bo sprawa należy do osoby z dokumentów, a imiona pochodzą z profilu konta.
+  const imionaEtykiet: Partial<Record<RodzicWRodzinie, string | null>> =
+    zrodloAdresu === 'przykladowa-sprawa' ? {} : kontekst.imiona;
   const etykiety: Record<RodzicWRodzinie, string> = {
-    matka: kontekst.imiona.matka
-      ? ti.zImieniem({ rola: zdarzenie === 'przyjecie' ? ti.rodzicPrzyjmujacy : ti.matka, imie: kontekst.imiona.matka })
+    matka: imionaEtykiet.matka
+      ? ti.zImieniem({ rola: zdarzenie === 'przyjecie' ? ti.rodzicPrzyjmujacy : ti.matka, imie: imionaEtykiet.matka })
       : zdarzenie === 'przyjecie'
         ? ti.rodzicPrzyjmujacy
         : ti.matka,
-    'drugi-rodzic': kontekst.imiona['drugi-rodzic']
-      ? ti.zImieniem({ rola: ti.drugiRodzic, imie: kontekst.imiona['drugi-rodzic'] })
+    'drugi-rodzic': imionaEtykiet['drugi-rodzic']
+      ? ti.zImieniem({ rola: ti.drugiRodzic, imie: imionaEtykiet['drugi-rodzic'] })
       : ti.drugiRodzic,
   };
 
@@ -339,8 +343,9 @@ function TrescWyniku({
             dzis={dzis}
             dostepny={wariant81}
             parametry={parametry}
-            sumaBiezaca={wynik.sumy.razem}
-            sumaDrugiego={wynikDrugiegoWariantu?.sumy.razem ?? null}
+            // Bez ustalonej podstawy rodzica z prawem do zasiłku sumy wariantów nie są porównywalne, więc ich nie pokazujemy.
+            sumaBiezaca={brakPodstawyZPrawem ? 0 : wynik.sumy.razem}
+            sumaDrugiego={brakPodstawyZPrawem ? null : (wynikDrugiegoWariantu?.sumy.razem ?? null)}
             onZmiana={(wariant) => ustawParametry({ ...parametry, wariant })}
           />
         )}
@@ -377,7 +382,7 @@ function TrescWyniku({
                     : ti.matka
                   : ti.drugiRodzic
                 ).toLowerCase(),
-                kontekst.imiona[arkuszRodzica],
+                imionaEtykiet[arkuszRodzica],
               ]
                 .filter(Boolean)
                 .join(', ')
@@ -583,7 +588,7 @@ function KartaOkresow({
   return (
     <Karta tytul={t.kartaOkresow} bezLinii>
       <Stos odstep={7.5}>
-        <div className="flex flex-wrap items-end gap-4">
+        <div className="flex flex-col items-start gap-4">
           {zdarzenie === 'przyjecie' && przyjecie ? (
             <PoleDaty
               id="wynik-poczatek"

@@ -12,7 +12,7 @@ export const POLA_DOKUMENTU: Readonly<Record<RodzajDokumentuSprawy, readonly Sci
   zam: [...OSOBA, 'ubezpieczenieChorobowe.rodzaj', 'ustanieZatrudnienia.przyczyna', 'zdarzenie.rodzaj', 'zdarzenie.dataPorodu',
     'zdarzenie.przewidywanyTermin', 'zdarzenie.liczbaDzieci', 'wniosek.swiadczenia', 'wniosek.okresy',
     'wniosek.oswiadczeniePelnyWymiar', 'wniosek.dataZlozenia', 'wniosek.okresMatki'],
-  'z-3': [...OSOBA, 'tytul.rodzaj', 'tytul.od', 'tytul.dataUstania', 'wymiarCzasuPracy', 'ubezpieczenieChorobowe.rodzaj',
+  'z-3': [...OSOBA, 'tytul.rodzaj', 'tytul.od', 'tytul.dataUstania', 'wymiarCzasuPracy', 'wymiarEtatu', 'ubezpieczenieChorobowe.rodzaj',
     'ubezpieczenieChorobowe.okresy', 'liczbaUbezpieczonychPlatnika', 'zdarzenie.rodzaj', 'zdarzenie.niezdolnosc',
     'zdarzenie.liczbaDzieci', 'wniosek.swiadczenia', 'wniosek.okresy', 'kwotyMiesieczne'],
   'z-3a': [...OSOBA, 'tytul.rodzaj', 'tytul.od', 'tytul.dataUstania', 'ubezpieczenieChorobowe.rodzaj', 'ubezpieczenieChorobowe.okresy',

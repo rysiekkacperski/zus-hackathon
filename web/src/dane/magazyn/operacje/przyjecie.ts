@@ -1,10 +1,9 @@
 // Dane przyjęcia dziecka w szkicu profilu (kontrakt, sekcja 6.5). Właściciel: u24 (Przyjęcie dziecka na wychowanie).
-// Zapis wymaga zgody na dane dotyczące zdrowia (0004). Zapis danych przyjęcia ustawia sytuację
+// Zapis działa dla konta ze zgodą na dane dotyczące zdrowia i bez niej (3.3.4.1.3). Zapis danych przyjęcia ustawia sytuację
 // „przyjęcie dziecka na wychowanie” i usuwa ze szkicu przewidywany termin porodu, liczbę dzieci
 // z ciąży i datę pierwszej wizyty u lekarza albo położnej.
 import { rozpocznijZmianeProfilu } from '@/dane/magazyn/operacje/profil-szkic';
 import { odczytajStanKonta, odczytajZalogowanego, wykonajOperacjeZWynikiem, zmienStanKonta } from '@/dane/magazyn/stan';
-import { czyMaZgode } from '@/domena/konto/zgoda';
 import {
   KOLEJNOSC_POL_PRZYJECIA,
   walidujDanePrzyjecia,
@@ -33,8 +32,8 @@ export function zapiszDanePrzyjeciaWSzkicu(dane: FormularzPrzyjecia, ctx: Kontek
   return wykonajOperacjeZWynikiem<void>(() => {
     const zalogowany = odczytajZalogowanego();
     if (zalogowany === null) return { ok: false, kod: '0003' };
+    // 3.3.4.1.3, KA-15: dane przyjęcia zapisujemy dla konta ze zgodą na dane dotyczące zdrowia i bez niej.
     const { konto } = zalogowany.stanKonta;
-    if (!czyMaZgode(konto.decyzjeOZgodzie)) return { ok: false, kod: '0004' };
 
     const bledy = walidujDanePrzyjecia(dane, ctx.dzis);
     const pierwszyBlad = KOLEJNOSC_POL_PRZYJECIA.find((pole) => bledy[pole] !== undefined);

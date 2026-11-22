@@ -19,6 +19,7 @@ import { komunikatDlaPlatnika, nazwaPlikuDlaPlatnika } from '@/domena/wnioski/za
 import { listaDokumentowPrzyjecia } from '@/domena/wnioski/zam-przyjecie';
 import { useKatalog, useKonto, useRodzina } from '@/dane/magazyn/hooki';
 import { teksty } from '@/teksty';
+import { KomunikatRezygnacjiDlaPlatnika } from '../przejecie-urlopu/_czesci/komunikat-rezygnacji-po-zam';
 import { zbudujPdf } from './_czesci/pdf-wniosku';
 import { wierszeDokumentuZam } from './_czesci/tresc-dokumentu';
 
@@ -126,6 +127,7 @@ export function WidokZamDlaPlatnika() {
   const tresc = (
     <div className="flex min-w-0 flex-col gap-7.5">
       <Komunikat kod={kod} />
+      <KomunikatRezygnacjiDlaPlatnika wniosek={wniosek} rodzina={rodzina} />
       <Karta tytul={t.dokument.tytul} bezLinii>
         <div className="flex items-center gap-3 rounded-sm bg-surface-page px-5 py-4">
           <Ikona nazwa="plik" className="flex-none text-brand" />

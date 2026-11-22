@@ -16,6 +16,7 @@ import type {
   Procent,
   RodzajUrlopu,
   RodzicWRodzinie,
+  Wniosek,
   WniosekZam,
 } from '@/domena/typy';
 import { walidujDateWZakresie, walidujLiczbeCalkowita } from '@/domena/walidacje';
@@ -27,6 +28,8 @@ export interface WejscieOkresowZam {
   plan: PlanRodziny | null;
   /** Rodzic, który składa wniosek; domyślnie matka. */
   rodzic?: RodzicWRodzinie;
+  /** Wnioski rodziny do wymiaru urlopu rodzicielskiego drugiego rodzica i części urlopu ojcowskiego (3.9.1.1.6). */
+  wnioski?: Wniosek[];
 }
 
 export interface WynikOkresowZam {
@@ -44,6 +47,8 @@ export const DNI_TERMINU_WARIANTU = 21;
 export const TYGODNIE_NIEPRZENOSZALNE = 9;
 /** Długość urlopu ojcowskiego w dniach. */
 export const DNI_URLOPU_OJCOWSKIEGO = 14;
+/** Najkrótsza część urlopu ojcowskiego w dniach (3.9.1.1.6). */
+export const MIN_DNI_URLOPU_OJCOWSKIEGO = 7;
 /** Urlop rodzicielski wykorzystuje się do 31 grudnia roku, w którym dziecko kończy 6 lat. */
 export const LATA_WYKORZYSTANIA_RODZICIELSKIEGO = 6;
 
@@ -60,6 +65,13 @@ export interface KontekstOkresowZam {
   zaZyciem: boolean;
   przedPorodem: boolean;
   wymiarUzupelniajacegoTygodni: number | null;
+  /** Tygodnie urlopu rodzicielskiego matki z wysłanych wniosków (3.9.1.1.6). */
+  tygodnieRodzicielskiegoMatki?: number;
+  /** Dni urlopu ojcowskiego z wysłanych wniosków drugiego rodzica (3.9.1.1.6). */
+  dniOjcowskiegoWyslane?: number;
+  /** Numer części urlopu rodzicielskiego albo ojcowskiego w nowym wniosku (3.9.1.1.6). */
+  numerCzesciRodzicielskiego?: number;
+  numerCzesciOjcowskiego?: number;
 }
 
 export interface ParametryOkresuZam {
@@ -69,8 +81,9 @@ export interface ParametryOkresuZam {
   terminWariantu: DataISO | null;
   dniDoTerminu: number | null;
   wariantDostepny: boolean;
-  rodzicielski: { bezposrednioOd: DataISO | null; zakres: Okres | null; maksTygodni: number };
-  ojcowski: { zakres: Okres | null };
+  rodzicielski: { bezposrednioOd: DataISO | null; zakres: Okres | null; zakresPozniej: Okres | null; maksTygodni: number };
+  /** Zakres dni urlopu ojcowskiego: `zakres.do` to dzień poprzedzający ukończenie przez dziecko 12 miesięcy. */
+  ojcowski: { zakres: Okres | null; minDni: number; maksDni: number };
 }
 
 function liczba(n: number | undefined): LiczbaDzieci {
@@ -107,6 +120,38 @@ export function kontekstOkresowZam(w: WejscieOkresowZam): KontekstOkresowZam {
     zaZyciem: daneCiazy?.zaswiadczenieZaZyciem === true,
     przedPorodem,
     wymiarUzupelniajacegoTygodni: wymiarUzupelniajacegoZPlanu(plan, daneCiazy),
+    ...zWnioskowRodziny(w.wnioski ?? [], wniosek.idWniosku),
+  };
+}
+
+/** Tygodnie, dni i numery części z wysłanych wniosków obojga rodziców (3.9.1.1.6, Dane wniosku ZAM). */
+function zWnioskowRodziny(
+  wnioski: Wniosek[],
+  idBiezacego: string,
+): Pick<KontekstOkresowZam, 'tygodnieRodzicielskiegoMatki' | 'dniOjcowskiegoWyslane' | 'numerCzesciRodzicielskiego' | 'numerCzesciOjcowskiego'> {
+  let tygodnieMatki = 0;
+  let dniOjcowskiego = 0;
+  let czesciRodzicielskiego = 0;
+  let czesciOjcowskiego = 0;
+  for (const w of wnioski) {
+    if (w.idWniosku === idBiezacego || w.stan === 'szkic') continue;
+    if (w.rodzaj !== 'zam' && w.rodzaj !== 'urlop-do-pracodawcy' && w.rodzaj !== 'wniosek-ojca-o-urlop') continue;
+    for (const o of w.okresy) {
+      if (o.rodzajUrlopu === 'rodzicielski') {
+        czesciRodzicielskiego += 1;
+        if ((o.rodzic ?? (w.rola === 'drugi-rodzic' ? 'drugi-rodzic' : 'matka')) === 'matka') tygodnieMatki += o.tygodnie ?? 0;
+      }
+      if (o.rodzajUrlopu === 'ojcowski') {
+        czesciOjcowskiego += 1;
+        dniOjcowskiego += o.dni ?? DNI_URLOPU_OJCOWSKIEGO;
+      }
+    }
+  }
+  return {
+    tygodnieRodzicielskiegoMatki: tygodnieMatki,
+    dniOjcowskiegoWyslane: dniOjcowskiego,
+    numerCzesciRodzicielskiego: czesciRodzicielskiego + 1,
+    numerCzesciOjcowskiego: czesciOjcowskiego + 1,
   };
 }
 
@@ -116,10 +161,14 @@ export function okresOdDni(od: DataISO, dni: number): Okres {
 }
 
 /** Najwyższa liczba tygodni urlopu rodzicielskiego wnioskodawcy (R5, R6). */
-export function maksTygodniRodzicielskiego(k: Pick<KontekstOkresowZam, 'rodzic' | 'liczbaDzieci' | 'zaZyciem'>): number {
-  if (k.rodzic === 'drugi-rodzic') return TYGODNIE_NIEPRZENOSZALNE;
+export function maksTygodniRodzicielskiego(
+  k: Pick<KontekstOkresowZam, 'rodzic' | 'liczbaDzieci' | 'zaZyciem' | 'tygodnieRodzicielskiegoMatki'>,
+): number {
   const wymiar = k.zaZyciem ? (k.liczbaDzieci > 1 ? 67 : 65) : k.liczbaDzieci > 1 ? 43 : 41;
-  return wymiar - TYGODNIE_NIEPRZENOSZALNE;
+  const najwyzej = wymiar - TYGODNIE_NIEPRZENOSZALNE;
+  // 3.9.1.1.6: drugi rodzic korzysta z wymiaru pomniejszonego o tygodnie matki, najwyżej 32/34 (56/58 „Za życiem”).
+  if (k.rodzic === 'drugi-rodzic') return Math.max(0, Math.min(najwyzej, wymiar - (k.tygodnieRodzicielskiegoMatki ?? 0)));
+  return najwyzej;
 }
 
 /** Parametry ekranu okresu: okresy wyliczone, termin 21 dni i zakresy pól. */
@@ -138,8 +187,16 @@ export function parametryOkresuZam(k: KontekstOkresowZam, dzis: DataISO): Parame
   const rokGraniczny = k.dataPorodu ? Number(k.dataPorodu.slice(0, 4)) + LATA_WYKORZYSTANIA_RODZICIELSKIEGO : null;
   const zakresRodzicielskiego =
     bezposrednioOd && rokGraniczny !== null ? { od: bezposrednioOd, do: `${rokGraniczny}-12-31` } : null;
+  // 3.9.1.1.6: urlop rodzicielski w późniejszym terminie i urlop ojcowski zaczynają się najwcześniej dzień po dniu wypełnienia.
+  const jutro = dodajDni(dzis, 1);
+  const zakresRodzicielskiegoPozniej = zakresRodzicielskiego
+    ? { od: porownajDaty(jutro, zakresRodzicielskiego.od) > 0 ? jutro : zakresRodzicielskiego.od, do: zakresRodzicielskiego.do }
+    : null;
   const zakresOjcowskiego = k.dataPorodu
-    ? { od: k.dataPorodu, do: dodajDni(dodajMiesiace(k.dataPorodu, 12), -DNI_URLOPU_OJCOWSKIEGO) }
+    ? {
+        od: porownajDaty(jutro, k.dataPorodu) > 0 ? jutro : k.dataPorodu,
+        do: dodajDni(dodajMiesiace(k.dataPorodu, 12), -1),
+      }
     : null;
   return {
     okresMacierzynski,
@@ -148,8 +205,17 @@ export function parametryOkresuZam(k: KontekstOkresowZam, dzis: DataISO): Parame
     terminWariantu,
     dniDoTerminu,
     wariantDostepny,
-    rodzicielski: { bezposrednioOd, zakres: zakresRodzicielskiego, maksTygodni: maksTygodniRodzicielskiego(k) },
-    ojcowski: { zakres: zakresOjcowskiego },
+    rodzicielski: {
+      bezposrednioOd,
+      zakres: zakresRodzicielskiego,
+      zakresPozniej: zakresRodzicielskiegoPozniej,
+      maksTygodni: maksTygodniRodzicielskiego(k),
+    },
+    ojcowski: {
+      zakres: zakresOjcowskiego,
+      minDni: (k.dniOjcowskiegoWyslane ?? 0) > 0 ? DNI_URLOPU_OJCOWSKIEGO - (k.dniOjcowskiegoWyslane ?? 0) : MIN_DNI_URLOPU_OJCOWSKIEGO,
+      maksDni: Math.max(0, DNI_URLOPU_OJCOWSKIEGO - (k.dniOjcowskiegoWyslane ?? 0)),
+    },
   };
 }
 
@@ -167,7 +233,8 @@ export function okresyMacierzynskiego(
     rodzic: 'matka',
   };
   if (wariant !== 'caly-rodzicielski' || !p.wariantDostepny) return [mac];
-  const od = dodajDni(p.okresMacierzynski.do, 1);
+  // 3.9.1.1.6: przy sprawie K11 urlop rodzicielski zaczyna się dzień po końcu uzupełniającego urlopu macierzyńskiego.
+  const od = p.rodzicielski.bezposrednioOd ?? dodajDni(p.okresMacierzynski.do, 1);
   const tygodnie = p.rodzicielski.maksTygodni;
   return [
     { ...mac, stawka: STAWKA_81_5 },
@@ -182,9 +249,11 @@ export interface FormularzOkresuZam {
   dataPoczatku: string;
   tygodnie: string;
   dataOjcowskiego: string;
+  /** Liczba dni urlopu ojcowskiego (3.9.1.1.6). */
+  dniOjcowskiego?: string;
 }
 
-export type PoleOkresuZam = 'wariant' | 'trybRodzicielskiego' | 'dataPoczatku' | 'tygodnie' | 'dataOjcowskiego';
+export type PoleOkresuZam = 'wariant' | 'trybRodzicielskiego' | 'dataPoczatku' | 'tygodnie' | 'dataOjcowskiego' | 'dniOjcowskiego';
 
 export type WynikWalidacjiOkresuZam =
   | { ok: true; zmiana: Pick<WniosekZam, 'okresy' | 'wariant' | 'rodzicielski'> }
@@ -216,13 +285,24 @@ export function walidujOkresZam(
     };
   }
   if (rodzaj === 'ojcowski') {
+    // 3.9.1.1.6: 7–14 dni jednorazowo albo 2 części po 7 dni; urlop kończy się najpóźniej dzień przed ukończeniem 12 miesięcy.
+    let dni: number | null = null;
+    const tekstDni = f.dniOjcowskiego ?? String(p.ojcowski.maksDni);
+    if (tekstDni.trim() === '') bledy.dniOjcowskiego = '0006';
+    else {
+      const wynik = walidujLiczbeCalkowita(tekstDni, p.ojcowski.minDni, p.ojcowski.maksDni, '0202');
+      if ('kod' in wynik) bledy.dniOjcowskiego = wynik.kod;
+      else dni = wynik.liczba;
+    }
     const zakres = p.ojcowski.zakres ?? undefined;
-    const data = walidujDateWZakresie(f.dataOjcowskiego, { od: zakres?.od, do: zakres?.do }, { format: '0010', pusta: '0006', zaWczesnie: '0042', zaPozno: '0042' });
-    if ('kod' in data) return { ok: false, bledy: { dataOjcowskiego: data.kod } };
+    const doPoczatku = zakres ? dodajDni(zakres.do, -((dni ?? MIN_DNI_URLOPU_OJCOWSKIEGO) - 1)) : undefined;
+    const data = walidujDateWZakresie(f.dataOjcowskiego, { od: zakres?.od, do: doPoczatku }, { format: '0010', pusta: '0006', zaWczesnie: '0042', zaPozno: '0042' });
+    if ('kod' in data) bledy.dataOjcowskiego = data.kod;
+    if ('kod' in data || dni === null) return { ok: false, bledy };
     return {
       ok: true,
       zmiana: {
-        okresy: [{ rodzajUrlopu: 'ojcowski', ...okresOdDni(data.data, DNI_URLOPU_OJCOWSKIEGO), dni: DNI_URLOPU_OJCOWSKIEGO, stawka: STAWKA_100, rodzic: k.rodzic }],
+        okresy: [{ rodzajUrlopu: 'ojcowski', ...okresOdDni(data.data, dni), dni, stawka: STAWKA_100, rodzic: k.rodzic }],
         wariant: 'brak',
         rodzicielski: undefined,
       },
@@ -233,7 +313,7 @@ export function walidujOkresZam(
     let od: DataISO | null = null;
     if (f.trybRodzicielskiego === 'bezposrednio') od = p.rodzicielski.bezposrednioOd;
     if (f.trybRodzicielskiego === 'pozniej') {
-      const zakres = p.rodzicielski.zakres ?? undefined;
+      const zakres = p.rodzicielski.zakresPozniej ?? undefined;
       const data = walidujDateWZakresie(f.dataPoczatku, { od: zakres?.od, do: zakres?.do }, { format: '0010', pusta: '0006', zaWczesnie: '0042', zaPozno: '0042' });
       if ('kod' in data) bledy.dataPoczatku = data.kod;
       else od = data.data;
@@ -244,6 +324,11 @@ export function walidujOkresZam(
       const t = walidujLiczbeCalkowita(f.tygodnie, 1, p.rodzicielski.maksTygodni, '0061');
       if ('kod' in t) bledy.tygodnie = t.kod;
       else tygodnie = t.liczba;
+    }
+    // 3.9.1.1.6: ostatni dzień urlopu rodzicielskiego przypada najpóźniej 31 grudnia roku, w którym dziecko kończy 6 lat.
+    if (od !== null && tygodnie !== null && p.rodzicielski.zakres && porownajDaty(dodajDni(od, tygodnie * 7 - 1), p.rodzicielski.zakres.do) > 0) {
+      bledy.tygodnie = '0061';
+      tygodnie = null;
     }
     if (Object.keys(bledy).length > 0 || od === null || tygodnie === null || f.trybRodzicielskiego === null) {
       return { ok: false, bledy: Object.keys(bledy).length > 0 ? bledy : { trybRodzicielskiego: '0006' } };

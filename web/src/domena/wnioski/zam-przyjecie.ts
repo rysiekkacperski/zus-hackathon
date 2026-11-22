@@ -23,8 +23,33 @@ import type {
 /** Dane przyjęcia potrzebne regułom wniosku (podzbiór PrzyjecieDziecka). */
 export type DanePrzyjecia = Pick<
   PrzyjecieDziecka,
-  'forma' | 'dataPrzyjecia' | 'dataUrodzeniaDziecka' | 'liczbaPrzyjetychDzieci' | 'odroczenieObowiazkuSzkolnego'
+  'forma' | 'dataPrzyjecia' | 'dataUrodzeniaDziecka' | 'liczbaPrzyjetychDzieci' | 'odroczenieObowiazkuSzkolnego' | 'datyUrodzeniaDzieci'
 >;
+
+/** Daty urodzenia jednocześnie przyjętych dzieci: z profilu albo data jednego dziecka powtórzona dla liczby dzieci. */
+export function datyUrodzeniaPrzyjetych(p: DanePrzyjecia): DataISO[] {
+  if (p.datyUrodzeniaDzieci && p.datyUrodzeniaDzieci.length > 0) return p.datyUrodzeniaDzieci;
+  return Array.from({ length: Math.max(1, p.liczbaPrzyjetychDzieci) }, () => p.dataUrodzeniaDziecka);
+}
+
+export interface DzieciWliczone {
+  wiek: number;
+  /** Liczba wszystkich przyjętych dzieci. */
+  wszystkie: number;
+  /** Daty urodzenia dzieci, które w dniu przyjęcia nie ukończyły wieku granicznego, od najstarszego. */
+  wliczone: DataISO[];
+  /** Dni ukończenia wieku granicznego przez wliczone dzieci, rosnąco. */
+  urodzinyGraniczne: DataISO[];
+}
+
+/** Dzieci wliczone do liczby dzieci (wymaganie „Okres urlopu na warunkach urlopu macierzyńskiego”); null bez prawa. */
+export function dzieciWliczone(p: DanePrzyjecia, katalog: Katalog | null = null): DzieciWliczone | null {
+  const wiek = wiekGranicznyPrzyjecia(p.forma, p.odroczenieObowiazkuSzkolnego, katalog, p.dataPrzyjecia);
+  if (wiek === null) return null;
+  const daty = datyUrodzeniaPrzyjetych(p);
+  const wliczone = daty.filter((d) => porownajDaty(p.dataPrzyjecia, dodajLata(d, wiek)) < 0).sort(porownajDaty);
+  return { wiek, wszystkie: daty.length, wliczone, urodzinyGraniczne: wliczone.map((d) => dodajLata(d, wiek)) };
+}
 
 /** Identyfikatory wpisów słownika wymiarów i okresów używanych przez reguły przyjęcia dziecka. */
 export const WPISY_PRZYJECIA = {
@@ -80,28 +105,55 @@ export function sprawdzPrzyjecieDoWniosku(
   p: DanePrzyjecia,
   katalog: Katalog | null = null,
 ): { kod: '0092' } | { kod: '0091'; parametry: { wiek: string } } | null {
-  const wiek = wiekGranicznyPrzyjecia(p.forma, p.odroczenieObowiazkuSzkolnego, katalog, p.dataPrzyjecia);
-  if (wiek === null) return { kod: '0092' };
-  if (porownajDaty(p.dataPrzyjecia, dodajLata(p.dataUrodzeniaDziecka, wiek)) >= 0) {
-    return { kod: '0091', parametry: { wiek: String(wiek) } };
-  }
+  const d = dzieciWliczone(p, katalog);
+  if (d === null) return { kod: '0092' };
+  if (d.wliczone.length === 0) return { kod: '0091', parametry: { wiek: String(d.wiek) } };
   return null;
 }
 
+function tygodnieWum(liczba: number, katalog: Katalog | null, dzien: DataISO): number {
+  const klucz = liczbaDoKlucza(liczba);
+  return zKatalogu(katalog, WPISY_PRZYJECIA.wymiarWum, dzien, KLUCZ_LICZBY_DZIECI[klucz], WYMIAR_WUM_TYGODNI[klucz]);
+}
+
+/** Zakres daty początku urlopu na warunkach urlopu macierzyńskiego: od dnia przyjęcia do 21. dnia po nim. */
+export function zakresPoczatkuWum(dataPrzyjecia: DataISO): Okres {
+  return { od: dataPrzyjecia, do: dodajDni(dataPrzyjecia, TERMIN_WARIANTU_DNI) };
+}
+
 /**
- * Okres urlopu na warunkach urlopu macierzyńskiego: od dnia przyjęcia, wymiar dla liczby przyjętych
- * dzieci, najpóźniej do dnia poprzedzającego ukończenie wieku granicznego, co najmniej 9 tygodni (63 dni).
+ * Okres urlopu na warunkach urlopu macierzyńskiego: od wskazanej daty początku (domyślnie dnia przyjęcia),
+ * wymiar dla liczby wliczonych dzieci, a od urodzin dziecka kończącego wiek graniczny w trakcie urlopu
+ * wymiar dla pozostałych dzieci; najpóźniej do dnia poprzedzającego ukończenie wieku granicznego przez
+ * najmłodsze wliczone dziecko, co najmniej 9 tygodni (63 dni).
  */
-export function okresWum(p: DanePrzyjecia, katalog: Katalog | null = null): Okres | null {
-  const wiek = wiekGranicznyPrzyjecia(p.forma, p.odroczenieObowiazkuSzkolnego, katalog, p.dataPrzyjecia);
-  if (wiek === null) return null;
-  const klucz = liczbaDoKlucza(p.liczbaPrzyjetychDzieci);
-  const tygodnie = zKatalogu(katalog, WPISY_PRZYJECIA.wymiarWum, p.dataPrzyjecia, KLUCZ_LICZBY_DZIECI[klucz], WYMIAR_WUM_TYGODNI[klucz]);
+export function okresWum(p: DanePrzyjecia, katalog: Katalog | null = null, poczatek?: DataISO): Okres | null {
+  const d = dzieciWliczone(p, katalog);
+  if (d === null || d.wliczone.length === 0) return null;
+  const n = d.wliczone.length;
   const minimum = zKatalogu(katalog, WPISY_PRZYJECIA.wymiarWum, p.dataPrzyjecia, 'minimum', NAJKROTSZY_WUM_TYGODNI);
-  const od = p.dataPrzyjecia;
-  const granica = granicaWieku(p.dataUrodzeniaDziecka, wiek);
-  const koniec = maxData(dodajDni(od, minimum * 7 - 1), minData(dodajDni(od, tygodnie * 7 - 1), granica));
-  return { od, do: koniec };
+  const od = poczatek ?? p.dataPrzyjecia;
+  let koniec = dodajDni(od, tygodnieWum(n, katalog, p.dataPrzyjecia) * 7 - 1);
+  for (let i = 0; i < n - 1; i++) {
+    const urodziny = d.urodzinyGraniczne[i];
+    if (porownajDaty(urodziny, koniec) > 0) break;
+    koniec = maxData(dodajDni(od, tygodnieWum(n - i - 1, katalog, p.dataPrzyjecia) * 7 - 1), dodajDni(urodziny, -1));
+  }
+  const granica = dodajDni(d.urodzinyGraniczne[n - 1], -1);
+  return { od, do: maxData(dodajDni(od, minimum * 7 - 1), minData(koniec, granica)) };
+}
+
+/**
+ * Komunikat 0263 na ekranie ViewZamPeriod, gdy wiek graniczny ukończyła w dniu przyjęcia część przyjętych
+ * dzieci; null w pozostałych przypadkach.
+ */
+export function komunikatDzieciPoWieku(
+  p: DanePrzyjecia,
+  katalog: Katalog | null = null,
+): { kod: '0263'; parametry: { liczbaDzieci: string; wiek: string } } | null {
+  const d = dzieciWliczone(p, katalog);
+  if (d === null || d.wliczone.length === 0 || d.wliczone.length === d.wszystkie) return null;
+  return { kod: '0263', parametry: { liczbaDzieci: String(d.wliczone.length), wiek: String(d.wiek) } };
 }
 
 export interface ParametryRodzicielskiegoPoPrzyjeciu {
@@ -113,8 +165,12 @@ export interface ParametryRodzicielskiegoPoPrzyjeciu {
   poczatekBezposrednio: DataISO;
   /** Zakres daty początku urlopu rodzicielskiego w późniejszym terminie. */
   zakresPoczatku: Okres;
-  /** Najpóźniejszy koniec części urlopu przy pełnym wymiarze; brak przy wymiarze 38 albo 62 tygodni. */
+  /** Najpóźniejszy koniec każdej części urlopu: dzień przed wiekiem granicznym albo koniec okresu 38 albo 62 tygodni. */
   koniecCzesciNajpozniej?: DataISO;
+  /** Zmiana wymiaru na jedno dziecko od urodzin, po których wieku granicznego nie ukończyło tylko jedno dziecko (0296). */
+  zmianaWymiaru?: { data: DataISO; wiek: number; wymiar: number };
+  /** Pierwsze urodziny najmłodszego wliczonego dziecka (stawka 81,5% albo 70% i wyrównanie, 0267). */
+  pierwszeUrodziny: DataISO;
 }
 
 /** Wymiar i zakresy urlopu rodzicielskiego po przyjęciu dziecka (wymaganie „Urlop rodzicielski po przyjęciu dziecka”). */
@@ -122,33 +178,52 @@ export function parametryRodzicielskiegoPoPrzyjeciu(
   p: DanePrzyjecia,
   zaZyciem: boolean,
   katalog: Katalog | null = null,
+  opcje: { poczatekWum?: DataISO; dzis?: DataISO } = {},
 ): ParametryRodzicielskiegoPoPrzyjeciu | null {
-  const wum = okresWum(p, katalog);
-  const wiek = wiekGranicznyPrzyjecia(p.forma, p.odroczenieObowiazkuSzkolnego, katalog, p.dataPrzyjecia);
-  if (wum === null || wiek === null) return null;
-  const granica = granicaWieku(p.dataUrodzeniaDziecka, wiek);
-  const wiecej = p.liczbaPrzyjetychDzieci > 1;
-  const wariantPelny = zaZyciem
-    ? wiecej
-      ? 'wiecejDzieciZaZyciem'
-      : 'jednoDzieckoZaZyciem'
-    : wiecej
-      ? 'wiecejDzieci'
-      : 'jednoDziecko';
-  const pelny = zKatalogu(katalog, WPISY_PRZYJECIA.rodzicielski, p.dataPrzyjecia, wariantPelny, zaZyciem ? (wiecej ? 67 : 65) : wiecej ? 43 : 41);
+  const wum = okresWum(p, katalog, opcje.poczatekWum);
+  const d = dzieciWliczone(p, katalog);
+  if (wum === null || d === null || d.wliczone.length === 0) return null;
+  const n = d.wliczone.length;
+  const granica = dodajDni(d.urodzinyGraniczne[n - 1], -1);
+  const wymiarPelny = (wiecej: boolean) =>
+    zKatalogu(
+      katalog,
+      WPISY_PRZYJECIA.rodzicielski,
+      p.dataPrzyjecia,
+      zaZyciem ? (wiecej ? 'wiecejDzieciZaZyciem' : 'jednoDzieckoZaZyciem') : wiecej ? 'wiecejDzieci' : 'jednoDziecko',
+      zaZyciem ? (wiecej ? 67 : 65) : wiecej ? 43 : 41,
+    );
   const poczatekBezposrednio = dodajDni(wum.do, 1);
+  let pelny = wymiarPelny(n > 1);
+  let zmianaWymiaru: ParametryRodzicielskiegoPoPrzyjeciu['zmianaWymiaru'];
+  if (n > 1) {
+    const urodzinyJednego = d.urodzinyGraniczne[n - 2];
+    if (porownajDaty(urodzinyJednego, dodajDni(poczatekBezposrednio, pelny * 7 - 1)) <= 0) {
+      pelny = wymiarPelny(false);
+      zmianaWymiaru = { data: urodzinyJednego, wiek: d.wiek, wymiar: pelny };
+    }
+  }
   const wykracza = porownajDaty(dodajDni(poczatekBezposrednio, pelny * 7 - 1), granica) > 0;
   const wariantPoWum = zaZyciem ? 'poUrlopieNaWarunkachZaZyciem' : 'poUrlopieNaWarunkach';
   const wymiar = wykracza
     ? zKatalogu(katalog, WPISY_PRZYJECIA.rodzicielski, p.dataPrzyjecia, wariantPoWum, zaZyciem ? 62 : 38)
     : pelny;
+  const koniecCzesci = wykracza ? dodajDni(poczatekBezposrednio, wymiar * 7 - 1) : maxData(poczatekBezposrednio, granica);
+  const najwczesniej = opcje.dzis ? maxData(poczatekBezposrednio, dodajDni(opcje.dzis, 1)) : poczatekBezposrednio;
   return {
     wymiar,
     maksWnioskodawcy: wymiar - TYGODNIE_DRUGIEGO_RODZICA,
     poczatekBezposrednio,
-    zakresPoczatku: { od: poczatekBezposrednio, do: maxData(poczatekBezposrednio, granica) },
-    ...(wykracza ? {} : { koniecCzesciNajpozniej: granica }),
+    zakresPoczatku: { od: najwczesniej, do: koniecCzesci },
+    koniecCzesciNajpozniej: koniecCzesci,
+    ...(zmianaWymiaru && !wykracza ? { zmianaWymiaru } : {}),
+    pierwszeUrodziny: dodajLata(d.wliczone[n - 1], 1),
   };
+}
+
+/** Czy urlop rodzicielski od danego dnia zaczyna się po pierwszych urodzinach dziecka (stawka 70%, wyrównanie, 0267). */
+export function czyWyrownaniePoPrzyjeciu(parametry: ParametryRodzicielskiegoPoPrzyjeciu, poczatekRodzicielskiego: DataISO): boolean {
+  return porownajDaty(poczatekRodzicielskiego, parametry.pierwszeUrodziny) >= 0;
 }
 
 /** Wymiar urlopu rodzicielskiego po przyjęciu dziecka w tygodniach (0, gdy prawa brak). */
@@ -185,16 +260,16 @@ export function wariantPoPrzyjeciu(dataPrzyjecia: DataISO, dzis: DataISO): Waria
  * cały okres. W pozostałych przypadkach urlop na warunkach urlopu macierzyńskiego 100%.
  */
 export function okresyZamPoPrzyjeciu(
-  w: { przyjecie: DanePrzyjecia; zaZyciem: boolean; wariant: 'caly-rodzicielski' | 'tylko-wum' },
+  w: { przyjecie: DanePrzyjecia; zaZyciem: boolean; wariant: 'caly-rodzicielski' | 'tylko-wum'; poczatekWum?: DataISO },
   katalog: Katalog | null = null,
 ): OkresWniosku[] {
-  const wum = okresWum(w.przyjecie, katalog);
+  const wum = okresWum(w.przyjecie, katalog, w.poczatekWum);
   if (wum === null) return [];
   const dniWum = roznicaDni(wum.od, wum.do) + 1;
   if (w.wariant === 'tylko-wum') {
     return [{ rodzajUrlopu: 'na-warunkach-macierzynskiego', ...wum, dni: dniWum, tygodnie: Math.floor(dniWum / 7), stawka: 100 }];
   }
-  const parametry = parametryRodzicielskiegoPoPrzyjeciu(w.przyjecie, w.zaZyciem, katalog);
+  const parametry = parametryRodzicielskiegoPoPrzyjeciu(w.przyjecie, w.zaZyciem, katalog, { poczatekWum: w.poczatekWum });
   const okresy: OkresWniosku[] = [
     { rodzajUrlopu: 'na-warunkach-macierzynskiego', ...wum, dni: dniWum, tygodnie: Math.floor(dniWum / 7), stawka: 81.5 },
   ];
@@ -206,7 +281,7 @@ export function okresyZamPoPrzyjeciu(
       do: dodajDni(od, parametry.maksWnioskodawcy * 7 - 1),
       tygodnie: parametry.maksWnioskodawcy,
       dni: parametry.maksWnioskodawcy * 7,
-      stawka: 81.5,
+      stawka: czyWyrownaniePoPrzyjeciu(parametry, od) ? 70 : 81.5,
     });
   }
   return okresy;
@@ -274,16 +349,17 @@ export type DokumentPrzyjecia =
   | 'decyzja-odroczenia-obowiazku-szkolnego';
 
 /**
- * Dokumenty do wniosku przy przyjęciu dziecka (0149): przy przysposobieniu zaświadczenie sądu,
- * w rodzinie zastępczej niezawodowej orzeczenie sądu albo umowa ze starostą, w obu formach dokument
- * potwierdzający wiek dziecka, a przy odroczonym obowiązku szkolnym decyzja o odroczeniu.
+ * Dokumenty do wniosku przy przyjęciu dziecka (0149): przy przysposobieniu zaświadczenie sądu opiekuńczego
+ * o dacie wystąpienia albo kopia wniosku z poświadczeniem sądu, w rodzinie zastępczej niezawodowej
+ * orzeczenie sądu albo umowa ze starostą oraz dokument potwierdzający wiek dziecka, a przy odroczonym
+ * obowiązku szkolnym decyzja o odroczeniu.
  */
 export function listaDokumentowPrzyjecia(p: Pick<DanePrzyjecia, 'forma' | 'odroczenieObowiazkuSzkolnego'>): DokumentPrzyjecia[] {
   if (p.forma === 'rodzina-zastepcza-zawodowa') return [];
-  const dokumenty: DokumentPrzyjecia[] = [
-    p.forma === 'przysposobienie' ? 'zaswiadczenie-sadu-przysposobienie' : 'orzeczenie-albo-umowa-ze-starosta',
-    'dokument-wieku-dziecka',
-  ];
+  const dokumenty: DokumentPrzyjecia[] =
+    p.forma === 'przysposobienie'
+      ? ['zaswiadczenie-sadu-przysposobienie']
+      : ['orzeczenie-albo-umowa-ze-starosta', 'dokument-wieku-dziecka'];
   if (p.odroczenieObowiazkuSzkolnego) dokumenty.push('decyzja-odroczenia-obowiazku-szkolnego');
   return dokumenty;
 }

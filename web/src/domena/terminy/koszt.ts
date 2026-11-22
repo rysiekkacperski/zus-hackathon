@@ -1,7 +1,7 @@
 // Koszt spóźnienia sprawy (kontrakt, sekcja 7.2; Story 3.7.1.2.1). Właściciel: u13 (Kalendarz terminów).
 // Przed terminem liczymy koszt w dniu następującym po terminie, po terminie koszt na dzień dzisiejszy.
 // Kwoty w groszach pochodzą ze słownika kwot i progów i obowiązują w każdym miesiącu, którego dotyczy strata.
-import { dataZMiesiaca, dodajDni, dodajMiesiaceDoMiesiaca, miesiacZDaty } from '@/domena/daty';
+import { dataZMiesiaca, dodajDni, dodajMiesiaceDoMiesiaca, miesiacZDaty, ostatniDzienMiesiaca } from '@/domena/daty';
 import { kwotaWpisuSlownika, kwotaZeSlownika, type KluczWpisuKalendarza } from '@/domena/terminy/slowniki';
 import type {
   DataISO,
@@ -34,6 +34,12 @@ const JEDNORAZOWE: Partial<Record<IdPozycji, RegulaJednorazowa>> = {
 };
 
 const skutkiWbudowane: Readonly<Record<string, string>> = teksty.ViewDeadlines.skutki;
+
+/** Dane profilu do kosztu: data kotwicząca (dzień urodzenia dla K12 i K16) i zaświadczenie „Za życiem” dla K01. */
+export interface OpcjeKosztu {
+  dataKotwicy?: DataISO;
+  zaZyciem?: boolean;
+}
 
 /** Rodzaj prezentacji kosztu sprawy: świadczenie miesięczne, jednorazowe albo inne. */
 export function rodzajKosztu(idPozycji: IdPozycji | null): 'miesieczny' | 'jednorazowy' | 'inny' {
@@ -73,13 +79,24 @@ function kosztMiesieczny(
   katalog: Katalog,
   liczbaDzieci: number,
   idWpisu?: IdWpisuSlownika,
+  dataKotwicy?: DataISO,
 ): KosztSpoznienia {
   const { dzien, moment } = dzienZlozeniaDoKosztu(termin, dzis);
-  const start = dodajMiesiaceDoMiesiaca(miesiacZDaty(termin), regula.przesuniecieStartu);
+  // K12 i K16 (Story 3.7.1.2.2): strata od miesiąca urodzenia, a za miesiąc urodzenia część kwoty proporcjonalna
+  // do liczby dni od dnia urodzenia, zaokrąglona do 10 groszy w górę.
+  const czescMiesiacaUrodzenia = regula.przesuniecieStartu < 0 && dataKotwicy !== undefined;
+  const start = czescMiesiacaUrodzenia ? miesiacZDaty(dataKotwicy) : dodajMiesiaceDoMiesiaca(miesiacZDaty(termin), regula.przesuniecieStartu);
   const koniec = dodajMiesiaceDoMiesiaca(miesiacZDaty(dzien), -1);
   const rozbicie: { miesiac: MiesiacISO; kwotaNaDziecko: Grosze }[] = [];
   for (let m = start; m <= koniec && rozbicie.length < 240; m = dodajMiesiaceDoMiesiaca(m, 1)) {
-    rozbicie.push({ miesiac: m, kwotaNaDziecko: kwotaZeSlownika(katalog, regula.wpis, dataZMiesiaca(m), idWpisu) });
+    const kwotaMiesiaca = kwotaZeSlownika(katalog, regula.wpis, dataZMiesiaca(m), idWpisu);
+    if (czescMiesiacaUrodzenia && m === start) {
+      const dniMiesiaca = Number(ostatniDzienMiesiaca(dataKotwicy).slice(8, 10));
+      const dniOdUrodzenia = dniMiesiaca - Number(dataKotwicy.slice(8, 10)) + 1;
+      rozbicie.push({ miesiac: m, kwotaNaDziecko: Math.ceil((kwotaMiesiaca * dniOdUrodzenia) / dniMiesiaca / 10) * 10 });
+    } else {
+      rozbicie.push({ miesiac: m, kwotaNaDziecko: kwotaMiesiaca });
+    }
   }
   const mnoznik = regula.naDziecko ? Math.max(liczbaDzieci, 1) : 1;
   const kwota = rozbicie.reduce((suma, r) => suma + r.kwotaNaDziecko, 0) * mnoznik;
@@ -95,13 +112,14 @@ export function kosztSprawy(
   katalog: Katalog,
   liczbaDzieci: number,
   dochod: Grosze | 'nieznany' | null,
+  opcje: OpcjeKosztu = {},
 ): KosztSpoznienia {
   if (termin === null) return skutekSprawy(idPozycji, kosztKatalogu);
   const idWpisuKatalogu = kosztKatalogu?.typ === 'kwota' ? kosztKatalogu.idWpisuKwoty : undefined;
   const n = Math.max(liczbaDzieci, 1);
 
   const miesieczna = MIESIECZNE[idPozycji];
-  if (miesieczna) return kosztMiesieczny(miesieczna, termin, dzis, katalog, n, idWpisuKatalogu);
+  if (miesieczna) return kosztMiesieczny(miesieczna, termin, dzis, katalog, n, idWpisuKatalogu, opcje.dataKotwicy);
 
   const { moment } = dzienZlozeniaDoKosztu(termin, dzis);
   const jednorazowa = JEDNORAZOWE[idPozycji];
@@ -114,11 +132,14 @@ export function kosztSprawy(
     const nieznany = dochod === null || dochod === 'nieznany';
     const becikowe = nieznany || dochod <= kwotaZeSlownika(katalog, 'progBecikowego', termin);
     const dodatek = nieznany || dochod <= kwotaZeSlownika(katalog, 'progZasilkuRodzinnego', termin);
+    const zaZyciem = opcje.zaZyciem === true;
     const kwota =
-      ((becikowe ? kwotaZeSlownika(katalog, 'becikowe', termin) : 0) + (dodatek ? kwotaZeSlownika(katalog, 'dodatek', termin) : 0)) * n;
+      ((becikowe ? kwotaZeSlownika(katalog, 'becikowe', termin) : 0) + (dodatek ? kwotaZeSlownika(katalog, 'dodatek', termin) : 0)) * n +
+      (zaZyciem ? kwotaZeSlownika(katalog, 'zaZyciem', termin) : 0);
     if (kwota === 0) return { rodzaj: 'skutek', tekst: teksty.ViewDeadlines.skutki.K01 };
     const opis = teksty.ViewDeadlines.opisKosztu;
-    const tekst = becikowe && dodatek ? opis.becikoweIDodatek : becikowe ? opis.becikowe : opis.dodatek;
+    const czesci = [becikowe ? opis.becikowe : null, dodatek ? opis.dodatek : null, zaZyciem ? opis.zaZyciem : null].filter((c) => c !== null);
+    const tekst = becikowe && dodatek && !zaZyciem ? opis.becikoweIDodatek : opis.lista({ czesci });
     return { rodzaj: 'kwota', kwota, moment, rozbicie: [], liczbaDzieci: n, tekst };
   }
 

@@ -4,7 +4,7 @@
 import type { KontekstRodziny } from '@/dane/magazyn/hooki';
 import { formatujDate } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
-import { tytulSprawy } from '@/domena/katalog/odczyt';
+import { tytulSprawy as tytulSprawyPlanu } from '@/app/(strefa)/plan-rodziny/_czesci/sprawy';
 import { czyKosztMinimalny } from '@/domena/terminy/koszt';
 import type { TerminNaLiscie } from '@/domena/terminy/lista';
 import { REGULY_POZYCJI } from '@/domena/terminy/reguly';
@@ -19,7 +19,7 @@ const t = teksty.ViewDeadlines;
 
 export function tytulZKatalogu(k: KontekstRodziny, sprawa: PozycjaPlanu): string {
   const zKatalogu = sprawa.idPozycji ? k.katalog.pozycje.find((p) => p.id === sprawa.idPozycji)?.tytul : undefined;
-  return zKatalogu ?? tytulSprawy(k.katalog, sprawa.idSprawy);
+  return zKatalogu ?? tytulSprawyPlanu(k.katalog, sprawa);
 }
 
 export function KosztPrzyTerminie({ termin, sprawa }: { termin: TerminNaLiscie; sprawa: PozycjaPlanu }) {
@@ -39,7 +39,7 @@ export function KosztPrzyTerminie({ termin, sprawa }: { termin: TerminNaLiscie; 
       {czyKosztMinimalny(sprawa.idPozycji) ? `${t.pozycja.coNajmniej} ` : null}
       <span className="font-semibold text-ink-strong">{formatujKwote(koszt.kwota)}</span>{' '}
       {koszt.moment === 'na-dzis' ? t.pozycja.naDzis : t.pozycja.wDniuPoTerminie}
-      {wyjasnienie ? ` – ${wyjasnienie}` : null}
+      {wyjasnienie ? `, ${wyjasnienie}` : null}
     </p>
   );
 }

@@ -10,6 +10,7 @@ import {
   WERSJA_SCHEMATU,
 } from '@/dane/magazyn/klucze';
 import { stanGlobalnyPoczatkowy } from '@/dane/magazyn/stan-poczatkowy';
+import { DAWNE_OPOZNIENIA_ODCZYTU_ZUS_MS, OPOZNIENIE_ODCZYTU_ZUS_MS } from '@/dane/parametry-systemu';
 
 /** Minimalny interfejs magazynu Web Storage, który rdzeń dostarcza migracji. */
 export interface MagazynKluczy {
@@ -49,11 +50,36 @@ function wyczyscBazePlikow(): void {
 }
 
 /**
- * Sprawdza znacznik wersji i w razie potrzeby zakłada stan początkowy.
- * Zwraca true, gdy wyczyściła magazyn (rdzeń unieważnia wtedy pamięć podręczną).
+ * Zamienia w zapisanych parametrach dawną wartość początkową czasu odczytu z ZUS na bieżącą.
+ * Pozostałe dane stanu globalnego zostają bez zmian. Zwraca true, gdy zapisała zmianę.
+ */
+function uzupelnijParametry(lokalny: MagazynKluczy): boolean {
+  try {
+    const surowy = lokalny.getItem(KLUCZ_GLOBALNE);
+    if (surowy === null) return false;
+    const globalne = JSON.parse(surowy) as {
+      parametry?: { symulacje?: { opoznienieOdczytuZusMs?: unknown } };
+    } | null;
+    const symulacje = globalne?.parametry?.symulacje;
+    const opoznienie = symulacje?.opoznienieOdczytuZusMs;
+    if (!symulacje || typeof opoznienie !== 'number') return false;
+    if (!DAWNE_OPOZNIENIA_ODCZYTU_ZUS_MS.includes(opoznienie)) return false;
+    symulacje.opoznienieOdczytuZusMs = OPOZNIENIE_ODCZYTU_ZUS_MS;
+    lokalny.setItem(KLUCZ_GLOBALNE, JSON.stringify(globalne));
+    return true;
+  } catch {
+    // Uszkodzony albo zablokowany magazyn: parametry zostają w zapisanej postaci.
+    return false;
+  }
+}
+
+/**
+ * Sprawdza znacznik wersji i w razie potrzeby zakłada stan początkowy. Przy aktualnej wersji
+ * uzupełnia zapisane parametry o bieżące wartości początkowe.
+ * Zwraca true, gdy zmieniła zapisany stan (rdzeń unieważnia wtedy pamięć podręczną).
  */
 export function migrujJesliTrzeba(lokalny: MagazynKluczy, karta: MagazynKluczy): boolean {
-  if (czyAktualnaWersja(lokalny.getItem(KLUCZ_META))) return false;
+  if (czyAktualnaWersja(lokalny.getItem(KLUCZ_META))) return uzupelnijParametry(lokalny);
 
   usunKluczePrzewodnika(lokalny);
   usunKluczePrzewodnika(karta);

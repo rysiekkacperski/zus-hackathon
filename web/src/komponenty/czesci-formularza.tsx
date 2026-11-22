@@ -208,7 +208,14 @@ export function PrzyciskiCzesci({
         </Przycisk>
       ) : null}
       {dodatkowe}
-      <Przycisk wariant="glowny" onClick={() => czesci.dalej(onAkcjaKroku)} zajety={czesci.czyOstatnia && zajety}>
+      <Przycisk
+        wariant="glowny"
+        // Wciśnięcie myszy nie zabiera fokusu polu, więc błąd pola z opuszczenia nie przesuwa przycisku przed
+        // kliknięciem; kliknięcie zawsze waliduje część i przenosi fokus na pierwsze pole z błędem.
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => czesci.dalej(onAkcjaKroku)}
+        zajety={czesci.czyOstatnia && zajety}
+      >
         {czesci.czyOstatnia ? (etykietaAkcji ?? teksty.wspolne.przyciski.dalej) : teksty.wspolne.przyciski.dalej}
       </Przycisk>
     </div>

@@ -39,6 +39,12 @@ export function WidokDanychPrzykladowejSprawy() {
     usunPlikiPo24h(pobierzKontekstOperacji());
   }, [teraz]);
 
+  // Karta przeglądarki nosi tytuł sprawy zespołu, tak jak nagłówek h1.
+  const idSprawyZespolu = sprawa && sprawa.zrodlo !== 'wgrane-dokumenty' ? sprawa.idSprawy : undefined;
+  useEffect(() => {
+    if (idSprawyZespolu) document.title = t.naglowekSprawy({ id: idSprawyZespolu });
+  }, [idSprawyZespolu]);
+
   if (!sprawa) {
     return (
       <>

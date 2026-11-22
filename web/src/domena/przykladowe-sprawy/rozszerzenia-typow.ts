@@ -2,7 +2,7 @@
 // Właściciel: u21 (Przykładowe sprawy: weryfikacja i sprawdzenie wyliczeń).
 // Pole rozszerzenie niesie szczegóły wyniku świadczeń, uzasadnienie płatnika, okres do wyliczenia,
 // parametry komunikatów i rodzaj zdarzenia, których nie ma w polach kontraktu.
-import type { DataISO, Grosze, KodKomunikatu, Okres, RodzajUrlopu, RozstrzygniecieSprawy } from '@/domena/typy';
+import type { DataISO, Grosze, KodKomunikatu, Okres, RodzajUrlopu, RozstrzygniecieSprawy, WartoscSprawy } from '@/domena/typy';
 
 export type SwiadczenieSprawy = RozstrzygniecieSprawy['swiadczenie'];
 
@@ -37,5 +37,22 @@ export interface RozszerzenieWeryfikacji {
 declare module '@/domena/typy/przykladowe-sprawy' {
   interface WynikWeryfikacjiSprawy {
     rozszerzenie?: RozszerzenieWeryfikacji;
+  }
+  interface DaneSprawy {
+    /** Wymiar etatu przy niepełnym etacie jako ułamek licznik/mianownik, na przykład 1/2. */
+    wymiarEtatu?: WartoscSprawy<string>;
+  }
+}
+
+/** Podstawa wymiaru obowiązująca od dnia zmiany minimalnej podstawy wymiaru zasiłku w trakcie okresu zasiłku. */
+export interface ZmianaPodstawyWOkresie {
+  od: DataISO;
+  kwota: Grosze;
+}
+
+declare module '@/domena/typy/kalkulacje' {
+  interface PodstawaWymiaru {
+    /** Kolejne podstawy wymiaru od dnia zmiany minimalnej podstawy wymiaru zasiłku, w kolejności dat. */
+    zmianyWOkresie?: ZmianaPodstawyWOkresie[];
   }
 }

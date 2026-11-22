@@ -170,10 +170,12 @@ export function WidokSwiadczenWCiazy() {
   const wzc = zc.wynik;
   const oz = s.okresZasilkowy;
   const opcjeEtykiety = { bezZgody, drugiRodzic, warunekSkladek: zc.warunekZadluzenia !== undefined };
+  // Zasiłek w wysokości zasiłku macierzyńskiego przysługuje wyłącznie pracownicy na umowie o pracę.
+  const zwzmDlaPracownicy = s.forma === null || s.forma === 'umowa-o-prace';
   const etykiety: Record<KluczKarty, string> = {
     zasilekChorobowy: etykietaWyniku(wzc, opcjeEtykiety),
     rehabilitacyjne: etykietaWyniku(s.rehabilitacyjne.wynik, opcjeEtykiety),
-    zwzm: etykietaWyniku(s.zwzm.wynik, opcjeEtykiety),
+    zwzm: zwzmDlaPracownicy ? etykietaWyniku(s.zwzm.wynik, opcjeEtykiety) : T.wyniki.nieDlaPracownicy,
   };
   const nazwy: Record<KluczKarty, string> = {
     zasilekChorobowy: T.karty.zasilekChorobowy,
@@ -279,6 +281,24 @@ export function WidokSwiadczenWCiazy() {
               <PrzyciskLink href={linkSprawy('K29')} wariant="drugorzedny">{T.akcje.K29}</PrzyciskLink>
             </div>
           ) : null}
+          {wzc.postac === 'przysluguje' && zc.wyczekiwanieZaDni ? (
+            <p className="m-0 mt-4 text-body">
+              {T.koniecZasilku.wyczekiwanie({ od: formatujDate(zc.wyczekiwanieZaDni.od), koniec: formatujDate(zc.wyczekiwanieZaDni.do) })}
+            </p>
+          ) : null}
+          {wzc.postac === 'przysluguje' && wzc.do && s.liczbaEzla > 0 ? (
+            <div className="mt-4 flex flex-col gap-3">
+              <p className="m-0 text-body">
+                {zc.macierzynskiZaDni
+                  ? T.koniecZasilku.macierzynskiOdPorodu({ od: formatujDate(zc.macierzynskiZaDni.od), koniec: formatujDate(zc.macierzynskiZaDni.do) })
+                  : `${T.koniecZasilku.doKoncaNiezdolnosci({ data: formatujDate(wzc.do) })} ${T.koniecZasilku.porodWNiezdolnosci}`}
+              </p>
+              {podzial.some((p) => p.rodzaj === 'zasilek-po-ustaniu') && s.zwzm.wynik.postac === 'przysluguje' ? (
+                <Komunikat kod="0266" className="w-full" />
+              ) : null}
+              <Komunikat kod="0279" className="w-full" />
+            </div>
+          ) : null}
           <SekcjaDokumentow id="dok-zc-t">
             <ZawartoscDokumentow s={s} swiadczenie={SWIADCZENIA_SLOWNIKA.zasilekChorobowy} idNaglowka="dok-zc-t" />
           </SekcjaDokumentow>
@@ -349,6 +369,9 @@ export function WidokSwiadczenWCiazy() {
                   { etykieta: T.pola.stawkaWCiazy, wartosc: T.stawki.podstawy({ procent: String(s.rehabilitacyjne.wynik.stawka ?? 100) }) },
                 ]}
               />
+              {s.rehabilitacyjne.stawkaCiazyDo && s.rehabilitacyjne.wynik.postac === 'przysluguje' ? (
+                <p className="m-0 mt-4 text-body">{T.stawkaRehabilitacyjnegoDo({ data: formatujDate(s.rehabilitacyjne.stawkaCiazyDo) })}</p>
+              ) : null}
               <p className="m-0 mt-4 text-body">{T.rehabilitacyjne.poza}</p>
             </>
           )}
@@ -361,7 +384,7 @@ export function WidokSwiadczenWCiazy() {
           <p className="m-0 text-body-strong text-ink-strong">{etykiety.zwzm}</p>
           <p className="m-0 mt-4 text-body">
             {T.zwzm.opis}
-            {s.zwzm.wynik.postac === 'warunek' && kontekst.rodzina.daneRodziny.matka.zmianaZatrudnienia?.rodzaj.wartosc !== 'ustanie' ? ` ${T.zwzm.bezZmian}` : null}
+            {zwzmDlaPracownicy && s.zwzm.wynik.postac === 'warunek' && kontekst.rodzina.daneRodziny.matka.zmianaZatrudnienia?.rodzaj.wartosc !== 'ustanie' ? ` ${T.zwzm.bezZmian}` : null}
           </p>
           <KafelkiDanych
             szerokosc="waska"

@@ -3,7 +3,8 @@
 // ViewLeaveRequestType (u28): krok 1 kreatora wniosku o urlop do pracodawcy, wybór rodzaju wniosku (R-1, R-2).
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { formatujDate } from '@/domena/daty';
+import { formatujDate, porownajDaty } from '@/domena/daty';
+import { czyWychowawczy, dataSzesciuMiesiecyZatrudnienia } from '@/domena/wnioski/urlopy-wychowawczy';
 import type { KodKomunikatu, PodrodzajWnioskuOUrlop } from '@/domena/typy';
 import {
   idSprawyWniosku,
@@ -68,8 +69,12 @@ export function WidokRodzajuWnioskuOUrlop() {
   const rodzaje = useMemo(() => {
     if (stan === null) return [];
     const { kontekst } = stan;
-    return rodzajeWniosku(kontekst.rola, kontekst.rodzina, kontekst.rodzina.plan, kontekst.rodzina.wnioski, kontekst.dzis);
-  }, [stan]);
+    const wszystkie = rodzajeWniosku(kontekst.rola, kontekst.rodzina, kontekst.rodzina.plan, kontekst.rodzina.wnioski, kontekst.dzis);
+    // Sprawa K23 Urlop wychowawczy prowadzi do wniosków o urlop wychowawczy i o obniżenie wymiaru czasu pracy (3.9.6.1.5).
+    const sprawa = sprawaWejscia ?? wniosekWejscia?.idSprawy ?? '';
+    const zK23 = sprawa.startsWith('K23');
+    return wszystkie.filter((r) => (r === 'wychowawczy' || r === 'obnizenie-wymiaru') === zK23);
+  }, [stan, sprawaWejscia, wniosekWejscia]);
 
   const wybrany = wybor ?? (wniosekWejscia?.podrodzaj && rodzaje.includes(wniosekWejscia.podrodzaj) ? wniosekWejscia.podrodzaj : null);
   const walidacja = useWalidacjaNaBiezaco({
@@ -83,11 +88,15 @@ export function WidokRodzajuWnioskuOUrlop() {
   if (stan === null || przekierowanie !== null) return <SzkieletWidoku />;
   const { kontekst, dane } = stan;
   const idSprawyPowrotu = wniosekWejscia?.idSprawy ?? sprawaWejscia;
+  // Urlop wychowawczy i obniżenie wymiaru czasu pracy po 6 miesiącach zatrudnienia (3.9.6.1.5, KA-02 i KA-03).
+  const dataStazu = rodzaje.some((r) => czyWychowawczy(r)) ? dataSzesciuMiesiecyZatrudnienia(dane.okresyZatrudnienia) : null;
+  const przedStazem = dataStazu !== null && porownajDaty(dataStazu, kontekst.dzis) > 0;
   const termin = stawkaZasilku({ zakres: 'z-calym-rodzicielskim', dzis: kontekst.dzis, dataPorodu: dane.dataPoroduPotwierdzona ? dane.dataPorodu : undefined, przyjecie: dane.przyjecie });
 
   function zapisz(cel: 'dalej' | 'dokonczenie') {
     if (stan === null) return;
     if (cel === 'dalej' && !walidacja.sprobujWyslac()) return;
+    if (cel === 'dalej' && przedStazem && czyWychowawczy(wybrany ?? undefined)) return;
     setBlad(null);
     ustawZajety(true);
     const ctx = pobierzKontekstOperacji();
@@ -169,9 +178,19 @@ export function WidokRodzajuWnioskuOUrlop() {
                 setBlad(null);
               }}
               {...walidacja.pole('rodzaj')}
-              opcje={rodzaje.map((r) => ({ wartosc: r, etykieta: t.rodzaje[r].etykieta, opis: t.rodzaje[r].opis }))}
+              opcje={rodzaje.map((r) => ({
+                wartosc: r,
+                etykieta: t.rodzaje[r].etykieta,
+                opis: t.rodzaje[r].opis,
+                wylaczona: przedStazem && czyWychowawczy(r),
+              }))}
             />
           )}
+          {przedStazem && dataStazu ? (
+            <div className="mt-4">
+              <Komunikat kod="0287" parametry={{ data: formatujDate(dataStazu) }} />
+            </div>
+          ) : null}
           {rodzaje.length === 1 && rodzaje[0] === 'czesc-przed-porodem' ? (
             <Notatka className="mt-4">{t.notatkaPrzedPorodem}</Notatka>
           ) : null}

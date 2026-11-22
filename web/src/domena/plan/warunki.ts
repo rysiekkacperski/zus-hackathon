@@ -94,6 +94,10 @@ export interface FaktyRodziny {
   rozpoczecieWCiazy: boolean;
   /** Umowa o pracę matki ustała w ciąży z przyczyny dającej zasiłek macierzyński (K08). */
   ustanieDajeZasilekMacierzynski: boolean;
+  /** Umowa o pracę matki na czas określony przedłużyła się do dnia porodu (K08, 3.6.1.1.3). */
+  umowaPrzedluzonaDoPorodu: boolean;
+  /** Matka pracuje na umowie o pracę, która trwa po dniu porodu (K07, 3.6.1.1.3). */
+  umowaOPraceTrwaPoPorodzie: boolean;
   /** Umowa o pracę matki ustała w ciąży z przyczyny dającej zasiłek w wysokości zasiłku macierzyńskiego (K26). */
   ustanieDajeK26: boolean;
   /** Ubezpieczenie chorobowe matki ustało w ciąży (K24). */
@@ -161,6 +165,13 @@ export function faktyRodziny(w: WejsciePlanu): FaktyRodziny {
     !ustanie.inneZatrudnienie;
   const choroboweUstaloWCiazy =
     ustanie !== null && (ustanie.forma === 'umowa-o-prace' || ((ustanie.forma === 'umowa-zlecenia' || ustanie.forma === 'jdg') && duchMatki));
+  // Umowa o pracę kończy się najpóźniej w dniu porodu: ustała przed porodem albo przedłużyła się do dnia porodu.
+  const dzienPorodu = urodzone ? daneCiazy?.dataPorodu : ptp;
+  const umowaPrzedluzonaDoPorodu = ustanieUmowyOPrace && ustanie.przedluzonaDoPorodu;
+  const umowaKonczySiePrzedPorodem =
+    ustanieUmowyOPrace &&
+    (ustanie.przedluzonaDoPorodu || ustanie.data === undefined || dzienPorodu === undefined || ustanie.data <= dzienPorodu);
+  const umowaOPraceTrwaPoPorodzie = formaMatki === 'umowa-o-prace' && !umowaKonczySiePrzedPorodem;
 
   const dochodZProfilu = w.daneRodziny.dochodNaOsobe?.wartosc;
   const fakty: FaktyRodziny = {
@@ -184,6 +195,8 @@ export function faktyRodziny(w: WejsciePlanu): FaktyRodziny {
     ustanie,
     rozpoczecieWCiazy: rodzajZmiany === 'rozpoczecie',
     ustanieDajeZasilekMacierzynski,
+    umowaPrzedluzonaDoPorodu,
+    umowaOPraceTrwaPoPorodzie,
     ustanieDajeK26,
     choroboweUstaloWCiazy,
   };
@@ -313,7 +326,7 @@ export const METADANE_POZYCJI: Record<string, { etap: Etap; rodzaj: RodzajPozycj
   K08: { etap: 'urlopy-i-zasilek', rodzaj: 'swiadczenie', rodzic: 'matka' },
   K09: { etap: 'urlopy-i-zasilek', rodzaj: 'uprawnienie', rodzic: 'drugi-rodzic' },
   K10: { etap: 'urlopy-i-zasilek', rodzaj: 'uprawnienie', rodzic: 'drugi-rodzic' },
-  K11: { etap: 'urlopy-i-zasilek', rodzaj: 'uprawnienie', rodzic: 'matka' },
+  K11: { etap: 'urlopy-i-zasilek', rodzaj: 'uprawnienie', rodzic: 'matka-albo-ojciec' },
   K12: { etap: 'pieniadze-na-dziecko', rodzaj: 'swiadczenie', rodzic: 'matka-albo-ojciec' },
   K13: { etap: 'pieniadze-na-dziecko', rodzaj: 'swiadczenie', rodzic: 'matka-albo-ojciec' },
   K14: { etap: 'pieniadze-na-dziecko', rodzaj: 'swiadczenie', rodzic: 'matka-albo-ojciec' },
@@ -323,7 +336,7 @@ export const METADANE_POZYCJI: Record<string, { etap: Etap; rodzaj: RodzajPozycj
   K18: { etap: 'pieniadze-na-dziecko', rodzaj: 'swiadczenie', rodzic: 'matka-albo-ojciec' },
   K19: { etap: 'urlopy-i-zasilek', rodzaj: 'obowiazek', rodzic: 'matka' },
   K20: { etap: 'powrot-do-pracy', rodzaj: 'uprawnienie', rodzic: 'matka' },
-  K21: { etap: 'powrot-do-pracy', rodzaj: 'uprawnienie', rodzic: 'kazdy-rodzic-na-umowie-o-prace' },
+  K21: { etap: 'powrot-do-pracy', rodzaj: 'uprawnienie', rodzic: 'matka-albo-ojciec' },
   K22: { etap: 'powrot-do-pracy', rodzaj: 'swiadczenie', rodzic: 'matka-albo-ojciec' },
   K23: { etap: 'powrot-do-pracy', rodzaj: 'uprawnienie', rodzic: 'kazdy-rodzic-na-umowie-o-prace' },
   K24: { etap: 'ciaza', rodzaj: 'swiadczenie', rodzic: 'matka' },
@@ -470,22 +483,39 @@ export const warunkiSpraw: Record<IdPozycji, WarunekSprawy> = {
     return drugiMaTytul ? tak('drugi-rodzic') : NIE;
   },
   K06: (w) => poUrodzeniu(faktyRodziny(w), true),
-  K07: (w) => (faktyRodziny(w).formaMatki === 'umowa-o-prace' ? tak('matka') : NIE),
+  // Umowa o pracę matki trwa po dniu porodu (3.6.1.1.3).
+  K07: (w) => (faktyRodziny(w).umowaOPraceTrwaPoPorodzie ? tak('matka') : NIE),
+  // Także umowa o pracę na czas określony przedłużona do dnia porodu (3.6.1.1.3).
   K08: (w) => {
     const f = faktyRodziny(w);
     const zDuch = (f.formaMatki === 'umowa-zlecenia' || f.formaMatki === 'jdg') && f.duchMatki;
-    return zDuch || f.ustanieDajeZasilekMacierzynski ? tak('matka') : NIE;
+    return zDuch || f.ustanieDajeZasilekMacierzynski || f.umowaPrzedluzonaDoPorodu ? tak('matka') : NIE;
   },
   K09: (w) => (faktyRodziny(w).drugiRodzicPodlega ? tak('drugi-rodzic') : NIE),
   K10: (w) => (faktyRodziny(w).drugiRodzicPodlega ? tak('drugi-rodzic') : NIE),
-  // Poród przed 37. tygodniem ciąży albo hospitalizacja co najmniej 2 kolejne dni między 5. a 28. dniem życia.
+  // Pobyt dziecka w szpitalu po porodzie: przed ukończeniem 37. tygodnia ciąży albo z masą do 1000 g, albo po
+  // ukończeniu 37. tygodnia co najmniej 2 kolejne dni, z których pierwszy przypada od 5. do 28. dnia po porodzie.
+  // Sprawa dotyczy rodzica, który korzysta z urlopu i podlega ubezpieczeniu chorobowemu, a po przyjęciu dziecka
+  // rodzica, który je przyjął (3.6.1.1.3).
   K11: (w) => {
     const f = faktyRodziny(w);
     const d = f.daneCiazy;
-    if (!f.matkaPodlega || !f.urodzone || d === null) return NIE;
-    const przedwczesny = d.tydzienCiazyWDniuPorodu !== undefined && d.tydzienCiazyWDniuPorodu < 37;
-    const hospitalizacja = (d.dniHospitalizacji5do28 ?? 0) >= 2;
-    return przedwczesny || hospitalizacja ? tak('matka') : NIE;
+    const przyjecie = d?.przyjecie;
+    if (d === null || (!f.urodzone && przyjecie === undefined)) return NIE;
+    const tydzien = d.tydzienCiazyWDniuPorodu;
+    const dni = d.dniHospitalizacji5do28;
+    const pobytPoPorodzie =
+      dni === undefined || dni > 0 || d.sytuacjeSzczegolne.some((s) => s.rodzaj === 'szpital' || s.rodzaj === 'przedwczesny-porod');
+    const przedwczesnyAlboNiskaMasa = (tydzien !== undefined && tydzien < 37) || (d.masaUrodzeniowaG !== undefined && d.masaUrodzeniowaG <= 1000);
+    const poTerminieZPobytem = (tydzien === undefined || tydzien >= 37) && (dni ?? 0) >= 2;
+    if (!((przedwczesnyAlboNiskaMasa && pobytPoPorodzie) || poTerminieZPobytem)) return NIE;
+    if (!f.urodzone && przyjecie) {
+      const przyjmujacyPodlega = przyjecie.rolaRodzicaPrzyjmujacego === 'matka' ? f.matkaPodlega : f.drugiRodzicPodlega;
+      return przyjmujacyPodlega ? tak('rodzic-przyjmujacy') : NIE;
+    }
+    if (f.matkaPodlega && f.drugiRodzicPodlega) return tak('matka-albo-ojciec');
+    if (f.matkaPodlega) return tak('matka');
+    return f.drugiRodzicPodlega ? tak('drugi-rodzic') : NIE;
   },
   K12: (w) => poUrodzeniu(faktyRodziny(w), true),
   // Sprawa K12 ma status załatwiona, a dziecko nie ukończyło 18 lat.
@@ -524,7 +554,15 @@ export const warunkiSpraw: Record<IdPozycji, WarunekSprawy> = {
     return f.formaMatki === 'jdg' && f.duchMatki ? tak('matka') : NIE;
   },
   K20: (w) => (faktyRodziny(w).formaMatki === 'umowa-o-prace' ? tak('matka') : NIE),
-  K21: (w) => kazdyRodzicNaUmowieOPrace(faktyRodziny(w)),
+  // Jedna sprawa dla rodziny: ze zwolnienia w danym roku korzysta jedno z rodziców na umowie o pracę (3.6.1.1.3).
+  K21: (w) => {
+    const f = faktyRodziny(w);
+    const matka = naUmowieOPrace(f, 'matka');
+    const drugi = naUmowieOPrace(f, 'drugi-rodzic');
+    if (matka && drugi) return tak('matka-albo-ojciec');
+    if (matka) return tak('matka');
+    return drugi ? tak('drugi-rodzic') : NIE;
+  },
   K22: (w) => {
     const f = faktyRodziny(w);
     return f.matkaPodlega || f.drugiRodzicPodlega ? tak('matka-albo-ojciec') : NIE;

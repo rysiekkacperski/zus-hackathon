@@ -51,7 +51,7 @@ export interface ParametrySystemu {
     uslugaEmailNiedostepna: boolean;                 // 0138
     asystentNiedostepny: boolean;                    // 0071
     odczytDokumentu: 'model' | 'fikstura' | 'nierozpoznany' | 'nieczytelny' | 'niedostepny';
-    opoznienieOdczytuZusMs: number;                  // 2400
+    opoznienieOdczytuZusMs: number;                  // 4000
     kodSmsStaly: string | null;                      // '482913' do testów KA
   };
 }

@@ -6,6 +6,8 @@ export interface WejscieFiltraOdczytu {
   zrodlo: ZrodloweDaneKontaZus;
   poprzednia: DaneZKontaZus | null;
   teraz: ZnacznikCzasu;
+  /** Zgoda konta na dane dotyczące zdrowia; bez niej filtr `ezla` pomija zaświadczenia e-ZLA. Domyślnie udzielona. */
+  zgodaNaDaneZdrowia?: boolean;
 }
 
 export type FiltrOdczytu = (kopia: DaneZKontaZus, w: WejscieFiltraOdczytu) => DaneZKontaZus;

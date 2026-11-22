@@ -8,6 +8,7 @@ import type { WejsciePlanu } from '@/domena/przeliczenie';
 import {
   RODZAJE_STRATY,
   RODZAJE_Z_K35,
+  czyPoronienieBezZaswiadczenia,
   czySpokojnyTryb,
   kanalK34,
   liczbyDzieci,
@@ -137,6 +138,8 @@ export const sytuacjaSzczegolna: KrokPlanu = (pozycje, w) => {
 
   // Sprawy po stracie dziecka, gdy przy życiu nie zostało żadne dziecko z ciąży.
   const bezDzieciPrzyZyciu = maStrate && liczby.przyZyciu === 0;
+  // Poronienie bez zaświadczenia o martwym urodzeniu: K07 i K08 zostają bez zmian, bez przypomnień, do dopisania zaświadczenia.
+  const czekaNaZaswiadczenie = czyPoronienieBezZaswiadczenia(daneCiazy);
   if (bezDzieciPrzyZyciu) {
     const bezUrodzonychZywo = liczby.urodzoneZywo === 0;
     wynik = usunJesliMozna(
@@ -145,12 +148,16 @@ export const sytuacjaSzczegolna: KrokPlanu = (pozycje, w) => {
         const id = idPozycjiSprawy(p);
         if (p.etap === 'ciaza' && id !== null) return true;
         if (id === null) return false;
+        if (czekaNaZaswiadczenie && (id === 'K07' || id === 'K08')) return false;
         return USUWANE_PO_STRACIE.includes(id) || (bezUrodzonychZywo && NA_DZIECKO_URODZONE_ZYWO.includes(id));
       },
       w,
     );
     const terminK06 = terminK06PoStracie(daneCiazy);
-    const bezPrzypomnien: readonly IdPozycji[] = bezUrodzonychZywo ? ['K06'] : BEZ_PRZYPOMNIEN_PO_ZGONIE;
+    const bezPrzypomnien: readonly IdPozycji[] = [
+      ...(bezUrodzonychZywo ? ['K06' as const] : BEZ_PRZYPOMNIEN_PO_ZGONIE),
+      ...(czekaNaZaswiadczenie ? (['K07', 'K08'] as const) : []),
+    ];
     wynik = wynik.map((p) => {
       const id = idPozycjiSprawy(p);
       if (id === null) return p;

@@ -2,7 +2,17 @@
 // Właściciel: u26 (Kalkulatory wariantu zasiłku i podziału urlopu).
 // Reguły R1–R7 z analizy epiku 3.10.1: okres porównania, wypłata miesięczna, suma za okres,
 // harmonogram z podwyższeniem do kwoty świadczenia rodzicielskiego, skutek powrotu do pracy, termin decyzji.
-import { dniWMiesiacu, czesciDaty, dodajDni, liczbaDniWlacznie, miesiacZDaty, roznicaDni } from '@/domena/daty';
+import {
+  czesciDaty,
+  dataZMiesiaca,
+  dniWMiesiacu,
+  dodajDni,
+  dodajMiesiaceDoMiesiaca,
+  liczbaDniWlacznie,
+  miesiacZDaty,
+  roznicaDni,
+} from '@/domena/daty';
+import { minimalnaPodstawaPracownika } from '@/domena/kalkulatory/podstawa';
 import { formatujDate } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
@@ -64,6 +74,7 @@ export interface SzczegolyPorownania {
   dniDoTerminu: number;                // ≥ 0; po terminie 0
   wariant81Dostepny: boolean;
   swiadczenieRodzicielskie: Grosze;
+  podstawy: CzescPodstawy[];           // więcej niż jedna część: zmiana minimalnej podstawy w okresie
 }
 
 export type WynikPorownaniaWariantow = ZapisPorownaniaWariantow['wynik'] & {
@@ -210,12 +221,60 @@ export function wyplataZeStawki(podstawa: Grosze, stawka: Procent): Grosze {
   return Math.round((podstawa * Math.round(stawka * 10)) / 1000);
 }
 
-/** Suma za dni okresu: podstawa / 30 × stawka × dni, zaokrąglona do grosza na końcu. */
-export function sumaZaDni(podstawa: Grosze, stawka: Procent, dni: number): Grosze {
-  return Math.round((podstawa * Math.round(stawka * 10) * dni) / 30000);
+/** Stawka dzienna: podstawa / 30 zaokrąglona do grosza, pomnożona przez stawkę i ponownie zaokrąglona do grosza. */
+export function stawkaDzienna(podstawa: Grosze, stawka: Procent): Grosze {
+  return Math.round((Math.round(podstawa / 30) * Math.round(stawka * 10)) / 1000);
 }
 
-interface OkresWyliczenia { okres: Okres; stawka: Procent; podwyzszany: boolean }
+/** Suma za dni okresu: stawka dzienna × liczba dni. */
+export function sumaZaDni(podstawa: Grosze, stawka: Procent, dni: number): Grosze {
+  return stawkaDzienna(podstawa, stawka) * dni;
+}
+
+/** Część okresu zasiłku z podstawą wymiaru obowiązującą w tej części. */
+export interface CzescPodstawy { od: DataISO; do: DataISO; kwota: Grosze }
+
+/** Podstawa przed podniesieniem do minimalnej podstawy pracownika (średnia pomniejszona o składki). */
+function podstawaPrzedMinimum(p: PodstawaWymiaru): Grosze {
+  const srednia = p.skladniki?.find((s) => s.opis === 'srednia');
+  const pomniejszenie = p.skladniki?.find((s) => s.opis === 'pomniejszenie');
+  return srednia && pomniejszenie ? srednia.kwota - pomniejszenie.kwota : p.kwota;
+}
+
+/** Podstawa wymiaru w dniu: pracownik na pełnym etacie co najmniej minimalna podstawa obowiązująca w tym dniu. */
+export function podstawaWDniu(p: PodstawaWymiaru, k: Katalog, dzien: DataISO): Grosze {
+  if (p.pelnyEtat !== true) return p.kwota;
+  return Math.max(podstawaPrzedMinimum(p), minimalnaPodstawaPracownika(k, dzien));
+}
+
+/** Podstawa wymiaru za dni przed zmianą minimalnej podstawy i od dnia zmiany (zmiany od 1. dnia miesiąca). */
+export function podstawyWOkresie(p: PodstawaWymiaru, k: Katalog, okres: Okres): CzescPodstawy[] {
+  const wynik: CzescPodstawy[] = [];
+  let od = okres.od;
+  let kwota = podstawaWDniu(p, k, od);
+  let m = dodajMiesiaceDoMiesiaca(miesiacZDaty(okres.od), 1);
+  while (dataZMiesiaca(m) <= okres.do) {
+    const dzien = dataZMiesiaca(m);
+    const nowa = podstawaWDniu(p, k, dzien);
+    if (nowa !== kwota) {
+      wynik.push({ od, do: dodajDni(dzien, -1), kwota });
+      od = dzien;
+      kwota = nowa;
+    }
+    m = dodajMiesiaceDoMiesiaca(m, 1);
+  }
+  wynik.push({ od, do: okres.do, kwota });
+  return wynik;
+}
+
+/** Okres podzielony na części z podstawą wymiaru obowiązującą w każdej części. */
+function czesciOkresu(okres: Okres, podstawy: CzescPodstawy[]): { okres: Okres; podstawa: Grosze }[] {
+  return podstawy
+    .filter((c) => c.do >= okres.od && c.od <= okres.do)
+    .map((c) => ({ okres: { od: c.od > okres.od ? c.od : okres.od, do: c.do < okres.do ? c.do : okres.do }, podstawa: c.kwota }));
+}
+
+interface OkresWyliczenia { okres: Okres; stawka: Procent; podwyzszany: boolean; podstawa: Grosze; rodzaj: 'macierzynski' | 'rodzicielski' }
 
 function miesiaceOkresu(o: Okres): { miesiac: MiesiacISO; dni: number }[] {
   const wynik: { miesiac: MiesiacISO; dni: number }[] = [];
@@ -235,20 +294,16 @@ function miesiaceOkresu(o: Okres): { miesiac: MiesiacISO; dni: number }[] {
  * domyka sumę okresu; suma miesiąca niższa niż świadczenie rodzicielskie (za miesiąc częściowy
  * kwota proporcjonalna zaokrąglona w górę do 10 groszy) podwyższona do tej kwoty.
  */
-function sumaZHarmonogramu(podstawa: Grosze, okresy: OkresWyliczenia[], swiadczenie: Grosze): { suma: Grosze; zaOkresy: Grosze[] } {
+function sumaZHarmonogramu(okresy: OkresWyliczenia[], swiadczenie: Grosze): { suma: Grosze; zaRodzaj: Record<OkresWyliczenia['rodzaj'], Grosze> } {
   const miesiace = new Map<MiesiacISO, { kwota: number; dniPodwyzszane: number }>();
-  const zaOkresy: Grosze[] = [];
+  const zaRodzaj: Record<OkresWyliczenia['rodzaj'], Grosze> = { macierzynski: 0, rodzicielski: 0 };
   for (const o of okresy) {
-    const czesci = miesiaceOkresu(o.okres);
-    const sumaOkresu = sumaZaDni(podstawa, o.stawka, liczbaDniWlacznie(o.okres));
-    let dotad = 0;
-    czesci.forEach((c, i) => {
-      const kwota = i === czesci.length - 1 ? sumaOkresu - dotad : sumaZaDni(podstawa, o.stawka, c.dni);
-      dotad += kwota;
+    for (const c of miesiaceOkresu(o.okres)) {
+      const kwota = sumaZaDni(o.podstawa, o.stawka, c.dni);
       const m = miesiace.get(c.miesiac) ?? { kwota: 0, dniPodwyzszane: 0 };
       miesiace.set(c.miesiac, { kwota: m.kwota + kwota, dniPodwyzszane: m.dniPodwyzszane + (o.podwyzszany ? c.dni : 0) });
-    });
-    zaOkresy.push(sumaOkresu);
+    }
+    zaRodzaj[o.rodzaj] += sumaZaDni(o.podstawa, o.stawka, liczbaDniWlacznie(o.okres));
   }
   let suma = 0;
   for (const [miesiac, m] of miesiace) {
@@ -259,7 +314,7 @@ function sumaZHarmonogramu(podstawa: Grosze, okresy: OkresWyliczenia[], swiadcze
     else if (m.dniPodwyzszane > 0) prog = Math.ceil((Math.round(swiadczenie / dniMiesiaca) * m.dniPodwyzszane) / 10) * 10;
     suma += Math.max(m.kwota, prog);
   }
-  return { suma, zaOkresy };
+  return { suma, zaRodzaj };
 }
 
 function okresOd(od: DataISO, dni: number): Okres | null {
@@ -281,34 +336,48 @@ export function porownajWarianty(w: WejsciePorownaniaWariantow): WynikPorownania
   const rodzicielski = okresOd(poczatekRodzicielskiego, tygR * 7);
   const dataPowrotu = rodzicielski === null ? poczatekRodzicielskiego : dodajDni(rodzicielski.do, 1);
   const okresCaly: Okres = { od: dataPorodu, do: rodzicielski?.do ?? macierzynski.do };
+  // Podstawa wymiaru za dni przed zmianą minimalnej podstawy wymiaru zasiłku i od dnia zmiany.
+  const podstawy = podstawyWOkresie(w.podstawa, k, okresCaly);
+  const podstawaOkresu = (o: Okres | null) => (o === null ? podstawa : (czesciOkresu(o, podstawy)[0]?.podstawa ?? podstawa));
 
-  const miesiecznie = (stawka: Procent) => {
-    const zeStawki = wyplataZeStawki(podstawa, stawka);
+  const miesiecznie = (p: Grosze, stawka: Procent) => {
+    const zeStawki = wyplataZeStawki(p, stawka);
     return { zeStawki, poPodwyzszeniu: Math.max(zeStawki, swiadczenie), podwyzszona: zeStawki < swiadczenie };
   };
-  const zHarmonogramu = [stawki.s815, stawki.s100, stawki.s70].some((s) => wyplataZeStawki(podstawa, s) < swiadczenie);
+  const zHarmonogramu = podstawy.some((c) => [stawki.s815, stawki.s100, stawki.s70].some((s) => wyplataZeStawki(c.kwota, s) < swiadczenie));
 
   const wylicz = (stawkaM: Procent, stawkaR: Procent): WariantPorownania => {
-    const okresyWyliczenia: OkresWyliczenia[] = [{ okres: macierzynski, stawka: stawkaM, podwyzszany: true }];
-    if (rodzicielski !== null) okresyWyliczenia.push({ okres: rodzicielski, stawka: stawkaR, podwyzszany: true });
-    const zHarm = sumaZHarmonogramu(podstawa, okresyWyliczenia, swiadczenie);
-    const mM = miesiecznie(stawkaM);
-    const mR = miesiecznie(stawkaR);
+    const okresyWyliczenia: OkresWyliczenia[] = czesciOkresu(macierzynski, podstawy).map((c) => ({
+      okres: c.okres, podstawa: c.podstawa, stawka: stawkaM, podwyzszany: true, rodzaj: 'macierzynski' as const,
+    }));
+    if (rodzicielski !== null) {
+      for (const c of czesciOkresu(rodzicielski, podstawy)) {
+        okresyWyliczenia.push({ okres: c.okres, podstawa: c.podstawa, stawka: stawkaR, podwyzszany: true, rodzaj: 'rodzicielski' });
+      }
+    }
+    const zHarm = sumaZHarmonogramu(okresyWyliczenia, swiadczenie);
+    const mM = miesiecznie(podstawaOkresu(macierzynski), stawkaM);
+    const mR = miesiecznie(podstawaOkresu(rodzicielski), stawkaR);
     const okresy: OkresPorownania[] = [
       { rodzaj: 'macierzynski', okres: macierzynski, dni: tygM * 7, stawka: stawkaM, miesiecznie: mM.poPodwyzszeniu,
-        miesiecznieZeStawki: mM.zeStawki, podwyzszona: mM.podwyzszona, suma: zHarm.zaOkresy[0] },
+        miesiecznieZeStawki: mM.zeStawki, podwyzszona: mM.podwyzszona, suma: zHarm.zaRodzaj.macierzynski },
       { rodzaj: 'rodzicielski', okres: rodzicielski, dni: tygR * 7, stawka: stawkaR, miesiecznie: mR.poPodwyzszeniu,
-        miesiecznieZeStawki: mR.zeStawki, podwyzszona: mR.podwyzszona, suma: zHarm.zaOkresy[1] ?? 0 },
+        miesiecznieZeStawki: mR.zeStawki, podwyzszona: mR.podwyzszona, suma: zHarm.zaRodzaj.rodzicielski },
     ];
-    const suma = zHarmonogramu ? zHarm.suma : zHarm.zaOkresy.reduce((a, b) => a + b, 0);
+    const suma = zHarmonogramu ? zHarm.suma : zHarm.zaRodzaj.macierzynski + zHarm.zaRodzaj.rodzicielski;
     return { okresy, wyrownanie: 0, suma };
   };
 
   const w81 = wylicz(stawki.s815, stawki.s815);
   const w100 = wylicz(stawki.s100, stawki.s70);
   if (tygR === 0) {
-    // Wyrównanie zasiłku za urlop macierzyński do 100%, gdy matka nie wykorzysta urlopu rodzicielskiego.
-    const wyrownanie = Math.max(0, sumaZaDni(podstawa, stawki.s100, tygM * 7) - sumaZaDni(podstawa, stawki.s815, tygM * 7));
+    // Wyrównanie zasiłku za urlop macierzyński do 100%: żaden dzień urlopu rodzicielskiego matki ani tygodni drugiego
+    // rodzica ponad jego 9 tygodni nie przypada przed pierwszymi urodzinami dziecka. Kalkulator liczy urlop
+    // rodzicielski matki bezpośrednio po urlopie macierzyńskim, więc warunek spełnia 0 tygodni urlopu rodzicielskiego.
+    const wyrownanie = czesciOkresu(macierzynski, podstawy).reduce((s, c) => {
+      const dni = liczbaDniWlacznie(c.okres);
+      return s + Math.max(0, sumaZaDni(c.podstawa, stawki.s100, dni) - sumaZaDni(c.podstawa, stawki.s815, dni));
+    }, 0);
     w81.wyrownanie = wyrownanie;
     w81.suma += wyrownanie;
   }
@@ -342,6 +411,7 @@ export function porownajWarianty(w: WejsciePorownaniaWariantow): WynikPorownania
       dniDoTerminu: Math.max(0, roznicaDni(w.dzis, termin)),
       wariant81Dostepny,
       swiadczenieRodzicielskie: swiadczenie,
+      podstawy,
     },
   };
 }

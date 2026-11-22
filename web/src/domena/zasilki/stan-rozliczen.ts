@@ -1,6 +1,6 @@
 // Stan rozliczeń składek JDG i skutek zadłużenia (kontrakt, sekcja 7.2; ANALIZY/17 R1–R9).
 // Właściciel: u14 (Dane ZUS: e-ZLA, rozliczenia składek, statusy wniosków).
-import { dataZeZnacznika, dodajDni, dodajMiesiace, formatujDate, parsujDate, porownajDaty } from '@/domena/daty';
+import { dataZeZnacznika, dodajDni, dodajMiesiace, formatujDate, porownajDaty } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
 import { wartoscZKatalogu, zaswiadczeniaOdNajnowszych } from '@/domena/zasilki/okres-zasilkowy';
 import type {
@@ -11,9 +11,12 @@ import type {
   Katalog,
   KodKomunikatu,
   OsZadluzenia,
+  Pesel,
   StanRozliczenSkladek,
   TytulUbezpieczenia,
   UmowaOSplacie,
+  Wniosek,
+  WniosekZam,
   ZaswiadczenieEzla,
   ZaswiadczenieOStanieRozliczen,
   ZnacznikCzasu,
@@ -89,36 +92,114 @@ export type SwiadczenieDniaPrawa = 'zasilek-chorobowy' | 'zasilek-macierzynski';
 export interface DzienPowstaniaPrawa {
   swiadczenie: SwiadczenieDniaPrawa;
   dzien: DataISO;
-  podstawa: 'porod' | 'termin-porodu' | 'e-zla';
+  podstawa: 'porod' | 'termin-porodu' | 'e-zla' | 'wniosek-zam' | 'wyczekiwanie';
   seriaINumer?: string;
 }
+
+/** Okres wyczekiwania na zasiłek chorobowy przy dobrowolnym ubezpieczeniu chorobowym w dniach (3.5.1). */
+export const DOMYSLNE_WYCZEKIWANIE_DOBROWOLNE = 90;
 
 /** Ostatnie zaświadczenie e-ZLA z powodu choroby (najpóźniejszy początek niezdolności). */
 export function ostatnieZaswiadczenie(ezla: readonly ZaswiadczenieEzla[]): ZaswiadczenieEzla | null {
   return zaswiadczeniaOdNajnowszych(ezla.filter((z) => z.rodzaj === 'choroba'))[0] ?? null;
 }
 
-/** Dni powstania prawa z podstawą: zasiłek chorobowy z ostatniego e-ZLA, zasiłek macierzyński z porodu albo terminu. */
+/**
+ * Ostatnia nieprzerwana niezdolność do pracy z jednego albo kilku następujących po sobie zaświadczeń e-ZLA
+ * z powodu choroby: pierwszy dzień, ostatni dzień i numer zaświadczenia, które ją rozpoczyna.
+ */
+export function ostatniaNiezdolnosc(
+  ezla: readonly ZaswiadczenieEzla[],
+): { od: DataISO; do: DataISO; seriaINumer: string } | null {
+  const choroba = ezla
+    .filter((z) => z.rodzaj === 'choroba')
+    .sort((a, b) => porownajDaty(a.od, b.od) || porownajDaty(a.do, b.do));
+  if (choroba.length === 0) return null;
+  let biezaca = { od: choroba[0].od, do: choroba[0].do, seriaINumer: choroba[0].seriaINumer };
+  for (const z of choroba.slice(1)) {
+    if (z.od <= dodajDni(biezaca.do, 1)) {
+      if (z.do > biezaca.do) biezaca = { ...biezaca, do: z.do };
+    } else {
+      biezaca = { od: z.od, do: z.do, seriaINumer: z.seriaINumer };
+    }
+  }
+  return biezaca;
+}
+
+/** Pierwszy dzień zasiłku macierzyńskiego z wniosku ZAM złożonego przed porodem w grupie danych Wnioski. */
+export function poczatekZasilkuZWnioskuZam(wnioski: readonly Wniosek[], pesel: Pesel | null): DataISO | null {
+  const zlozone = wnioski
+    .filter((w): w is WniosekZam => w.rodzaj === 'zam')
+    .filter((w) => (pesel === null || w.konto === pesel) && (w.stan === 'wyslany' || w.stan === 'zlozony'))
+    .map((w) => w.przedPorodem?.dzienPoczatkuZasilku)
+    .filter((d): d is DataISO => d !== undefined)
+    .sort(porownajDaty);
+  return zlozone[0] ?? null;
+}
+
+export interface OpcjeDniPowstaniaPrawa {
+  wnioski?: readonly Wniosek[];
+  pesel?: Pesel | null;
+  /** Początek dobrowolnego ubezpieczenia chorobowego, od którego biegnie okres wyczekiwania. */
+  poczatekChorobowego?: DataISO | null;
+  wyczekiwanieDni?: number;
+}
+
+/** Dzień powstania prawa do zasiłku macierzyńskiego: początek zasiłku z wniosku ZAM, data porodu albo termin porodu. */
+export function dzienPrawaMacierzynskiego(
+  daneCiazy: DaneCiazyIDziecka | null,
+  opcje: OpcjeDniPowstaniaPrawa = {},
+): DzienPowstaniaPrawa | null {
+  const zWniosku = poczatekZasilkuZWnioskuZam(opcje.wnioski ?? [], opcje.pesel ?? null);
+  if (zWniosku) return { swiadczenie: 'zasilek-macierzynski', dzien: zWniosku, podstawa: 'wniosek-zam' };
+  if (daneCiazy?.dataPorodu) return { swiadczenie: 'zasilek-macierzynski', dzien: daneCiazy.dataPorodu, podstawa: 'porod' };
+  if (daneCiazy?.przewidywanyTerminPorodu) {
+    return { swiadczenie: 'zasilek-macierzynski', dzien: daneCiazy.przewidywanyTerminPorodu, podstawa: 'termin-porodu' };
+  }
+  return null;
+}
+
+/**
+ * Dzień powstania prawa do zasiłku chorobowego: pierwszy dzień ostatniej nieprzerwanej niezdolności do pracy,
+ * a gdy przypada w okresie wyczekiwania i niezdolność trwa po jego upływie, dzień nabycia prawa.
+ */
+export function dzienPrawaChorobowego(
+  ezla: readonly ZaswiadczenieEzla[],
+  opcje: OpcjeDniPowstaniaPrawa = {},
+): DzienPowstaniaPrawa | null {
+  const niezdolnosc = ostatniaNiezdolnosc(ezla);
+  if (!niezdolnosc) return null;
+  const dzien: DzienPowstaniaPrawa = {
+    swiadczenie: 'zasilek-chorobowy',
+    dzien: niezdolnosc.od,
+    podstawa: 'e-zla',
+    seriaINumer: niezdolnosc.seriaINumer,
+  };
+  if (opcje.poczatekChorobowego) {
+    const nabycie = dodajDni(opcje.poczatekChorobowego, opcje.wyczekiwanieDni ?? DOMYSLNE_WYCZEKIWANIE_DOBROWOLNE);
+    if (niezdolnosc.od < nabycie && niezdolnosc.do >= nabycie) return { ...dzien, dzien: nabycie, podstawa: 'wyczekiwanie' };
+  }
+  return dzien;
+}
+
+/** Dni powstania prawa z podstawą: zasiłek chorobowy z e-ZLA, zasiłek macierzyński z wniosku ZAM, porodu albo terminu. */
 export function dniPowstaniaPrawaZPodstawa(
   daneCiazy: DaneCiazyIDziecka | null,
   ezla: readonly ZaswiadczenieEzla[],
+  opcje: OpcjeDniPowstaniaPrawa = {},
 ): DzienPowstaniaPrawa[] {
-  const dni: DzienPowstaniaPrawa[] = [];
-  const ostatnie = ostatnieZaswiadczenie(ezla);
-  if (ostatnie) {
-    dni.push({ swiadczenie: 'zasilek-chorobowy', dzien: ostatnie.od, podstawa: 'e-zla', seriaINumer: ostatnie.seriaINumer });
-  }
-  if (daneCiazy?.dataPorodu) {
-    dni.push({ swiadczenie: 'zasilek-macierzynski', dzien: daneCiazy.dataPorodu, podstawa: 'porod' });
-  } else if (daneCiazy?.przewidywanyTerminPorodu) {
-    dni.push({ swiadczenie: 'zasilek-macierzynski', dzien: daneCiazy.przewidywanyTerminPorodu, podstawa: 'termin-porodu' });
-  }
-  return dni;
+  return [dzienPrawaChorobowego(ezla, opcje), dzienPrawaMacierzynskiego(daneCiazy, opcje)].filter(
+    (d): d is DzienPowstaniaPrawa => d !== null,
+  );
 }
 
 /** Dni powstania prawa do świadczeń z danych ciąży i zaświadczeń e-ZLA. */
-export function dniPowstaniaPrawa(daneCiazy: DaneCiazyIDziecka | null, ezla: ZaswiadczenieEzla[]): DataISO[] {
-  return dniPowstaniaPrawaZPodstawa(daneCiazy, ezla).map((d) => d.dzien);
+export function dniPowstaniaPrawa(
+  daneCiazy: DaneCiazyIDziecka | null,
+  ezla: ZaswiadczenieEzla[],
+  opcje: OpcjeDniPowstaniaPrawa = {},
+): DataISO[] {
+  return dniPowstaniaPrawaZPodstawa(daneCiazy, ezla, opcje).map((d) => d.dzien);
 }
 
 /** Próg zadłużenia obowiązujący w dniu `dzien`: 1% minimalnego wynagrodzenia (48,06 zł przy 4806 zł). Kwoty słownika są w groszach. */
@@ -133,6 +214,16 @@ export function progZadluzenia(katalog: Katalog, dzien: DataISO): { prog: Grosze
     dzien,
   );
   return { prog: prog !== null ? Math.round(prog) : Math.round((minimalne * DOMYSLNE_ROZLICZENIA.progProcent) / 100), minimalne };
+}
+
+/** Okres wyczekiwania na zasiłek chorobowy przy dobrowolnym ubezpieczeniu chorobowym ze słownika wymiarów i okresów. */
+export function wyczekiwanieDobrowolneZKatalogu(katalog: Katalog, dzien: DataISO): number {
+  const wartosc = wartoscZKatalogu(
+    katalog,
+    { id: 'okres-wyczekiwania-na-zasilek-chorobowy', nazwa: 'Okres wyczekiwania', klucz: 'dobrowolne' },
+    dzien,
+  );
+  return wartosc ?? DOMYSLNE_WYCZEKIWANIE_DOBROWOLNE;
 }
 
 /** Okres spłaty zadłużenia w miesiącach ze słownika wymiarów i okresów. */
@@ -211,13 +302,11 @@ export function skutekZadluzenia(
   return komunikaty[0];
 }
 
-/** Domyślny dzień stanu w zaświadczeniu o stanie rozliczeń: dzień powstania prawa do zasiłku macierzyńskiego albo dziś. */
-export function domyslnyDzienZaswiadczenia(daneCiazy: DaneCiazyIDziecka | null, dzis: DataISO): DataISO {
-  const dzien = daneCiazy?.dataPorodu ?? daneCiazy?.przewidywanyTerminPorodu;
-  return dzien !== undefined && dzien <= dzis ? dzien : dzis;
-}
-
-/** Rodzaj zaświadczenia według kwoty zadłużenia i umowy o spłacie. */
+/**
+ * Rodzaj dokumentu wydanego na wniosek o zaświadczenie o niezaleganiu: zaświadczenie o niezaleganiu bez zadłużenia
+ * albo przy całym zadłużeniu objętym umową spłacaną terminowo, a przy każdym innym zadłużeniu decyzja o odmowie
+ * (wartość `o-wysokosci-zadluzenia`).
+ */
 export function rodzajZaswiadczenia(stan: StanRozliczenSkladek): ZaswiadczenieOStanieRozliczen['rodzaj'] {
   return kwotaDlaStraznika(stan) === 0 ? 'o-niezaleganiu' : 'o-wysokosci-zadluzenia';
 }
@@ -226,22 +315,6 @@ export function rodzajZaswiadczenia(stan: StanRozliczenSkladek): ZaswiadczenieOS
 export function tytulDzialalnosci(kopia: DaneZKontaZus | null): TytulUbezpieczenia | null {
   if (!kopia) return null;
   return [...kopia.tytuly].filter((t) => t.rodzaj === 'dzialalnosc').sort((a, b) => porownajDaty(a.od, b.od))[0] ?? null;
-}
-
-/** Walidacja pola dnia stanu rozliczeń: 0188, 0010, 0189, 0190. */
-export function walidujDzienStanu(
-  tekst: string,
-  dzis: DataISO,
-  poczatekDzialalnosci: DataISO | null,
-): { dzien: DataISO } | { kod: KodKomunikatu; parametry?: Record<string, string> } {
-  if (tekst.trim() === '') return { kod: '0188' };
-  const dzien = parsujDate(tekst);
-  if (dzien === null) return { kod: '0010' };
-  if (dzien > dzis) return { kod: '0189' };
-  if (poczatekDzialalnosci !== null && dzien < poczatekDzialalnosci) {
-    return { kod: '0190', parametry: { data: formatujDate(poczatekDzialalnosci) } };
-  }
-  return { dzien };
 }
 
 /** Stan rozliczeń na dzień z kopii (zapisany przy odczycie) albo z osi zadłużenia odczytanej z PUE/eZUS. */

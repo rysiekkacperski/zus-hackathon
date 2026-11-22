@@ -211,9 +211,10 @@ function sekcjaDanychCiazy(p: ProfilDoPokazania, zgoda: boolean): SekcjaProfilu 
     id: 'daneCiazy',
     tytul: t.sekcje.daneCiazy,
     etykietaZmiany: t.zmienSekcje.daneCiazy,
-    ekran: zgoda ? ekranDanychCiazy(sytuacja) : 'ViewProfileSituation',
+    // Dane przyjęcia dziecka rodzic podaje także bez zgody na dane dotyczące zdrowia (KA-01 3.3.1.4.2).
+    ekran: zgoda || sytuacja === 'przyjecie' ? ekranDanychCiazy(sytuacja) : 'ViewProfileSituation',
     wiersze,
-    notatka: zgoda ? undefined : teksty.komunikaty['0004'],
+    notatka: zgoda || sytuacja === 'przyjecie' ? undefined : teksty.komunikaty['0004'],
   };
 }
 

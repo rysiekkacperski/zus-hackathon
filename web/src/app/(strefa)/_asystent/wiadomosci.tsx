@@ -1,7 +1,7 @@
 'use client';
 
 // Wiadomości panelu ViewAssistantChat według wzorów P28-02 … P28-12: dymek użytkownika, odpowiedź asystenta
-// z kartą sprawy, propozycją działania i stopką 0148, komunikaty 0070, 0071, 0256 i 0033.
+// z kartą sprawy, propozycją działania i stopką 0148, komunikaty 0070, 0071, 0256, 0275, 0276 i 0033.
 import type { SzczegolyKontekstuAsystenta } from '@/domena/asystent/rozszerzenia-typow';
 import { formatujDate, formatujDateICzas } from '@/domena/daty';
 import type { IdSprawy, KontekstAsystenta, PropozycjaDzialania, Rola, WiadomoscAsystenta, ZnacznikCzasu } from '@/domena/typy';
@@ -311,6 +311,9 @@ function PozaZakresem({ wiadomosc }: { wiadomosc: WiadomoscAsystenta }) {
             <a href={`mailto:${T.adresMamaZus}`} className={klasy}>
               {T.kanaly['mama-zus']}
             </a>
+            <a href={`tel:${T.numerInfoliniiZus}`} className={klasy}>
+              {T.kanaly.infolinia}
+            </a>
           </div>
         }
       />
@@ -354,6 +357,14 @@ export function WiadomoscAsystentaWidok({
       );
     case '0070':
       return <PozaZakresem wiadomosc={wiadomosc} />;
+    case '0275':
+    case '0276':
+      return (
+        <div>
+          <Naglowek autor={T.asystent} czas={wiadomosc.czas} />
+          <Komunikat kod={wiadomosc.kodKomunikatu} />
+        </div>
+      );
     case '0256':
       return <PowitanieNowegoUzytkownika czas={wiadomosc.czas} k={k} />;
     case '0033':

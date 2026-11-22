@@ -23,7 +23,15 @@ export type CelOdpisu = NonNullable<WniosekOOdpis['cel']>;
 export type SposobOdbioruOdpisu = NonNullable<WniosekOOdpis['sposobOdbioru']>;
 
 export const RODZAJE_ODPISU: readonly RodzajOdpisu[] = ['skrocony', 'zupelny', 'wielojezyczny'];
-export const CELE_ODPISU: readonly CelOdpisu[] = ['sprawa-w-zus', 'swiadczenie-socjalne', 'opieka-albo-adopcja', 'zatrudnienie', 'inny'];
+export const CELE_ODPISU: readonly CelOdpisu[] = [
+  'sprawa-w-zus',
+  'swiadczenie-socjalne',
+  'alimenty',
+  'opieka-albo-adopcja',
+  'zatrudnienie',
+  'dowod-osobisty-albo-paszport',
+  'inny',
+];
 export const SPOSOBY_ODBIORU: readonly SposobOdbioruOdpisu[] = ['e-doreczenia', 'poczta', 'osobiscie'];
 
 /** Liczba dni kalendarzowych od złożenia wniosku do przewidywanego dnia wydania odpisu. */
@@ -40,6 +48,8 @@ export interface FormularzOdpisu {
   cel: CelOdpisu | null;
   sposobOdbioru: SposobOdbioruOdpisu | null;
   adresDoDoreczenia: string;
+  /** Identyfikator TERYT gminy wybranego urzędu stanu cywilnego; pusty tekst oznacza brak wyboru. */
+  urzadStanuCywilnego: string;
 }
 
 /** Pola formularza w kolejności na ekranie (fokus na pierwszym polu z błędem). */
@@ -54,6 +64,7 @@ export const KOLEJNOSC_POL_ODPISU: readonly PoleOdpisu[] = [
   'cel',
   'sposobOdbioru',
   'adresDoDoreczenia',
+  'urzadStanuCywilnego',
 ];
 
 /** Profil rodziny potrzebny symulowanemu rejestrowi i uzupełnieniu wniosku. */
@@ -136,7 +147,7 @@ export function walidujPeselDziecka(tekst: string, dataUrodzenia: DataISO | null
   return null;
 }
 
-/** Błędy wniosku o odpis: 0006, 0010, 0025–0031, 0163, 0191, 0195, 0196; wszystkie pola naraz. */
+/** Błędy wniosku o odpis: 0006 (także urząd stanu cywilnego), 0010, 0025–0031, 0163, 0191, 0195, 0196; wszystkie pola naraz. */
 export function walidujWniosekOOdpis(f: FormularzOdpisu, dzis: DataISO): BledyPol<PoleOdpisu> {
   const bledy: BledyPol<PoleOdpisu> = {};
   if (f.rodzajOdpisu === null) bledy.rodzajOdpisu = '0006';
@@ -167,6 +178,8 @@ export function walidujWniosekOOdpis(f: FormularzOdpisu, dzis: DataISO): BledyPo
     if (f.adresDoDoreczenia.trim() === '') bledy.adresDoDoreczenia = '0195';
     else if (!walidujKodPocztowy(f.adresDoDoreczenia)) bledy.adresDoDoreczenia = '0196';
   }
+
+  if (f.urzadStanuCywilnego.trim() === '') bledy.urzadStanuCywilnego = '0006';
   return bledy;
 }
 
@@ -198,8 +211,11 @@ export function urzadStanuCywilnego(gmina: Gmina | null, nazwy: { wMiejscowniku:
   return gmina.urzadStanuCywilnegoMiejscownik ? nazwy.wMiejscowniku(gmina.urzadStanuCywilnegoMiejscownik) : nazwy.wGminie(gmina.nazwa);
 }
 
-/** Formularz wypełniony z profilu: dane dziecka z profilu, data urodzenia z potwierdzonej daty porodu. */
-export function formularzZProfilu(daneCiazy: DaneCiazyIDziecka | null): FormularzOdpisu {
+/**
+ * Formularz wypełniony z profilu: dane dziecka z profilu, data urodzenia z potwierdzonej daty porodu,
+ * propozycja urzędu stanu cywilnego w gminie zamieszkania z profilu rodziny.
+ */
+export function formularzZProfilu(daneCiazy: DaneCiazyIDziecka | null, gmina: Gmina | null = null): FormularzOdpisu {
   const dziecko = dzieckoZProfilu(daneCiazy);
   const data = daneCiazy?.dataPoroduPotwierdzona ? (daneCiazy.dataPorodu ?? dziecko?.dataUrodzenia) : dziecko?.dataUrodzenia;
   return {
@@ -212,6 +228,7 @@ export function formularzZProfilu(daneCiazy: DaneCiazyIDziecka | null): Formular
     cel: null,
     sposobOdbioru: null,
     adresDoDoreczenia: '',
+    urzadStanuCywilnego: gmina?.idTeryt ?? '',
   };
 }
 
@@ -249,14 +266,19 @@ function rowne(a: string | undefined, b: string | undefined): boolean {
   return a.trim().normalize('NFC').toLocaleLowerCase('pl') === b.trim().normalize('NFC').toLocaleLowerCase('pl');
 }
 
+/** Konta przykładowe bez adresu do e-Doręczeń: Tomasz Nowak (Drugi rodzic). */
+export const KONTA_BEZ_ADRESU_DO_E_DORECZEN: readonly string[] = ['90011555532'];
+
 /**
- * Odpowiedź symulowanego rejestru stanu cywilnego: akt jest w rejestrze, gdy imię, nazwisko i data urodzenia
+ * Odpowiedź symulowanego rejestru stanu cywilnego: wnioskodawca bez adresu do e-Doręczeń dostaje 0295 przy
+ * każdym sposobie odbioru. Akt jest w rejestrze, gdy imię, nazwisko i data urodzenia
  * dziecka we wniosku są równe danym dziecka w profilu (pole puste w profilu nie rozstrzyga). Brak aktu: 0146.
  */
 export function symulujRejestr(
   wniosek: WniosekOOdpis,
   profil: ProfilDoRejestru,
-): { kod: Extract<KodKomunikatu, '0145' | '0146'> } | { urzadStanuCywilnego: string; przewidywanyDzienWydania: DataISO } {
+): { kod: Extract<KodKomunikatu, '0145' | '0146' | '0295'> } | { urzadStanuCywilnego: string; przewidywanyDzienWydania: DataISO } {
+  if (KONTA_BEZ_ADRESU_DO_E_DORECZEN.includes(wniosek.konto)) return { kod: '0295' };
   const dziecko = dzieckoZProfilu(profil.daneCiazy);
   const dane = wniosek.daneDziecka;
   const dataProfilu = profil.daneCiazy?.dataPorodu ?? dziecko?.dataUrodzenia;

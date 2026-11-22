@@ -12,7 +12,6 @@ import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { BladPola, idBledu, klasyRamkiPolaWpisu, polaczOpisy } from '@/komponenty/pole';
-import { PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { Stos, UkladDwuKolumnowy } from '@/komponenty/uklad';
 import { formatujLiczbe } from '@/domena/kwoty';
@@ -110,11 +109,6 @@ export function WidokWgraniaDokumentu() {
           {bladPola ? <BladPola id={idBledu(ID_PLIKU)} kod={bladPola} /> : null}
         </div>
         <Notatka className="mt-6">{t.kartaPliku.notatka}</Notatka>
-        <div className="mt-6">
-          <PrzyciskLink href={trasy.ViewSampleCaseList()} wariant="drugorzedny">
-            {t.wrocDoListy}
-          </PrzyciskLink>
-        </div>
       </Karta>
     </Stos>
   );
@@ -125,7 +119,7 @@ export function WidokWgraniaDokumentu() {
         <ListaKrokow kroki={t.jak.kroki.map((krok) => <span key={krok}>{krok}</span>)} />
       </Karta>
       <Karta tytul={t.rodzaje.tytul} bezLinii>
-        <ul className="m-0 grid gap-2 pl-5">
+        <ul className="m-0 grid gap-x-6 gap-y-2 pl-5 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
           {t.rodzaje.lista.map((rodzaj) => (
             <li key={rodzaj}>{rodzaj}</li>
           ))}
@@ -136,7 +130,11 @@ export function WidokWgraniaDokumentu() {
 
   return (
     <>
-      <NaglowekStrony tytul={t.naglowek} wstep={tryb === 'dodaj' ? t.wstepDodaj : t.wstep} />
+      <NaglowekStrony
+        tytul={t.naglowek}
+        wstep={tryb === 'dodaj' ? t.wstepDodaj : t.wstep}
+        powrot={{ href: trasy.ViewSampleCaseList(), etykieta: t.wrocDoListy }}
+      />
       <UkladDwuKolumnowy tresc={tresc} boczna={boczna} etykietaBocznej={t.etykietaBocznej} />
     </>
   );

@@ -37,7 +37,15 @@ export const ID_KWOT = {
   zasilekChorobowyBezKoduB: 'zasilek-chorobowy-bez-kodu-b',
 } as const;
 
-const OD_URUCHOMIENIA = '2026-01-01';
+/** Początek obowiązywania wartości bez okresu w tabeli wymagania Słownik kwot i progów (3.5.1.1.2). */
+const OD_URUCHOMIENIA = '2023-04-26';
+/** Początek obowiązywania wartości programu Aktywny Rodzic. */
+const OD_AKTYWNEGO_RODZICA = '2024-10-01';
+/** Wartości zmieniające się z początkiem roku kalendarzowego. */
+const OD_2026 = '2026-01-01';
+const DO_2026 = '2026-12-31';
+const OD_2027 = '2027-01-01';
+const DO_2027 = '2027-12-31';
 
 export const wpisySlownikaKwot: readonly WpisSlownika[] = [
   {
@@ -94,7 +102,7 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
     ],
     wersje: [{ od: OD_URUCHOMIENIA, wartosci: { kwota: 67400, niepelnosprawnosc: 76400 } }],
     szablonOpisu:
-      '{kwota} netto miesięcznie na osobę, a w rodzinie z dzieckiem z orzeczeniem o niepełnosprawności {niepelnosprawnosc}',
+      '{kwota} netto miesięcznie na osobę, a w rodzinie z dzieckiem z orzeczeniem o niepełnosprawności {niepelnosprawnosc}. Gdy dochód rodziny przekracza próg pomnożony przez liczbę członków rodziny o kwotę nie wyższą niż łączna miesięczna kwota zasiłków rodzinnych z dodatkami, w której dodatek z tytułu urodzenia dziecka liczy się jako 1/12 jego kwoty, zasiłek rodzinny i dodatki przysługują w kwocie pomniejszonej o kwotę przekroczenia, a kwota niższa niż 20 zł nie przysługuje',
     edytowalny: true,
     kolejnosc: 5,
   },
@@ -107,7 +115,7 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
       { klucz: 'tygodnie', etykieta: 'Okres wypłaty przy jednym dziecku', jednostka: 'tygodnie' },
     ],
     wersje: [{ od: OD_URUCHOMIENIA, wartosci: { kwota: 100000, tygodnie: 52 } }],
-    szablonOpisu: '{kwota} miesięcznie przez {tygodnie} tygodnie przy jednym dziecku',
+    szablonOpisu: '{kwota} miesięcznie, jedno świadczenie bez względu na liczbę dzieci, przez {tygodnie} tygodnie przy jednym dziecku',
     edytowalny: true,
     kolejnosc: 6,
   },
@@ -129,7 +137,7 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
       { klucz: 'kwota', etykieta: 'Kwota miesięcznie', jednostka: 'zl' },
       { klucz: 'niepelnosprawnosc', etykieta: 'Kwota miesięcznie przy orzeczeniu o niepełnosprawności dziecka', jednostka: 'zl' },
     ],
-    wersje: [{ od: OD_URUCHOMIENIA, wartosci: { kwota: 150000, niepelnosprawnosc: 190000 } }],
+    wersje: [{ od: OD_AKTYWNEGO_RODZICA, wartosci: { kwota: 150000, niepelnosprawnosc: 190000 } }],
     szablonOpisu: '{kwota} miesięcznie, przy orzeczeniu o niepełnosprawności dziecka {niepelnosprawnosc}',
     edytowalny: true,
     kolejnosc: 8,
@@ -146,7 +154,7 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
         jednostka: 'zl',
       },
     ],
-    wersje: [{ od: OD_URUCHOMIENIA, wartosci: { kwota: 150000, niepelnosprawnosc: 190000 } }],
+    wersje: [{ od: OD_AKTYWNEGO_RODZICA, wartosci: { kwota: 150000, niepelnosprawnosc: 190000 } }],
     szablonOpisu:
       'do {kwota} miesięcznie, nie więcej niż opłata za żłobek, przy orzeczeniu o niepełnosprawności dziecka do {niepelnosprawnosc}',
     edytowalny: true,
@@ -157,7 +165,7 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
     slownik: 'kwoty-i-progi',
     nazwa: 'Aktywny Rodzic, aktywnie w domu',
     warianty: [{ klucz: 'kwota', etykieta: 'Kwota miesięcznie', jednostka: 'zl' }],
-    wersje: [{ od: OD_URUCHOMIENIA, wartosci: { kwota: 50000 } }],
+    wersje: [{ od: OD_AKTYWNEGO_RODZICA, wartosci: { kwota: 50000 } }],
     szablonOpisu: '{kwota} miesięcznie',
     edytowalny: true,
     kolejnosc: 10,
@@ -196,7 +204,7 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
     ],
     wersje: [{ od: OD_URUCHOMIENIA, wartosci: { stawka: 81.5, drugiRodzic: 70 } }],
     szablonOpisu:
-      '{stawka} podstawy za okres urlopu macierzyńskiego albo na warunkach urlopu macierzyńskiego i urlopu rodzicielskiego, z wyjątkiem 9 tygodni drugiego rodzica płatnych {drugiRodzic}',
+      '{stawka} podstawy za okres urlopu macierzyńskiego albo na warunkach urlopu macierzyńskiego i urlopu rodzicielskiego, z wyjątkiem 9 tygodni drugiego rodzica płatnych {drugiRodzic}, gdy co najmniej jeden dzień urlopu rodzicielskiego ze stawką {stawka} przypada przed pierwszymi urodzinami dziecka, a w pozostałych przypadkach 70% za urlop rodzicielski i jednorazowe wyrównanie zasiłku za urlop macierzyński albo na warunkach urlopu macierzyńskiego do 100%',
     edytowalny: true,
     reguly: ['zasilek-macierzynski-bez-wyczekiwania'],
     kolejnosc: 12,
@@ -256,7 +264,10 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
     slownik: 'kwoty-i-progi',
     nazwa: 'Minimalne wynagrodzenie',
     warianty: [{ klucz: 'kwota', etykieta: 'Kwota miesięcznie', jednostka: 'zl' }],
-    wersje: [{ od: OD_URUCHOMIENIA, wartosci: { kwota: 480600 } }],
+    wersje: [
+      { od: OD_2026, do: DO_2026, wartosci: { kwota: 480600 } },
+      { od: OD_2027, wartosci: { kwota: 495000 } },
+    ],
     szablonOpisu: '{kwota} miesięcznie',
     edytowalny: true,
     kolejnosc: 17,
@@ -283,7 +294,7 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
         wyprowadzony: { zWpisu: ID_KWOT.minimalneWynagrodzenie, zWariantu: 'kwota', pomniejszenieProcent: 13.71 },
       },
     ],
-    wersje: [{ od: OD_URUCHOMIENIA, wartosci: {} }],
+    wersje: [{ od: OD_2026, wartosci: {} }],
     szablonOpisu: 'minimalne wynagrodzenie pomniejszone o 13,71%, obecnie {kwota}',
     edytowalny: false,
     reguly: ['zwzm'],
@@ -294,7 +305,10 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
     slownik: 'kwoty-i-progi',
     nazwa: 'Najniższa podstawa wymiaru składek osoby prowadzącej pozarolniczą działalność',
     warianty: [{ klucz: 'kwota', etykieta: 'Kwota miesięcznie', jednostka: 'zl' }],
-    wersje: [{ od: OD_URUCHOMIENIA, wartosci: { kwota: 565200 } }],
+    wersje: [
+      { od: OD_2026, do: DO_2026, wartosci: { kwota: 565200 } },
+      { od: OD_2027, do: DO_2027, wartosci: { kwota: 601980 } },
+    ],
     szablonOpisu: '{kwota} miesięcznie',
     edytowalny: true,
     kolejnosc: 20,
@@ -311,7 +325,7 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
         wyprowadzony: { zWpisu: ID_KWOT.minimalneWynagrodzenie, zWariantu: 'kwota', mnoznik: 0.01 },
       },
     ],
-    wersje: [{ od: OD_URUCHOMIENIA, wartosci: {} }],
+    wersje: [{ od: OD_2026, wartosci: {} }],
     szablonOpisu: '1% minimalnego wynagrodzenia, obecnie {kwota}',
     edytowalny: false,
     reguly: ['zadluzenie'],
@@ -326,7 +340,8 @@ export const wpisySlownikaKwot: readonly WpisSlownika[] = [
       { klucz: 'zupelny', etykieta: 'Odpis zupełny', jednostka: 'zl' },
     ],
     wersje: [{ od: OD_URUCHOMIENIA, wartosci: { skrocony: 2200, zupelny: 3300 } }],
-    szablonOpisu: '{skrocony} za odpis skrócony, {zupelny} za odpis zupełny',
+    szablonOpisu:
+      '{skrocony} za odpis skrócony, {zupelny} za odpis zupełny, bez opłaty przy odpisie na cel sprawa w ZUS, świadczenie socjalne, opieka albo adopcja i zatrudnienie',
     edytowalny: true,
     kolejnosc: 22,
   },

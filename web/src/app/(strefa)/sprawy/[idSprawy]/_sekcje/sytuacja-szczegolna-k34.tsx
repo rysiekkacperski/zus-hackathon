@@ -4,10 +4,11 @@
 // Sprawa K34 Zasiłek macierzyński po stracie dziecka (wzór P22-05): karta „Okres zasiłku” z zakresem dat
 // i karta „Jak załatwić” z kanałem według formy zatrudnienia matki i przejściem do instrukcji sprawy.
 import { Karta } from '@/komponenty/karta';
+import { Komunikat } from '@/komponenty/komunikat';
 import { PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { dodajDni, formatujDate } from '@/domena/daty';
-import { stratyDoOkresuK34 } from '@/domena/rodzina/sytuacje';
+import { czyPoronienieBezZaswiadczenia, stratyDoOkresuK34 } from '@/domena/rodzina/sytuacje';
 import { teksty } from '@/teksty';
 import type { PropsSlotu } from './typy';
 
@@ -19,6 +20,10 @@ function koniecOsmiuTygodni(dataPorodu: string): string {
 }
 
 export function SekcjaSytuacjaSzczegolnaK34({ sprawa, kontekst, pochodzenie }: PropsSlotu<'sekcja'>) {
+  // K07 i K08 po poronieniu bez zaświadczenia o martwym urodzeniu: prawo powstaje po przedstawieniu zaświadczenia.
+  if (sprawa.idSprawy === 'K07' || sprawa.idSprawy === 'K08') {
+    return czyPoronienieBezZaswiadczenia(kontekst.rodzina.daneCiazy) ? <Komunikat kod="0265" /> : null;
+  }
   if (sprawa.idSprawy !== 'K34') return null;
   const okres = sprawa.dane?.okresK34;
   const daneCiazy = kontekst.rodzina.daneCiazy;

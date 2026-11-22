@@ -49,6 +49,7 @@ const ADRESY_SYMULOWANE_EZUS: Partial<Record<IdPozycji, string>> = {
 
 const KREATOR_ZAM: SpecyfikacjaKanalu = { typ: 'kreator', idWidoku: 'ViewZamLeaveType' };
 const KREATOR_ZAS53: SpecyfikacjaKanalu = { typ: 'kreator', idWidoku: 'ViewZas53Start' };
+const KREATOR_Z15: SpecyfikacjaKanalu = { typ: 'kreator', idWidoku: 'ViewZ15Start' };
 const EZUS: SpecyfikacjaKanalu = { typ: 'zewnetrzny', kanal: 'ezus' };
 const EMPATIA: SpecyfikacjaKanalu = { typ: 'zewnetrzny', kanal: 'empatia' };
 const PRACODAWCA: SpecyfikacjaKanalu = { typ: 'u-pracodawcy' };
@@ -81,7 +82,7 @@ const KANALY_DOMYSLNE: Record<IdPozycji, (forma: FormaZatrudnienia | null) => Sp
   K19: () => EZUS,
   K20: () => PRACODAWCA,
   K21: () => PRACODAWCA,
-  K22: (f) => (f === 'umowa-o-prace' ? PRACODAWCA : EZUS),
+  K22: () => KREATOR_Z15,
   K23: () => PRACODAWCA,
   K24: (f) => (f === 'jdg' ? KREATOR_ZAS53 : f === 'umowa-o-prace' ? PRACODAWCA : BRAK),
   K25: () => EZUS,
@@ -147,6 +148,11 @@ function czyUstanieWCiazy(dane: Omit<DaneRodzica, 'formaZatrudnienia'>): boolean
   return dane.zmianaZatrudnienia?.rodzaj.wartosc === 'ustanie';
 }
 
+/** Umowa o pracę na czas określony przedłużona do dnia porodu (reguła K30), która ustała po porodzie. */
+function czyUmowaPrzedluzonaDoPorodu(dane: Omit<DaneRodzica, 'formaZatrudnienia'>): boolean {
+  return dane.zmianaZatrudnienia?.umowaPrzedluzonaDoPorodu === true;
+}
+
 function specyfikacjaZKatalogu(kanal: KanalPozycji | undefined): SpecyfikacjaKanalu | null {
   if (kanal === undefined) return null;
   return kanal;
@@ -182,8 +188,11 @@ export function wybierzKanal(
   let spec: SpecyfikacjaKanalu | null = null;
   // K24 matki po ustaniu ubezpieczenia chorobowego: ZAS-53 z oświadczeniem Z-10 w kreatorze przewodnika.
   if (idPozycji === 'K24' && rodzic === 'matka' && czyUstanieWCiazy(dane)) spec = KREATOR_ZAS53;
-  // K08 po ustaniu umowy o pracę w ciąży: ZUS, wniosek ZAM w eZUS z częścią o urodzeniu po ustaniu zatrudnienia.
-  if (idPozycji === 'K08' && forma === 'umowa-o-prace' && czyUstanieWCiazy(dane)) spec = EZUS;
+  // K08 po ustaniu umowy o pracę w ciąży: ZUS, wniosek ZAM w eZUS z częścią o urodzeniu po ustaniu zatrudnienia,
+  // a po ustaniu umowy przedłużonej do dnia porodu ZUS, wniosek ZAM w eZUS (KA-02 3.8.1.1.2).
+  if (idPozycji === 'K08' && forma === 'umowa-o-prace' && (czyUstanieWCiazy(dane) || czyUmowaPrzedluzonaDoPorodu(dane))) {
+    spec = EZUS;
+  }
   if (spec === null && pozycjaKatalogu !== null) {
     spec =
       specyfikacjaZKatalogu(forma === null ? undefined : pozycjaKatalogu.kanaly[forma]) ??

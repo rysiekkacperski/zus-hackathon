@@ -1,21 +1,23 @@
 'use client';
 
 // Pozycja listy kont na ViewDemoAccountPicker (wzory P02-01, P02-02 i Wybor-konta): imię i nazwisko,
-// forma zatrudnienia, rola albo oznaczenie nowego konta, akcje „Zaloguj się”, „Symuluj narodziny
-// dziecka” i „Przywróć stan początkowy”. Symulacja narodzin jest dostępna dla konta, którego rodzina czeka
-// na dziecko z terminem porodu; pozostałe konta rodziców dostają podpowiedź. „Zaloguj się” pokazuje
-// ładowanie do otwarcia ekranu startowego konta. Właściciel: u01.
-import { useLogowanieWToku, useStanSymulowanegoZus } from '@/dane/magazyn/hooki';
-import { useDostepnoscSymulacjiNarodzin } from '@/dane/magazyn/hooki-konta-demo';
-import { symulujNarodzinyDziecka } from '@/dane/magazyn/operacje/konta-demo';
+// forma zatrudnienia, rola albo oznaczenie nowego konta, akcje „Zaloguj się”, „Symuluj uzupełnienie
+// profilu” i „Przywróć stan początkowy”. Symulacja jest dostępna w trybie demonstracyjnym dla każdego konta
+// rodzica: zapisuje profil rodziny z danymi przykładowymi, loguje kontem i otwiera plan rodziny w etapie Ciąża.
+// „Przywróć stan początkowy” otwiera okno potwierdzenia, bo operacji nie da się cofnąć. „Zaloguj się”
+// i symulacja pokazują ładowanie do otwarcia docelowego ekranu. Właściciel: u01.
+import { useState } from 'react';
+import { useLogowanieWToku } from '@/dane/magazyn/hooki';
 import { przywrocStanPoczatkowy, zalogujKontem } from '@/dane/magazyn/operacje/konto';
+import { symulujUzupelnienieProfilu } from '@/dane/magazyn/operacje/profil-demo';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import type { KodKomunikatu, KontoDemo } from '@/domena/typy';
-import { formatujDate } from '@/komponenty/format';
 import { Ikona } from '@/komponenty/ikona';
 import { useKomunikatChwilowy } from '@/komponenty/komunikat-chwilowy';
 import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
+import { OknoModalne } from '@/komponenty/okno';
 import { Przycisk } from '@/komponenty/przycisk';
+import { sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { teksty } from '@/teksty';
 
 const tekst = teksty.ViewDemoAccountPicker;
@@ -33,47 +35,65 @@ function opisKonta(konto: KontoDemo): string {
 
 export interface PozycjaKontaProps {
   konto: KontoDemo;
+  /** Tryb demonstracyjny włączony: konto rodzica dostaje akcję symulacji uzupełnienia profilu. */
+  symulacja: boolean;
   onBlad: (kod: KodKomunikatu | null) => void;
 }
 
-export function PozycjaKonta({ konto, onBlad }: PozycjaKontaProps) {
+export function PozycjaKonta({ konto, symulacja, onBlad }: PozycjaKontaProps) {
   const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
+  const symulowanie = useNawigacjaZLadowaniem();
   const logowanie = useLogowanieWToku();
-  const stanZus = useStanSymulowanegoZus(konto.pesel);
-  const dostepnosc = useDostepnoscSymulacjiNarodzin(konto.pesel);
   const { pokaz } = useKomunikatChwilowy();
   const imieINazwisko = `${konto.imie} ${konto.nazwisko}`;
   const administrator = konto.rodzaj === 'konto-administratora';
-  const dziecko = stanZus?.dzieckoZSymulacji;
-  const symulacjaDostepna = dostepnosc === 'dostepna';
+  const symulacjaDostepna = symulacja && !administrator;
+  const [potwierdzanie, ustawPotwierdzanie] = useState(false);
 
-  const zaloguj = () => {
-    if (zajety) return;
-    ustawZajety(true);
+  const zaloguj = (cel?: string) => {
     const wynik = zalogujKontem(
-      { pesel: konto.pesel, sposob: logowanie?.sposob ?? 'mobywatel', powrot: logowanie?.powrot },
+      { pesel: konto.pesel, sposob: logowanie?.sposob ?? 'mobywatel', powrot: cel === undefined ? logowanie?.powrot : undefined },
       pobierzKontekstOperacji(),
     );
     if (!wynik.ok) {
-      ustawZajety(false);
       onBlad(wynik.kod);
-      return;
+      return null;
     }
     onBlad(null);
-    przejdz(wynik.wartosc.cel);
+    return cel ?? wynik.wartosc.cel;
   };
 
+  const zalogujINastepnie = () => {
+    if (zajety || symulowanie.zajety) return;
+    ustawZajety(true);
+    const cel = zaloguj();
+    if (cel === null) {
+      ustawZajety(false);
+      return;
+    }
+    przejdz(cel);
+  };
+
+  // Symulacja zapisuje profil z danymi przykładowymi, loguje kontem i otwiera plan rodziny w etapie Ciąża.
   const symuluj = () => {
-    const wynik = symulujNarodzinyDziecka(konto.pesel, pobierzKontekstOperacji());
+    if (zajety || symulowanie.zajety) return;
+    symulowanie.ustawZajety(true);
+    const wynik = symulujUzupelnienieProfilu(konto.pesel, pobierzKontekstOperacji());
     if (!wynik.ok) {
+      symulowanie.ustawZajety(false);
       onBlad(wynik.kod);
       return;
     }
-    onBlad(null);
-    pokaz(tekst.zasymulowano({ imieINazwisko, data: formatujDate(wynik.wartosc.dataUrodzenia) }));
+    const cel = zaloguj(sciezkaWidoku('ViewFamilyPlan'));
+    if (cel === null) {
+      symulowanie.ustawZajety(false);
+      return;
+    }
+    symulowanie.przejdz(cel);
   };
 
   const przywroc = () => {
+    ustawPotwierdzanie(false);
     const wynik = przywrocStanPoczatkowy(konto.pesel, pobierzKontekstOperacji());
     if (!wynik.ok) {
       onBlad(wynik.kod);
@@ -89,42 +109,30 @@ export function PozycjaKonta({ konto, onBlad }: PozycjaKontaProps) {
         <div className="min-w-0 flex-[1_1_18rem]">
           <h3 className="m-0 text-tile-title text-ink-max">{imieINazwisko}</h3>
           <p className="m-0">{opisKonta(konto)}</p>
-          {dziecko ? (
-            <>
-              <p className="mt-2 mb-0 flex items-start gap-2">
-                <Ikona nazwa="sukces" rozmiar={20} className="mt-0.5 flex-none text-brand" />
-                <span className="min-w-0">
-                  <strong>{tekst.dzieckoDodane}</strong>{' '}
-                  {tekst.opisDziecka({
-                    imieINazwisko: `${dziecko.imie} ${dziecko.nazwisko}`,
-                    data: formatujDate(dziecko.dataUrodzenia),
-                    pesel: dziecko.pesel,
-                  })}
-                </span>
-              </p>
-              <p className="mt-1 mb-0">{tekst.podpowiedzSymulacji}</p>
-            </>
-          ) : null}
-          {dostepnosc === 'bez-terminu-porodu' ? (
-            <p className="mt-2 mb-0 text-small text-ink-muted">{tekst.bezTerminuPorodu}</p>
-          ) : null}
           {symulacjaDostepna || !administrator ? (
             <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
               {symulacjaDostepna ? (
                 <button
                   type="button"
                   onClick={symuluj}
+                  disabled={symulowanie.zajety}
+                  aria-busy={symulowanie.zajety || undefined}
                   aria-label={tekst.symulujKonto({ imieINazwisko })}
                   className={klasyPrzyciskuLinku}
                 >
-                  <Ikona nazwa="dodaj-osobe" rozmiar={16} />
+                  {symulowanie.zajety ? (
+                    <Ikona nazwa="ladowanie" rozmiar={16} className="motion-safe:animate-spin" />
+                  ) : (
+                    <Ikona nazwa="dodaj-osobe" rozmiar={16} />
+                  )}
                   {tekst.symuluj}
                 </button>
               ) : null}
               {administrator ? null : (
                 <button
                   type="button"
-                  onClick={przywroc}
+                  onClick={() => ustawPotwierdzanie(true)}
+                  aria-haspopup="dialog"
                   aria-label={tekst.przywrocKonto({ imieINazwisko })}
                   className={klasyPrzyciskuLinku}
                 >
@@ -135,10 +143,36 @@ export function PozycjaKonta({ konto, onBlad }: PozycjaKontaProps) {
             </div>
           ) : null}
         </div>
-        <Przycisk wariant="drugorzedny" zajety={zajety} onClick={zaloguj} aria-label={tekst.zalogujKonto({ imieINazwisko })}>
+        <Przycisk
+          wariant="drugorzedny"
+          ikona="konto"
+          zajety={zajety}
+          onClick={zalogujINastepnie}
+          aria-label={tekst.zalogujKonto({ imieINazwisko })}
+        >
           {tekst.zaloguj}
         </Przycisk>
       </div>
+      {administrator ? null : (
+        <OknoModalne
+          otwarte={potwierdzanie}
+          onZamknij={() => ustawPotwierdzanie(false)}
+          tytul={tekst.oknoPrzywracania.tytul}
+          etykietaZamkniecia={tekst.oknoPrzywracania.zamknij}
+          stopka={
+            <div className="flex flex-wrap items-center gap-4">
+              <Przycisk wariant="glowny" onClick={przywroc}>
+                {tekst.oknoPrzywracania.potwierdz}
+              </Przycisk>
+              <Przycisk wariant="drugorzedny" onClick={() => ustawPotwierdzanie(false)}>
+                {tekst.oknoPrzywracania.anuluj}
+              </Przycisk>
+            </div>
+          }
+        >
+          <p className="m-0">{tekst.oknoPrzywracania.opis({ imieINazwisko })}</p>
+        </OknoModalne>
+      )}
     </li>
   );
 }

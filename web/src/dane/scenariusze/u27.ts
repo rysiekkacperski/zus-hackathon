@@ -4,6 +4,9 @@
 // przeliczenie rodziny po wczytaniu scenariusza (wyliczono puste).
 import { wynikiKalkulacjiPuste } from '@/dane/magazyn/stan-poczatkowy';
 import type { DaneCiazyIDziecka, DaneRodziny, KontekstOperacji, ScenariuszDemo, StanRodziny, WniosekZam } from '@/domena/typy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const PESEL_ANNY = '93041231085';
 const DATA_PORODU = '2026-11-19';
@@ -93,8 +96,8 @@ function szkicZ0812(): WniosekZam {
 export const scenariuszeU27: readonly ScenariuszDemo[] = [
   {
     id: 'u27-anna-po-porodzie',
-    nazwa: 'Wniosek ZAM: Anna Nowak po porodzie',
-    opis: 'Anna Nowak, JDG z dobrowolnym ubezpieczeniem chorobowym, poród 19.11.2026, córka Zofia Nowak, dzień demonstracyjny 21.11.2026.',
+    nazwa: tekst['u27-anna-po-porodzie'].nazwa,
+    opis: tekst['u27-anna-po-porodzie'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       rodzina: rodzinaAnny(ctx, daneCiazyAnny()),
@@ -103,8 +106,8 @@ export const scenariuszeU27: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u27-anna-bez-pesel-dziecka',
-    nazwa: 'Wniosek ZAM: brak numeru PESEL dziecka',
-    opis: 'Anna Nowak po porodzie 19.11.2026; profil nie zawiera numeru PESEL ani miejscowości urodzenia dziecka.',
+    nazwa: tekst['u27-anna-bez-pesel-dziecka'].nazwa,
+    opis: tekst['u27-anna-bez-pesel-dziecka'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       rodzina: rodzinaAnny(
@@ -116,8 +119,8 @@ export const scenariuszeU27: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u27-anna-za-zyciem',
-    nazwa: 'Wniosek ZAM: zaświadczenie „Za życiem”',
-    opis: 'Anna Nowak po porodzie 19.11.2026; dziecko ma zaświadczenie „Za życiem”, urlop rodzicielski do 56 tygodni.',
+    nazwa: tekst['u27-anna-za-zyciem'].nazwa,
+    opis: tekst['u27-anna-za-zyciem'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       rodzina: rodzinaAnny(ctx, daneCiazyAnny({ zaswiadczenieZaZyciem: true })),
@@ -126,8 +129,8 @@ export const scenariuszeU27: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u27-anna-blizneta',
-    nazwa: 'Wniosek ZAM: bliźnięta',
-    opis: 'Anna Nowak po porodzie 19.11.2026 z bliźniętami; urlop macierzyński do 23.06.2027.',
+    nazwa: tekst['u27-anna-blizneta'].nazwa,
+    opis: tekst['u27-anna-blizneta'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       rodzina: rodzinaAnny(
@@ -146,8 +149,8 @@ export const scenariuszeU27: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u27-anna-szkic-po-terminie',
-    nazwa: 'Wniosek ZAM: szkic z 08.12.2026 po terminie 21 dni',
-    opis: 'Szkic wniosku z całym urlopem rodzicielskim i zasiłkiem 81,5% z 08.12.2026; dzień demonstracyjny 11.12.2026.',
+    nazwa: tekst['u27-anna-szkic-po-terminie'].nazwa,
+    opis: tekst['u27-anna-szkic-po-terminie'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       rodzina: rodzinaAnny(ctx, daneCiazyAnny(), [szkicZ0812()]),

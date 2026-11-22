@@ -9,7 +9,13 @@ import { rozpocznijLubWznowZam } from '@/dane/magazyn/operacje/wnioski-zam';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { dodajDni, formatujDate } from '@/domena/daty';
 import type { BledyPol, KodKomunikatu, RodzajUrlopu } from '@/domena/typy';
-import { daneRodzicaWniosku, dostepneRodzajeUrlopu, sprawdzPrawoDoWnioskuZam } from '@/domena/wnioski/zam';
+import {
+  czyDrugaRolaWnioskowalaOUzupelniajacy,
+  czyMinalTerminUzupelniajacego,
+  daneRodzicaWniosku,
+  dostepneRodzajeUrlopu,
+  sprawdzPrawoDoWnioskuZam,
+} from '@/domena/wnioski/zam';
 import { ekranPoZam, nastepnyEkranZam } from '@/domena/wnioski/zam-nawigacja';
 import { parametryOkresuZam, TYGODNIE_URLOPU_MACIERZYNSKIEGO } from '@/domena/wnioski/zam-okresy';
 import { GrupaOpcji, type OpcjaGrupy } from '@/komponenty/grupa-opcji';
@@ -61,7 +67,7 @@ function StartWnioskuZam({ idSprawy }: { idSprawy: string }) {
     uruchomiono.current = true;
     const prawo = sprawdzPrawoDoWnioskuZam({ konto, rodzina: kontekst?.rodzina ?? null, idSprawy, dzis });
     if (prawo.cel !== 'ViewZamLeaveType') {
-      if (prawo.kod) ustawKomunikatPoPrzejsciu({ kod: prawo.kod, dlaWidoku: prawo.cel });
+      if (prawo.kod) ustawKomunikatPoPrzejsciu({ kod: prawo.kod, dlaWidoku: prawo.cel, ...(prawo.parametry ? { parametry: prawo.parametry } : {}) });
       if (prawo.cel === 'ViewCaseGuide') router.replace(trasy.ViewCaseGuide({ idSprawy: prawo.idSprawy ?? idSprawy }));
       else if (prawo.cel === 'ViewProfilePayer') router.replace(trasy.ViewProfilePayer({ powrot: trasy.ViewZamLeaveType({ sprawa: idSprawy }) }));
       else router.replace(sciezkaWidoku(prawo.cel));
@@ -105,6 +111,8 @@ function opisRodzaju(rodzaj: RodzajUrlopu, dane: DaneWnioskuZam, dzis: string): 
       });
     case 'ojcowski':
       return t.opisOjcowski({ data: p.ojcowski.zakres ? formatujDate(p.ojcowski.zakres.do) : '' });
+    case 'przejety-macierzynski':
+      return teksty.ViewFatherTakeover.opisRodzajuZam;
     case 'na-warunkach-macierzynskiego':
       return t.opisNaWarunkach;
     default:
@@ -125,7 +133,26 @@ function FormularzRodzajuUrlopu({ dane }: { dane: DaneWnioskuZam }) {
 
   const tryb = okresy.przedPorodem ? 'przed-porodem' : kontekst.rodzina.daneCiazy?.przyjecie ? 'przyjecie' : 'po-porodzie';
   const rola = okresy.rodzic === 'drugi-rodzic' ? 'drugi-rodzic' : 'rodzic';
-  const rodzaje = dostepneRodzajeUrlopu(rola, kontekst.rodzina.plan, tryb);
+  const koniecMacierzynskiego = parametryOkresuZam(okresy, dzis).okresMacierzynski?.do ?? null;
+  const rodzajeBazowe = dostepneRodzajeUrlopu(rola, kontekst.rodzina.plan, tryb, {
+    wnioski: kontekst.rodzina.wnioski,
+    koniecMacierzynskiego,
+    dzis,
+  });
+  // 3.9.1.1.5: po końcu urlopu macierzyńskiego wniosek o uzupełniający urlop macierzyński jest niedostępny (0269).
+  const pokaz0269 =
+    tryb === 'po-porodzie' &&
+    (kontekst.rodzina.plan?.pozycje.some((pz) => pz.idPozycji === 'K11') ?? false) &&
+    czyMinalTerminUzupelniajacego(koniecMacierzynskiego, dzis) &&
+    !czyDrugaRolaWnioskowalaOUzupelniajacy(rola, kontekst.rodzina.wnioski);
+  // Drugi rodzic na umowie zlecenia albo JDG z dobrowolnym chorobowym może przejąć urlop macierzyński (u34).
+  const rodzicWniosku = daneRodzicaWniosku(kontekst.rodzina, okresy.rodzic);
+  const mozePrzejac =
+    rola === 'drugi-rodzic' &&
+    tryb === 'po-porodzie' &&
+    (rodzicWniosku.forma === 'umowa-zlecenia' || rodzicWniosku.forma === 'jdg') &&
+    rodzicWniosku.dobrowolneChorobowe?.wartosc === true;
+  const rodzaje: RodzajUrlopu[] = mozePrzejac ? [...rodzajeBazowe, 'przejety-macierzynski'] : rodzajeBazowe;
   const opcje: OpcjaGrupy<RodzajUrlopu>[] = rodzaje.map((r) => ({
     wartosc: r,
     etykieta: tk.rodzajeUrlopu[r],
@@ -137,7 +164,7 @@ function FormularzRodzajuUrlopu({ dane }: { dane: DaneWnioskuZam }) {
 
   const dalej = () => {
     if (!walidacja.sprobujWyslac() || rodzaj === null) return;
-    const cel = ekranPoZam(wniosek, 'ViewZamLeaveType', okresy.przedPorodem);
+    const cel = rodzaj === 'przejety-macierzynski' ? 'ViewFatherTakeover' : ekranPoZam(wniosek, 'ViewZamLeaveType', okresy.przedPorodem);
     ustawBladZapisu(przejdzDalej(wniosek, zmiana(rodzaj), cel));
   };
 
@@ -186,6 +213,7 @@ function FormularzRodzajuUrlopu({ dane }: { dane: DaneWnioskuZam }) {
   const komunikaty = (
     <>
       <KomunikatBleduZapisu kod={bladZapisu} />
+      {pokaz0269 && koniecMacierzynskiego ? <Komunikat kod="0269" parametry={{ data: formatujDate(koniecMacierzynskiego) }} /> : null}
       {okresy.przedPorodem && kontekst.rodzina.daneCiazy?.przewidywanyTerminPorodu ? (
         <Komunikat kod="0229" parametry={{ data: formatujDate(dodajDni(kontekst.rodzina.daneCiazy.przewidywanyTerminPorodu, -42)) }} />
       ) : null}

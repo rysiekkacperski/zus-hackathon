@@ -22,7 +22,7 @@ import type {
 } from '@/domena/typy';
 
 export const POLA_PROSTE = [
-  'imie', 'nazwisko', 'pesel', 'rola', 'tytulRodzaj', 'tytulOd', 'tytulDo', 'etat', 'liczbaUb', 'rodzajCh',
+  'imie', 'nazwisko', 'pesel', 'rola', 'tytulRodzaj', 'tytulOd', 'tytulDo', 'etat', 'wymiarEtatu', 'liczbaUb', 'rodzajCh',
   'przyczyna', 'inneZatrudnienie', 'pracaPoUstaniu', 'zdarzenie', 'porod', 'termin', 'dzieci', 'martwe',
   'niezdolnoscOd', 'niezdolnoscDo', 'niezdolnoscKod', 'tydzien', 'masa', 'pobytOd', 'pobytDo', 'zaZyciem',
   'zlozenie', 'oswiadczenie', 'matkaOd', 'matkaDo', 'popPodstawa', 'popKoniec', 'dlug',
@@ -89,6 +89,7 @@ export function formularzZeSprawy(sprawa: SprawaPrzykladowa): FormularzSprawy {
       tytulOd: dataDoPola(d.tytul.od.wartosc),
       tytulDo: dataDoPola(d.tytul.dataUstania.wartosc),
       etat: tekst(d.wymiarCzasuPracy.wartosc),
+      wymiarEtatu: tekst(d.wymiarEtatu?.wartosc ?? null),
       liczbaUb: tekst(d.liczbaUbezpieczonychPlatnika.wartosc),
       rodzajCh: tekst(d.ubezpieczenieChorobowe.rodzaj.wartosc),
       przyczyna: tekst(d.ustanieZatrudnienia.przyczyna.wartosc),
@@ -172,6 +173,15 @@ function maDokument(sprawa: SprawaPrzykladowa, rodzaj: string): boolean {
  * Błędy pól formularza: PESEL (0024–0026), pola wyboru (0006), daty (0010, 0110), kwoty (0016, 0048),
  * dane dziecka (0021, 0022), a przy poprawnych polach kompletność danych do weryfikacji (0109).
  */
+/** Wymiar etatu jako ułamek licznik/mianownik z liczbami całkowitymi, licznik od 1 i mniejszy od mianownika, mianownik najwyżej 99. */
+export function czyPoprawnyWymiarEtatu(tekstPola: string): boolean {
+  const dopasowanie = /^(\d{1,2})\/(\d{1,2})$/.exec(tekstPola.trim());
+  if (dopasowanie === null) return false;
+  const licznik = Number(dopasowanie[1]);
+  const mianownik = Number(dopasowanie[2]);
+  return licznik >= 1 && licznik < mianownik && mianownik <= 99;
+}
+
 export function walidujFormularzSprawy(f: FormularzSprawy, sprawa: SprawaPrzykladowa): BledyPol<string> {
   const bledy: BledyPol<string> = {};
   const p = f.pola;
@@ -182,6 +192,8 @@ export function walidujFormularzSprawy(f: FormularzSprawy, sprawa: SprawaPrzykla
   wymagajWyboru(p.tytulRodzaj, 'tytulRodzaj', bledy);
   wymagajWyboru(p.rodzajCh, 'rodzajCh', bledy);
   wymagajWyboru(p.zdarzenie, 'zdarzenie', bledy);
+
+  if (p.etat === 'niepelny-etat' && !czyPoprawnyWymiarEtatu(p.wymiarEtatu)) bledy.wymiarEtatu = '0294';
 
   const tytulOd = sprawdzDate(p.tytulOd, 'tytulOd', bledy);
   const tytulDo = sprawdzDate(p.tytulDo, 'tytulDo', bledy);
@@ -265,7 +277,10 @@ export function walidujDaneSprawy(d: DaneSprawy): BledyPol<string> {
   const dataZdarzenia = rodzaj === 'niezdolnosc'
     ? d.zdarzenie.niezdolnosc.wartosc?.od ?? null
     : d.zdarzenie.dataPorodu.wartosc ?? d.zdarzenie.przewidywanyTermin.wartosc ?? null;
-  if (dataZdarzenia === null) bledy[rodzaj === 'niezdolnosc' ? 'niezdolnoscOd' : 'porod'] = '0109';
+  if (dataZdarzenia === null) {
+    if (rodzaj === 'niezdolnosc') bledy.niezdolnoscOd = '0109';
+    else bledy.porod = '0018';
+  }
   return bledy;
 }
 
@@ -326,6 +341,7 @@ export function wartosciZFormularza(f: FormularzSprawy, dane: DaneSprawy): { pol
     { pole: 'tytul.od', wartosc: dataLubNull(p.tytulOd) },
     { pole: 'tytul.dataUstania', wartosc: dataLubNull(p.tytulDo) },
     { pole: 'wymiarCzasuPracy', wartosc: p.etat === '' ? null : p.etat },
+    { pole: 'wymiarEtatu', wartosc: p.etat === 'niepelny-etat' && p.wymiarEtatu.trim() !== '' ? p.wymiarEtatu.trim() : null },
     { pole: 'liczbaUbezpieczonychPlatnika', wartosc: p.liczbaUb === '' ? null : p.liczbaUb },
     { pole: 'ubezpieczenieChorobowe.rodzaj', wartosc: p.rodzajCh === '' ? null : p.rodzajCh },
     { pole: 'ubezpieczenieChorobowe.okresy', wartosc: okresyCh.length > 0 ? okresyCh : null },

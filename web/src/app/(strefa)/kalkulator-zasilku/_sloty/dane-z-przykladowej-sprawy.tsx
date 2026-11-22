@@ -104,6 +104,7 @@ export function SlotDaneZPrzykladowejSprawy({ zrodlo, onUzupelnij }: PropsSlotu<
             ? T.wstepBezId
             : T.wstep({ id: sprawa.idSprawy })}
       </p>
+      <div className="grid items-start gap-6 xl:grid-cols-2">
       <Karta tytul={T.tytulUbezpieczonej} poziomTytulu={2} bezLinii>
         <ListaDefinicji
           szerokoscEtykiety="szeroka"
@@ -163,9 +164,7 @@ export function SlotDaneZPrzykladowejSprawy({ zrodlo, onUzupelnij }: PropsSlotu<
           />
         </Karta>
       )}
-      <Odnosnik href={trasy.ViewSampleCaseVerification()} ikonaPo="w-prawo">
-        {T.wrocDoWeryfikacji}
-      </Odnosnik>
+      </div>
     </Stos>
   );
 }

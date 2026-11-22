@@ -106,13 +106,19 @@ export function drugiRodzicPoDolaczeniu(
 }
 
 /**
- * Dane drugiego rodzica po odłączeniu (R-ODLACZENIE): te same wartości ze źródłem odpowiedź rodzica,
- * bez danych z konta ZUS i bez kopii odpowiedzi sprzed dołączenia.
+ * Dane drugiego rodzica po odłączeniu (R-ODLACZENIE, 3.3.3.1.4 KA-02): dane ze źródłem konto ZUS znikają, a profil
+ * wraca do odpowiedzi rodzica zachowanych przy dołączeniu. Bez zachowanej kopii zostają te same wartości ze
+ * źródłem odpowiedź rodzica.
  */
 export function drugiRodzicPoOdlaczeniu(drugi: DrugiRodzic): DrugiRodzic {
-  const { daneZKontaZus, zachowaneOdpowiedzi, ...reszta } = drugi;
+  const { daneZKontaZus, zachowaneOdpowiedzi, ...biezace } = drugi;
   void daneZKontaZus;
-  void zachowaneOdpowiedzi;
+  const reszta: Omit<DrugiRodzic, 'zachowaneOdpowiedzi' | 'daneZKontaZus'> = (() => {
+    if (zachowaneOdpowiedzi === undefined) return biezace;
+    const { daneZKontaZus: zachowaneDaneZus, ...odpowiedzi } = structuredClone(zachowaneOdpowiedzi);
+    void zachowaneDaneZus;
+    return odpowiedzi;
+  })();
   const platnik = reszta.platnikZasilku ? { ...reszta.platnikZasilku, zrodlo: 'odpowiedz-rodzica' as const } : null;
   return {
     ...reszta,

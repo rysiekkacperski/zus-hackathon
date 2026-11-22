@@ -27,7 +27,7 @@ export interface AnalizaPytania {
   sprawy: IdSprawy[];
   propozycja?: PropozycjaDzialania;
   akcjeKanalow?: AkcjaKanaluAsystenta[];
-  kodKomunikatu: '0070' | '0148';
+  kodKomunikatu: '0070' | '0148' | '0275' | '0276';
 }
 
 export interface WskazaniePytania {
@@ -342,16 +342,37 @@ function analizaInstrukcji(k: KontekstAsystenta, wskazane: SprawaKontekstu[]): A
   return analiza([fakt('instrukcja', F.instrukcja({ tytul: s.tytul }), [], s.idSprawy)], [s], przejdz('ViewCaseGuide', { idSprawy: s.idSprawy }));
 }
 
+/**
+ * Zaświadczenia lekarskie e-ZLA (R-AS-ZRODLA): asystent pokazuje wyłącznie zaświadczenia zalogowanego ubezpieczonego
+ * przy udzielonej zgodzie na dane dotyczące zdrowia, a kontu z rolą Drugi rodzic wskazuje konto matki.
+ */
+function analizaZaswiadczen(k: KontekstAsystenta): AnalizaPytania {
+  if (k.rola === 'drugi-rodzic') {
+    const osoba = k.szczegoly?.imionaRodzicow.matka ?? teksty.SheetAssistantActionConfirm.kogoDotyczy.matka.toLowerCase();
+    return analiza([fakt('zla-matki', F.zlaMatki({ osoba }))], []);
+  }
+  if (!k.zgoda) return analiza([fakt('zla-bez-zgody', F.zlaBezZgody)], []);
+  const okres = k.daneZus?.ezla;
+  return analiza([okres ? fakt('zla', F.zlaKonta({ okres }), [okres]) : fakt('zla-brak', F.zlaBrak)], []);
+}
+
 /** Pełna analiza pytania: fakty, sprawy, propozycja działania i akcje kanałów. */
 export function analizujPytanie(intencja: IntencjaAsystenta, k: KontekstAsystenta, w?: WskazaniePytania): AnalizaPytania {
+  if (intencja === 'poza-zakresem-medyczne') {
+    return { fakty: [fakt('poza-zakresem', teksty.komunikaty['0275'])], sprawy: [], kodKomunikatu: '0275' };
+  }
+  if (intencja === 'poza-zakresem-podatkowe') {
+    return { fakty: [fakt('poza-zakresem', teksty.komunikaty['0276'])], sprawy: [], kodKomunikatu: '0276' };
+  }
   if (czyPozaZakresem(intencja)) {
     return {
       fakty: [fakt('poza-zakresem', teksty.komunikaty['0070'])],
       sprawy: [],
-      akcjeKanalow: ['pytanie-do-zus', 'e-wizyta', 'mama-zus'],
+      akcjeKanalow: ['pytanie-do-zus', 'e-wizyta', 'mama-zus', 'infolinia'],
       kodKomunikatu: '0070',
     };
   }
+  if (intencja === 'zaswiadczenia-lekarskie') return analizaZaswiadczen(k);
   if (k.rola === 'nowy-uzytkownik' || k.profil === null) return analizaNowegoUzytkownika(intencja, k, w);
   const wskazane = sprawyWskazane(k, w);
   switch (intencja) {
@@ -397,5 +418,5 @@ export function tekstZFaktow(fakty: readonly Fakt[]): string {
     .join(' ');
 }
 
-/** Kod komunikatu stopki odpowiedzi: 0148 przy odpowiedzi merytorycznej, 0070 poza zakresem. */
-export type KodOdpowiedzi = Extract<KodKomunikatu, '0070' | '0148'>;
+/** Kod komunikatu odpowiedzi: 0148 przy odpowiedzi merytorycznej, 0070 poza zakresem, 0275 i 0276 dla pytań medycznych i podatkowych. */
+export type KodOdpowiedzi = Extract<KodKomunikatu, '0070' | '0148' | '0275' | '0276'>;

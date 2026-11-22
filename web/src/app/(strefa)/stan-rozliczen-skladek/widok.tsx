@@ -13,7 +13,11 @@ import { trasy } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { trescKomunikatu } from '@/komponenty/typy-komunikatow';
 import { UkladDwuKolumnowy } from '@/komponenty/uklad';
-import { czyUmowaBezZadluzenia, zadluzenieNieobjeteUmowa } from '@/domena/zasilki/stan-rozliczen';
+import {
+  czyUmowaBezZadluzenia,
+  zadluzenieNieobjeteUmowa,
+  type DzienPowstaniaPrawa,
+} from '@/domena/zasilki/stan-rozliczen';
 import { teksty } from '@/teksty';
 import { KafleWartosci, type KafelWartosci } from '../zaswiadczenia-e-zla/_czesci/kafle-wartosci';
 import { useStanRozliczenKonta, type KartaStanu } from './_czesci/wyliczenia';
@@ -71,7 +75,7 @@ export function WidokStanuRozliczen() {
             <StanPusty
               ikona="pieniadze"
               akcja={
-                <PrzyciskLink href={trasy.ViewFamilyPlan()} wariant="glowny">
+                <PrzyciskLink href={trasy.ViewFamilyPlanStage({ etap: 'ciaza' })} wariant="glowny">
                   {t.potwierdzWPlanie}
                 </PrzyciskLink>
               }
@@ -120,18 +124,28 @@ export function WidokStanuRozliczen() {
   );
 }
 
+/** Opis dnia powstania prawa według podstawy: e-ZLA, okres wyczekiwania, wniosek ZAM, poród albo termin porodu. */
+function opisDniaPrawa(d: DzienPowstaniaPrawa): string {
+  const data = formatujDate(d.dzien);
+  switch (d.podstawa) {
+    case 'e-zla':
+      return t.dzienPrawaEzla({ data, numer: d.seriaINumer ?? '' });
+    case 'wyczekiwanie':
+      return t.dzienPrawaWyczekiwanie({ data, numer: d.seriaINumer ?? '' });
+    case 'wniosek-zam':
+      return t.dzienPrawaZam({ data });
+    case 'porod':
+      return t.dzienPrawaPorod({ data });
+    default:
+      return t.dzienPrawaTermin({ data });
+  }
+}
+
 function KartaDnia({ karta, pokazZadluzenieOd }: { karta: KartaStanu; pokazZadluzenieOd: boolean }) {
   const { dzienPrawa, stan, prog, komunikaty } = karta;
   const tytul =
     dzienPrawa === null ? t.kartaNaDzis : dzienPrawa.swiadczenie === 'zasilek-chorobowy' ? t.kartaChorobowy : t.kartaMacierzynski;
-  const opisDnia =
-    dzienPrawa === null
-      ? null
-      : dzienPrawa.podstawa === 'e-zla'
-        ? t.dzienPrawaEzla({ data: formatujDate(dzienPrawa.dzien), numer: dzienPrawa.seriaINumer ?? '' })
-        : dzienPrawa.podstawa === 'porod'
-          ? t.dzienPrawaPorod({ data: formatujDate(dzienPrawa.dzien) })
-          : t.dzienPrawaTermin({ data: formatujDate(dzienPrawa.dzien) });
+  const opisDnia = dzienPrawa === null ? null : opisDniaPrawa(dzienPrawa);
 
   const data = formatujDate(stan.dzien);
   const umowaBezZadluzenia = czyUmowaBezZadluzenia(stan);
@@ -155,7 +169,7 @@ function KartaDnia({ karta, pokazZadluzenieOd }: { karta: KartaStanu; pokazZadlu
     if (stan.dataSplaty) kafle.push({ etykieta: t.dataSplaty, wartosc: formatujDate(stan.dataSplaty) });
   }
   const umowa = stan.umowa
-    ? `${t.umowaOpis[stan.umowa.rodzaj]} – ${stan.umowa.splacanaZgodnieZUmowa ? t.umowaZgodnie : t.umowaNiezgodnie}`
+    ? `${t.umowaOpis[stan.umowa.rodzaj]}, ${stan.umowa.splacanaZgodnieZUmowa ? t.umowaZgodnie : t.umowaNiezgodnie}`
     : t.umowaBrak;
 
   return (

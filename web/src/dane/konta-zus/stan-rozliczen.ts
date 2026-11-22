@@ -20,4 +20,6 @@ export const osieZadluzeniaKontZus: Readonly<Partial<Record<Pesel, OsZadluzenia>
       { od: '2026-10-21', kwota: 125000 },
     ],
   },
+  // Marcin Lis: 0,00 zł każdego dnia od 01.05.2022
+  '94062103737': { zmiany: [{ od: '2022-05-01', kwota: 0 }] },
 };

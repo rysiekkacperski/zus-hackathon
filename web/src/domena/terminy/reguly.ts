@@ -30,6 +30,7 @@ export const REGULY_POZYCJI: Readonly<Record<string, RegulaTerminu>> = {
   K17: { typ: 'przesuniecie', kotwica: 'data-porodu', ...miesiace(12) },
   K18: { typ: 'koniec-miesiaca-wieku', miesiace: 12 },
   K21: { typ: 'coroczny', dzien: '12-31', doRokuUrodzin: 14 },
+  K23: { typ: 'koniec-roku-urodzin', lata: 6 },
   K29: { typ: 'przesuniecie', kotwica: 'przewidywany-termin-porodu', ...dni(-1) },
   K31: {
     typ: 'dwa-terminy',
@@ -76,6 +77,16 @@ function pierwszyRokCorocznego(r: Extract<RegulaTerminu, { typ: 'coroczny' }>, u
   return `${r0}-${r.dzien}` >= urodzenie ? r0 : r0 + 1;
 }
 
+/**
+ * Termin coroczny bez początku składania (K21, Story 3.7.1.1.4): w roku, w którym dziecko kończy `doRokuUrodzin` lat,
+ * termin przypada w dniu poprzedzającym te urodziny i jest ostatnim terminem sprawy.
+ */
+export function terminCorocznyZOstatnim(r: Extract<RegulaTerminu, { typ: 'coroczny' }>, urodzenie: DataISO, termin: DataISO): DataISO {
+  if (r.poczatekSkladania || r.doRokuUrodzin === undefined) return termin;
+  if (rok(termin) !== rok(urodzenie) + r.doRokuUrodzin) return termin;
+  return minData(termin, dodajDni(dodajLata(urodzenie, r.doRokuUrodzin), -1));
+}
+
 /** Termin coroczny w roku cyklu `rokCyklu` (null po ostatnim roku). */
 export function terminCorocznyWRoku(
   r: Extract<RegulaTerminu, { typ: 'coroczny' }>,
@@ -85,7 +96,7 @@ export function terminCorocznyWRoku(
   const rokTerminu = Math.max(pierwszyRokCorocznego(r, urodzenie), rokCyklu);
   if (r.doRokuUrodzin !== undefined && rokTerminu > rok(urodzenie) + r.doRokuUrodzin) return null;
   return {
-    termin: `${rokTerminu}-${r.dzien}`,
+    termin: terminCorocznyZOstatnim(r, urodzenie, `${rokTerminu}-${r.dzien}`),
     rokCyklu: rokTerminu,
     poczatekSkladania: r.poczatekSkladania ? `${rokTerminu}-${r.poczatekSkladania}` : undefined,
     zalecany: r.zalecany ? `${rokTerminu}-${r.zalecany}` : undefined,

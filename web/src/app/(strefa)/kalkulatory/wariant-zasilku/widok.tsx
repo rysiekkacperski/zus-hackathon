@@ -19,7 +19,8 @@ import { useKontekstRodziny } from '@/dane/magazyn/hooki';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { zapiszDecyzjeWariantu } from '@/dane/magazyn/operacje/kalkulacje-decyzje';
 import { formatujDate } from '@/domena/daty';
-import { formatujKwote, parsujKwote } from '@/domena/kwoty';
+import { formatujKwote, formatujKwoteBezWaluty, parsujKwote } from '@/domena/kwoty';
+import { useStanRoboczy } from '@/app/(strefa)/kalkulator-zasilku/_czesci/stan-roboczy';
 import {
   daneDzieckaDoKalkulatora,
   matkaMaPrawoDoZasilku,
@@ -29,14 +30,31 @@ import {
   tygodnieUrlopuMacierzynskiego,
   walidujDanePorownania,
 } from '@/domena/kalkulatory/wariant';
-import type { KodKomunikatu, PodstawaWymiaru } from '@/domena/typy';
+import type { KodKomunikatu, PodstawaWymiaru, WynikiKalkulacji } from '@/domena/typy';
 import { teksty } from '@/teksty';
-import { ostatniePorownanie, podstawaZKontaZus, wybranyWariantSprawy } from '../_czesci/dane-kalkulatorow';
+import { ostatniePorownanie, podstawaZKontaZus, wybranyWariantSprawy, wynikiRodziny } from '../_czesci/dane-kalkulatorow';
 import { KafleWariantow } from './_czesci/kafle-wariantow';
 import { ZestawienieWariantow } from './_czesci/zestawienie-wariantow';
 
 const t = teksty.ViewCalcMaternityVariant;
 type Wariant = '81-5' | '100-70';
+
+/**
+ * Podstawa matki wpisana wcześniej przez rodzica albo przyjęta z przykładowej sprawy: najpierw z bieżącego stanu
+ * kalkulatora zasiłku, potem z najnowszego zapisu w wynikach kalkulacji (scenariusz, porównanie, podział urlopu).
+ */
+function podstawaWpisanaWczesniej(robocza: PodstawaWymiaru | undefined, wyniki: WynikiKalkulacji | undefined): PodstawaWymiaru | null {
+  if (robocza && robocza.zrodlo !== 'konto-zus') return robocza;
+  const w = wynikiRodziny(wyniki);
+  const kandydaci = [
+    ...w.scenariusze.map((s) => ({ zapisano: s.zapisano, p: s.podstawy.matka })),
+    ...w.porownaniaWariantow.map((z) => ({ zapisano: z.zapisano, p: z.podstawa })),
+    ...w.podzialyUrlopu.map((z) => ({ zapisano: z.zapisano, p: z.podstawy.matka })),
+  ].filter((k): k is { zapisano: string; p: PodstawaWymiaru } => k.p !== undefined && k.p.zrodlo !== 'konto-zus');
+  let najnowszy: { zapisano: string; p: PodstawaWymiaru } | null = null;
+  for (const k of kandydaci) if (najnowszy === null || k.zapisano >= najnowszy.zapisano) najnowszy = k;
+  return najnowszy?.p ?? null;
+}
 
 function OdnosnikKalkulatora() {
   return (
@@ -102,7 +120,9 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
   const wybranyWPlanie = wybranyWariantSprawy(rodzina.plan, sprawa);
   const wybrany: Wariant | null = wybranyWPlanie && 'wariant' in wybranyWPlanie ? wybranyWPlanie.wariant : (zapisany?.decyzja ?? null);
 
-  const [podstawaTekst, setPodstawaTekst] = useState('');
+  const stanRoboczy = useStanRoboczy(kontekst.konto.pesel);
+  const podstawaWczesniej = podstawaZus === null ? podstawaWpisanaWczesniej(stanRoboczy?.podstawy.matka, rodzina.wynikiKalkulacji) : null;
+  const [podstawaTekst, setPodstawaTekst] = useState(podstawaWczesniej ? formatujKwoteBezWaluty(podstawaWczesniej.kwota) : '');
   const [tygodnieTekst, setTygodnieTekst] = useState(String(maks));
   // Podstawę wpisuje rodzic tylko wtedy, gdy kalkulator nie wyliczył jej z konta ZUS.
   const ocen = (w: { podstawa: string; tygodnie: string }) =>
@@ -113,7 +133,10 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
     pola: { podstawa: 'podstawa', tygodnie: 'tygodnie' },
   });
   const [wejscie, setWejscie] = useState<{ podstawa: PodstawaWymiaru; tygodnie: number } | null>(
-    podstawaZus === null ? null : { podstawa: podstawaZus, tygodnie: maks },
+    () => {
+      const p = podstawaZus ?? podstawaWczesniej;
+      return p === null ? null : { podstawa: p, tygodnie: maks };
+    },
   );
   const [zapisano, setZapisano] = useState<Wariant | null>(null);
   const [bladZapisu, setBladZapisu] = useState<KodKomunikatu | null>(null);
@@ -254,7 +277,8 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
           </>
         ) : (
           <Karta tytul={t.daneTytul} bezLinii>
-            {podstawaZus === null ? <Komunikat kod="0094" className="mb-6" /> : null}
+            {podstawaZus === null && podstawaWczesniej === null ? <Komunikat kod="0094" className="mb-6" /> : null}
+            {podstawaWczesniej ? <Notatka className="mb-6">{t.podstawaWczesniej}</Notatka> : null}
             <p className="m-0 mb-6 text-body">
               {t.zProfilu({ dataPorodu: formatujDate(dataPorodu), przewidywany: dziecko.przewidywany, liczbaDzieci: dziecko.liczbaDzieci, zaZyciem: dziecko.zaZyciem })}
               {opisFormy}
@@ -270,6 +294,20 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
                       <p className="m-0 mt-1 text-amount text-ink-strong">{formatujKwote(podstawaZus.kwota)}</p>
                       <p className="m-0 text-body">{t.zrodlo({ zrodlo: t.zrodla[podstawaZus.zrodlo] })}</p>
                     </div>
+                    {s && s.podstawy.length > 1 ? (
+                      <div>
+                        <p className="m-0 text-body-strong">{t.zmianaPodstawyTytul}</p>
+                        <ul className="m-0 mt-1 list-disc pl-6 text-body">
+                          {s.podstawy.map((c, i) => (
+                            <li key={c.od}>
+                              {i === 0
+                                ? t.podstawaPrzedZmiana({ kwota: formatujKwote(c.kwota), data: formatujDate(c.do) })
+                                : t.podstawaOdZmiany({ kwota: formatujKwote(c.kwota), data: formatujDate(c.od) })}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                     {podstawaZus.skladniki && podstawaZus.skladniki.length > 0 && !poTerminie ? (
                       <Tabela
                         podpis={t.jakPoliczylismy}
@@ -323,10 +361,10 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
                   {...walidacja.pole('tygodnie')}
                   szerokosc="waska"
                 />
-                <div>
-                  <Przycisk wariant="glowny" onClick={oblicz}>{t.oblicz}</Przycisk>
-                </div>
               </div>
+            </div>
+            <div className="mt-6">
+              <Przycisk wariant="glowny" onClick={oblicz}>{t.oblicz}</Przycisk>
             </div>
           </Karta>
         )}

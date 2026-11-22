@@ -155,15 +155,11 @@ function KartaPrzedluzenia({ kontekst, rodzic, poziom, pochodzenie, przyrostek }
                 <>
                   <p className="m-0">
                     <strong className="font-semibold text-ink-strong">{teksty.wspolne.prefiksy.INFO}</strong>{' '}
-                    {teksty.komunikaty['0121']}
-                  </p>
-                  <p className="m-0 mt-1">
-                    {daneCiazy?.dataPoroduPotwierdzona && daneCiazy.dataPorodu
-                      ? tekst.przedluzenie.dzienPorodu
-                      : tekst.przedluzenie.przewidywanyTerminPorodu}{' '}
-                    <strong className="text-ink-strong">
-                      {formatujDate(daneCiazy?.dataPoroduPotwierdzona && daneCiazy.dataPorodu ? daneCiazy.dataPorodu : ptp)}
-                    </strong>
+                    {teksty.komunikaty['0121']({
+                      data: formatujDate(
+                        daneCiazy?.dataPoroduPotwierdzona && daneCiazy.dataPorodu ? daneCiazy.dataPorodu : ptp,
+                      ),
+                    })}
                   </p>
                 </>
               }
@@ -255,6 +251,12 @@ function KartaZasad() {
       <ul className="m-0 pl-6 text-body">
         {t.wyjatki.map((w) => (
           <li key={w}>{w}</li>
+        ))}
+      </ul>
+      <h3 className="m-0 mt-6 mb-2 text-body-strong">{t.uprawnieniaTytul}</h3>
+      <ul className="m-0 pl-6 text-body">
+        {t.uprawnienia.map((u) => (
+          <li key={u}>{u}</li>
         ))}
       </ul>
       <h3 className="m-0 mt-6 mb-2 text-body-strong">{t.wczesniejTytul}</h3>

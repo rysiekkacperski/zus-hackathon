@@ -83,7 +83,9 @@ export function KartaLogowania({
     e.preventDefault();
     if (zajety || !walidacja.sprobujWyslac()) return;
     // Hasło służy wyłącznie symulacji: usuwamy je ze stanu i z pola przed przejściem dalej. Walidacja wraca
-    // do stanu początkowego, więc puste pole hasła nie pokazuje błędu po powrocie na ekran.
+    // do stanu początkowego, więc puste pole hasła nie pokazuje błędu po powrocie na ekran. Fokus schodzi
+    // z pola przed resetem, bo ukrycie ekranu przy przejściu opuszcza pole i oznaczałoby je jako ocenione.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     ustawHaslo('');
     walidacja.resetuj();
     const pole = formularz.current?.querySelector<HTMLInputElement>(`#${ID_HASLA}`);

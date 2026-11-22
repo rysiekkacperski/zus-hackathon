@@ -43,6 +43,8 @@ const CZESCI_FORMULARZA: Record<PodrodzajWnioskuOUrlop, SekcjaFormularzaUrlopu[]
   'laczenie-z-praca': [['dane'], ['okres'], ['laczenie'], ['wydluzenie', 'zalaczniki']],
   'rezygnacja-matki': [['dane'], ['okres', 'zalaczniki']],
   'pozostala-czesc-macierzynskiego': [['dane'], ['okres', 'zalaczniki']],
+  wychowawczy: [['dane', 'okres'], ['oswiadczenie', 'zalaczniki']],
+  'obnizenie-wymiaru': [['dane', 'okres'], ['oswiadczenie', 'zalaczniki']],
 };
 
 export function czesciFormularzaUrlopu(podrodzaj: PodrodzajWnioskuOUrlop | null | undefined): SekcjaFormularzaUrlopu[][] {
@@ -79,8 +81,13 @@ export function useKreatorUrlopu(): StanKreatora | null {
   const idWniosku = parametry.get('wniosek');
   return useMemo(() => {
     if (kontekst === null) return null;
-    const dane = zbierzDaneKreatora({ konto: kontekst.konto, rodzina: kontekst.rodzina, daneZus: kontekst.daneZusKonta });
     const wniosek = znajdzWniosekOUrlop(kontekst.rodzina, kontekst.konto.pesel, idWniosku);
+    const dane = zbierzDaneKreatora({
+      konto: kontekst.konto,
+      rodzina: kontekst.rodzina,
+      daneZus: kontekst.daneZusKonta,
+      numerScenariusza: wniosek?.numerScenariusza,
+    });
     return { kontekst, dane, wniosek };
   }, [kontekst, idWniosku]);
 }

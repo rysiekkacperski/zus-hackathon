@@ -29,6 +29,7 @@ import type {
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
 import { zapiszSzkic } from '@/dane/magazyn/operacje/profil-szkic';
+import { przeliczWnioskiZamPoPorodzie } from '@/dane/magazyn/operacje/wnioski-zam-rozszerzenia';
 import {
   odczytajKatalog,
   odczytajZalogowanego,
@@ -103,6 +104,9 @@ function zapiszPotwierdzenie(
   zapiszStanRodziny({ ...rodzina, daneCiazy, daneRodziny: sytuacjaPoPorodzie(rodzina.daneRodziny, zgoda) });
   const przeliczenie = przeliczRodzine(rodzina.idRodziny, ctx);
   if (!przeliczenie.ok) return przeliczenie;
+  // Wnioski ZAM złożone przed porodem: nowy okres i oznaczenie sprawy K08 (KA-19, KA-20, KA-22 3.9.1.3.1).
+  const zam = przeliczWnioskiZamPoPorodzie(ctx);
+  if (!zam.ok) return zam;
   if (!zgoda) ustawKomunikatPoPrzejsciu({ kod: komunikatPakietu(daneCiazy), dlaWidoku: 'ViewBirthPackage' });
   return { ok: true, wartosc: undefined };
 }
@@ -202,9 +206,12 @@ export function zapiszDaneDziecka(dane: FormularzDanychDziecka, ctx: KontekstOpe
       tydzienCiazyWDniuPorodu: liczby.tydzien,
       masaUrodzeniowaG: liczby.masa,
       dniHospitalizacji5do28: liczby.dni,
+      pobytWSzpitaluPoPorodzie: liczby.pobyt,
       ciezkaChorobaDziecka: dane.ciezkaChoroba || dane.zaswiadczenieZaZyciem,
       zaswiadczenieZaZyciem: dane.zaswiadczenieZaZyciem,
-      wymiarUzupelniajacegoUrlopu: wyznaczUzupelniajacyUrlop(forma, chorobowe, liczby.tydzien, liczby.masa, liczby.dni),
+      wymiarUzupelniajacegoUrlopu: wyznaczUzupelniajacyUrlop(
+        forma, chorobowe, liczby.tydzien, liczby.masa, liczby.dni, liczby.pobyt,
+      ),
       wymiarUrlopuRodzicielskiegoTygodni: wyznaczWymiarUrlopuRodzicielskiego(
         liczbaDzieci, dane.zaswiadczenieZaZyciem, dataPorodu, odczytajKatalog(),
       ),

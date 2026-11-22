@@ -4,15 +4,13 @@
 // Tryb profilu na start: formularz w trzech częściach, „Dalej” na ostatniej części zapisuje dane w szkicu
 // i prowadzi do ViewProfileFamily.
 // Tryb zmiany z podsumowania (?powrot=podsumowanie albo konto Rodzic): „Dalej” wraca na ViewProfileSummary.
+// Formularz działa z udzieloną zgodą na dane dotyczące zdrowia i bez niej (KA-01 3.3.1.4.2).
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { trasy } from '@/komponenty/rama/trasy';
-import { PrzyciskLink } from '@/komponenty/przycisk';
-import { Stos, UkladDwuKolumnowy } from '@/komponenty/uklad';
+import { UkladDwuKolumnowy } from '@/komponenty/uklad';
 import { useDzis, useKonto, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
-import { czyMaZgode } from '@/domena/konto/zgoda';
 import { formatujDate } from '@/domena/daty';
 import { formularzZPrzyjecia } from '@/domena/rodzina/przyjecie';
 import { teksty } from '@/teksty';
@@ -42,32 +40,12 @@ export function WidokPrzyjeciaDziecka() {
   const adresPodsumowania = nowyUzytkownik ? trasy.ViewProfileSummary() : trasy.ViewProfileSummary({ tryb: 'rodzina' });
   const adresDalej = trybZmiany ? adresPodsumowania : trasy.ViewProfileFamily();
   const adresWstecz = trybZmiany ? adresPodsumowania : trasy.ViewProfileSituation();
-  const zgoda = czyMaZgode(konto.decyzjeOZgodzie);
 
   const naglowek = trybZmiany ? (
     <NaglowekStrony tytul={t.naglowekZmiany} powrot={{ href: adresPodsumowania, etykieta: t.powrotDoProfilu }} />
   ) : (
     <NaglowekStrony tytul={t.naglowek} wstep={t.wstep} powrot={false} />
   );
-
-  if (!zgoda) {
-    return (
-      <>
-        {naglowek}
-        <Stos odstep={7.5} className="max-w-tresc">
-          <Komunikat kod="0004" />
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <PrzyciskLink href={adresWstecz} wariant="drugorzedny">
-              {t.wstecz}
-            </PrzyciskLink>
-            <PrzyciskLink href={adresDalej} wariant="glowny">
-              {trybZmiany ? t.bezZgody.wrocDoProfilu : t.bezZgody.przejdzDalej}
-            </PrzyciskLink>
-          </div>
-        </Stos>
-      </>
-    );
-  }
 
   const tresc = (
     <FormularzDanychPrzyjecia

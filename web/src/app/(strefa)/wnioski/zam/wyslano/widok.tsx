@@ -13,6 +13,7 @@ import { SzkieletWidoku } from '@/komponenty/szkielet-widoku';
 import { UkladDwuKolumnowy } from '@/komponenty/uklad';
 import { teksty } from '@/teksty';
 import { BrakWnioskuZam, DaneBoczne, nazwaRodzajuWniosku, opisZasilkuWniosku, useWniosekZam, type DaneWnioskuZam } from '../_czesci/kreator';
+import { KomunikatRezygnacjiPoWyslaniuZam } from '../przejecie-urlopu/_czesci/komunikat-rezygnacji-po-zam';
 
 const t = teksty.ViewZamSent;
 const tk = teksty.ViewZamLeaveType.kreator;
@@ -89,6 +90,7 @@ function Potwierdzenie({ dane }: { dane: DaneWnioskuZam }) {
       />
       <div className="flex flex-col gap-7.5">
         <Komunikat kod={przekazanie ? '0232' : '0045'} />
+        <KomunikatRezygnacjiPoWyslaniuZam wniosek={wniosek} rodzina={kontekst.rodzina} />
         <UkladDwuKolumnowy tresc={tresc} boczna={boczna} etykietaBocznej={tk.etykietaBocznej} />
       </div>
     </>

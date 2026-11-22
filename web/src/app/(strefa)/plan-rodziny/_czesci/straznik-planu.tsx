@@ -3,7 +3,7 @@
 // Blok strażnika ubezpieczenia chorobowego na stronie etapu Ciąża ViewFamilyPlanStage (historyjka 3.6.1.3.1,
 // wzory Plan-rodziny, P06-04, P06-05, P06-06, P06-08). Link do sprawy Opłacenie składek niesie ?etap=ciaza,
 // więc powrót z karty sprawy wraca na stronę etapu. Właściciel: u12.
-import { dodajMiesiaceDoMiesiaca, formatujDate, formatujDateICzas } from '@/domena/daty';
+import { dodajDni, dodajMiesiaceDoMiesiaca, formatujDate, formatujDateICzas } from '@/domena/daty';
 import { formatujKwote, formatujProcent } from '@/domena/kwoty';
 import { dzienUtworzeniaSprawyOplacenia, terminOplaceniaSkladek, type OcenaStraznika } from '@/domena/plan/straznik';
 import type { PozycjaPlanu, Rola } from '@/domena/typy';
@@ -18,6 +18,7 @@ import { Tabela } from '@/komponenty/tabela';
 import { StatusSprawy } from '@/komponenty/znaczek';
 import { teksty } from '@/teksty';
 import { PARAMETR_ETAPU } from './sciezka-etapu';
+import { PrzyciskAsystenta } from './przycisk-asystenta';
 
 const t = teksty.ViewFamilyPlan.straznik;
 const to = teksty.ViewFamilyPlan.oplacenie;
@@ -41,7 +42,17 @@ function ZrodloOplacenia({ sprawa }: { sprawa: PozycjaPlanu }) {
 
 export function StraznikPlanu({ ocena, sprawaOplacenia, rola, matkaDopelniacz, onPotwierdz }: StraznikPlanuProps) {
   const jdg = ocena.forma === 'jdg';
+  const uop = ocena.forma === 'umowa-o-prace';
   const prog = formatujKwote(ocena.prog);
+  // Progi zadłużenia obowiązujące do dnia powstania prawa do zasiłku, np. „48,06 zł do 31.12.2026 i 49,50 zł od 01.01.2027”.
+  const progi = (ocena.progi ?? [{ prog: ocena.prog, od: '' }])
+    .map((p, i, lista) => {
+      const kwota = formatujKwote(p.prog);
+      if (lista.length === 1) return kwota;
+      if (i < lista.length - 1) return t.progDo({ kwota, data: formatujDate(dodajDni(lista[i + 1].od, -1)) });
+      return t.progOd({ kwota, data: formatujDate(p.od) });
+    })
+    .join(t.progiLacznik);
   const dataOdczytu = ocena.odczytano ? formatujDate(ocena.odczytano) : '';
   const oplacenie = ocena.oplacenie;
   const sprawa = sprawaOplacenia;
@@ -96,7 +107,7 @@ export function StraznikPlanu({ ocena, sprawaOplacenia, rola, matkaDopelniacz, o
   return (
     <div className="flex flex-col gap-4 rounded-md border border-line bg-surface-sunken p-5">
       {naglowek}
-      <p className="m-0 text-body">{jdg ? t.wstepJdg : t.wstepUz}</p>
+      <p className="m-0 text-body">{jdg ? t.wstepJdg : uop ? t.wstepUop : t.wstepUz}</p>
       {ocena.daneZus && ocena.odczytano ? (
         <p className="m-0 text-body-strong">{t.stanNa({ data: formatujDateICzas(ocena.odczytano) })}</p>
       ) : (
@@ -112,13 +123,14 @@ export function StraznikPlanu({ ocena, sprawaOplacenia, rola, matkaDopelniacz, o
               { etykieta: t.profil, wartosc: t.profilDuchTak },
             ]}
           />
-          <div>
+          <div className="flex flex-wrap items-center gap-4">
+            {rola === 'rodzic' ? <PrzyciskAsystenta /> : null}
             <Odnosnik href={sciezkaWidoku('ViewProfileSummary', { tryb: 'rodzina' })}>
               {teksty.ViewFamilyPlan.otworzProfil}
             </Odnosnik>
           </div>
         </div>
-      ) : ocena.daneZus ? (
+      ) : ocena.daneZus && !uop ? (
         <ListaDefinicji
           pozycje={[
             { etykieta: t.duch, wartosc: t.aktywne },
@@ -173,7 +185,7 @@ export function StraznikPlanu({ ocena, sprawaOplacenia, rola, matkaDopelniacz, o
         </div>
       ) : null}
 
-      {jdg ? <Komunikat typ="WARNING" tresc={t.opiekaSkladek({ prog })} /> : null}
+      {jdg ? <Komunikat typ="WARNING" tresc={t.opiekaSkladek({ prog: progi })} /> : null}
 
       {oplacenie && status ? (
         <div className="flex flex-col gap-3 rounded-sm bg-surface-card p-4">
@@ -212,6 +224,7 @@ export function StraznikPlanu({ ocena, sprawaOplacenia, rola, matkaDopelniacz, o
             <PrzyciskLink wariant="drugorzedny" href={sciezkaWidoku('ViewContributionBalance')}>
               {t.sprawdzStan}
             </PrzyciskLink>
+            {zadluzenie && zadluzenie.rodzaj === 'zadluzenie-ponad-prog' && rola === 'rodzic' ? <PrzyciskAsystenta /> : null}
           </div>
         </div>
       ) : null}

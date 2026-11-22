@@ -6,11 +6,10 @@
 // założenia i akcja „Załóż nowe konto”. Właściciel: u01.
 import { useMemo, useState } from 'react';
 import { NaglowekDemo } from '@/app/(publiczne)/_czesci/naglowek-demo';
-import { useDzis, useKontaDemo, useParametry } from '@/dane/magazyn/hooki';
+import { useKontaDemo, useParametry } from '@/dane/magazyn/hooki';
 import { ustawParametry } from '@/dane/magazyn/operacje/parametry';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import type { KodKomunikatu } from '@/domena/typy';
-import { formatujDate } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { useKomunikatChwilowy } from '@/komponenty/komunikat-chwilowy';
@@ -26,15 +25,12 @@ const tekst = teksty.ViewDemoAccountPicker;
 export function WidokWyboruKonta() {
   const konta = useKontaDemo();
   const parametry = useParametry();
-  const dzis = useDzis();
   const { pokaz } = useKomunikatChwilowy();
   const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
   const tryb = parametry.trybDemonstracyjny;
 
   const przykladowe = useMemo(() => konta.filter((k) => k.rodzaj !== 'nowe-konto'), [konta]);
   const nowe = useMemo(() => konta.filter((k) => k.rodzaj === 'nowe-konto'), [konta]);
-  // Symulacja narodzin daje dziecko urodzone w dniu demonstracyjnym „dzisiaj”.
-  const dataDzieckaZSymulacji = formatujDate(dzis);
 
   const wlaczTryb = () => {
     const wynik = ustawParametry({ trybDemonstracyjny: true }, pobierzKontekstOperacji());
@@ -49,7 +45,7 @@ export function WidokWyboruKonta() {
   return (
     <>
       <NaglowekDemo tytul={tekst.naglowek} wstep={tekst.wstep} />
-      <div className="flex max-w-tresc flex-col gap-7.5">
+      <div className="flex flex-col gap-7.5">
         {blad ? <Komunikat kod={blad} /> : null}
         {tryb ? null : (
           <Komunikat
@@ -75,13 +71,13 @@ export function WidokWyboruKonta() {
               </Notatka>
               {tryb ? (
                 <Notatka>
-                  <p>{tekst.notatkaSymulacji({ data: dataDzieckaZSymulacji })}</p>
+                  <p>{tekst.notatkaSymulacji}</p>
                 </Notatka>
               ) : null}
             </div>
             <ul className="mt-6 mb-0 list-none border-t border-line-row p-0">
               {przykladowe.map((konto) => (
-                <PozycjaKonta key={konto.pesel} konto={konto} onBlad={ustawBlad} />
+                <PozycjaKonta key={konto.pesel} konto={konto} symulacja={tryb} onBlad={ustawBlad} />
               ))}
             </ul>
           </Karta>
@@ -95,7 +91,7 @@ export function WidokWyboruKonta() {
             {nowe.length > 0 ? (
               <ul className="mt-6 mb-0 list-none border-t border-line-row p-0">
                 {nowe.map((konto) => (
-                  <PozycjaKonta key={konto.pesel} konto={konto} onBlad={ustawBlad} />
+                  <PozycjaKonta key={konto.pesel} konto={konto} symulacja={tryb} onBlad={ustawBlad} />
                 ))}
               </ul>
             ) : null}

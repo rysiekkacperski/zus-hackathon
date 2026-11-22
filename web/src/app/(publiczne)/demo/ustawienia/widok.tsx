@@ -207,7 +207,7 @@ export function WidokUstawienDemo() {
   return (
     <>
       <NaglowekDemo tytul={tekst.naglowek} wstep={tekst.wstep} powrot={tekst.powrot} />
-      <div className="flex max-w-190 flex-col gap-7.5">
+      <div className="flex flex-col gap-7.5">
         {blad ? <Komunikat kod={blad} /> : null}
 
         <Karta tytul={tekst.tryb.tytul} bezLinii>

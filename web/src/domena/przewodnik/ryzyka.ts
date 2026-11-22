@@ -198,6 +198,7 @@ export function ostrzezenieRyzyka(
 /** Sytuacje szczególne słownika podmiotów wsparcia w kolejności wzorów. */
 export const SYTUACJE_SZCZEGOLNE: readonly RodzajSytuacjiSzczegolnej[] = [
   'martwe-urodzenie',
+  'poronienie-bez-zaswiadczenia',
   'poronienie',
   'zgon-dziecka',
   'przedwczesny-porod',
@@ -251,10 +252,19 @@ export interface FormularzPodmiotu {
   telefon: string;
   email: string;
   adresStrony: string;
+  krs: string;
   charytatywny: boolean;
 }
 
-export type PolePodmiotu = 'nazwa' | 'sytuacje' | 'zakresPomocy' | 'telefon' | 'email' | 'adresStrony' | 'charytatywny';
+export type PolePodmiotu =
+  | 'nazwa'
+  | 'sytuacje'
+  | 'zakresPomocy'
+  | 'telefon'
+  | 'email'
+  | 'adresStrony'
+  | 'krs'
+  | 'charytatywny';
 
 /** Kolejność pól formularza, w której fokus trafia do pierwszego pola z błędem. */
 export const POLA_PODMIOTU: readonly PolePodmiotu[] = [
@@ -264,6 +274,7 @@ export const POLA_PODMIOTU: readonly PolePodmiotu[] = [
   'telefon',
   'email',
   'adresStrony',
+  'krs',
   'charytatywny',
 ];
 
@@ -273,7 +284,7 @@ function normalizujNazwe(nazwa: string): string {
 
 /** Pusty formularz nowej organizacji. */
 export function pustyFormularzPodmiotu(): FormularzPodmiotu {
-  return { nazwa: '', sytuacje: [], zakresPomocy: '', telefon: '', email: '', adresStrony: '', charytatywny: false };
+  return { nazwa: '', sytuacje: [], zakresPomocy: '', telefon: '', email: '', adresStrony: '', krs: '', charytatywny: false };
 }
 
 /** Formularz z danymi organizacji ze słownika. */
@@ -286,11 +297,12 @@ export function formularzZPodmiotu(p: PodmiotWsparcia): FormularzPodmiotu {
     telefon: p.telefon ?? '',
     email: p.email ?? '',
     adresStrony: p.adresStrony,
+    krs: p.krs ?? '',
     charytatywny: p.charytatywny,
   };
 }
 
-/** Błędy formularza podmiotu wsparcia: 0122, 0161, 0006, 0160, 0124, 0060, 0123, 0162. */
+/** Błędy formularza podmiotu wsparcia: 0122, 0161, 0006, 0160, 0124, 0060, 0123, 0280, 0162. */
 export function walidujPodmiot(f: FormularzPodmiotu, k: Katalog): BledyPol<PolePodmiotu> {
   const bledy: BledyPol<PolePodmiotu> = {};
   const nazwa = normalizujNazwe(f.nazwa);
@@ -303,6 +315,7 @@ export function walidujPodmiot(f: FormularzPodmiotu, k: Katalog): BledyPol<PoleP
   if (email !== null) bledy.email = email;
   const strona = f.adresStrony.trim();
   if (!/^https:\/\/[^\s/]+\.[^\s]+$/.test(strona)) bledy.adresStrony = '0123';
+  if (!/^\d{10}$/.test(f.krs.trim())) bledy.krs = '0280';
   if (!f.charytatywny) bledy.charytatywny = '0162';
   return bledy;
 }
@@ -319,6 +332,7 @@ export function podmiotZFormularza(f: FormularzPodmiotu, id: string, kolejnosc: 
     ...(telefon === '' ? {} : { telefon }),
     ...(email === '' ? {} : { email }),
     adresStrony: f.adresStrony.trim(),
+    krs: f.krs.trim(),
     charytatywny: true,
     kolejnosc,
   };

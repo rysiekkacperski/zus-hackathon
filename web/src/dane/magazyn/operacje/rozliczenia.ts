@@ -1,5 +1,5 @@
-// Zaświadczenie o stanie rozliczeń składek i powiadomienie o zmianie statusu wniosku w ZUS
-// (kontrakt, sekcja 6.5; ANALIZY/17 R8–R9, ANALIZY/15 R6). Właściciel: u14.
+// Zaświadczenie o niezaleganiu w opłacaniu składek albo decyzja o odmowie jego wydania i powiadomienie o zmianie statusu wniosku w ZUS
+// (kontrakt, sekcja 6.5; ANALIZY/17 R8–R9, ANALIZY/15 R6; 3.4.5.1.4). Właściciel: u14.
 import { zrodloweDaneKonta } from '@/dane/konta-zus';
 import { utworzPowiadomienie } from '@/dane/magazyn/operacje/powiadomienia';
 import { losowyCiag } from '@/dane/magazyn/losowanie';
@@ -17,6 +17,7 @@ import {
   zmienStanKonta,
   zmienStanZus,
 } from '@/dane/magazyn/stan';
+import { dataZeZnacznika } from '@/domena/daty';
 import { idZLosowych } from '@/domena/numery';
 import { zmianyStatusowZus } from '@/domena/plan/kroki/statusy-zus';
 import type {
@@ -33,7 +34,20 @@ import '@/domena/zasilki/rozszerzenia-typow';
 import { trasy } from '@/komponenty/rama/trasy';
 import { teksty } from '@/teksty';
 
-/** Zaświadczenie na dzień `dzien` zapisane w symulowanym ZUS i jako plik (0133 przy pueEzusNiedostepne). */
+/**
+ * Wniosek o zaświadczenie o niezaleganiu w opłacaniu składek (3.4.5.1.4): ZUS wydaje dokument według stanu
+ * rozliczeń w dniu wydania, a symulacja wydaje go w dniu wysłania wniosku, czyli w dniu z `ctx.teraz`.
+ */
+export async function wyslijWniosekOZaswiadczenieONiezaleganiu(
+  ctx: KontekstOperacji,
+): Promise<WynikOperacji<{ idPliku: IdPliku }>> {
+  return wystawZaswiadczenieORozliczeniach(dataZeZnacznika(ctx.teraz), ctx);
+}
+
+/**
+ * Zaświadczenie o niezaleganiu albo decyzja o odmowie jego wydania na dzień `dzien`, zapisane w danych konta ZUS
+ * i jako plik do pobrania do zakończenia sesji (0133 przy pueEzusNiedostepne).
+ */
 export async function wystawZaswiadczenieORozliczeniach(
   dzien: DataISO,
   ctx: KontekstOperacji,
@@ -62,7 +76,10 @@ export async function wystawZaswiadczenieORozliczeniach(
 
   let idPliku: IdPliku;
   try {
-    const nazwa = teksty.ViewContributionCertificate.nazwaPliku({ data: dzien.split('-').reverse().join('-') });
+    const nazwa = teksty.ViewContributionCertificate.nazwaPliku({
+      data: dzien.split('-').reverse().join('-'),
+      rodzaj: zaswiadczenie.rodzaj,
+    });
     idPliku = await zapiszPlik(new Blob([JSON.stringify(zaswiadczenie)], { type: 'application/json' }), {
       nazwa,
       wlasciciel: konto.pesel,

@@ -1,6 +1,6 @@
 'use client';
 
-// ViewBirthDetails (3.3.2.1.2, 3.3.2.1.3): dane dziecka po porodzie i zaświadczenie „Za życiem”.
+// ViewBirthDetails (3.3.2.1.2, 3.3.2.1.3, 3.3.2.1.5): dane dziecka po porodzie, pobyt w szpitalu i zaświadczenie „Za życiem”.
 // Tryb pakietu (/narodziny/dane-dziecka) prowadzi do ViewBirthPackage, tryb zmiany
 // (/profil-rodziny/dane-dziecka) wraca do profilu rodziny. Wzory: cz1/P10-09, P10-10, P10-11, P10-17.
 // Formularz ma trzy części w ?czesc=N, żeby każda mieściła się w oknie: dane porodu, pobyt dziecka w szpitalu
@@ -12,6 +12,7 @@ import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { formatujDate } from '@/domena/daty';
 import { czyMaZgode } from '@/domena/konto';
 import {
+  czyPytacOPobytWSzpitalu,
   walidujDaneDziecka,
   wyznaczWymiarUrlopuRodzicielskiego,
   type FormularzDanychDziecka as Formularz,
@@ -19,6 +20,7 @@ import {
 } from '@/domena/rodzina/narodziny';
 import type { BledyPol, DaneCiazyIDziecka, KodKomunikatu } from '@/domena/typy';
 import { CzescFormularza, useCzesciFormularza } from '@/komponenty/czesci-formularza';
+import { GrupaOpcji, idOpcjiGrupy } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { ListaDefinicji, type PozycjaListyDefinicji } from '@/komponenty/lista-definicji';
@@ -38,14 +40,28 @@ import { teksty } from '@/teksty';
 
 const t = teksty.ViewBirthDetails;
 
+const NAZWA_POBYTU = 'pobyt-w-szpitalu';
+
 const ID_POL: Record<PoleDanychDziecka, string> = {
   tydzienCiazy: 'tydzien-ciazy',
   masaUrodzeniowa: 'masa-urodzeniowa',
+  pobytWSzpitalu: idOpcjiGrupy(NAZWA_POBYTU, 'tak'),
   dniHospitalizacji: 'dni-hospitalizacji',
 };
 
 /** Pola każdej części formularza: 1 dane porodu, 2 pobyt dziecka w szpitalu, 3 zdrowie dziecka (bez pól wymaganych). */
-const PODZIAL: readonly (readonly PoleDanychDziecka[])[] = [['tydzienCiazy', 'masaUrodzeniowa'], ['dniHospitalizacji'], []];
+const PODZIAL: readonly (readonly PoleDanychDziecka[])[] = [
+  ['tydzienCiazy', 'masaUrodzeniowa'],
+  ['pobytWSzpitalu', 'dniHospitalizacji'],
+  [],
+];
+
+type Pobyt = 'tak' | 'nie';
+
+function pobytZDanych(d: DaneCiazyIDziecka): '' | Pobyt {
+  if (d.pobytWSzpitaluPoPorodzie === undefined) return '';
+  return d.pobytWSzpitaluPoPorodzie ? 'tak' : 'nie';
+}
 
 function powrotTrybu(tryb: TrybWidoku<'ViewBirthDetails'>) {
   return tryb === 'zmiana'
@@ -105,13 +121,16 @@ function FormularzDanychDziecka({ tryb, daneCiazy, dataPorodu }: PropsFormularza
   const [tydzien, setTydzien] = useState(() => daneCiazy.tydzienCiazyWDniuPorodu?.toString() ?? '');
   const [masa, setMasa] = useState(() => daneCiazy.masaUrodzeniowaG?.toString() ?? '');
   const [dni, setDni] = useState(() => (daneCiazy.dniHospitalizacji5do28 ?? 0).toString());
+  const [pobyt, setPobyt] = useState<'' | Pobyt>(() => pobytZDanych(daneCiazy));
   const [ciezka, setCiezka] = useState(() => daneCiazy.ciezkaChorobaDziecka === true);
   const [zaZyciem, setZaZyciem] = useState(() => daneCiazy.zaswiadczenieZaZyciem === true);
   const [bladZapisu, setBladZapisu] = useState<KodKomunikatu | null>(null);
+  const pytacOPobyt = czyPytacOPobytWSzpitalu(tydzien, masa);
 
   const formularz: Formularz = {
     tydzienCiazy: tydzien,
     masaUrodzeniowa: masa,
+    pobytWSzpitalu: pytacOPobyt ? pobyt : '',
     dniHospitalizacji: dni,
     ciezkaChoroba: ciezka,
     zaswiadczenieZaZyciem: zaZyciem,
@@ -209,6 +228,21 @@ function FormularzDanychDziecka({ tryb, daneCiazy, dataPorodu }: PropsFormularza
               <Karta tytul={t.kartaHospitalizacja}>
                 <Stos odstep={6}>
                   <p className="m-0 text-body">{t.wstepPorod}</p>
+                  {pytacOPobyt ? (
+                    <GrupaOpcji<Pobyt>
+                      nazwa={NAZWA_POBYTU}
+                      legenda={t.polePobytu.legenda}
+                      podpowiedz={t.polePobytu.podpowiedz}
+                      uklad="poziomo"
+                      opcje={[
+                        { wartosc: 'tak', etykieta: t.polePobytu.tak },
+                        { wartosc: 'nie', etykieta: t.polePobytu.nie },
+                      ]}
+                      wartosc={pobyt === '' ? null : pobyt}
+                      onZmiana={setPobyt}
+                      {...walidacja.pole('pobytWSzpitalu')}
+                    />
+                  ) : null}
                   <PoleTekstowe
                     id={ID_POL.dniHospitalizacji}
                     nazwa="dniHospitalizacji"

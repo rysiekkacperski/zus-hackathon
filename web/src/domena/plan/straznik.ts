@@ -2,7 +2,7 @@
 // Czyste funkcje: brak aktywnego dobrowolnego ubezpieczenia chorobowego, sprawa Opłacenie składek z terminem
 // 20. dnia miesiąca, status sprawy ze stanu rozliczeń składek albo z potwierdzenia rodzica, próg zadłużenia
 // ze słownika kwot i progów, podwyższenie podstawy wymiaru składek i informacja przy K19 po porodzie.
-import { dataZeZnacznika, dodajMiesiaceDoMiesiaca, miesiacZDaty, porownajDaty } from '@/domena/daty';
+import { dataZeZnacznika, dodajDni, dodajMiesiaceDoMiesiaca, miesiacZDaty, porownajDaty } from '@/domena/daty';
 import { ID_KWOT } from '@/dane/katalog/slownik-kwot';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import type {
@@ -23,8 +23,11 @@ import type {
   ZrodloStatusu,
 } from '@/domena/typy';
 
-/** Forma zatrudnienia matki, przy której działa strażnik. */
-export type FormaStraznika = 'jdg' | 'umowa-zlecenia';
+/**
+ * Forma zatrudnienia matki, przy której działa strażnik. Przy umowie o pracę strażnik pokazuje wyłącznie
+ * ostrzeżenie o podwyższeniu podstawy (historyjka 3.6.1.3.2).
+ */
+export type FormaStraznika = 'jdg' | 'umowa-zlecenia' | 'umowa-o-prace';
 
 /** Próg zadłużenia stosowany, gdy słownik kwot i progów nie ma wpisu: 1% minimalnego wynagrodzenia 4806 zł. */
 const PROG_ZADLUZENIA_ZAPASOWY: Grosze = 4806;
@@ -55,7 +58,9 @@ export function formaMatkiZDuch(daneRodziny: DaneRodziny): FormaStraznika | null
 /** Strażnik działa dla matki JDG albo UZ z dobrowolnym ubezpieczeniem chorobowym do potwierdzenia daty porodu. */
 export function formaStraznika(daneRodziny: DaneRodziny, daneCiazy: DaneCiazyIDziecka | null): FormaStraznika | null {
   if (czyPorodPotwierdzony(daneCiazy)) return null;
-  return formaMatkiZDuch(daneRodziny);
+  const zDuch = formaMatkiZDuch(daneRodziny);
+  if (zDuch !== null) return zDuch;
+  return daneRodziny.matka.formaZatrudnienia?.wartosc === 'umowa-o-prace' ? 'umowa-o-prace' : null;
 }
 
 /** Miesiąc składek sprawy Opłacenie składek tworzonej w miesiącu dnia `dzis` (poprzedni miesiąc). */
@@ -63,9 +68,47 @@ export function miesiacSkladekNaDzien(dzis: DataISO): MiesiacISO {
   return dodajMiesiaceDoMiesiaca(miesiacZDaty(dzis), -1);
 }
 
-/** Termin opłacenia składek za miesiąc: 20. dzień następnego miesiąca. */
+/** Niedziela Wielkanocna w roku `rok` (algorytm Meeusa, Jonesa i Butchera dla kalendarza gregoriańskiego). */
+function wielkanoc(rok: number): DataISO {
+  const a = rok % 19;
+  const b = Math.floor(rok / 100);
+  const c = rok % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const miesiac = Math.floor((h + l - 7 * m + 114) / 31);
+  const dzien = ((h + l - 7 * m + 114) % 31) + 1;
+  return `${rok}-${String(miesiac).padStart(2, '0')}-${String(dzien).padStart(2, '0')}`;
+}
+
+/** Dni ustawowo wolne od pracy w roku `rok` poza niedzielami. */
+function dniUstawowoWolne(rok: number): Set<DataISO> {
+  const stale = ['01-01', '01-06', '05-01', '05-03', '08-15', '11-01', '11-11', '12-24', '12-25', '12-26'].map((md) => `${rok}-${md}`);
+  const w = wielkanoc(rok);
+  return new Set([...stale, w, dodajDni(w, 1), dodajDni(w, 49), dodajDni(w, 60)]);
+}
+
+/** Dzień jest sobotą, niedzielą albo dniem ustawowo wolnym od pracy. */
+function czyDzienWolny(dzien: DataISO): boolean {
+  const [rok, miesiac, dzienMiesiaca] = dzien.split('-').map(Number);
+  const dzienTygodnia = new Date(Date.UTC(rok, miesiac - 1, dzienMiesiaca)).getUTCDay();
+  return dzienTygodnia === 0 || dzienTygodnia === 6 || dniUstawowoWolne(rok).has(dzien);
+}
+
+/**
+ * Termin opłacenia składek za miesiąc: 20. dzień następnego miesiąca, a gdy przypada w sobotę albo w dniu
+ * ustawowo wolnym od pracy, najbliższy następny dzień roboczy (historyjka 3.6.1.3.2).
+ */
 export function terminOplaceniaSkladek(miesiac: MiesiacISO): DataISO {
-  return `${dodajMiesiaceDoMiesiaca(miesiac, 1)}-20`;
+  let termin: DataISO = `${dodajMiesiaceDoMiesiaca(miesiac, 1)}-20`;
+  while (czyDzienWolny(termin)) termin = dodajDni(termin, 1);
+  return termin;
 }
 
 /** Dzień utworzenia sprawy za miesiąc: pierwszy dzień następnego miesiąca. */
@@ -104,6 +147,21 @@ export function progZadluzenia(katalog: Katalog, dzien: DataISO): Grosze {
   return minimalne !== null && minimalne > 0 ? Math.round(minimalne / 100) : PROG_ZADLUZENIA_ZAPASOWY;
 }
 
+/**
+ * Progi zadłużenia obowiązujące od dnia `dzis` do dnia powstania prawa do zasiłku `doDnia`: pierwszy próg od
+ * dnia `dzis`, kolejne od pierwszego dnia miesiąca, w którym słownik kwot i progów zmienia wartość.
+ */
+export function progiZadluzenia(katalog: Katalog, dzis: DataISO, doDnia: DataISO): { prog: Grosze; od: DataISO }[] {
+  const progi = [{ prog: progZadluzenia(katalog, dzis), od: dzis }];
+  let miesiac = dodajMiesiaceDoMiesiaca(miesiacZDaty(dzis), 1);
+  for (let i = 0; i < 24 && porownajDaty(`${miesiac}-01`, doDnia) <= 0; i += 1) {
+    const prog = progZadluzenia(katalog, `${miesiac}-01`);
+    if (prog !== progi[progi.length - 1].prog) progi.push({ prog, od: `${miesiac}-01` });
+    miesiac = dodajMiesiaceDoMiesiaca(miesiac, 1);
+  }
+  return progi;
+}
+
 function czyAktywnyWDniu(od: DataISO | undefined, do_: DataISO | undefined, dzien: DataISO): boolean {
   if (od !== undefined && porownajDaty(od, dzien) > 0) return false;
   return do_ === undefined || porownajDaty(dzien, do_) <= 0;
@@ -111,7 +169,7 @@ function czyAktywnyWDniu(od: DataISO | undefined, do_: DataISO | undefined, dzie
 
 /** Tytuł ubezpieczenia z danych konta ZUS odpowiadający formie strażnika, aktywny w dniu `dzien`. */
 export function tytulStraznika(kopia: DaneZKontaZus, forma: FormaStraznika, dzien: DataISO): TytulUbezpieczenia | null {
-  const rodzaj = forma === 'jdg' ? 'dzialalnosc' : 'zleceniobiorca';
+  const rodzaj = forma === 'jdg' ? 'dzialalnosc' : forma === 'umowa-o-prace' ? 'pracownik' : 'zleceniobiorca';
   const tytuly = kopia.tytuly
     .filter((t) => t.rodzaj === rodzaj && czyAktywnyWDniu(t.od, t.do, dzien))
     .sort((a, b) => porownajDaty(b.od, a.od));
@@ -241,6 +299,8 @@ export interface OcenaStraznika {
   stanRozliczenNiedostepny: boolean;
   zadluzenie: Grosze | null;
   prog: Grosze;
+  /** Progi zadłużenia od dziś do przewidywanego terminu porodu (historyjka 3.6.1.3.2). */
+  progi: { prog: Grosze; od: DataISO }[];
   podwyzszenie: PodwyzszeniePodstawy | null;
   /** Sprawa Opłacenie składek bieżącego miesiąca (wyłącznie JDG). */
   oplacenie: ({ miesiac: MiesiacISO; termin: DataISO; idSprawy: IdSprawy } & StatusOplacenia) | null;
@@ -263,12 +323,15 @@ export function ocenStraznika(w: WejscieStraznika): OcenaStraznika | null {
   if (forma === null) return null;
   const kopia = w.kopia;
   const tytul = kopia ? tytulStraznika(kopia, forma, w.dzis) : null;
-  const duchAktywne = kopia ? czyDuchAktywne(tytul, w.dzis) : null;
+  const uop = forma === 'umowa-o-prace';
+  const duchAktywne = kopia && !uop ? czyDuchAktywne(tytul, w.dzis) : null;
   const stanNiedostepny = kopia?.stanRozliczenNiedostepny === true;
   const stan = kopia && forma === 'jdg' ? ostatniStanRozliczen(kopia) : null;
   const prog = progZadluzenia(w.katalog, w.dzis);
   const podstawy = tytul?.podstawySkladek ?? [];
   const podwyzszenie = podwyzszeniePodstawy(podstawy, w.progPodwyzszeniaProcent);
+  // Matce na umowie o pracę strażnik pokazuje wyłącznie ostrzeżenie o podwyższeniu podstawy.
+  if (uop && podwyzszenie === null) return null;
   let oplacenie: OcenaStraznika['oplacenie'] = null;
   if (forma === 'jdg') {
     const miesiac = miesiacSkladekNaDzien(w.dzis);
@@ -297,6 +360,7 @@ export function ocenStraznika(w: WejscieStraznika): OcenaStraznika | null {
     stanRozliczenNiedostepny: forma === 'jdg' && stanNiedostepny,
     zadluzenie: stan ? zadluzenieDlaStraznika(stan) : null,
     prog,
+    progi: progiZadluzenia(w.katalog, w.dzis, w.daneCiazy?.przewidywanyTerminPorodu ?? w.dzis),
     podwyzszenie,
     oplacenie,
     liczbaOstrzezen,

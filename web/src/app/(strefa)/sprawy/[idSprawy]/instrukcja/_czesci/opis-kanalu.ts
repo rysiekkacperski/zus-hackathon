@@ -43,6 +43,19 @@ export function kafelkiKanalu(w: {
           { etykieta: t.kanal, wartosc: o.zam.kanal, podpis: o.zam.kanalPodpis },
         ];
       }
+      if (w.wybor.idWidoku === 'ViewZ15Start') {
+        // K22: instytucja według formy zatrudnienia, wniosek Z-15 w kreatorze przewodnika (3.8.1.1.1, tabela kanałów).
+        const instytucja =
+          w.forma === 'umowa-o-prace'
+            ? { wartosc: o.z15.instytucjaPracodawca, podpis: o.z15.instytucjaPracodawcaPodpis }
+            : w.forma === 'umowa-zlecenia'
+              ? { wartosc: o.z15.instytucjaZleceniodawca, podpis: o.z15.instytucjaZleceniodawcaPodpis }
+              : { wartosc: o.z15.instytucjaZus, podpis: o.z15.instytucjaZusPodpis };
+        return [
+          { etykieta: t.instytucja, ...instytucja },
+          { etykieta: t.kanal, wartosc: o.z15.kanal, podpis: o.z15.kanalPodpis },
+        ];
+      }
       return [
         { etykieta: t.instytucja, wartosc: o.zas53.instytucja, podpis: o.zas53.instytucjaPodpis },
         { etykieta: t.kanal, wartosc: o.zas53.kanal, podpis: o.zas53.kanalPodpis },
@@ -50,12 +63,21 @@ export function kafelkiKanalu(w: {
     case 'zewnetrzny': {
       const klucz = w.wybor.kanal === 'gov-zgloszenie-urodzenia' ? 'mobywatel' : w.wybor.kanal;
       const opis = o[klucz];
+      // K08 po ustaniu umowy o pracę: ZUS, wniosek ZAM w eZUS (KA-02 3.8.1.1.2).
+      const kanalPodpis = w.wybor.kanal === 'ezus' && w.pozycja?.id === 'K08' ? o.ezusZam.kanalPodpis : opis.kanalPodpis;
       return [
         { etykieta: t.instytucja, wartosc: opis.instytucja, podpis: opis.instytucjaPodpis },
-        { etykieta: t.kanal, wartosc: opis.kanal, podpis: opis.kanalPodpis },
+        { etykieta: t.kanal, wartosc: opis.kanal, podpis: kanalPodpis },
       ];
     }
     case 'u-pracodawcy': {
+      // K23: wniosek o urlop wychowawczy albo o obniżenie wymiaru czasu pracy w kreatorze wniosków do pracodawcy (KA-03 3.8.1.1.2).
+      if (w.pozycja?.id === 'K23') {
+        return [
+          { etykieta: t.instytucja, wartosc: o.pracodawca.instytucja, podpis: w.nazwaPracodawcy },
+          { etykieta: t.kanal, wartosc: o.pracodawcaK23.kanal, podpis: o.pracodawcaK23.kanalPodpis },
+        ];
+      }
       const opis = w.forma === 'umowa-zlecenia' ? o.zleceniodawca : o.pracodawca;
       return [
         { etykieta: t.instytucja, wartosc: opis.instytucja, podpis: w.nazwaPracodawcy },

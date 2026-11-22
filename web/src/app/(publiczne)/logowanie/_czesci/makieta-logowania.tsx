@@ -93,7 +93,7 @@ export function KartaKoduMakiety({
   waznoscSekund,
 }: KartaKoduMakietyProps) {
   return (
-    <Karta tytul={tytulKarty} bezLinii className="max-w-okno-szerokie">
+    <Karta tytul={tytulKarty} bezLinii>
       <div className="flex flex-wrap items-start gap-7.5">
         <KodQrZastepczy opis={opisKoduQr} pozostaloSekund={pozostaloSekund} waznoscSekund={waznoscSekund} />
         <div className="flex min-w-0 flex-[1_1_22.5rem] flex-col gap-6">

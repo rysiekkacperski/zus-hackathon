@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { formatujDate, liczbaDniWlacznie } from '@/domena/daty';
 import type { KodKomunikatu, WniosekZas53, Zalacznik } from '@/domena/typy';
 import { formatujRachunek } from '@/domena/walidacje';
+import { formatujHektary } from '@/domena/wnioski/z10';
 import {
   brakujeWymaganegoPliku,
   czyOkresyNachodza,
@@ -271,7 +272,9 @@ export function WidokPodsumowaniaZas53() {
                     o.tak ? t.odpowiedzTak : t.odpowiedzNie,
                     o.podmiot ?? o.miejsce,
                     o.rodzajDzialalnosci ? tZ.rodzaje[o.rodzajDzialalnosci as keyof typeof tZ.rodzaje] : undefined,
+                    o.hektary !== undefined ? `${tZ.hektary}: ${formatujHektary(o.hektary)}` : undefined,
                     o.data ? formatujDate(o.data) : undefined,
+                    o.urlop ? teksty.ViewZas53Start.kreator.okres({ od: formatujDate(o.urlop.od), do: formatujDate(o.urlop.do) }) : undefined,
                   ]
                     .filter(Boolean)
                     .join(', '),
@@ -482,6 +485,9 @@ export function WidokPodsumowaniaZas53() {
                       do: formatujDate(powiazana.wynikUstaleniaPrawa.do),
                     })}
                   </p>
+                  <div className="mb-4">
+                    <Komunikat kod="0266" />
+                  </div>
                   <Odnosnik href={trasy.ViewCaseDetails({ idSprawy: powiazana.idSprawy })}>{t.sprawaPowiazanaAkcja}</Odnosnik>
                 </Karta>
               ) : null}

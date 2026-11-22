@@ -5,7 +5,7 @@ import { parsujDate, wiekWLatach } from '@/domena/daty';
 import { losoweCyfry, losowyCiag, ZNAKI_A_Z_0_9, type Losuj } from '@/domena/losowanie';
 import { losujPesel } from '@/domena/pesel';
 import type { BledyPol, DataISO, Pesel, Plec } from '@/domena/typy';
-import { walidujImieNazwisko } from '@/domena/walidacje';
+import { MAKS_DLUGOSC_IMIENIA, MAKS_DLUGOSC_NAZWISKA, walidujImieNazwisko } from '@/domena/walidacje';
 
 /** Pola formularza ViewDemoNewAccount przed walidacją; data urodzenia w zapisie 'DD.MM.RRRR'. */
 export interface DaneNowegoKonta {
@@ -30,17 +30,27 @@ export const DLUGOSC_KODU_MOBYWATEL = 6;
 export const DLUGOSC_KODU_MZUS = 8;
 export const WAZNOSC_KODU_MZUS_SEKUNDY = 120;
 
+/** Najwyższa długość imienia i nazwiska nowego konta, parametr komunikatu 0271 (Story 3.1.1.1.6). */
+export const MAKS_DLUGOSC_POLA_NOWEGO_KONTA = { imie: MAKS_DLUGOSC_IMIENIA, nazwisko: MAKS_DLUGOSC_NAZWISKA } as const;
+
+/** Imię albo nazwisko: 0028 albo 0029 (puste), 0271 (za długie), 0030 (niedozwolone znaki). */
+function walidujCzescNazwy(tekst: string, pole: 'imie' | 'nazwisko'): BledyPol<PoleNowegoKonta>['imie'] {
+  const wartosc = tekst.trim().normalize('NFC');
+  if (wartosc !== '' && wartosc.length > MAKS_DLUGOSC_POLA_NOWEGO_KONTA[pole]) return '0271';
+  return walidujImieNazwisko(tekst, pole) ?? undefined;
+}
+
 /**
- * Błędy pól nowego konta, sprawdzane wszystkie naraz (analiza 3.1.1, sekcja 7):
- * imię 0028 albo 0030, nazwisko 0029 albo 0030, data urodzenia 0253 (puste), 0010 (format
+ * Błędy pól nowego konta, sprawdzane wszystkie naraz (Story 3.1.1.1.6, Walidacja):
+ * imię 0028, 0271 albo 0030, nazwisko 0029, 0271 albo 0030, data urodzenia 0253 (puste), 0010 (format
  * albo dzień spoza kalendarza), 0254 (wiek spoza 16–60 lat w dniu `dzis`), płeć 0006.
  */
 export function walidujNoweKonto(d: DaneNowegoKonta, dzis: DataISO): BledyPol<PoleNowegoKonta> {
   const bledy: BledyPol<PoleNowegoKonta> = {};
 
-  const imie = walidujImieNazwisko(d.imie, 'imie');
+  const imie = walidujCzescNazwy(d.imie, 'imie');
   if (imie) bledy.imie = imie;
-  const nazwisko = walidujImieNazwisko(d.nazwisko, 'nazwisko');
+  const nazwisko = walidujCzescNazwy(d.nazwisko, 'nazwisko');
   if (nazwisko) bledy.nazwisko = nazwisko;
 
   const zapisDaty = d.dataUrodzenia.trim();

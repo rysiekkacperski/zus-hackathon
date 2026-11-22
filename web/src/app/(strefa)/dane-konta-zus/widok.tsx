@@ -18,6 +18,7 @@ import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { Kwota } from '@/komponenty/kwota';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
+import { useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
@@ -180,7 +181,8 @@ export function WidokDanychKontaZus() {
   const adresPowrotu = idSprawy ? trasy.ViewCaseGuide({ idSprawy }) : trasy.ViewFamilyPlan();
 
   const [odczyt, setOdczyt] = useState<StanOdczytu>({ stan: 'trwa' });
-  const [bladEzus, setBladEzus] = useState<KodKomunikatu | null>(null);
+  // Błąd otwarcia eZUS jest chwilowy: po powrocie na trasę widok zaczyna bez niego.
+  const [bladEzus, setBladEzus] = useStanChwilowy<KodKomunikatu | null>(null);
 
   const odczytaj = useCallback(async () => {
     setOdczyt({ stan: 'trwa' });
@@ -188,11 +190,13 @@ export function WidokDanychKontaZus() {
     setOdczyt(wynik.ok ? { stan: 'gotowy' } : { stan: 'blad', kod: wynik.kod });
   }, []);
 
-  // Odczyt danych konta przy otwarciu ekranu (R8); zabezpieczenie przed podwójnym odczytem w trybie deweloperskim.
-  const odczytano = useRef(false);
+  // Odczyt danych konta przy każdym otwarciu ekranu (R8), także po powrocie na trasę zachowaną przez Cache
+  // Components; odstęp 1 s chroni przed podwójnym odczytem przy ponownym montowaniu w trybie deweloperskim.
+  const ostatniOdczyt = useRef(0);
   useEffect(() => {
-    if (odczytano.current) return;
-    odczytano.current = true;
+    const teraz = Date.now();
+    if (teraz - ostatniOdczyt.current < 1000) return;
+    ostatniOdczyt.current = teraz;
     void Promise.resolve().then(odczytaj);
   }, [odczytaj]);
 
@@ -326,13 +330,18 @@ export function WidokDanychKontaZus() {
               etykietaPrzewijania={t.zasilki.przewijanie}
               kolumny={[
                 { klucz: 'rodzaj', naglowek: t.zasilki.kolumny.rodzaj, tytulowa: true },
+                { klucz: 'okres', naglowek: t.zasilki.kolumny.okres },
                 { klucz: 'data', naglowek: t.zasilki.kolumny.data },
                 { klucz: 'kwota', naglowek: t.zasilki.kolumny.kwota, liczbowa: true },
                 { klucz: 'sposob', naglowek: t.zasilki.kolumny.sposob },
               ]}
               wiersze={kopia.zasilki.map((z, i) => ({
                 id: `${z.dataWyplaty}-${i}`,
-                rodzaj: z.rodzaj,
+                rodzaj: t.zasilki.rodzaje[z.rodzaj] ?? z.rodzaj,
+                okres:
+                  z.okresOd && z.okresDo
+                    ? t.okresOdDo({ od: formatujDate(z.okresOd), doDnia: formatujDate(z.okresDo) })
+                    : t.brakDaty,
                 data: formatujDate(z.dataWyplaty),
                 kwota: formatujKwote(z.kwota),
                 sposob: t.zasilki.sposoby[z.sposobWyplaty],

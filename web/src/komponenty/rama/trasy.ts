@@ -89,6 +89,13 @@ export interface ParametryWidokow {
   ViewZas53Data: Zapytanie<'wniosek'>;
   ViewZas53Summary: Zapytanie<'wniosek'>;
   ViewZas53Sent: Zapytanie<'wniosek'>;
+  ViewZ15Start: Zapytanie<'sprawa' | 'sytuacja'>;
+  ViewZ15Situation: Zapytanie<'wniosek'>;
+  ViewZ15Statements: Zapytanie<'wniosek'>;
+  ViewZ15Data: Zapytanie<'wniosek'>;
+  ViewZ15Summary: Zapytanie<'wniosek'>;
+  ViewZ15Sent: Zapytanie<'wniosek'>;
+  ViewZ15ForPayer: Zapytanie<'wniosek'>;
   ViewLeaveRequestType: Zapytanie<'sprawa' | 'wniosek' | 'scenariusz'>;
   ViewLeaveRequestForm: Zapytanie<'wniosek'>;
   ViewLeaveRequestSummary: Zapytanie<'wniosek'>;

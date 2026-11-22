@@ -46,6 +46,8 @@ import {
   type SekcjaFormularzaUrlopu,
   type StanKreatora,
 } from '../_czesci/kreator';
+import { czyWychowawczy } from '@/domena/wnioski/urlopy-wychowawczy';
+import { FormularzWychowawczy } from './_czesci/formularz-wychowawczy';
 
 const t = teksty.ViewLeaveRequestForm;
 const tt = teksty.ViewLeaveRequestType;
@@ -139,12 +141,15 @@ export function WidokFormularzaWnioskuOUrlop() {
   const wniosek = stan?.wniosek ?? null;
   const podrodzaj = wniosek?.podrodzaj;
   const poczatkowe = useMemo(() => {
-    if (stan === null || !wniosek || !podrodzaj) return null;
+    if (stan === null || !wniosek || !podrodzaj || czyWychowawczy(podrodzaj)) return null;
     if (wniosek.okresy.length > 0 || wniosek.zakres) return odpowiedziZeSzkicu(wniosek, formatujDate);
     return odpowiedziProponowane(podrodzaj, stan.dane, propozycjeFormularza(podrodzaj, stan.dane), formatujDate);
   }, [stan, wniosek, podrodzaj]);
 
   if (stan === null) return null;
+  if (wniosek && czyWychowawczy(podrodzaj)) {
+    return <FormularzWychowawczy key={wniosek.idWniosku} stan={stan} wniosek={wniosek} podrodzaj={podrodzaj} />;
+  }
   if (!wniosek || !podrodzaj || !poczatkowe) {
     return (
       <RamaKreatora krok={2} nazwaKroku={tt.nazwaKroku} idSprawy={null}>

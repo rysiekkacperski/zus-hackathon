@@ -384,7 +384,7 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
     if (!plik) return;
     setBladDodania(null);
     const kody = Object.values(walidacja.bledyAktualne);
-    zapiszZmiany(kody.every((k) => k === '0006' || k === '0109'));
+    zapiszZmiany(kody.every((k) => k === '0006' || k === '0018' || k === '0109'));
     const kod = await onDodajDokument(plik);
     if (kod === '0103' || kod === '0104') setBladDodania(kod);
     else if (kod) setBladStrony(kod);
@@ -481,6 +481,7 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
           {poleWpisu('tytulOd', t.osoba.tytulOd, d.tytul.od, { data: true })}
           {poleWpisu('tytulDo', t.osoba.tytulDo, d.tytul.dataUstania, { data: true, trwa: f.pola.tytulDo === '' && f.pola.tytulOd !== '' ? 'tytul' : null })}
           {pokazEtat ? poleWyboru('etat', t.osoba.etat, d.wymiarCzasuPracy, o.etat) : null}
+          {pokazEtat && f.pola.etat === 'niepelny-etat' ? poleWpisu('wymiarEtatu', t.osoba.wymiarEtatu, d.wymiarEtatu ?? { wartosc: null, zrodlo: { rodzaj: 'brak' } }) : null}
           {pokazLiczbeUb ? poleWyboru('liczbaUb', t.osoba.liczbaUb, d.liczbaUbezpieczonychPlatnika, o.liczbaUb) : null}
           {pokazUstanie ? (
             <>
@@ -503,6 +504,9 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
           {pokazDlug ? poleWpisu('dlug', t.chorobowe.dlug, d.zadluzenieJdg, { inputMode: 'decimal', brak: t.chorobowe.dlugBrak }) : null}
         </SiatkaPol>
         <PodtytulKarty id={`${POLE_OKRESOW_CHOROBOWYCH}-naglowek`}>{t.chorobowe.okresy}</PodtytulKarty>
+        {poczatkowy.okresyChorobowe.length > 0 ? (
+          <p className="mt-0 mb-4 text-small text-ink-muted">{opisElementu(okresyCh, false, '').tekst}</p>
+        ) : null}
         {f.okresyChorobowe.length > 0 ? (
           <div className="grid grid-cols-1 items-start gap-x-6 gap-y-4 xl:grid-cols-2">
             {f.okresyChorobowe.map((ok, i) => {
@@ -516,7 +520,7 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
                     data
                     wartosc={ok.od}
                     onZmiana={(w) => setF((s) => ({ ...s, okresyChorobowe: s.okresyChorobowe.map((x, j) => (j === i ? { ...x, od: w } : x)) }))}
-                    zrodlo={opisElementu(okresyCh, ok.od !== (pierwotny?.od ?? ''), pierwotny?.od ?? '')}
+                    zrodlo={pierwotny === undefined ? { tekst: t.zrodla.podajeszTy } : ok.od !== pierwotny.od ? opisElementu(okresyCh, true, pierwotny.od) : null}
                     {...walidacja.pole(idOkresuChorobowego(i, 'od'))}
                   />
                   <PoleWpisuSprawy
@@ -525,7 +529,7 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
                     data
                     wartosc={ok.do}
                     onZmiana={(w) => setF((s) => ({ ...s, okresyChorobowe: s.okresyChorobowe.map((x, j) => (j === i ? { ...x, do: w } : x)) }))}
-                    zrodlo={opisKoncaOkresuCh(i)}
+                    zrodlo={pierwotny === undefined ? { tekst: t.zrodla.podajeszTy } : opisKoncaOkresuCh(i)}
                     {...walidacja.pole(idOkresuChorobowego(i, 'do'))}
                   />
                   {usun(t.chorobowe.usunOkres({ numer }), () => setF((s) => ({ ...s, okresyChorobowe: s.okresyChorobowe.filter((_, j) => j !== i) })))}
@@ -541,7 +545,12 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
             id={POLE_OKRESOW_CHOROBOWYCH}
             data-blad={bladOkresow ? 'true' : undefined}
             aria-describedby={bladOkresow ? idBledu(POLE_OKRESOW_CHOROBOWYCH) : undefined}
-            onClick={() => setF((s) => ({ ...s, okresyChorobowe: [...s.okresyChorobowe, { od: '', do: '' }] }))}
+            onClick={() => {
+              const nowy = f.okresyChorobowe.length;
+              setF((s) => ({ ...s, okresyChorobowe: [...s.okresyChorobowe, { od: '', do: '' }] }));
+              // Fokus trafia na pierwsze pole nowego okresu po jego wyrenderowaniu.
+              setTimeout(() => document.getElementById(idOkresuChorobowego(nowy, 'od'))?.focus(), 0);
+            }}
           >
             {t.chorobowe.dodajOkres}
           </Przycisk>
@@ -642,13 +651,13 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
                     wartosc={ok.rodzajUrlopu}
                     opcje={o.urlop}
                     onZmiana={zmien('rodzajUrlopu')}
-                    zrodlo={opisElementu(okresyWn, ok.rodzajUrlopu !== (p?.rodzajUrlopu ?? ''), o.urlop[p?.rodzajUrlopu as keyof typeof o.urlop] ?? '')}
+                    zrodlo={p === undefined ? { tekst: t.zrodla.podajeszTy } : opisElementu(okresyWn, ok.rodzajUrlopu !== (p?.rodzajUrlopu ?? ''), o.urlop[p?.rodzajUrlopu as keyof typeof o.urlop] ?? '')}
                     {...walidacja.pole(idOkresuWniosku(i, 'rodzaj'))}
                   />
                   <PoleWpisuSprawy id={idOkresuWniosku(i, 'od')} etykieta={t.zdarzenie.od} data wartosc={ok.od} onZmiana={zmien('od')}
-                    zrodlo={opisElementu(okresyWn, ok.od !== (p?.od ?? ''), p?.od ?? '')} {...walidacja.pole(idOkresuWniosku(i, 'od'))} />
+                    zrodlo={p === undefined ? { tekst: t.zrodla.podajeszTy } : opisElementu(okresyWn, ok.od !== (p?.od ?? ''), p?.od ?? '')} {...walidacja.pole(idOkresuWniosku(i, 'od'))} />
                   <PoleWpisuSprawy id={idOkresuWniosku(i, 'do')} etykieta={t.zdarzenie.do} data wartosc={ok.do} onZmiana={zmien('do')}
-                    zrodlo={opisElementu(okresyWn, ok.do !== (p?.do ?? ''), p?.do ?? '')} {...walidacja.pole(idOkresuWniosku(i, 'do'))} />
+                    zrodlo={p === undefined ? { tekst: t.zrodla.podajeszTy } : opisElementu(okresyWn, ok.do !== (p?.do ?? ''), p?.do ?? '')} {...walidacja.pole(idOkresuWniosku(i, 'do'))} />
                   {usun(t.zdarzenie.usunOkres({ numer }), () => setF((s) => ({ ...s, okresyWniosku: s.okresyWniosku.filter((_, j) => j !== i) })))}
                 </div>
               );
@@ -684,7 +693,9 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
       <Karta tytul={t.kwoty.tytul} bezLinii>
         {f.kwoty.length > 0 ? (
           <>
-            <p className="mt-0 mb-5">{t.kwoty.opisy[rodzajKwot]}</p>
+            <p className="mt-0 mb-2">{t.kwoty.opisy[rodzajKwot]}</p>
+            {/* Źródło wspólne dla kwot pokazujemy raz, a przy polu tylko korektę albo kwotę dopisaną ręcznie. */}
+            <p className="mt-0 mb-5 text-small text-ink-muted">{opisElementu(kwoty, false, '').tekst}</p>
             <SiatkaPol kolumny={6}>
               {f.kwoty.map((k, i) => {
                 const miesiac = wielka(formatujMiesiac(k.miesiac));
@@ -698,7 +709,7 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
                     inputMode="decimal"
                     wartosc={k.kwota}
                     onZmiana={(w) => setF((s) => ({ ...s, kwoty: s.kwoty.map((x, j) => (j === i ? { ...x, kwota: w } : x)) }))}
-                    zrodlo={opisElementu(kwoty, k.kwota !== (p?.kwota ?? ''), pierwotna)}
+                    zrodlo={p === undefined ? { tekst: t.zrodla.podajeszTy } : k.kwota !== p.kwota ? opisElementu(kwoty, true, pierwotna) : null}
                     dodatek={usun(t.kwoty.usunMiesiac({ miesiac: formatujMiesiac(k.miesiac) }), () => setF((s) => ({ ...s, kwoty: s.kwoty.filter((_, j) => j !== i) })))}
                     {...walidacja.pole(idKwoty(i))}
                   />
@@ -747,7 +758,7 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
           wiersze={przyznane.map((p, i) => ({
             id: `${p.rodzaj}-${i}`,
             swiadczenie: p.rodzaj in o.swiadczenie ? o.swiadczenie[p.rodzaj as keyof typeof o.swiadczenie] : p.rodzaj,
-            okres: `${formatujDate(p.od)}–${formatujDate(p.do)}`,
+            okres: teksty.wspolne.zlozone.zakresDat({ od: formatujDate(p.od), do: formatujDate(p.do) }),
             kwota: formatujKwote(p.kwota),
             zrodlo: opisElementu(d.swiadczeniaPrzyznane, false, '').tekst,
           }))}

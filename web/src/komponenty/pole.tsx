@@ -42,8 +42,10 @@ export interface PodpowiedzPolaProps {
 }
 
 // Klasy pola wpisu ez-input. Ramka 2 px przy fokusie, a odstęp 11 px zatrzymuje tekst w miejscu.
+// Pole z błędem (aria-invalid) ma ramkę 2 px w kolorze ink-strong i tło surface-sunken. Drugi piksel ramki
+// rysuje cień wewnętrzny, więc tekst stoi w miejscu, a przy fokusie ramkę 2 px daje już focus:border-2.
 export const klasyRamkiPolaWpisu =
-  'block w-full min-w-0 box-border m-0 border border-brand rounded-sm bg-surface-card text-ink font-sans text-body placeholder:text-ink-muted focus:outline-none focus:border-2 disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-ink-muted read-only:bg-surface-sunken';
+  'block w-full min-w-0 box-border m-0 border border-brand rounded-sm bg-surface-card text-ink font-sans text-body placeholder:text-ink-muted focus:outline-none focus:border-2 aria-invalid:border-ink-strong aria-invalid:bg-surface-sunken aria-invalid:shadow-[inset_0_0_0_1px_var(--color-ink-strong)] aria-invalid:focus:shadow-none disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-ink-muted read-only:bg-surface-sunken';
 
 export const klasyPolaWpisu = `h-control ${klasyRamkiPolaWpisu}`;
 

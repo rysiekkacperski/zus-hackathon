@@ -9,6 +9,7 @@ import { formatujProcent } from '@/domena/kwoty';
 import type { KodKomunikatu } from '@/domena/typy';
 import { poczatekOchrony } from '@/domena/wnioski/ochrona';
 import { listaZalacznikow, nazwaPlikuWniosku } from '@/domena/wnioski/urlopy';
+import { czyWychowawczy, ochronaWychowawczego } from '@/domena/wnioski/urlopy-wychowawczy';
 import { okresOchrony, walidujWysylke } from '@/domena/wnioski/wysylka-do-pracodawcy';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { zapiszKrokWnioskuOUrlop } from '@/dane/magazyn/operacje/wnioski-urlop';
@@ -40,6 +41,7 @@ import {
   RamaKreatora,
   useKreatorUrlopu,
 } from '../_czesci/kreator';
+import { pozycjeOkresuWychowawczego, pozycjeOswiadczenWychowawczego } from '../_czesci/pozycje-wychowawczego';
 import { OknoPodgladuWiadomosci } from './_czesci/okno-podgladu-wiadomosci';
 
 const t = teksty.ViewLeaveRequestSummary;
@@ -98,18 +100,29 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   }
   const podrodzaj = wniosek.podrodzaj;
   const idW = wniosek.idWniosku;
-  const zalaczniki = listaZalacznikow(podrodzaj, dane).map((z) => wniosek.zalaczniki.find((s) => s.id === z.id) ?? z);
-  const pierwszy = okresOchrony(wniosek);
-  const ochronaDzis = pierwszy
-    ? poczatekOchrony(kontekst.dzis, pierwszy.od, pierwszy.rodzajUrlopu === 'laczenie-z-praca' ? 'rodzicielski' : pierwszy.rodzajUrlopu)
-    : null;
-  const hrefFormularza = adresCzesciFormularzaUrlopu(idW, czescSekcjiUrlopu(podrodzaj, 'okres'));
-  const hrefOsob = adresCzesciFormularzaUrlopu(idW, czescSekcjiUrlopu(podrodzaj, 'dane'));
-  const hrefOswiadczen = adresCzesciFormularzaUrlopu(
-    idW,
-    czescSekcjiUrlopu(podrodzaj, podrodzaj === 'laczenie-z-praca' ? 'laczenie' : 'oswiadczenie'),
-  );
-  const hrefWstecz = adresCzesciFormularzaUrlopu(idW, czesciFormularzaUrlopu(podrodzaj).length);
+  // Rezygnacja matki i wniosek ojca o pozostałą część urlopu (u34) mają własne ekrany i listę załączników w szkicu.
+  const ekranU34 =
+    podrodzaj === 'rezygnacja-matki'
+      ? trasy.ViewMaternityResignation({ wniosek: idW, sprawa: wniosek.idSprawy })
+      : podrodzaj === 'pozostala-czesc-macierzynskiego'
+        ? trasy.ViewFatherTakeover({ wniosek: idW, sprawa: wniosek.idSprawy })
+        : null;
+  const zalaczniki = ekranU34
+    ? wniosek.zalaczniki
+    : listaZalacznikow(podrodzaj, dane).map((z) => wniosek.zalaczniki.find((s) => s.id === z.id) ?? z);
+  const pierwszy = podrodzaj === 'rezygnacja-matki' ? null : okresOchrony(wniosek);
+  const ochronaDzis =
+    wniosek.wychowawczy && czyWychowawczy(podrodzaj)
+      ? ochronaWychowawczego(wniosek.wychowawczy, podrodzaj, kontekst.dzis).od
+      : pierwszy
+        ? poczatekOchrony(kontekst.dzis, pierwszy.od, pierwszy.rodzajUrlopu === 'laczenie-z-praca' ? 'rodzicielski' : pierwszy.rodzajUrlopu)
+        : null;
+  const hrefFormularza = ekranU34 ?? adresCzesciFormularzaUrlopu(idW, czescSekcjiUrlopu(podrodzaj, 'okres'));
+  const hrefOsob = ekranU34 ?? adresCzesciFormularzaUrlopu(idW, czescSekcjiUrlopu(podrodzaj, 'dane'));
+  const hrefOswiadczen =
+    ekranU34 ??
+    adresCzesciFormularzaUrlopu(idW, czescSekcjiUrlopu(podrodzaj, podrodzaj === 'laczenie-z-praca' ? 'laczenie' : 'oswiadczenie'));
+  const hrefWstecz = ekranU34 ?? adresCzesciFormularzaUrlopu(idW, czesciFormularzaUrlopu(podrodzaj).length);
   const nazwaPliku = nazwaPlikuWniosku(podrodzaj);
 
   function pokazKomunikat(nowy: { kod: KodKomunikatu; ponow?: boolean }) {
@@ -174,7 +187,9 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
     });
   }
 
-  const okresy: { etykieta: string; wartosc: string }[] = wniosek.okresy.map((o) => ({
+  const okresy: { etykieta: string; wartosc: string }[] = wniosek.rezygnacja
+    ? [{ etykieta: teksty.ViewMaternityResignation.poleDatyPowrotu, wartosc: formatujDate(wniosek.rezygnacja.dataPowrotu) }]
+    : wniosek.okresy.map((o) => ({
     etykieta: tf.rodzajeUrlopu[o.rodzajUrlopu],
     wartosc: `${formatujDate(o.od)} – ${formatujDate(o.do)}${o.stawka !== undefined ? `, ${tf.stawkaPodstawy({ stawka: formatujProcent(o.stawka) })}` : ''}`,
   }));
@@ -182,6 +197,7 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
     okresy.push({ etykieta: tf.wymiarPracy, wartosc: `${wniosek.laczenie.wymiarPracy} ${tf.procentEtatu}` });
     okresy.push({ etykieta: tf.ostatniDzien, wartosc: formatujDate(wniosek.laczenie.ostatniDzienUrlopu) });
   }
+  okresy.push(...pozycjeOkresuWychowawczego(wniosek));
   const osoby: { etykieta: string; wartosc: ReactNode }[] = [{ etykieta: tf.pracownik, wartosc: dane.imieINazwisko }];
   if (dane.dziecko?.dataUrodzenia) {
     const imie = [dane.dziecko.imie, dane.dziecko.nazwisko].filter(Boolean).join(' ');
@@ -195,6 +211,7 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   if (os.wczesniejszyOjcowski) oswiadczenia.push({ etykieta: t.ojcowskiWczesniej, wartosc: os.wczesniejszyOjcowski === '7-dni' ? tf.ojcowskiTak : tf.ojcowskiNie });
   if (os.drugiRodzicBezUzupelniajacego) oswiadczenia.push({ etykieta: t.uzupelniajacyDrugi, wartosc: t.potwierdzone });
   if (os.laczenieCzesciZWydluzenia !== undefined) oswiadczenia.push({ etykieta: t.laczenieWydluzenie, wartosc: os.laczenieCzesciZWydluzenia ? tf.tak : tf.nie });
+  oswiadczenia.push(...pozycjeOswiadczenWychowawczego(wniosek));
 
   // Panel zakładki: karta bez górnego odstępu, bo panel zakładek ma własny odstęp od paska.
   const sekcja = (tytul: string, tresc: ReactNode, href?: string) => (
@@ -214,7 +231,8 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
     </Karta>
   );
 
-  const listaZalacznikowTekst = zalaczniki.map((z) => tf.zalaczniki[z.id] ?? z.rodzaj).join(', ');
+  const nazwaZalacznika = (z: { id: string; rodzaj: string; opis?: string }) => tf.zalaczniki[z.id] ?? z.opis ?? z.rodzaj;
+  const listaZalacznikowTekst = zalaczniki.map(nazwaZalacznika).join(', ');
   const bladWPlikach = zalaczniki.some((z) => bledyPlikow[z.id]);
   // Brak albo błędny adres e-mail blokuje wysłanie, więc zakładka Adresat pokazuje wskaźnik od razu.
   const bladAdresu = Boolean(walidacja.bledyAktualne.email ?? walidacja.blad('email'));
@@ -222,7 +240,7 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
   function trescZakladki(): ReactNode {
     switch (zakladka) {
       case 'rodzaj':
-        return sekcja(t.rodzajTytul, <p className="m-0">{tf.nazwyWnioskow[podrodzaj]}</p>, trasy.ViewLeaveRequestType({ wniosek: idW }));
+        return sekcja(t.rodzajTytul, <p className="m-0">{tf.nazwyWnioskow[podrodzaj]}</p>, ekranU34 ?? trasy.ViewLeaveRequestType({ wniosek: idW }));
       case 'okres':
         return sekcja(t.okresTytul, <DaneNaTle poziomo={false} pozycje={okresy} />, hrefFormularza);
       case 'osoby':
@@ -246,7 +264,7 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
               </p>
               <ul className="m-0 mt-2 flex list-none flex-col p-0">
                 {zalaczniki.map((z) => {
-                  const nazwa = tf.zalaczniki[z.id] ?? z.rodzaj;
+                  const nazwa = nazwaZalacznika(z);
                   const idPola = `urlop-plik-${z.id}`;
                   const blad = bledyPlikow[z.id];
                   return (

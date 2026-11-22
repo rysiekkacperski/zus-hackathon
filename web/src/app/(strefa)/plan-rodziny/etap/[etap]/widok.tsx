@@ -19,15 +19,15 @@ import { PrzyciskLink } from '@/komponenty/przycisk';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { Stos } from '@/komponenty/uklad';
-import { Znaczek } from '@/komponenty/znaczek';
 import { teksty } from '@/teksty';
 import { ArkuszPotwierdzeniaSkladek } from '@/app/(strefa)/plan-rodziny/_czesci/arkusz-potwierdzenia-skladek';
 import { EtapPlanu } from '@/app/(strefa)/plan-rodziny/_czesci/etap-planu';
-import { licznikSprawEtapu } from '@/app/(strefa)/plan-rodziny/_czesci/karty-planu';
+import { OznaczenieEtapu, licznikSprawEtapu, stanEtapu } from '@/app/(strefa)/plan-rodziny/_czesci/karty-planu';
 import { useOcenaStraznika } from '@/app/(strefa)/plan-rodziny/_czesci/ocena-straznika';
 import { etapZeSlugu, sciezkaEtapu } from '@/app/(strefa)/plan-rodziny/_czesci/sciezka-etapu';
 import { ETAPY, nazwaEtapu, numerEtapu } from '@/app/(strefa)/plan-rodziny/_czesci/sprawy';
 import { StraznikPlanu } from '@/app/(strefa)/plan-rodziny/_czesci/straznik-planu';
+import { SlotKomunikatyPrzyjecia } from '@/app/(strefa)/plan-rodziny/_sloty/komunikaty-przyjecia';
 
 const t = teksty.ViewFamilyPlanStage;
 const tp = teksty.ViewFamilyPlan;
@@ -106,10 +106,15 @@ export function WidokEtapuPlanu({ params }: { params: PageProps<'/plan-rodziny/e
     kontoMatki?.konto.imieINazwiskoDopelniacz ??
     (kontekst.daneZusMatki ? `${kontekst.daneZusMatki.imie} ${kontekst.daneZusMatki.nazwisko}` : undefined);
 
+  const dataPorodu = daneCiazy?.dataPoroduPotwierdzona && daneCiazy.dataPorodu ? daneCiazy.dataPorodu : null;
   const opisEtapu =
-    etap === 'ciaza' && daneCiazy?.przewidywanyTerminPorodu
-      ? `${tp.opisyEtapow.ciaza} ${tp.terminPorodu({ data: formatujDate(daneCiazy.przewidywanyTerminPorodu) })}`
-      : tp.opisyEtapow[etap];
+    etap !== 'ciaza'
+      ? tp.opisyEtapow[etap]
+      : dataPorodu
+        ? `${tp.opisyEtapow.ciaza} ${tp.dataPorodu({ data: formatujDate(dataPorodu) })}`
+        : daneCiazy?.przewidywanyTerminPorodu
+          ? `${tp.opisyEtapow.ciaza} ${tp.terminPorodu({ data: formatujDate(daneCiazy.przewidywanyTerminPorodu) })}`
+          : tp.opisyEtapow.ciaza;
 
   let przedTabela: ReactNode;
   let poTabeli: ReactNode;
@@ -123,20 +128,29 @@ export function WidokEtapuPlanu({ params }: { params: PageProps<'/plan-rodziny/e
         onPotwierdz={() => setArkuszOtwarty(true)}
       />
     ) : undefined;
+    // Stan rozliczeń składek dotyczy osoby z jednoosobową działalnością gospodarczą.
+    const formaOsoby =
+      kontekst.rola === 'drugi-rodzic'
+        ? rodzina.daneRodziny.drugiRodzic.formaZatrudnienia?.wartosc
+        : rodzina.daneRodziny.matka.formaZatrudnienia?.wartosc;
+    const jdg = formaOsoby === 'jdg';
     poTabeli = (
       <div className="flex flex-col gap-4">
         <p className="m-0 text-body">{tp.ezla.opis}</p>
         <p className="m-0 text-body">{t.swiadczeniaWCiazy.opis}</p>
+        {jdg ? <p className="m-0 text-body">{t.stanRozliczen.opis}</p> : null}
         <Kafelki
-          kolumny={2}
+          kolumny={jdg ? 3 : 2}
           kafelki={[
             { href: sciezkaWidoku('ViewSickLeaveList'), etykieta: tp.ezla.kafelek },
             { href: sciezkaWidoku('ViewPregnancyBenefits'), etykieta: t.swiadczeniaWCiazy.kafelek },
+            ...(jdg ? [{ href: sciezkaWidoku('ViewContributionBalance'), etykieta: t.stanRozliczen.kafelek }] : []),
           ]}
         />
       </div>
     );
   } else if (etap === 'urlopy-i-zasilek') {
+    przedTabela = <SlotKomunikatyPrzyjecia kontekst={kontekst} etap={etap} />;
     poTabeli = (
       <div className="flex flex-col gap-4">
         <p className="m-0 text-body">{tp.kalkulator.opis}</p>
@@ -163,13 +177,7 @@ export function WidokEtapuPlanu({ params }: { params: PageProps<'/plan-rodziny/e
             <p className="text-body-strong">{licznikSprawEtapu(wszystkie)}</p>
           </div>
         }
-        akcje={
-          etap === biezacyEtap ? (
-            <Znaczek>{tp.biezacyEtap}</Znaczek>
-          ) : indeks < ETAPY.indexOf(biezacyEtap) ? (
-            <span className="text-small-strong text-ink">{tp.etapZakonczony}</span>
-          ) : undefined
-        }
+        akcje={<OznaczenieEtapu stan={stanEtapu(indeks, ETAPY.indexOf(biezacyEtap), wszystkie)} />}
       />
       <Stos odstep={7.5}>
         <EtapPlanu

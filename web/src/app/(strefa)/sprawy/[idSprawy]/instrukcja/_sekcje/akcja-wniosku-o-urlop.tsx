@@ -12,7 +12,7 @@ import { teksty } from '@/teksty';
 import type { PropsSlotu } from './typy';
 
 const t = teksty.ViewCaseGuide.sekcjaAkcjaWnioskuOUrlop;
-const SPRAWY = ['K07', 'K09', 'K10', 'K11', 'K31', 'K37'];
+const SPRAWY = ['K07', 'K09', 'K10', 'K11', 'K23', 'K31', 'K37'];
 
 export function SekcjaAkcjaWnioskuOUrlop(props: PropsSlotu<'akcja'>) {
   const { sprawa, kontekst } = props;

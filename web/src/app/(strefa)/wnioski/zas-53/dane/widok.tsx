@@ -190,7 +190,7 @@ function FormularzDanych({ k }: { k: NonNullable<ReturnType<typeof useWniosekZas
       />,
     );
   }
-  if (wniosek.stawka === 80) komunikatyPrawa.push(<Komunikat key="0234" kod="0234" />);
+  if (wniosek.stawka === 80 && !zWypadkiem) komunikatyPrawa.push(<Komunikat key="0234" kod="0234" />);
   if (wniosek.zadluzenie) {
     komunikatyPrawa.push(
       <Komunikat

@@ -15,6 +15,7 @@ import type { CzlonekRodzinyZus, KodKomunikatu } from '@/domena/typy';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { ListaDefinicji } from '@/komponenty/lista-definicji';
+import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { OknoModalne } from '@/komponenty/okno';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
@@ -48,6 +49,10 @@ export function SlotOknoNowegoDziecka({ kontekst }: PropsSlotu<'nadPlanem'>) {
   const zgoda = kontekst.stanZgody === 'udzielona';
   const [ponownieOtwarte, setPonownieOtwarte] = useState(false);
   const [blad, setBlad] = useState<KodKomunikatu | null>(null);
+  const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
+  // Treść okna z chwili potwierdzenia: zapis usuwa noweDzieckoOczekujace, a okno zostaje otwarte z ładowaniem
+  // do pokazania następnego widoku, więc przeliczony plan pod nim nie zostaje sam na ekranie.
+  const [przejscie, ustawPrzejscie] = useStanChwilowy<{ dzieci: CzlonekRodzinyZus[]; stanNa: string } | null>(null);
 
   const rozbieznosc =
     kontekst.rola === 'rodzic' &&
@@ -65,12 +70,17 @@ export function SlotOknoNowegoDziecka({ kontekst }: PropsSlotu<'nadPlanem'>) {
     router.replace(sciezkaWidoku('ViewBirthDate', { tryb: 'pakiet' }));
   }, [rozbieznosc, wykryto, router]);
 
-  if (!czyZgloszenieNarodzinDostepne(kontekst) || oczekujace === undefined || dzieci.length === 0) return null;
+  const dostepne = czyZgloszenieNarodzinDostepne(kontekst) && oczekujace !== undefined && dzieci.length > 0;
+  if (!dostepne && przejscie === null) return null;
 
-  const otwarte = oczekujace.zamknieto === undefined || ponownieOtwarte;
-  const stanNa = kontekst.daneZusKonta?.odczytano ? dataZeZnacznika(kontekst.daneZusKonta.odczytano) : kontekst.dzis;
+  const otwarte = przejscie !== null || oczekujace?.zamknieto === undefined || ponownieOtwarte;
+  const dzieciOkna = przejscie?.dzieci ?? dzieci;
+  const stanNa =
+    przejscie?.stanNa ??
+    (kontekst.daneZusKonta?.odczytano ? dataZeZnacznika(kontekst.daneZusKonta.odczytano) : kontekst.dzis);
 
   function zamknij() {
+    if (zajety) return;
     setPonownieOtwarte(false);
     setBlad(null);
     if (oczekujace?.zamknieto === undefined) {
@@ -80,19 +90,25 @@ export function SlotOknoNowegoDziecka({ kontekst }: PropsSlotu<'nadPlanem'>) {
   }
 
   function potwierdz() {
+    if (zajety) return;
+    const zapamietane = { dzieci: dzieciOkna, stanNa };
+    ustawZajety(true);
     const wynik = potwierdzZOkna(pobierzKontekstOperacji());
     if (!wynik.ok) {
+      ustawZajety(false);
       setBlad(wynik.kod);
       return;
     }
-    router.push(zgoda ? sciezkaWidoku('ViewBirthDetails', { tryb: 'pakiet' }) : sciezkaWidoku('ViewBirthPackage'));
+    setBlad(null);
+    ustawPrzejscie(zapamietane);
+    przejdz(zgoda ? sciezkaWidoku('ViewBirthDetails', { tryb: 'pakiet' }) : sciezkaWidoku('ViewBirthPackage'));
   }
 
   const przewidywany = daneCiazy?.przewidywanyTerminPorodu;
 
   return (
     <>
-      {czyPrzypomnienieONowymDziecku(kontekst) ? (
+      {przejscie === null && czyPrzypomnienieONowymDziecku(kontekst) ? (
         <Karta tytul={tKarty.tytulKarty}>
           <Stos odstep={6}>
             <Komunikat
@@ -127,31 +143,32 @@ export function SlotOknoNowegoDziecka({ kontekst }: PropsSlotu<'nadPlanem'>) {
       <OknoModalne
         otwarte={otwarte}
         onZamknij={zamknij}
-        tytul={dzieci.length === 1 ? tOkna.tytul : tOkna.tytulWielu}
+        zamykanieZablokowane={zajety}
+        tytul={dzieciOkna.length === 1 ? tOkna.tytul : tOkna.tytulWielu}
         opis={<Komunikat kod="0032" />}
         komunikat={blad ? <Komunikat kod={blad} /> : undefined}
         stopka={
           <>
-            <Przycisk wariant="glowny" type="button" onClick={potwierdz}>
+            <Przycisk wariant="glowny" type="button" zajety={zajety} onClick={potwierdz}>
               {tOkna.potwierdz}
             </Przycisk>
-            <Przycisk wariant="drugorzedny" type="button" onClick={zamknij}>
+            <Przycisk wariant="drugorzedny" type="button" disabled={zajety} onClick={zamknij}>
               {tOkna.zamknij}
             </Przycisk>
           </>
         }
       >
         <p className="m-0 text-body">{teksty.wspolne.stanNa({ data: formatujDate(stanNa) })}</p>
-        {dzieci.length === 1 ? (
+        {dzieciOkna.length === 1 ? (
           <ListaDefinicji
             pozycje={[
-              { etykieta: tOkna.imieINazwisko, wartosc: `${dzieci[0].imie} ${dzieci[0].nazwisko}` },
-              { etykieta: tOkna.dataUrodzenia, wartosc: formatujDate(dzieci[0].dataUrodzenia) },
+              { etykieta: tOkna.imieINazwisko, wartosc: `${dzieciOkna[0].imie} ${dzieciOkna[0].nazwisko}` },
+              { etykieta: tOkna.dataUrodzenia, wartosc: formatujDate(dzieciOkna[0].dataUrodzenia) },
             ]}
           />
         ) : (
           <ul aria-label={tOkna.listaDzieci} className="m-0 flex list-none flex-col gap-4 p-0">
-            {dzieci.map((d) => (
+            {dzieciOkna.map((d) => (
               <li key={d.pesel} className="flex flex-wrap gap-x-6 gap-y-2 border-b border-line pb-4">
                 <div className="min-w-0">
                   <p className="m-0 text-body-strong">{tOkna.imieINazwisko}</p>
@@ -165,7 +182,7 @@ export function SlotOknoNowegoDziecka({ kontekst }: PropsSlotu<'nadPlanem'>) {
             ))}
           </ul>
         )}
-        <p className="m-0 text-body">{opisZapisu(dzieci, zgoda)}</p>
+        <p className="m-0 text-body">{opisZapisu(dzieciOkna, zgoda)}</p>
       </OknoModalne>
     </>
   );

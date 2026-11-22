@@ -63,7 +63,7 @@ export interface WpisSlownikaDokumentow { id: string; grupa: 'zasilek-chorobowy'
   klucz: { formy: FormaZatrudnienia[] | 'kazda'; platnik?: 'platnik-uprawniony' | 'zus'; poUstaniu?: boolean; sytuacja?: string };
   dokumenty: string[]; adresat: string; termin: string; kolejnosc: number }
 export interface PodmiotWsparcia { id: string; nazwa: string; sytuacje: RodzajSytuacjiSzczegolnej[]; zakresPomocy: string;
-  telefon?: string; email?: string; adresStrony: string; charytatywny: true; kolejnosc: number }
+  telefon?: string; email?: string; adresStrony: string; krs?: string; charytatywny: true; kolejnosc: number }
 export interface EdycjeKatalogu { wersja: number; noweWersje: { idWpisu: IdWpisuSlownika; wersja: WersjaWpisu }[];
   nowePozycje: PozycjaKatalogu[]; podmioty: { dodane: PodmiotWsparcia[]; zmienione: PodmiotWsparcia[] } }
 export interface Katalog {                        // seed złożony z edycjami Administratora

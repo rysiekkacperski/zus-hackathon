@@ -61,4 +61,11 @@ export const gminy: Gmina[] = [
     wojewodztwo: 'małopolskie',
     urzadStanuCywilnegoMiejscownik: 'w Krakowie',
   },
+  {
+    idTeryt: '0463011',
+    nazwa: 'Toruń',
+    powiat: 'Toruń',
+    wojewodztwo: 'kujawsko-pomorskie',
+    urzadStanuCywilnegoMiejscownik: 'w Toruniu',
+  },
 ];

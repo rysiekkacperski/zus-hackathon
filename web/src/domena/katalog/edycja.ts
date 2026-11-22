@@ -273,7 +273,8 @@ export type PoleNowejPozycji =
   | 'rodzic'
   | 'formyZatrudnienia'
   | 'instytucjaIKanal'
-  | 'przesuniecie';
+  | 'przesuniecie'
+  | 'kosztSpoznienia';
 
 export const RODZAJE_POZYCJI: readonly RodzajPozycji[] = ['swiadczenie', 'uprawnienie', 'obowiazek', 'informacja'];
 export const ETAPY: readonly Etap[] = [
@@ -336,17 +337,29 @@ export function parsujPrzesuniecie(tekst: string, jednostka: JednostkaPrzesuniec
   return Math.abs(liczba) <= ZAKRES_PRZESUNIECIA[jednostka] ? liczba : null;
 }
 
-/** Błędy nowej pozycji katalogu: 0080, 0081 (tytuł), 0006 (rodzaj, etap, rodzic, formy), 0152 (instytucja), 0153 (przesunięcie). */
+/** Dozwolona liczba znaków pola z błędem 0271: 120 przy tytule, 500 przy instytucji i kanale oraz koszcie spóźnienia (3.5.1.2.6). */
+export function maksDlugoscPola(pole: PoleNowejPozycji): number {
+  return pole === 'tytul' ? MAKS_DLUGOSC_TYTULU : MAKS_DLUGOSC_OPISU;
+}
+
+/**
+ * Błędy nowej pozycji katalogu: 0080, 0081, 0271 (tytuł), 0006 (rodzaj, etap, rodzic, formy), 0152, 0271
+ * (instytucja), 0153 (przesunięcie), 0271 (koszt spóźnienia).
+ */
 export function walidujNowaPozycje(formularz: FormularzNowejPozycji, k: Katalog): BledyPol<PoleNowejPozycji> {
   const bledy: BledyPol<PoleNowejPozycji> = {};
   const tytul = formularz.tytul.trim();
   if (tytul === '') bledy.tytul = '0080';
+  else if (tytul.length > MAKS_DLUGOSC_TYTULU) bledy.tytul = '0271';
   else if (k.pozycje.some((p) => znormalizujTytul(p.tytul) === znormalizujTytul(tytul))) bledy.tytul = '0081';
   if (formularz.rodzaj === '') bledy.rodzaj = '0006';
   if (formularz.etap === '') bledy.etap = '0006';
   if (formularz.rodzic === '') bledy.rodzic = '0006';
   if (formularz.formyZatrudnienia.length === 0) bledy.formyZatrudnienia = '0006';
-  if (formularz.instytucjaIKanal.trim() === '') bledy.instytucjaIKanal = '0152';
+  const instytucja = formularz.instytucjaIKanal.trim();
+  if (instytucja === '') bledy.instytucjaIKanal = '0152';
+  else if (instytucja.length > MAKS_DLUGOSC_OPISU) bledy.instytucjaIKanal = '0271';
+  if (formularz.kosztSpoznienia.trim().length > MAKS_DLUGOSC_OPISU) bledy.kosztSpoznienia = '0271';
   if (
     formularz.kotwica !== 'brak' &&
     parsujPrzesuniecie(formularz.przesuniecie, formularz.jednostkaPrzesuniecia) === null

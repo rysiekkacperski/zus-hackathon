@@ -39,6 +39,9 @@ function pozycjeDziecka(dane: DaneCiazyIDziecka, zgoda: boolean): PozycjaListyDe
     ...pozycje,
     { etykieta: t.tydzien, wartosc: String(dane.tydzienCiazyWDniuPorodu) },
     { etykieta: t.masa, wartosc: t.masaWGramach({ masa: String(dane.masaUrodzeniowaG ?? '') }) },
+    ...(dane.pobytWSzpitaluPoPorodzie !== undefined
+      ? [{ etykieta: t.pobytWSzpitalu, wartosc: takNie(dane.pobytWSzpitaluPoPorodzie) }]
+      : []),
     { etykieta: t.dni, wartosc: String(dane.dniHospitalizacji5do28 ?? 0) },
     { etykieta: t.ciezkaChoroba, wartosc: takNie(dane.ciezkaChorobaDziecka) },
     { etykieta: t.zaZyciem, wartosc: takNie(dane.zaswiadczenieZaZyciem) },

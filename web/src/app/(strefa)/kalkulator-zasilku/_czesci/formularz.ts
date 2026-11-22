@@ -138,6 +138,8 @@ export function zmienPole<P extends PoleFormularza>(
   nazwa: P,
   wartosc: FormularzKalkulatora[P]['wartosc'],
 ): FormularzKalkulatora {
+  // Wpisanie tej samej wartości zostawia dotychczasowe źródło, na przykład profil rodziny.
+  if (JSON.stringify(f[nazwa].wartosc) === JSON.stringify(wartosc)) return f;
   return { ...f, [nazwa]: { wartosc, zrodlo: 'wartosc-w-kalkulatorze' } };
 }
 

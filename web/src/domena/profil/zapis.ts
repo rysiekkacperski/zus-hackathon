@@ -139,8 +139,15 @@ export function zbudujProfilZeSzkicu(
   };
   if (stanCywilny?.wartosc === 'nie-malzenstwo' && d.uznanieOjcostwa) daneRodziny.uznanieOjcostwa = d.uznanieOjcostwa;
 
-  const daneCiazy: DaneCiazyIDziecka | null = zgoda ? { ...daneCiazyPuste(), ...szkic.daneCiazy } : null;
+  const daneCiazy: DaneCiazyIDziecka | null = zgoda
+    ? { ...daneCiazyPuste(), ...szkic.daneCiazy }
+    : danePrzyjeciaBezZgody(szkic.daneCiazy.przyjecie);
   return { daneRodziny, daneCiazy };
+}
+
+/** Bez zgody na dane dotyczące zdrowia profil zachowuje wyłącznie dane przyjęcia dziecka (KA-01 3.3.1.4.2). */
+function danePrzyjeciaBezZgody(przyjecie: DaneCiazyIDziecka['przyjecie']): DaneCiazyIDziecka | null {
+  return przyjecie ? { ...daneCiazyPuste(), przyjecie } : null;
 }
 
 // --- Zmiana profilu (R17) ----------------------------------------------------------------------
@@ -224,8 +231,11 @@ export function zastosujZmianeProfilu(
     dostepKont: zapisaneRodziny.dostepKont,
     ...(zapisaneRodziny.zaproszenie ? { zaproszenie: zapisaneRodziny.zaproszenie } : {}),
   };
+  const przyjecieBezZgody = szkic.daneCiazy.przyjecie;
   const daneCiazy = zgoda
     ? { ...daneCiazyPuste(), ...(zapisane.daneCiazy ?? {}), ...szkic.daneCiazy }
-    : zapisane.daneCiazy;
+    : przyjecieBezZgody
+      ? { ...daneCiazyPuste(), ...(zapisane.daneCiazy ?? {}), przyjecie: przyjecieBezZgody }
+      : zapisane.daneCiazy;
   return { daneRodziny, daneCiazy };
 }

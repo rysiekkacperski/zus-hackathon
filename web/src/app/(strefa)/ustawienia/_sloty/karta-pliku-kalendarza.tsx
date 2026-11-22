@@ -35,7 +35,7 @@ export function SlotKartaPlikuKalendarza({ konto }: PropsSlotu<'sekcja'>) {
       <div className="flex flex-col gap-6">
         {komunikat ? <Komunikat kod={komunikat} /> : null}
         <p className="m-0 text-body">{t.wstep}</p>
-        <Przycisk wariant="drugorzedny" szerokosc="pelna" ikona="kalendarz-pobierz" onClick={otworz}>
+        <Przycisk wariant="drugorzedny" ikona="kalendarz-pobierz" onClick={otworz} className="self-start">
           {t.przycisk}
         </Przycisk>
       </div>

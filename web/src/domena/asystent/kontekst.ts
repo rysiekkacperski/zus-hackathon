@@ -112,7 +112,9 @@ export function formaZDanychZus(kopia: DaneZKontaZus, dzien: DataISO): { forma: 
   return { forma: pierwszenstwo[tytul.rodzaj] ?? 'brak-tytulu', dobrowolneChorobowe: dobrowolne };
 }
 
-function kontekstDanychZus(kopia: DaneZKontaZus | null): KontekstAsystenta['daneZus'] {
+// Zaświadczenia lekarskie e-ZLA zalogowanego ubezpieczonego trafiają do kontekstu wyłącznie przy udzielonej zgodzie
+// na dane dotyczące zdrowia (R-AS-ZRODLA).
+function kontekstDanychZus(kopia: DaneZKontaZus | null, zgoda = false): KontekstAsystenta['daneZus'] {
   if (kopia === null) return null;
   const tytuly = kopia.tytuly.map((t) => {
     const ch = t.ubezpieczenieChorobowe.rodzaj;
@@ -125,7 +127,7 @@ function kontekstDanychZus(kopia: DaneZKontaZus | null): KontekstAsystenta['dane
   return {
     tytuly,
     podstawaOstatnia: ostatnia ? formatujKwote(ostatnia.kwota) : undefined,
-    ezla: ezla ? `${formatujDate(ezla.od)} do ${formatujDate(ezla.do)}` : undefined,
+    ezla: zgoda && ezla ? `${formatujDate(ezla.od)} do ${formatujDate(ezla.do)}` : undefined,
     stanRozliczen: stan ? formatujKwote(stan.kwotaZadluzenia) : undefined,
   };
 }
@@ -272,7 +274,7 @@ export function zbudujKontekstAsystenta(k: KontekstRodziny | KontekstKontaBezRod
     sprawy,
     wnioski: rodzina.wnioski.map((w) => ({ rodzaj: w.rodzaj, stan: w.stan, dataZlozenia: w.dataZlozenia })),
     wyniki: kontekstWynikow(warianty),
-    daneZus: kontekstDanychZus(k.daneZusKonta),
+    daneZus: kontekstDanychZus(k.daneZusKonta, zgoda),
     katalog: kontekstKatalogu(katalog, dzis),
     szczegoly: {
       dobrowolneChorobowe: {

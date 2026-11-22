@@ -28,7 +28,7 @@ export interface KontekstAsystenta { rola: Rola; dzis: DataISO; zgoda: boolean;
   katalog: { kwoty: { nazwa: string; wartosc: string; od: string }[]; pozycje: { id: IdPozycji; tytul: string; warunek: string; kanal: string }[] } }
 export interface ZapytanieAsystenta { idRozmowy: string; wiadomosc: string; historia: { autor: 'uzytkownik' | 'asystent'; tresc: string }[]; kontekst: KontekstAsystenta }
 export interface OdpowiedzAsystenta { tekst: string; intencja: IntencjaAsystenta; sprawy: IdSprawy[]; propozycja?: PropozycjaDzialania;
-  akcjeKanalow?: AkcjaKanaluAsystenta[]; kodKomunikatu?: '0070' | '0148' | '0256'; oznaczenieAI: true }
+  akcjeKanalow?: AkcjaKanaluAsystenta[]; kodKomunikatu?: '0070' | '0148' | '0256' | '0275' | '0276'; oznaczenieAI: true }
 export interface WartoscOdczytana { pole: string; wartosc: string | number | boolean | null; daneZastapione?: boolean } // pole: ścieżka w DaneSprawy
 export interface WynikOdczytuDokumentu { status: 'odczytany' | 'nierozpoznany' | 'nieczytelny' | 'niedostepny';
   rodzajDokumentu?: RodzajDokumentuSprawy; wartosci: WartoscOdczytana[]; nowePowiazania: PowiazanieZastepcze[]; czasMs: number }

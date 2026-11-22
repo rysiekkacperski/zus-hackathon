@@ -7,7 +7,7 @@ import type { KontoDemo, Pesel } from '@/domena/typy';
 export const PESEL_ADMINISTRATORA_ZUS: Pesel = '88031407319';
 
 /**
- * Siedem przykładowych kont rodziców i konto Administrator ZUS w kolejności listy na ViewDemoAccountPicker.
+ * Dziewięć przykładowych kont rodziców i konto Administrator ZUS w kolejności listy na ViewDemoAccountPicker.
  * Każdy PESEL ma poprawną cyfrę kontrolną, a data urodzenia i płeć odpowiadają cyfrom numeru.
  */
 export const kontaPrzykladowe: KontoDemo[] = [
@@ -88,6 +88,30 @@ export const kontaPrzykladowe: KontoDemo[] = [
     kluczOpisuFormy: 'jdg-rozpoczeta-w-ciazy',
     kolejnosc: 7,
   },
+  // Piotr Wójcik dołącza jako drugi rodzic do planu rodziny Magdaleny Wójcik (Story 3.1.1.1.6).
+  {
+    pesel: '89031405734',
+    imie: 'Piotr',
+    nazwisko: 'Wójcik',
+    imieINazwiskoDopelniacz: 'Piotra Wójcika',
+    dataUrodzenia: '1989-03-14',
+    plec: 'mezczyzna',
+    rodzaj: 'przykladowe-konto-rodzica',
+    kluczOpisuFormy: 'umowa-o-prace',
+    kolejnosc: 8,
+  },
+  // Marcin Lis dołącza jako drugi rodzic do planu rodziny Karoliny Lis (Story 3.1.1.1.6).
+  {
+    pesel: '91080204172',
+    imie: 'Marcin',
+    nazwisko: 'Lis',
+    imieINazwiskoDopelniacz: 'Marcina Lisa',
+    dataUrodzenia: '1991-08-02',
+    plec: 'mezczyzna',
+    rodzaj: 'przykladowe-konto-rodzica',
+    kluczOpisuFormy: 'jdg-z-dobrowolnym',
+    kolejnosc: 9,
+  },
   {
     pesel: PESEL_ADMINISTRATORA_ZUS,
     imie: 'Administrator',
@@ -97,7 +121,7 @@ export const kontaPrzykladowe: KontoDemo[] = [
     plec: 'mezczyzna',
     rodzaj: 'konto-administratora',
     kluczOpisuFormy: 'administrator',
-    kolejnosc: 8,
+    kolejnosc: 10,
   },
 ];
 

@@ -2,25 +2,26 @@
 // Gospodarz renderuje każdą listę w kolejności wpisów w miejscu ze wzoru i przekazuje propsy z ./typy.ts.
 // Każdy plik należy do jednostki podanej w komentarzu wpisu.
 import type { WpisSlotu } from './typy';
-import { SlotAkcjaZglosNarodziny } from './akcja-zglos-narodziny';
-import { SlotAkcjaSytuacjaSzczegolna } from './akcja-sytuacja-szczegolna';
 import { SlotOknoNowegoDziecka } from './okno-nowego-dziecka';
+import { SlotKomunikatyPrzyjecia } from './komunikaty-przyjecia';
+import { SlotStanDanychZus } from './stan-danych-zus';
 import { SlotTerminSprawy } from './termin-sprawy';
 import { SlotStatusWnioskuZus } from './status-wniosku-zus';
 import { SlotOstrzezeniaSprawy } from './ostrzezenia-sprawy';
 import { SlotAkcjaPrzejeciaUrlopu } from './akcja-przejecia-urlopu';
+import { SlotInformacjaSymulacjiProfilu } from './informacja-symulacji-profilu';
 
 export type { MiejsceSlotu, PropsSlotu, WpisSlotu } from './typy';
 
-// Lista kart sekcji „Co możesz zrobić” pod najbliższymi terminami. Każdy slot renderuje Kartę z tytułem h3.
-export const slotyAkcji: WpisSlotu<'akcje'>[] = [
-  { id: 'akcja-zglos-narodziny', Komponent: SlotAkcjaZglosNarodziny }, // u19
-  { id: 'akcja-sytuacja-szczegolna', Komponent: SlotAkcjaSytuacjaSzczegolna }, // u25
-];
+// Akcje planu stoją poza rejestrem: „Zgłoś narodziny” w nagłówku pulpitu (warunek czyZgloszenieNarodzinDostepne
+// z ./akcja-zglos-narodziny, u19), a karta trybu z ./akcja-sytuacja-szczegolna (u25) w prawej kolumnie pulpitu.
 
 // Lista slotów nad planem.
 export const slotyNadPlanem: WpisSlotu<'nadPlanem'>[] = [
+  { id: 'informacja-symulacji-profilu', Komponent: SlotInformacjaSymulacjiProfilu }, // u01
+  { id: 'stan-danych-zus', Komponent: SlotStanDanychZus }, // u03
   { id: 'okno-nowego-dziecka', Komponent: SlotOknoNowegoDziecka }, // u19
+  { id: 'komunikaty-przyjecia', Komponent: SlotKomunikatyPrzyjecia }, // u24
 ];
 
 // Lista slotów przy sprawie.

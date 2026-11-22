@@ -26,6 +26,8 @@ Zasady zapisu wartości:
 - kwoty w groszach jako liczba całkowita (7000,00 zł to 700000);
 - ubezpieczony.rola: „matka” albo „ojciec-przejmujacy”; tytul.rodzaj: „pracownik”, „zleceniobiorca”, „dzialalnosc” albo „brak-tytulu”;
 - ubezpieczenieChorobowe.rodzaj: „obowiazkowe”, „dobrowolne” albo „brak”; wymiarCzasuPracy: „pelny-etat” albo „niepelny-etat”;
+- wymiarEtatu przy niepełnym etacie jako ułamek licznik/mianownik, na przykład „1/2”;
+- dziecko.tydzienCiazy jako liczba ukończonych tygodni ciąży w dniu porodu (27 tygodni i 4 dni to 27);
 - liczbaUbezpieczonychPlatnika: „do-20” albo „powyzej-20”; zdarzenie.rodzaj: „porod”, „martwe-urodzenie” albo „niezdolnosc”;
 - wartości złożone zapisz jako tekst JSON: ubezpieczenieChorobowe.okresy [{"od","do"?}], zdarzenie.niezdolnosc {"od","do","kod"?},
   dziecko.pobyt {"od","do"}, wniosek.swiadczenia ["zasilek-macierzynski"|"zwzm"|"zasilek-chorobowy"],

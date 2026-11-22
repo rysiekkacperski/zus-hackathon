@@ -53,8 +53,8 @@ function statusWniosku(w: Wniosek, adresat: AdresatWniosku, kopia: DaneZKontaZus
   if (adresat === 'zus') {
     const zZus = kopia?.wnioski.find((wz) => wz.idWnioskuPrzewodnika === w.idWniosku);
     if (zZus) {
-      const zalatwiona = zZus.status === 'przyznanie' || zZus.status === 'odmowa';
-      return { tekst: zalatwiona ? t.statusy.zalatwiona : t.statusy.wTrakcie, zZus: true };
+      if (zZus.status === 'odmowa') return { tekst: t.statusy.odmowa, zZus: true };
+      return { tekst: zZus.status === 'przyznanie' ? t.statusy.zalatwiona : t.statusy.wTrakcie, zZus: true };
     }
     return { tekst: t.statusy.wTrakcie, zZus: false };
   }

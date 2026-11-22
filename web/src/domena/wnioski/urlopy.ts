@@ -25,6 +25,7 @@ import type {
   StanRodziny,
   Wniosek,
   WniosekOUrlop,
+  WynikiKalkulacji,
   Zalacznik,
 } from '@/domena/typy';
 
@@ -55,6 +56,8 @@ export const KOLEJNOSC_RODZAJOW: readonly PodrodzajWnioskuOUrlop[] = [
   'uzupelniajacy',
   'na-warunkach-macierzynskiego',
   'laczenie-z-praca',
+  'wychowawczy',
+  'obnizenie-wymiaru',
 ];
 
 // --- Pomocnicze ---------------------------------------------------------------------------------
@@ -110,6 +113,8 @@ export interface DaneKreatora {
   pracodawca?: string;
   emailPracodawcy?: string;
   dataPoczatkuZatrudnienia?: DataISO;
+  /** Okresy tytułu pracownika z danych konta ZUS (warunek 6 miesięcy zatrudnienia urlopu wychowawczego). */
+  okresyZatrudnienia?: { od: DataISO; do?: DataISO }[];
   przewidywanyTerminPorodu?: DataISO;
   dataPorodu?: DataISO;
   dataPoroduPotwierdzona: boolean;
@@ -120,6 +125,43 @@ export interface DaneKreatora {
   wymiarK11?: number;
   /** Wysłane wnioski o urlop obojga rodziców z rodzicem wniosku. */
   wyslane: { wniosek: WniosekOUrlop; rodzic: RodzicWRodzinie }[];
+  /** Propozycje z zapisanego scenariusza kalkulatora w Wynikach kalkulacji (R-18). */
+  scenariusz?: PropozycjeScenariusza;
+}
+
+export interface PropozycjeScenariusza {
+  wariant: '81-5' | '100-70';
+  rodzicielski?: { od: DataISO; tygodnie: number };
+  ojcowski?: { od: DataISO; dni: 7 | 14 };
+  laczenie?: { wymiarPracy: number; od: DataISO; do: DataISO };
+}
+
+/** Propozycje pól z zapisanego scenariusza kalkulatora: wskazany numer, potem wybrany w planie, potem ostatni. */
+export function propozycjeZeScenariusza(
+  wyniki: WynikiKalkulacji | undefined,
+  pesel: Pesel,
+  rodzic: RodzicWRodzinie,
+  numer?: number,
+): PropozycjeScenariusza | undefined {
+  const lista = (wyniki?.scenariusze ?? []).filter((s) => !s.przykladowaSprawa && (s.zakres === 'rodzina' || s.konto === pesel));
+  const s = (numer !== undefined ? lista.find((x) => x.numer === numer) : undefined)
+    ?? lista.find((x) => x.wybranyWPlanie)
+    ?? [...lista].sort((a, b) => b.numer - a.numer)[0];
+  if (!s) return undefined;
+  const wynik: PropozycjeScenariusza = { wariant: s.parametry.wariant };
+  const czesc = s.parametry.czesciRodzicielskiego.find((c) => c.rodzic === rodzic);
+  if (czesc) wynik.rodzicielski = { od: czesc.od, tygodnie: czesc.tygodnie };
+  const ojcowski = s.parametry.ojcowski;
+  if (rodzic === 'drugi-rodzic' && ojcowski.wymiar !== 'brak' && ojcowski.czesci[0]) {
+    wynik.ojcowski = { od: ojcowski.czesci[0], dni: ojcowski.wymiar === '7-dni' ? 7 : 14 };
+  }
+  const laczenie = s.wynik.okresy.filter((o) => o.rodzic === rodzic && o.rodzaj === 'laczenie-z-praca');
+  if (s.parametry.laczenie && laczenie.length > 0) {
+    const od = laczenie.map((o) => o.od).sort(porownajDaty)[0];
+    const doDnia = laczenie.map((o) => o.do).sort(porownajDaty)[laczenie.length - 1];
+    wynik.laczenie = { wymiarPracy: s.parametry.laczenie.wymiarPracy, od, do: doDnia };
+  }
+  return wynik;
 }
 
 export function wymiarK11(plan: PlanRodziny | null, daneCiazy: DaneCiazyIDziecka | null): number | undefined {
@@ -135,6 +177,9 @@ export function zbierzDaneKreatora(w: {
   konto: KontoPrzewodnika;
   rodzina: StanRodziny;
   daneZus: DaneZKontaZus | null;
+  /** Wyniki kalkulacji konta, gdy scenariusz zapisano poza rodziną. */
+  wynikiKonta?: WynikiKalkulacji;
+  numerScenariusza?: number;
 }): DaneKreatora {
   const { konto, rodzina, daneZus } = w;
   const daneRodziny = rodzina.daneRodziny;
@@ -155,6 +200,7 @@ export function zbierzDaneKreatora(w: {
     pracodawca: tytulPracownika?.platnik.nazwa ?? daneRodzica.platnikZasilku?.nazwaPlatnika,
     emailPracodawcy: daneRodzica.emailPracodawcy?.wartosc,
     dataPoczatkuZatrudnienia: daneRodzica.dataPoczatkuZatrudnienia?.wartosc,
+    okresyZatrudnienia: daneZus?.tytuly.filter((t) => t.rodzaj === 'pracownik').map((t) => ({ od: t.od, ...(t.do ? { do: t.do } : {}) })),
     przewidywanyTerminPorodu: ciaza?.przewidywanyTerminPorodu,
     dataPorodu: ciaza?.dataPorodu,
     dataPoroduPotwierdzona: ciaza?.dataPoroduPotwierdzona === true && ciaza.dataPorodu !== undefined,
@@ -166,6 +212,12 @@ export function zbierzDaneKreatora(w: {
     przyjecie: ciaza?.przyjecie,
     wymiarK11: wymiarK11(rodzina.plan, ciaza),
     wyslane: wyslaneWnioskiOUrlop(rodzina.wnioski).map((wn) => ({ wniosek: wn, rodzic: rodzicWniosku(wn, daneRodziny) })),
+    scenariusz: propozycjeZeScenariusza(
+      rodzina.wynikiKalkulacji?.scenariusze.length ? rodzina.wynikiKalkulacji : w.wynikiKonta,
+      konto.pesel,
+      rodzic,
+      w.numerScenariusza,
+    ),
   };
 }
 
@@ -241,6 +293,11 @@ export function rodzajeWniosku(
     wynik.add('uzupelniajacy');
   }
   if (wlasne.some(czyWyslanyRodzicielski)) wynik.add('laczenie-z-praca');
+  // 3.9.6.1.5: urlop wychowawczy i obniżenie wymiaru czasu pracy po urodzeniu albo przyjęciu dziecka (K23).
+  if (porodPotwierdzony || przyjecie) {
+    wynik.add('wychowawczy');
+    wynik.add('obnizenie-wymiaru');
+  }
   return KOLEJNOSC_RODZAJOW.filter((r) => wynik.has(r));
 }
 
@@ -263,6 +320,9 @@ export function pozycjaSprawyWniosku(podrodzaj: PodrodzajWnioskuOUrlop, rodzic: 
       return 'K31';
     case 'laczenie-z-praca':
       return 'K37';
+    case 'wychowawczy':
+    case 'obnizenie-wymiaru':
+      return 'K23';
     default:
       return 'K07';
   }
@@ -518,6 +578,8 @@ export function nazwaPlikuWniosku(podrodzaj: PodrodzajWnioskuOUrlop | undefined)
     'laczenie-z-praca': 'Wniosek-o-laczenie-urlopu-rodzicielskiego-z-praca',
     'rezygnacja-matki': 'Wniosek-o-rezygnacje-z-urlopu-macierzynskiego',
     'pozostala-czesc-macierzynskiego': 'Wniosek-o-pozostala-czesc-urlopu-macierzynskiego',
+    wychowawczy: 'Wniosek-o-urlop-wychowawczy',
+    'obnizenie-wymiaru': 'Wniosek-o-obnizenie-wymiaru-czasu-pracy',
   };
   return `${nazwy[podrodzaj ?? 'macierzynski-z-rodzicielskim']}.pdf`;
 }

@@ -39,6 +39,7 @@ const INFORMACJA: KanalPozycji = { typ: 'informacja' };
 const U_PRACODAWCY: KanalPozycji = { typ: 'u-pracodawcy' };
 const KREATOR_ZAM: KanalPozycji = { typ: 'kreator', idWidoku: 'ViewZamLeaveType' };
 const KREATOR_ZAS53: KanalPozycji = { typ: 'kreator', idWidoku: 'ViewZas53Start' };
+const KREATOR_Z15: KanalPozycji = { typ: 'kreator', idWidoku: 'ViewZ15Start' };
 const EMPATIA: KanalPozycji = {
   typ: 'zewnetrzny',
   kanal: 'empatia',
@@ -78,7 +79,8 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     rodzaj: 'obowiazek',
     etap: 'ciaza',
     rodzic: 'matka',
-    warunekOpis: 'Profil wskazuje, że wizyta u lekarza albo położnej jeszcze się nie odbyła, a dziecko się nie urodziło.',
+    warunekOpis:
+      'Profil nie zawiera daty pierwszej wizyty u lekarza albo położnej albo zawiera datę nie późniejszą niż ostatni dzień 10. tygodnia ciąży, a dziecko się nie urodziło.',
     instytucjaIKanal: 'Lekarz albo położna, wizyta osobista.',
     kanaly: { kazda: INFORMACJA },
     regulaTerminu: { typ: 'przesuniecie', kotwica: 'koniec-10-tygodnia', przesuniecie: 0, jednostka: 'dni' },
@@ -228,7 +230,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     kosztSpoznienia: { typ: 'skutek', tekst: 'Kierownik urzędu stanu cywilnego sam wybierze dziecku imię.' },
     instrukcja: instrukcja(
       [
-        'Upewnij się, że szpital przekazał kartę urodzenia do urzędu stanu cywilnego – bez niej urząd nie przyjmie zgłoszenia.',
+        'Upewnij się, że szpital przekazał kartę urodzenia do urzędu stanu cywilnego. Zgłoś urodzenie w ciągu 21 dni od dnia sporządzenia karty urodzenia, a przy martwym urodzeniu w ciągu 3 dni od dnia sporządzenia karty martwego urodzenia.',
         'Wybierz przycisk Przejdź do zgłoszenia urodzenia i zaloguj się przez login.gov.pl.',
         'Wypełnij formularz i wpisz imię albo dwa imiona dziecka.',
         'Podpisz zgłoszenie profilem zaufanym, e-dowodem albo podpisem kwalifikowanym i odbierz potwierdzenie w skrzynce e-Doręczeń.',
@@ -253,7 +255,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     rodzaj: 'obowiazek',
     etap: 'urlopy-i-zasilek',
     rodzic: 'matka',
-    warunekOpis: 'Matka pracuje na umowie o pracę.',
+    warunekOpis: 'Matka pracuje na umowie o pracę, która trwa po dniu porodu.',
     instytucjaIKanal: 'Pracodawca.',
     kanaly: { 'umowa-o-prace': U_PRACODAWCY },
     regulaTerminu: dni('data-porodu', 21),
@@ -284,9 +286,9 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     etap: 'urlopy-i-zasilek',
     rodzic: 'matka',
     warunekOpis:
-      'Matka wykonuje umowę zlecenia albo prowadzi jednoosobową działalność gospodarczą z dobrowolnym ubezpieczeniem chorobowym albo jej umowa o pracę ustała w ciąży z powodu upadłości, likwidacji albo śmierci pracodawcy albo z naruszeniem przepisów potwierdzonym prawomocnym wyrokiem sądu.',
+      'Matka wykonuje umowę zlecenia albo prowadzi jednoosobową działalność gospodarczą z dobrowolnym ubezpieczeniem chorobowym albo jej umowa o pracę ustała w ciąży z powodu upadłości, likwidacji albo śmierci pracodawcy albo z naruszeniem przepisów potwierdzonym prawomocnym wyrokiem sądu, albo jej umowa o pracę na czas określony przedłużyła się do dnia porodu.',
     instytucjaIKanal:
-      'Kreator wniosku o zasiłek macierzyński w przewodniku, a po ustaniu umowy o pracę w ciąży ZUS, wniosek ZAM w eZUS z częścią o urodzeniu dziecka po ustaniu zatrudnienia.',
+      'Kreator wniosku o zasiłek macierzyński w przewodniku, a po ustaniu umowy o pracę w ciąży ZUS, wniosek ZAM w eZUS z częścią o urodzeniu dziecka po ustaniu zatrudnienia, a po ustaniu umowy przedłużonej do dnia porodu ZUS, wniosek ZAM w eZUS.',
     kanaly: { 'umowa-zlecenia': KREATOR_ZAM, jdg: KREATOR_ZAM, 'umowa-o-prace': ezus('/ezus') },
     regulaTerminu: dni('data-porodu', 21),
     kosztSpoznienia: { typ: 'skutek', tekst: 'Utrata możliwości wyboru równych wypłat w wysokości 81,5% przez cały rok.' },
@@ -371,9 +373,9 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     tytul: 'Uzupełniający urlop macierzyński',
     rodzaj: 'uprawnienie',
     etap: 'urlopy-i-zasilek',
-    rodzic: 'matka',
+    rodzic: 'matka-albo-ojciec',
     warunekOpis:
-      'Matka pracuje na umowie o pracę albo ma dobrowolne ubezpieczenie chorobowe, a dziecko urodziło się przed 37. tygodniem ciąży albo było hospitalizowane co najmniej 2 kolejne dni między 5. a 28. dniem życia.',
+      'Rodzic, który korzysta z urlopu, pracuje na umowie o pracę albo ma dobrowolne ubezpieczenie chorobowe, a dziecko przebywało w szpitalu po porodzie i urodziło się przed ukończeniem 37. tygodnia ciąży albo z masą urodzeniową do 1000 g, albo urodziło się po ukończeniu 37. tygodnia ciąży i przebywało w szpitalu co najmniej 2 kolejne dni, z których pierwszy przypada od 5. do 28. dnia po porodzie. Po przyjęciu dziecka na wychowanie sprawa dotyczy rodzica, który przyjął dziecko, gdy pobyt dziecka w szpitalu nastąpił po przyjęciu dziecka na wychowanie.',
     instytucjaIKanal:
       'Przy umowie o pracę pracodawca, w pozostałych przypadkach kreator wniosku o zasiłek macierzyński w przewodniku.',
     kanaly: { 'umowa-o-prace': U_PRACODAWCY, 'umowa-zlecenia': KREATOR_ZAM, jdg: KREATOR_ZAM },
@@ -505,7 +507,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     etap: 'pieniadze-na-dziecko',
     rodzic: 'matka-albo-ojciec',
     warunekOpis:
-      'Dziecko się urodziło, dochód na osobę nie przekracza progu zasiłku rodzinnego albo jest nieznany, a pierwsza wizyta u lekarza albo położnej odbyła się najpóźniej w ostatnim dniu 10. tygodnia ciąży.',
+      'Dziecko się urodziło, dochód na osobę nie przekracza progu zasiłku rodzinnego albo jest nieznany, a pierwsza wizyta u lekarza albo położnej odbyła się najpóźniej w ostatnim dniu 10. tygodnia ciąży. Przy dochodzie rodziny wyższym od progu pomnożonego przez liczbę członków rodziny dodatek przysługuje w kwocie pomniejszonej zgodnie z wpisem Próg zasiłku rodzinnego w słowniku kwot i progów, a plan uwzględnia tę sprawę przy dochodzie na osobę nieprzekraczającym progu albo nieznanym.',
     instytucjaIKanal: 'Gmina albo MOPS, wniosek razem z wnioskiem o zasiłek rodzinny, osobiście albo przez Emp@tię.',
     kanaly: { kazda: EMPATIA },
     regulaTerminu: { typ: 'dzien-przed-urodzinami', lata: 1 },
@@ -691,8 +693,9 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     tytul: 'Dwa dni opieki nad dzieckiem w roku',
     rodzaj: 'uprawnienie',
     etap: 'powrot-do-pracy',
-    rodzic: 'kazdy-rodzic-na-umowie-o-prace',
-    warunekOpis: 'Rodzic pracuje na umowie o pracę.',
+    rodzic: 'matka-albo-ojciec',
+    warunekOpis:
+      'Co najmniej jeden rodzic pracuje na umowie o pracę. Gdy oboje rodzice pracują na umowie o pracę, ze zwolnienia w danym roku korzysta jedno z nich.',
     instytucjaIKanal: 'Pracodawca.',
     kanaly: { 'umowa-o-prace': U_PRACODAWCY },
     regulaTerminu: { typ: 'coroczny', dzien: '12-31', doRokuUrodzin: 14 },
@@ -718,8 +721,9 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     etap: 'powrot-do-pracy',
     rodzic: 'matka-albo-ojciec',
     warunekOpis: 'Rodzic pracuje na umowie o pracę albo ma dobrowolne ubezpieczenie chorobowe.',
-    instytucjaIKanal: 'Pracodawca albo ZUS, wniosek Z-15 w eZUS.',
-    kanaly: { 'umowa-o-prace': U_PRACODAWCY, 'umowa-zlecenia': ezus('/ezus'), jdg: ezus('/ezus') },
+    instytucjaIKanal:
+      'Przy umowie o pracę pracodawca, który wypłaca zasiłek albo przekazuje do ZUS zaświadczenie Z-3. Przy umowie zlecenia płatnik składek albo ZUS z zaświadczeniem Z-3a. Przy jednoosobowej działalności gospodarczej ZUS. Wniosek Z-15 w kreatorze przewodnika.',
+    kanaly: { 'umowa-o-prace': KREATOR_Z15, 'umowa-zlecenia': KREATOR_Z15, jdg: KREATOR_Z15 },
     regulaTerminu: BRAK_TERMINU,
     kosztSpoznienia: { typ: 'brak' },
     instrukcja: instrukcja(
@@ -742,7 +746,8 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     etap: 'powrot-do-pracy',
     rodzic: 'kazdy-rodzic-na-umowie-o-prace',
     warunekOpis: 'Rodzic pracuje na umowie o pracę.',
-    instytucjaIKanal: 'Pracodawca.',
+    instytucjaIKanal:
+      'Pracodawca, w kreatorze wniosków do pracodawcy wniosek o urlop wychowawczy co najmniej 21 dni przed rozpoczęciem urlopu albo wniosek o obniżenie wymiaru czasu pracy co najmniej 21 dni przed rozpoczęciem pracy w obniżonym wymiarze.',
     kanaly: { 'umowa-o-prace': U_PRACODAWCY },
     regulaTerminu: BRAK_TERMINU,
     kosztSpoznienia: { typ: 'brak' },
@@ -803,7 +808,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     warunekOpis:
       'Matka podlega ubezpieczeniu chorobowemu, okres zasiłkowy zasiłku chorobowego w ciąży wyliczony z zaświadczeń lekarskich e-ZLA kończy się przed przewidywanym terminem porodu, a dziecko się nie urodziło.',
     instytucjaIKanal:
-      'ZUS, wniosek ZNp-7 z zaświadczeniem lekarza prowadzącego o stanie zdrowia OL-9, a przy umowie o pracę i umowie zlecenia także z wywiadem zawodowym OL-10. O świadczeniu orzeka lekarz orzecznik ZUS, a świadczenie wypłaca płatnik składek uprawniony do wypłaty zasiłków albo ZUS.',
+      'ZUS, wniosek ZNp-7 z zaświadczeniem lekarza prowadzącego o stanie zdrowia OL-9, a przy umowie o pracę i umowie zlecenia także z wywiadem zawodowym OL-10, oraz z zaświadczeniem lekarskim stwierdzającym ciążę. O świadczeniu orzeka lekarz orzecznik ZUS, a świadczenie wypłaca płatnik składek uprawniony do wypłaty zasiłków albo ZUS.',
     kanaly: { kazda: ezus('/ezus') },
     regulaTerminu: BRAK_TERMINU,
     kosztSpoznienia: { typ: 'brak' },
@@ -876,7 +881,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     instrukcja: instrukcja(
       [
         'Zasiłek chorobowy w ciąży i zasiłek macierzyński z ZUS przysługują osobie objętej ubezpieczeniem chorobowym.',
-        'Po porodzie rodzinie przysługuje świadczenie rodzicielskie, które przyznaje gmina albo MOPS. Sprawę znajdziesz w planie w etapie Pieniądze na dziecko.',
+        'Po porodzie rodzinie przysługuje świadczenie rodzicielskie, które przyznaje gmina albo MOPS. Sprawę znajdziesz w planie w etapie Świadczenia na dziecko.',
         'Przy umowie zlecenia albo jednoosobowej działalności gospodarczej zobacz w planie sprawę Zgłoszenie do dobrowolnego ubezpieczenia chorobowego.',
         'Oznacz sprawę jako załatwioną, gdy przeczytasz informację.',
       ],
@@ -971,7 +976,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     warunekOpis:
       'Rodzic przyjął dziecko na wychowanie i wystąpił do sądu o przysposobienie albo przyjął je jako rodzina zastępcza niezawodowa, dziecko nie ukończyło wieku uprawniającego do urlopu zgodnie ze słownikiem wymiarów i okresów, a rodzic pracuje na umowie o pracę.',
     instytucjaIKanal:
-      'Pracodawca, wniosek w ciągu 7 dni od przyjęcia dziecka z oświadczeniem o dacie przyjęcia i dokumentem sądu albo umową ze starostą.',
+      'Pracodawca, wniosek w ciągu 7 dni od przyjęcia dziecka, a przy przysposobieniu od późniejszej z dat przyjęcia dziecka i wystąpienia do sądu, z oświadczeniem o dacie przyjęcia i dokumentem sądu albo umową ze starostą.',
     kanaly: { 'umowa-o-prace': U_PRACODAWCY },
     regulaTerminu: {
       typ: 'dwa-terminy',
@@ -1114,7 +1119,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     rodzic: 'matka-albo-ojciec',
     warunekOpis: 'Dziecko się urodziło.',
     instytucjaIKanal:
-      'Urząd stanu cywilnego, wniosek przez rejestr stanu cywilnego na gov.pl. Pierwszy odpis skrócony urząd wydaje bezpłatnie osobie, która zgłosiła urodzenie.',
+      'Urząd stanu cywilnego, wniosek przez rejestr stanu cywilnego na gov.pl. Pierwszy odpis skrócony urząd wydaje bezpłatnie osobie, która zgłosiła urodzenie, a odpis na cel sprawa w ZUS, świadczenie socjalne, opieka albo adopcja i zatrudnienie wydaje bez opłaty skarbowej.',
     kanaly: {
       kazda: {
         typ: 'zewnetrzny',

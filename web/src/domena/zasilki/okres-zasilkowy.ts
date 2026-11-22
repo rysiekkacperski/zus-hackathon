@@ -38,6 +38,8 @@ export interface WynikWynagrodzeniaChorobowego {
   wykorzystane: number;
   pozostale: number;
   zasilekOd?: DataISO;
+  /** Początek nieprzerwanej niezdolności trwającej na przełomie roku, za którą od 1 stycznia przysługuje zasiłek. */
+  zasilekZaNiezdolnoscOd?: DataISO;
 }
 
 /** Wartości domyślne słowników (3.5.1), gdy katalog nie ma wpisu. */
@@ -126,39 +128,62 @@ function dniNiezdolnosci(zaswiadczenia: readonly ZaswiadczenieEzla[]): DataISO[]
   return [...dni].sort();
 }
 
+/** Ciągi nieprzerwanej niezdolności do pracy z rosnącej listy dni. */
+function ciagiNiezdolnosci(dni: readonly DataISO[]): DataISO[][] {
+  const ciagi: DataISO[][] = [];
+  for (const d of dni) {
+    const ostatni = ciagi.at(-1);
+    if (ostatni && roznicaDni(ostatni[ostatni.length - 1], d) === 1) ostatni.push(d);
+    else ciagi.push([d]);
+  }
+  return ciagi;
+}
+
 /**
- * Okres zasiłkowy w ciąży: zaświadczenia z kodem B z powodu choroby, połączone, gdy przerwa między nimi
- * nie przekracza `przerwa` dni. Liczy wykorzystaną część ostatniego okresu, także dni po dniu odczytu.
+ * Okres zasiłkowy w ciąży (3.4.4.1.4): liczony z zaświadczeń rodzaju niezdolność do pracy z powodu choroby, dzień
+ * objęty kilkoma zaświadczeniami liczony raz. Okres zaczyna się w pierwszym dniu nieprzerwanej niezdolności, która
+ * zawiera dni z kodem B i następuje po co najmniej jednym dniu przerwy, a nieprzerwana niezdolność bez kodu
+ * poprzedzająca dni z kodem B wlicza się w całości. Kolejne niezdolności bez kodu B przedłużają okres, gdy przerwa
+ * nie przekracza `przerwa` dni. Dni przed `poczatekPrawa`, czyli w okresie wyczekiwania, system pomija.
  */
 export function okresZasilkowyWCiazy(
-  zaswiadczenia: ZaswiadczenieEzla[],
+  zaswiadczenia: readonly ZaswiadczenieEzla[],
   limit: number,
   przerwa: number,
+  opcje: { poczatekPrawa?: DataISO } = {},
 ): WynikOkresuZasilkowego {
-  const wCiazy = zaswiadczenia
-    .filter((z) => czyKodCiazy(z) && z.rodzaj === 'choroba')
-    .sort((a, b) => porownajDaty(a.od, b.od) || porownajDaty(a.do, b.do));
-  if (wCiazy.length === 0) return { zaswiadczenia: [], wykorzystane: 0, pozostale: limit, dataWyczerpania: null, limit };
+  const pusty: WynikOkresuZasilkowego = { zaswiadczenia: [], wykorzystane: 0, pozostale: limit, dataWyczerpania: null, limit };
+  const choroba = zaswiadczenia.filter((z) => z.rodzaj === 'choroba');
+  const dniB = new Set(dniNiezdolnosci(choroba.filter(czyKodCiazy)));
+  if (dniB.size === 0) return pusty;
+  const poczatekPrawa = opcje.poczatekPrawa;
+  const dni = dniNiezdolnosci(choroba).filter((d) => poczatekPrawa === undefined || d >= poczatekPrawa);
+  const ciagi = ciagiNiezdolnosci(dni);
+  let start = -1;
+  ciagi.forEach((c, i) => {
+    if (c.some((d) => dniB.has(d))) start = i;
+  });
+  if (start < 0) return pusty;
 
-  let okres: ZaswiadczenieEzla[] = [wCiazy[0]];
-  let koniecOkresu: DataISO = wCiazy[0].do;
-  for (const z of wCiazy.slice(1)) {
-    const dniPrzerwy = roznicaDni(koniecOkresu, z.od) - 1;
-    if (dniPrzerwy > przerwa) {
-      okres = [z];
-      koniecOkresu = z.do;
-    } else {
-      okres.push(z);
-      if (z.do > koniecOkresu) koniecOkresu = z.do;
-    }
+  const okres: DataISO[] = [...ciagi[start]];
+  for (const c of ciagi.slice(start + 1)) {
+    if (roznicaDni(okres[okres.length - 1], c[0]) - 1 > przerwa) break;
+    okres.push(...c);
   }
+  const dniOkresu = new Set(okres);
+  const zaswiadczeniaOkresu = choroba
+    .filter((z) => {
+      const liczba = liczbaDniZaswiadczenia(z);
+      for (let i = 0; i < liczba; i += 1) if (dniOkresu.has(dodajDni(z.od, i))) return true;
+      return false;
+    })
+    .sort((x, y) => porownajDaty(x.od, y.od) || porownajDaty(x.do, y.do));
 
-  const dni = dniNiezdolnosci(okres);
-  const wykorzystane = Math.min(dni.length, limit);
-  const pozostale = Math.max(0, limit - dni.length);
-  const ostatniDzien = dni[dni.length - 1];
-  const dataWyczerpania = dni.length >= limit ? dni[limit - 1] : dodajDni(ostatniDzien, pozostale);
-  return { zaswiadczenia: okres, wykorzystane, pozostale, dataWyczerpania, poczatek: dni[0], limit };
+  const wykorzystane = Math.min(okres.length, limit);
+  const pozostale = Math.max(0, limit - okres.length);
+  const ostatniDzien = okres[okres.length - 1];
+  const dataWyczerpania = okres.length >= limit ? okres[limit - 1] : dodajDni(ostatniDzien, pozostale);
+  return { zaswiadczenia: zaswiadczeniaOkresu, wykorzystane, pozostale, dataWyczerpania, poczatek: okres[0], limit };
 }
 
 /** Limit dni wynagrodzenia chorobowego w roku: od roku po roku ukończenia 50 lat obowiązuje limit obniżony. */
@@ -170,28 +195,54 @@ export function limitWynagrodzeniaWRoku(
   return rok > czesciDaty(dataUrodzenia).rok + 50 ? limity.po50Roku : limity.podstawowy;
 }
 
-/** Dni wynagrodzenia chorobowego wykorzystane w roku kalendarzowym dnia `dzis`. */
+/**
+ * Dni wynagrodzenia chorobowego wykorzystane w roku kalendarzowym dnia `dzis`. Gdy niezdolność trwa nieprzerwanie na
+ * przełomie roku, a 31 grudnia pracownik pobiera zasiłek chorobowy, dni tej niezdolności w nowym roku to zasiłek
+ * chorobowy od 1 stycznia, a dni wynagrodzenia nowego roku system liczy od następnej niezdolności (3.4.4.1.4).
+ */
 export function wynagrodzenieChorobowe(
-  zaswiadczenia: ZaswiadczenieEzla[],
+  zaswiadczenia: readonly ZaswiadczenieEzla[],
   dataUrodzenia: DataISO,
   dzis: DataISO,
   limity: LimityWynagrodzeniaChorobowego,
 ): WynikWynagrodzeniaChorobowego {
   const rok = czesciDaty(dzis).rok;
   const limit = limitWynagrodzeniaWRoku(dataUrodzenia, rok, limity);
-  const dniWRoku = dniNiezdolnosci(zaswiadczenia.filter((z) => z.rodzaj === 'choroba')).filter(
-    (d) => czesciDaty(d).rok === rok,
-  );
+  const wszystkie = dniNiezdolnosci(zaswiadczenia.filter((z) => z.rodzaj === 'choroba'));
+
+  // Reguła przełomu roku: nieprzerwana niezdolność z zasiłkiem chorobowym 31 grudnia poprzedniego roku.
+  const sylwester = `${rok - 1}-12-31` as DataISO;
+  const nowyRok = `${rok}-01-01` as DataISO;
+  let wylaczone = new Set<DataISO>();
+  let kontynuacjaOd: DataISO | undefined;
+  const dniPoprzedniegoRoku = wszystkie.filter((d) => czesciDaty(d).rok === rok - 1);
+  const limitPoprzedni = limitWynagrodzeniaWRoku(dataUrodzenia, rok - 1, limity);
+  if (dniPoprzedniegoRoku.length > limitPoprzedni && wszystkie.includes(sylwester) && wszystkie.includes(nowyRok)) {
+    const ciag = ciagiNiezdolnosci(wszystkie).find((c) => c.includes(nowyRok));
+    if (ciag) {
+      wylaczone = new Set(ciag.filter((d) => czesciDaty(d).rok === rok));
+      kontynuacjaOd = ciag[0];
+    }
+  }
+
+  const dniWRoku = wszystkie.filter((d) => czesciDaty(d).rok === rok && !wylaczone.has(d));
   const wykorzystane = Math.min(dniWRoku.length, limit);
   const wynik: WynikWynagrodzeniaChorobowego = { rok, limit, wykorzystane, pozostale: limit - wykorzystane };
-  if (dniWRoku.length >= limit && limit > 0) wynik.zasilekOd = dodajDni(dniWRoku[limit - 1], 1);
+  if (kontynuacjaOd !== undefined) {
+    wynik.zasilekOd = nowyRok;
+    wynik.zasilekZaNiezdolnoscOd = kontynuacjaOd;
+  }
+  if (dniWRoku.length >= limit && limit > 0 && kontynuacjaOd === undefined) wynik.zasilekOd = dodajDni(dniWRoku[limit - 1], 1);
   return wynik;
 }
 
-/** Ostrzeżenia okresu zasiłkowego: 0086 przy wyczerpaniu, 0115 przy pozostałej części nie większej niż próg. */
+/** Próg ostrzeżenia o końcu okresu zasiłkowego: 6 tygodni, w których matka składa wniosek o świadczenie rehabilitacyjne. */
+export const PROG_OSTRZEZENIA_OKRESU_DNI = 42;
+
+/** Ostrzeżenia okresu zasiłkowego: 0086 przy wyczerpaniu, 0115 przy pozostałej części od 1 do 42 dni. */
 export function ostrzezeniaOkresu(
   wynik: WynikOkresuZasilkowego,
-  prog: number,
+  prog: number = PROG_OSTRZEZENIA_OKRESU_DNI,
 ): { kod: KodKomunikatu; parametry?: Record<string, string> }[] {
   if (wynik.zaswiadczenia.length === 0) return [];
   if (wynik.pozostale === 0) return [{ kod: '0086' }];
@@ -202,17 +253,32 @@ export function ostrzezeniaOkresu(
 // --- Wyliczenia dla konta ----------------------------------------------------------------------
 
 /** Wariant wyliczeń na ekranie według formy zatrudnienia i ubezpieczenia chorobowego (ANALIZY/16 sekcja 1). */
-export type WariantWyliczenEzla = 'wynagrodzenie' | 'zasilek-od-pierwszego-dnia' | 'bez-ubezpieczenia';
+export type WariantWyliczenEzla =
+  | 'wynagrodzenie'
+  | 'zasilek-od-pierwszego-dnia'
+  | 'po-ustaniu-ubezpieczenia'
+  | 'bez-ubezpieczenia';
 
 export interface ProfilUbezpieczenia {
   forma: FormaZatrudnienia | null;
   chorobowe: boolean | null;
+  /** Ostatni dzień ubezpieczenia chorobowego, gdy w dniu wyliczeń rodzic nie ma tytułu do ubezpieczenia. */
+  koniecUbezpieczenia?: DataISO;
 }
 
 /** Forma zatrudnienia i ubezpieczenie chorobowe z tytułów w Danych z konta ZUS (UoP > JDG > UZ). */
 export function profilZKopii(kopia: DaneZKontaZus | null, dzien: DataISO): ProfilUbezpieczenia {
   if (!kopia) return { forma: null, chorobowe: null };
   const aktywne = kopia.tytuly.filter((t) => t.od <= dzien && (t.do === undefined || dzien <= t.do));
+  if (aktywne.length === 0 && kopia.tytuly.length > 0) {
+    const konce = kopia.tytuly
+      .filter((t) => t.ubezpieczenieChorobowe.rodzaj !== 'brak')
+      .map((t) => t.ubezpieczenieChorobowe.do ?? t.do)
+      .filter((d): d is DataISO => d !== undefined && d < dzien)
+      .sort();
+    const koniec = konce.at(-1);
+    return { forma: 'brak-tytulu', chorobowe: false, ...(koniec ? { koniecUbezpieczenia: koniec } : {}) };
+  }
   const tytuly = aktywne.length > 0 ? aktywne : kopia.tytuly;
   const kolejnosc = ['pracownik', 'dzialalnosc', 'zleceniobiorca'] as const;
   const tytul = kolejnosc.map((r) => tytuly.find((t) => t.rodzaj === r)).find((t) => t !== undefined);
@@ -222,7 +288,23 @@ export function profilZKopii(kopia: DaneZKontaZus | null, dzien: DataISO): Profi
   return { forma, chorobowe: tytul.ubezpieczenieChorobowe.rodzaj !== 'brak' };
 }
 
+/**
+ * Rodzic bez tytułu do ubezpieczenia zachowuje prawo do zasiłku, gdy niezdolność do pracy powstała w czasie ubezpieczenia
+ * chorobowego i trwa po jego ustaniu albo powstała najpóźniej 14. dnia od ustania ubezpieczenia i trwa bez przerwy
+ * co najmniej 30 dni (3.4.4.1.4).
+ */
+export function niezdolnoscPoUstaniu(zaswiadczenia: readonly ZaswiadczenieEzla[], koniec: DataISO): boolean {
+  const ciagi = ciagiNiezdolnosci(dniNiezdolnosci(zaswiadczenia.filter((z) => z.rodzaj === 'choroba')));
+  return ciagi.some((c) => {
+    const od = c[0];
+    const ostatni = c[c.length - 1];
+    if (od <= koniec) return ostatni > koniec;
+    return roznicaDni(koniec, od) <= 14 && c.length >= 30;
+  });
+}
+
 export function wariantWyliczen(profil: ProfilUbezpieczenia): WariantWyliczenEzla {
+  if (profil.forma === 'brak-tytulu') return 'bez-ubezpieczenia';
   if ((profil.forma === 'umowa-zlecenia' || profil.forma === 'jdg') && profil.chorobowe === false) {
     return 'bez-ubezpieczenia';
   }
@@ -246,12 +328,21 @@ export function wyliczeniaEzla(w: {
   profil: ProfilUbezpieczenia;
   katalog: Katalog;
   dzis: DataISO;
-  progOstrzezenia: number;
+  /** Dzień nabycia prawa do zasiłku po okresie wyczekiwania; dni wcześniejsze system pomija w okresie zasiłkowym. */
+  poczatekPrawa?: DataISO;
+  progOstrzezenia?: number;
 }): WyliczeniaEzla {
   const zaswiadczenia = zaswiadczeniaOdNajnowszych(w.zaswiadczenia);
-  const wariant = wariantWyliczen(w.profil);
+  const koniec = w.profil.koniecUbezpieczenia;
+  const wariant: WariantWyliczenEzla =
+    w.profil.forma === 'brak-tytulu' && koniec !== undefined && niezdolnoscPoUstaniu(zaswiadczenia, koniec)
+      ? 'po-ustaniu-ubezpieczenia'
+      : wariantWyliczen(w.profil);
   const { limit, przerwa } = okresyZKatalogu(w.katalog, w.dzis);
-  const okres = wariant === 'bez-ubezpieczenia' ? null : okresZasilkowyWCiazy(zaswiadczenia, limit, przerwa);
+  const okres =
+    wariant === 'bez-ubezpieczenia'
+      ? null
+      : okresZasilkowyWCiazy(zaswiadczenia, limit, przerwa, w.poczatekPrawa ? { poczatekPrawa: w.poczatekPrawa } : {});
   const dataUrodzenia = dataUrodzeniaZPesel(w.pesel) ?? '1990-01-01';
   const wynagrodzenie =
     wariant === 'wynagrodzenie'
@@ -263,7 +354,7 @@ export function wyliczeniaEzla(w: {
     liczbaZKodemB: zaswiadczenia.filter(czyKodCiazy).length,
     okres,
     wynagrodzenie,
-    ostrzezenia: okres ? ostrzezeniaOkresu(okres, w.progOstrzezenia) : [],
+    ostrzezenia: okres ? ostrzezeniaOkresu(okres, w.progOstrzezenia ?? PROG_OSTRZEZENIA_OKRESU_DNI) : [],
   };
 }
 

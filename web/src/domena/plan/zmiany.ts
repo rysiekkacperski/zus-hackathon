@@ -18,7 +18,24 @@ declare module '@/domena/typy/plan' {
   interface PlanRodziny {
     /** Zmiana bieżącego etapu w ostatnim przeliczeniu. */
     zmianaEtapu?: { z: Etap; na: Etap };
+    /** Plan wyliczony bez Danych z konta ZUS matki, na przykład przed końcem odczytu po logowaniu. */
+    bezDanychZusMatki?: true;
   }
+}
+
+/**
+ * Zmiany po pierwszym przeliczeniu z Danymi z konta ZUS matki: zmiana statusu, którą ustaliły dane z konta ZUS,
+ * jest pierwszym odczytem tych danych, więc lista zmian jej nie pokazuje.
+ */
+export function bezZmianZPierwszegoOdczytuZus(
+  zmiany: readonly ZmianaPlanu[],
+  poprzedni: PlanRodziny | null,
+  pozycje: readonly PozycjaPlanu[],
+  zDanymiZusMatki: boolean,
+): ZmianaPlanu[] {
+  if (!zDanymiZusMatki || poprzedni?.bezDanychZusMatki !== true) return [...zmiany];
+  const zrodla = new Map<IdSprawy, ZrodloStatusu>(pozycje.map((p) => [p.idSprawy, p.zrodloStatusu]));
+  return zmiany.filter((z) => z.rodzaj !== 'zmieniony-status' || zrodla.get(z.idSprawy) !== 'dane-zus');
 }
 
 /** Klucze pola `opis` zmian bez poprzedniej wartości. */

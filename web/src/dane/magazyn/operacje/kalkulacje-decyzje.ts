@@ -57,9 +57,17 @@ export function zapiszDecyzjeWariantu(
       zapisano: ctx.dzis,
       konto: dane.pesel,
     };
+    // Istniejący szkic wniosku ZAM sprawy przyjmuje wybrany wariant jako domyślny (nowy szkic czyta go z planu).
+    const wariantZam = zapis.decyzja === '81-5' ? ('caly-rodzicielski' as const) : ('tylko-macierzynski' as const);
     zmienStanRodziny(dane.rodzina.idRodziny, (s) => {
       const wyniki = wynikiRodziny(s);
-      return { ...s, wynikiKalkulacji: { ...wyniki, porownaniaWariantow: [...wyniki.porownaniaWariantow, rekord] } };
+      return {
+        ...s,
+        wynikiKalkulacji: { ...wyniki, porownaniaWariantow: [...wyniki.porownaniaWariantow, rekord] },
+        wnioski: s.wnioski.map((w) =>
+          w.rodzaj === 'zam' && w.stan === 'szkic' && w.idSprawy === zapis.sprawa ? { ...w, wariant: wariantZam } : w,
+        ),
+      };
     });
     const okresy = okresyWariantu(zapis, tygodnieMacierzynskiego ?? 20);
     return zapiszWybranyWariant(

@@ -3,6 +3,12 @@
 // operacjami `ustawParametry` i `ustawSymulacje`.
 import type { ParametrySystemu } from '@/domena/typy';
 
+/** Początkowy czas symulowanego odczytu danych z konta ZUS w milisekundach. */
+export const OPOZNIENIE_ODCZYTU_ZUS_MS = 4000;
+
+/** Dawne wartości początkowe czasu odczytu, które migracja magazynu zamienia na bieżącą. */
+export const DAWNE_OPOZNIENIA_ODCZYTU_ZUS_MS: readonly number[] = [2400];
+
 /** Tworzy nową, niezależną kopię wartości początkowych parametrów systemu. */
 export function utworzParametryPoczatkowe(): ParametrySystemu {
   return {
@@ -24,7 +30,7 @@ export function utworzParametryPoczatkowe(): ParametrySystemu {
       uslugaEmailNiedostepna: false,
       asystentNiedostepny: false,
       odczytDokumentu: 'model',
-      opoznienieOdczytuZusMs: 4000,
+      opoznienieOdczytuZusMs: OPOZNIENIE_ODCZYTU_ZUS_MS,
       kodSmsStaly: '482913',
     },
   };

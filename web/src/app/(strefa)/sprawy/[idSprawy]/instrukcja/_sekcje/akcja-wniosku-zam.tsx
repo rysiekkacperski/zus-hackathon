@@ -5,9 +5,10 @@
 // z JDG albo umową zlecenia z dobrowolnym ubezpieczeniem chorobowym). Start wniosku („Wypełnij wniosek”)
 // renderuje gospodarz ViewCaseGuide (u17) w akcjach karty „Najważniejsze informacje”, gdy konto nie ma szkicu.
 // Teksty: teksty.ViewCaseGuide.sekcjaAkcjaWnioskuZam.
-import { dataZeZnacznika, formatujDate } from '@/domena/daty';
+import { dataZeZnacznika, dodajDni, formatujDate } from '@/domena/daty';
 import type { WniosekZam } from '@/domena/typy';
 import { daneRodzicaWniosku, rodzicKontaWRodzinie } from '@/domena/wnioski/zam';
+import { Komunikat } from '@/komponenty/komunikat';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
@@ -37,8 +38,25 @@ export function SekcjaAkcjaWnioskuZam({ sprawa, kontekst }: PropsSlotu<'akcja'>)
   const wyslany = wnioski.find((w) => w.stan === 'wyslany' || w.stan === 'zlozony');
 
   if (wyslany && !szkic) {
+    const doPrzekazania = sprawa.oznaczenia.includes('dane-dziecka-do-przekazania') && !wyslany.przekazanieDanychDziecka;
     return (
       <div className="flex flex-col gap-3">
+        {doPrzekazania ? (
+          <Komunikat
+            kod="0231"
+            parametry={{
+              data: rodzina.daneCiazy?.dataPorodu ? formatujDate(dodajDni(rodzina.daneCiazy.dataPorodu, 21)) : '',
+            }}
+            akcje={
+              <PrzyciskLink
+                href={trasy.ViewZamData({ wniosek: wyslany.idWniosku, trybDanych: 'przekazanie-danych-dziecka' })}
+                wariant="glowny"
+              >
+                {t.przekazDaneDziecka}
+              </PrzyciskLink>
+            }
+          />
+        ) : null}
         <p className="m-0">
           {t.wyslany({ data: wyslany.dataZlozenia ? formatujDate(wyslany.dataZlozenia) : '', numer: wyslany.potwierdzenie ?? '' })}
         </p>

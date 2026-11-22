@@ -12,6 +12,7 @@
 // Odczyt tylko czyta dane ZUS i nie zmienia roli konta. Zapisy odczytu są systemowe.
 import { zrodloweDaneKonta } from '@/dane/konta-zus';
 import { postepOdczytu, przygotujKopie } from '@/domena/dane-zus/odczyt';
+import { czyMaZgode } from '@/domena/konto/zgoda';
 import type {
   DaneZKontaZus,
   KontekstOperacji,
@@ -22,10 +23,12 @@ import type {
   ZrodloweDaneKontaZus,
 } from '@/domena/typy';
 import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
+import { powiadomOZmianachStatusowWnioskow } from '@/dane/magazyn/operacje/rozliczenia';
 import {
   czySymulacja,
   odczytajParametry,
   odczytajStanKonta,
+  odczytajStanRodziny,
   odczytajStanZus,
   wykonajOperacje,
   zmienStanKonta,
@@ -126,7 +129,12 @@ async function wykonajOdczyt(pesel: Pesel, ctx: KontekstOperacji): Promise<Wynik
     return { ok: true, wartosc: undefined };
   }
 
-  const kopia = przygotujKopie({ zrodlo, poprzednia, teraz: ctx.teraz });
+  const kopia = przygotujKopie({
+    zrodlo,
+    poprzednia,
+    teraz: ctx.teraz,
+    zgodaNaDaneZdrowia: czyMaZgode(biezacy.konto.decyzjeOZgodzie),
+  });
   const zapis = wykonajOperacje(() => {
     zmienStanKonta(
       pesel,
@@ -138,7 +146,12 @@ async function wykonajOdczyt(pesel: Pesel, ctx: KontekstOperacji): Promise<Wynik
 
   // Przeliczenie po zapisaniu kopii (sekcja 6.7); jego błąd zapisu nie unieważnia odczytu.
   const idRodziny = odczytajStanKonta(pesel)?.konto.idRodziny ?? null;
-  if (idRodziny !== null) przeliczRodzine(idRodziny, ctx);
+  if (idRodziny !== null) {
+    // Plan sprzed przeliczenia: z nim system porównuje statusy spraw ZUS i wysyła powiadomienie o zmianie statusu wniosku.
+    const poprzedniPlan = odczytajStanRodziny(idRodziny)?.plan ?? null;
+    const przeliczenie = przeliczRodzine(idRodziny, ctx);
+    if (przeliczenie.ok) powiadomOZmianachStatusowWnioskow(idRodziny, poprzedniPlan, ctx);
+  }
   return { ok: true, wartosc: undefined };
 }
 

@@ -41,7 +41,7 @@ export function zbudujOdpowiedz(
   tekstModelu?: string | null,
 ): OdpowiedzAsystenta {
   const tekst =
-    analiza.kodKomunikatu === '0070'
+    analiza.kodKomunikatu !== '0148'
       ? tekstZFaktow(analiza.fakty)
       : tekstModelu && czyTekstZgodnyZFaktami(tekstModelu, analiza.fakty)
         ? tekstModelu.trim()

@@ -19,6 +19,9 @@ import type {
   StanKonta,
   StanRodziny,
 } from '@/domena/typy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const DZIS = '2026-11-21';
 const TERAZ = '2026-11-21T09:00:00';
@@ -102,8 +105,8 @@ const PARAMETRY = { dataDemo: DZIS };
 export const scenariuszeU08: readonly ScenariuszDemo[] = [
   {
     id: 'u08-anna-plan-przed-porodem',
-    nazwa: 'Anna Nowak: plan rodziny przed porodem',
-    opis: 'Jednoosobowa działalność z dobrowolnym ubezpieczeniem chorobowym, termin porodu 15.03.2027, wizyta 20.07.2026, małżeństwo, dochód 3 500,00 zł, drugi rodzic na umowie o pracę.',
+    nazwa: tekst['u08-anna-plan-przed-porodem'].nazwa,
+    opis: tekst['u08-anna-plan-przed-porodem'].opis,
     pesel: PESEL_ANNY,
     zastosuj: () => ({
       konto: kontoRodzica(PESEL_ANNY, 'udzielenie'),
@@ -113,8 +116,8 @@ export const scenariuszeU08: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u08-anna-po-porodzie',
-    nazwa: 'Anna Nowak: plan po potwierdzeniu daty porodu',
-    opis: 'Plan sprzed porodu przeliczony po potwierdzeniu daty porodu 19.11.2026: zmiany w planie, bieżący etap Pierwsze tygodnie po porodzie.',
+    nazwa: tekst['u08-anna-po-porodzie'].nazwa,
+    opis: tekst['u08-anna-po-porodzie'].opis,
     pesel: PESEL_ANNY,
     zastosuj: () => {
       const dane = rodzinaAnny();
@@ -143,8 +146,8 @@ export const scenariuszeU08: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u08-joanna-jdg-bez-chorobowego',
-    nazwa: 'Joanna Mazur: działalność bez dobrowolnego ubezpieczenia chorobowego',
-    opis: 'Termin porodu 15.03.2027, wizyta 20.07.2026, rodzice bez ślubu i bez uznania ojcostwa, dochód nieznany, drugi rodzic na umowie o pracę.',
+    nazwa: tekst['u08-joanna-jdg-bez-chorobowego'].nazwa,
+    opis: tekst['u08-joanna-jdg-bez-chorobowego'].opis,
     pesel: PESEL_JOANNY,
     zastosuj: () => ({
       konto: kontoRodzica(PESEL_JOANNY, 'udzielenie'),
@@ -163,8 +166,8 @@ export const scenariuszeU08: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u08-magdalena-bliznieta',
-    nazwa: 'Magdalena Wójcik: umowa o pracę, bliźnięta',
-    opis: 'Umowa o pracę, ciąża bliźniacza, termin porodu 15.03.2027, wizyta 20.07.2026, małżeństwo, dochód 600,00 zł, drugi rodzic na umowie o pracę.',
+    nazwa: tekst['u08-magdalena-bliznieta'].nazwa,
+    opis: tekst['u08-magdalena-bliznieta'].opis,
     pesel: PESEL_MAGDALENY,
     zastosuj: () => ({
       konto: kontoRodzica(PESEL_MAGDALENY, 'udzielenie'),
@@ -182,8 +185,8 @@ export const scenariuszeU08: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u08-magdalena-bez-zgody',
-    nazwa: 'Magdalena Wójcik: plan bez zgody na dane dotyczące zdrowia',
-    opis: 'Odmowa zgody na dane dotyczące zdrowia, umowa o pracę matki: sprawy zależne od danych ciąży i dziecka wymagają uzupełnienia profilu.',
+    nazwa: tekst['u08-magdalena-bez-zgody'].nazwa,
+    opis: tekst['u08-magdalena-bez-zgody'].opis,
     pesel: PESEL_MAGDALENY,
     zastosuj: () => ({
       konto: kontoRodzica(PESEL_MAGDALENY, 'odmowa'),
@@ -202,8 +205,8 @@ export const scenariuszeU08: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u08-ewa-utrata-pracy',
-    nazwa: 'Ewa Kamińska: umowa o pracę ustała w ciąży',
-    opis: 'Brak tytułu do ubezpieczenia, umowa o pracę ustała 31.10.2026 z powodu likwidacji pracodawcy, bez innego zatrudnienia, termin porodu 15.03.2027, dochód 1 950,00 zł.',
+    nazwa: tekst['u08-ewa-utrata-pracy'].nazwa,
+    opis: tekst['u08-ewa-utrata-pracy'].opis,
     pesel: PESEL_EWY,
     zastosuj: () => ({
       konto: kontoRodzica(PESEL_EWY, 'udzielenie'),

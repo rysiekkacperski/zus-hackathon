@@ -14,6 +14,9 @@ import type {
   ScenariuszDemo,
   SzkicProfilu,
 } from '@/domena/typy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const PESEL_ANNY_NOWAK: Pesel = '93041231085';
 const PESEL_MAGDALENY_WOJCIK: Pesel = '90072551267';
@@ -41,8 +44,8 @@ function podstawy(kwota: number): PodstawaSkladek[] {
 export const scenariuszeU07: readonly ScenariuszDemo[] = [
   {
     id: 'u07-kilka-tytulow',
-    nazwa: 'Profil na start: kilka tytułów i dziecko z konta ZUS',
-    opis: 'Magdalena Wójcik z tytułem pracownika od 01.09.2023 u płatnika, który wypłaca zasiłki, i tytułem zleceniobiorcy od 01.02.2025 u płatnika, który ich nie wypłaca, oraz z dzieckiem Jan Wiśniewski urodzonym 12.03.2024 (KA-04, KA-06, KA-12).',
+    nazwa: tekst['u07-kilka-tytulow'].nazwa,
+    opis: tekst['u07-kilka-tytulow'].opis,
     pesel: PESEL_MAGDALENY_WOJCIK,
     zastosuj: (ctx) => ({
       konto: { konto: kontoZDecyzja(PESEL_MAGDALENY_WOJCIK, 'udzielenie', ctx) },
@@ -85,8 +88,8 @@ export const scenariuszeU07: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u07-dane-zus-niedostepne',
-    nazwa: 'Profil na start: dane z konta ZUS niedostępne',
-    opis: 'Joanna Mazur ze zgodą na dane dotyczące zdrowia i włączoną symulacją niedostępności danych z konta ZUS; ekran ViewProfileZusData bez wybranej formy zatrudnienia (KA-14).',
+    nazwa: tekst['u07-dane-zus-niedostepne'].nazwa,
+    opis: tekst['u07-dane-zus-niedostepne'].opis,
     pesel: PESEL_JOANNY_MAZUR,
     zastosuj: (ctx) => ({
       konto: { konto: kontoZDecyzja(PESEL_JOANNY_MAZUR, 'udzielenie', ctx) },
@@ -97,15 +100,15 @@ export const scenariuszeU07: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u07-odmowa-zgody',
-    nazwa: 'Profil na start: odmowa zgody na dane dotyczące zdrowia',
-    opis: 'Anna Nowak z zapisaną odmową zgody na dane dotyczące zdrowia; sytuacje z ciążą, porodem i przyjęciem prowadzą do ViewProfileFamily (KA-09, KA-10, KA-11 3.3.1.4.1).',
+    nazwa: tekst['u07-odmowa-zgody'].nazwa,
+    opis: tekst['u07-odmowa-zgody'].opis,
     pesel: PESEL_ANNY_NOWAK,
     zastosuj: (ctx) => ({ konto: { konto: kontoZDecyzja(PESEL_ANNY_NOWAK, 'odmowa', ctx) } }),
   },
   {
     id: 'u07-planowanie-rodzicielstwa',
-    nazwa: 'Profil na start: wybrane planowanie rodzicielstwa',
-    opis: 'Anna Nowak ze szkicem profilu po wyborze sytuacji planuję rodzicielstwo; po zalogowaniu przewodnik otwiera ViewProfileSituation z tą sytuacją (KA-08 3.3.1.4.1).',
+    nazwa: tekst['u07-planowanie-rodzicielstwa'].nazwa,
+    opis: tekst['u07-planowanie-rodzicielstwa'].opis,
     pesel: PESEL_ANNY_NOWAK,
     zastosuj: (ctx) => {
       const szkic: SzkicProfilu = {

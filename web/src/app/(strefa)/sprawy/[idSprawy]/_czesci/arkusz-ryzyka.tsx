@@ -126,7 +126,7 @@ export function ArkuszRyzyka({ otwarte, onZamknij, sprawa, ostrzezenie, kontekst
           <dt className="text-body-strong">{tekst.dataRyzyka}</dt>
           <dd className="m-0 mt-1 text-body">
             <strong className="text-ink-strong">{formatujDate(ostrzezenie.data)}</strong>
-            {` – ${opisDatyRyzyka(ostrzezenie, kontekst)}`}
+            {tekst.opisPoDacie({ opis: opisDatyRyzyka(ostrzezenie, kontekst) })}
           </dd>
         </div>
       </dl>

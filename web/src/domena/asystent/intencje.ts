@@ -18,6 +18,7 @@ export const INTENCJE_ASYSTENTA: readonly IntencjaAsystenta[] = [
   'otwarcie-kalkulatora',
   'otwarcie-instrukcji',
   'uzupelnienie-profilu',
+  'zaswiadczenia-lekarskie',
   'poza-zakresem-medyczne',
   'poza-zakresem-podatkowe',
   'poza-zakresem-inne-osoby',
@@ -29,7 +30,7 @@ export function czyIntencjaAsystenta(wartosc: unknown): wartosc is IntencjaAsyst
   return typeof wartosc === 'string' && (INTENCJE_ASYSTENTA as readonly string[]).includes(wartosc);
 }
 
-/** Intencja poza zakresem asystenta (R-AS-GRAN): odpowiedź 0070 z akcjami kanałów kontaktu ZUS. */
+/** Intencja poza zakresem asystenta (R-AS-GRAN): 0275 dla pytań medycznych, 0276 dla podatkowych, a pozostałe 0070 z akcjami kanałów kontaktu ZUS. */
 export function czyPozaZakresem(intencja: IntencjaAsystenta): boolean {
   return intencja.startsWith('poza-zakresem');
 }
@@ -53,6 +54,7 @@ interface RegulaIntencji {
 // Kolejność reguł rozstrzyga pytania pasujące do kilku intencji: granice asystenta, oznaczenie sprawy
 // i porównanie wariantów mają pierwszeństwo przed ogólnymi pytaniami o termin i prawo do świadczenia.
 const REGULY: readonly RegulaIntencji[] = [
+  { intencja: 'zaswiadczenia-lekarskie', wzorce: [/zwolnieni(e|u|a|em) lekarsk/, /\be-?zla\b/, /zaswiadczen(ie|ia|iu) lekarsk/, /\bl4\b/] },
   {
     intencja: 'poza-zakresem-medyczne',
     wzorce: [/\blek(i|u|ow|iem)?\b/, /nudnosc/, /\bbol/, /objaw/, /gorac/, /goraczk/, /tabletk/, /\bdiet/, /witamin/, /krwawien/, /szczepi/, /leczeni/],

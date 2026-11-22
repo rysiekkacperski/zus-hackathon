@@ -3,7 +3,8 @@
 // ViewCaseGuide: instrukcja sprawy z kanałem dopasowanym do formy zatrudnienia, przejściem do kanału,
 // oznaczeniem i cofnięciem oznaczenia (historyjki 3.8.1.1.1 i 3.8.1.2.1; wzory cz1/Instrukcja-sprawy, cz1/P08-01…P08-17).
 import { useSearchParams } from 'next/navigation';
-import { use, useEffect, useMemo, useRef, useState } from 'react';
+import { use, useEffect, useMemo, useRef } from 'react';
+import { useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -68,9 +69,10 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
   // Wejście ze strony etapu planu (?z=plan&etap=<slug>) zachowuje etap w powrocie do szczegółów sprawy.
   const etapPowrotu = pochodzenie === 'plan' ? etapZeSlugu(zapytanie.get(PARAMETR_ETAPU)) : null;
 
-  const [komunikat, setKomunikat] = useState<KodKomunikatu | null>(null);
-  const [powrotWykryty, setPowrotWykryty] = useState(true);
-  const [zajety, setZajety] = useState(false);
+  // Stan chwilowy wraca do wartości początkowej po powrocie na trasę ukrytą w Activity (Cache Components).
+  const [komunikat, setKomunikat] = useStanChwilowy<KodKomunikatu | null>(null);
+  const [powrotWykryty, setPowrotWykryty] = useStanChwilowy(true);
+  const [zajety, setZajety] = useStanChwilowy(false);
   const opuszczono = useRef(false);
   const refKomunikatu = useRef<HTMLDivElement>(null);
 
@@ -134,7 +136,7 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
       window.removeEventListener('blur', rozmycie);
       window.removeEventListener('focus', powrotDoKarty);
     };
-  }, []);
+  }, [setPowrotWykryty]);
 
   useEffect(() => {
     if (komunikat !== null) refKomunikatu.current?.focus();
@@ -343,7 +345,11 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
                 <>
                   {wybor.typ === 'kreator' && !maSzkicZam ? (
                     <PrzyciskLink href={sciezkaWidoku(wybor.idWidoku, { sprawa: idSprawy })} wariant="glowny">
-                      {wybor.idWidoku === 'ViewZamLeaveType' ? t.akcjaKreatorZam : t.akcjaKreatorZas53}
+                      {wybor.idWidoku === 'ViewZamLeaveType'
+                        ? t.akcjaKreatorZam
+                        : wybor.idWidoku === 'ViewZ15Start'
+                          ? t.akcjaKreatorZ15
+                          : t.akcjaKreatorZas53}
                     </PrzyciskLink>
                   ) : null}
                   {wybor.typ === 'zewnetrzny' ? (
@@ -393,6 +399,8 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
                 {idPozycji === 'K05' && wybor.typ === 'u-pracodawcy' ? (
                   <Notatka>{t.notatkaK05Pracownik}</Notatka>
                 ) : null}
+                {/* K36: odpis na cel sprawa w ZUS, świadczenie socjalne, opieka albo adopcja i zatrudnienie bez opłaty skarbowej (KA-06 3.8.1.1.2). */}
+                {idPozycji === 'K36' ? <Notatka>{t.notatkaK36BezOplaty}</Notatka> : null}
               </Stos>
             </Karta>
           }

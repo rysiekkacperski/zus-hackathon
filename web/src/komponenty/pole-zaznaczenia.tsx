@@ -44,7 +44,7 @@ export interface GrupaZaznaczenProps<W extends string = string> {
 
 // Kwadrat ez-check: 20 px, ramka brand, po zaznaczeniu tło brand i znacznik rysowany pseudoelementem.
 export const klasyKwadratuZaznaczenia =
-  "m-0 mt-0.5 grid size-5 flex-none cursor-pointer appearance-none place-items-center rounded-xs border border-brand bg-surface-card checked:bg-brand checked:after:h-[0.3125rem] checked:after:w-2.5 checked:after:-translate-y-px checked:after:-rotate-45 checked:after:border-0 checked:after:border-b-2 checked:after:border-l-2 checked:after:border-solid checked:after:border-on-brand checked:after:content-[''] disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken";
+  "m-0 mt-0.5 grid size-5 flex-none cursor-pointer appearance-none place-items-center rounded-xs border border-brand bg-surface-card checked:bg-brand checked:after:h-[0.3125rem] checked:after:w-2.5 checked:after:-translate-y-px checked:after:-rotate-45 checked:after:border-0 checked:after:border-b-2 checked:after:border-l-2 checked:after:border-solid checked:after:border-on-brand checked:after:content-[''] aria-invalid:border-2 aria-invalid:border-ink-strong aria-invalid:checked:bg-ink-strong disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken";
 
 export const klasyEtykietyZaznaczenia = {
   aktywna: 'inline-flex min-w-0 cursor-pointer items-start gap-3',

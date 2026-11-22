@@ -45,12 +45,13 @@ const ID_POL: Record<PolePodmiotu, string> = {
   telefon: 'org-telefon',
   email: 'org-email',
   adresStrony: 'org-strona',
+  krs: 'org-krs',
   charytatywny: 'org-charytatywna',
 };
 
 const CZESCI_PODMIOTU = ['organizacja', 'sytuacje', 'kontakt'] as const;
 const PODZIAL_PODMIOTU: readonly (readonly PolePodmiotu[])[] = [
-  ['nazwa', 'zakresPomocy'],
+  ['nazwa', 'krs', 'zakresPomocy'],
   ['sytuacje'],
   ['telefon', 'email', 'adresStrony', 'charytatywny'],
 ];
@@ -128,7 +129,7 @@ function Formularz({ poczatkowy, edycja }: { poczatkowy: FormularzPodmiotu; edyc
           nazwaKroku={tekst.czesciFormularza[czesc]}
         />
         {bladZapisu ? <Komunikat kod={bladZapisu} /> : null}
-        <Karta tytul={tf.dane} bezLinii>
+        <Karta tytul={tekst.czesciFormularza[czesc]} bezLinii>
           <div className="grid max-w-180 gap-6">
             <CzescFormularza czesci={czesci} numer={1}>
               <PoleTekstowe
@@ -138,6 +139,17 @@ function Formularz({ poczatkowy, edycja }: { poczatkowy: FormularzPodmiotu; edyc
                 onZmiana={(w) => zmien('nazwa', w)}
                 {...walidacja.pole('nazwa')}
                 autoComplete="off"
+              />
+              <PoleTekstowe
+                id={ID_POL.krs}
+                etykieta={tf.krs}
+                podpowiedz={tf.krsPodpowiedz}
+                inputMode="numeric"
+                autoComplete="off"
+                szerokosc="srednia"
+                wartosc={f.krs}
+                onZmiana={(w) => zmien('krs', w)}
+                {...walidacja.pole('krs')}
               />
               <PoleTekstuDlugiego
                 id={ID_POL.zakresPomocy}
@@ -212,6 +224,7 @@ function Formularz({ poczatkowy, edycja }: { poczatkowy: FormularzPodmiotu; edyc
               <PoleZaznaczenia
                 id={ID_POL.charytatywny}
                 etykieta={tf.charytatywny}
+                opis={tf.charytatywnyOpis}
                 zaznaczone={f.charytatywny}
                 onZmiana={(z) => zmien('charytatywny', z)}
                 {...walidacja.pole('charytatywny')}

@@ -25,6 +25,9 @@ export interface PanelZakladki {
 
 type IdZakladkiSlotu = 'dziecko' | 'przyjecie' | 'dostep' | 'sytuacja-szczegolna';
 
+/** Zakładka trybu rodziny z danymi, z których powstał plan. */
+type IdZakladkiDanychPlanu = 'dane-planu';
+
 /** Identyfikatory wszystkich zakładek podsumowania, także tych, których bieżący profil nie ma. */
 const ZNANE_ZAKLADKI: readonly string[] = [
   'zatrudnienie',
@@ -32,11 +35,12 @@ const ZNANE_ZAKLADKI: readonly string[] = [
   'zmiana-zatrudnienia',
   'dane-rodziny',
   'drugi-rodzic',
+  'dane-planu',
   'dziecko',
   'przyjecie',
   'dostep',
   'sytuacja-szczegolna',
-] satisfies (IdZakladkiSekcji | IdZakladkiSlotu)[];
+] satisfies (IdZakladkiSekcji | IdZakladkiDanychPlanu | IdZakladkiSlotu)[];
 
 /** Zakładka slotu z rejestru slotyPodsumowania: identyfikator w adresie i etykieta. */
 export function zakladkaSlotu(idSlotu: string, rola: Rola): { id: string; etykieta: string } {

@@ -63,7 +63,7 @@ export function SlotTerminSprawy({ sprawa, termin, kontekst }: PropsSlotu<'przyS
             {koszt.moment === 'na-dzis' ? t.naDzis : t.wDniuPoTerminie}
             {(() => {
               const w = koszt.moment === 'na-dzis' ? wyjasnienieKosztu(koszt, sprawa.idPozycji) : null;
-              return w ? ` – ${w}` : null;
+              return w ? `, ${w}` : null;
             })()}
           </span>
         )}

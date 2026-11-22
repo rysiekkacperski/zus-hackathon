@@ -9,6 +9,7 @@ import { ekranPoZam } from '@/domena/wnioski/zam-nawigacja';
 import { Karta } from '@/komponenty/karta';
 import { PoleZaznaczenia } from '@/komponenty/pole-zaznaczenia';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
+import { formatujDate } from '@/domena/daty';
 import { teksty } from '@/teksty';
 import {
   adresPoprzedniegoKrokuZam,
@@ -33,6 +34,33 @@ function walidujOswiadczenia(f: { potwierdzone: boolean }): BledyPol<'potwierdzo
   return f.potwierdzone ? {} : { potwierdzone: '0043' };
 }
 
+/** Sytuacja matki dziecka we wniosku ZAM ojca o urlop macierzyński przejęty od matki (u34, 3.9.2.1.2 i 3.9.2.2.1). */
+function SytuacjaMatki({ przejecie }: { przejecie: NonNullable<DaneWnioskuZam['wniosek']['przejecie']> }) {
+  const tp = teksty.ViewFatherTakeover;
+  const imieINazwisko = `${przejecie.matka.imie} ${przejecie.matka.nazwisko}`.trim();
+  const sytuacje = tp.sytuacje as Partial<Record<string, (p: { data: string }) => string>>;
+  const przyczyny = tp.przyczyny as Partial<Record<string, string>>;
+  const sytuacja = przejecie.dataZdarzenia ? sytuacje[przejecie.przyczyna] : undefined;
+  return (
+    <div className="mb-6">
+      <h3 className="m-0 mb-2 text-body-strong">{tp.sytuacjaMatkiZam.tytul}</h3>
+      <ul className="m-0 flex list-disc flex-col gap-2 pl-6">
+        <li>
+          {przejecie.przyczyna === 'rezygnacja'
+            ? przejecie.dzienZakonczeniaUrlopuMatki
+              ? tp.sytuacjaMatkiZam.skrocenie({ data: formatujDate(przejecie.dzienZakonczeniaUrlopuMatki) })
+              : tp.przyczyny.rezygnacja
+            : sytuacja && przejecie.dataZdarzenia
+              ? sytuacja({ data: formatujDate(przejecie.dataZdarzenia) })
+              : (przyczyny[przejecie.przyczyna] ?? tp.sytuacjaMatkiZam.tytul)}
+        </li>
+        {imieINazwisko ? <li>{tp.sytuacjaMatkiZam.matka({ imieINazwisko, pesel: przejecie.matka.pesel ?? '' })}</li> : null}
+        {przejecie.zaswiadczeniePlatnikaMatki ? <li>{tp.sytuacjaMatkiZam.zaswiadczenie}</li> : null}
+      </ul>
+    </div>
+  );
+}
+
 function FormularzOswiadczen({ dane }: { dane: DaneWnioskuZam }) {
   const router = useRouter();
   const { wniosek, okresy } = dane;
@@ -48,6 +76,9 @@ function FormularzOswiadczen({ dane }: { dane: DaneWnioskuZam }) {
   const [bladZapisu, ustawBladZapisu] = useState<KodKomunikatu | null>(null);
   const [oknoOtwarte, ustawOknoOtwarte] = useState(false);
   const zaZyciem = okresy.zaZyciem;
+  const przyjecie = dane.kontekst.rodzina.daneCiazy?.przyjecie;
+  const dzieckoWniosku = wniosek.daneDzieci[0];
+  const dziecko = dzieckoWniosku ? `${dzieckoWniosku.imie} ${dzieckoWniosku.nazwisko}`.trim() : '';
 
   const punktyOkresow =
     wniosek.wariant === 'caly-rodzicielski' && wniosek.okresy.length > 1
@@ -103,6 +134,17 @@ function FormularzOswiadczen({ dane }: { dane: DaneWnioskuZam }) {
               {t.pelnaTresc}
             </button>
           </p>
+          {przyjecie ? (
+            <div className="mb-6">
+              <h3 className="m-0 mb-2 text-body-strong">{t.przyjecie.tytul}</h3>
+              <p className="m-0">
+                {dziecko
+                  ? t.przyjecie.tresc({ dziecko, data: formatujDate(przyjecie.dataPrzyjecia) })
+                  : t.przyjecie.trescBezImienia({ data: formatujDate(przyjecie.dataPrzyjecia) })}
+              </p>
+            </div>
+          ) : null}
+          {wniosek.przejecie ? <SytuacjaMatki przejecie={wniosek.przejecie} /> : null}
           <PoleZaznaczenia
             id="zam-oswiadczenia"
             etykieta={t.potwierdzam}

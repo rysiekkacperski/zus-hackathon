@@ -7,6 +7,7 @@
 // z wpisu źródłowego obowiązującego w tym samym dniu: z pomniejszeniem A − round(A × p%) albo z mnożnikiem round(A × m).
 import { dodajDni, porownajDaty } from '@/domena/daty';
 import { formatujKwote, formatujProcent, zaokraglijDoGrosza } from '@/domena/kwoty';
+import { teksty } from '@/teksty';
 import type {
   DataISO,
   IdPozycji,
@@ -218,6 +219,11 @@ export function idPozycjiZeSprawy(idSprawy: IdSprawy): IdPozycji | null {
 
 /** Tytuł sprawy planu z pozycji katalogu; dla sprawy spoza katalogu zwraca identyfikator sprawy. */
 export function tytulSprawy(k: Katalog, idSprawy: IdSprawy): string {
+  const oplacenie = /^OS-(\d{4})-(\d{2})$/.exec(idSprawy);
+  if (oplacenie !== null) {
+    const nazwa = teksty.wspolne.miesiace[Number(oplacenie[2]) - 1];
+    if (nazwa) return teksty.ViewFamilyPlan.oplacenie.tytul({ miesiac: `${nazwa} ${oplacenie[1]}` });
+  }
   const idPozycji = idPozycjiZeSprawy(idSprawy);
   if (idPozycji === null) return idSprawy;
   return pozycjaLubBrak(k, idPozycji)?.tytul ?? idSprawy;

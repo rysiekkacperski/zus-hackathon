@@ -18,6 +18,7 @@ import {
 import { ID_KWOT } from '@/dane/katalog/slownik-kwot';
 import { ID_WYMIAROW } from '@/dane/katalog/slownik-wymiarow';
 import { formatujKwote, zaokraglijDoGrosza } from '@/domena/kwoty';
+import { stawkaDzienna } from '@/domena/kalkulatory/rachunek';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import type {
   DaneSprawy,
@@ -459,6 +460,7 @@ function warunek7(s: StanWeryfikacji): Warunek {
     data: formatujDate(zadluzenie.dzien ?? s.zdarzenie.data),
     prog: formatujKwote(prog.wartosc),
     odSlownika: formatujDate(prog.od),
+    dzienZdarzenia: formatujDate(s.zdarzenie.data),
     terminSplaty: formatujDate(dodajMiesiace(s.zdarzenie.data, MIESIACE_SPLATY_ZADLUZENIA)),
   };
   return zadluzenie.kwota <= prog.wartosc ? warunek(7, 'spelniony', T.w7.spelniony(parametry)) : warunek(7, 'niespelniony', T.w7.niespelniony(parametry));
@@ -702,6 +704,33 @@ export function ustalPodstaweZeSprawy(dane: DaneSprawy, katalog: Katalog): Podst
     skladniki: [{ opis, kwota }],
     miesiacPowstaniaPrawa: miesiacPrawa,
   });
+  // Minimalna podstawa wymiaru zasiłku pracownika obowiązująca w dniu zasiłku, przy niepełnym etacie
+  // pomnożona przez wymiar etatu i zaokrąglona do grosza.
+  const etat = tytul === 'pracownik' && !pelnyEtat ? wymiarEtatuSprawy(dane) : null;
+  const minimumObowiazuje = tytul === 'pracownik' && (pelnyEtat || etat !== null);
+  const minimumWDniu = (dzien: DataISO): Grosze => {
+    const pelna = zeSlownika(katalog, ID_KWOT.minimalnaPodstawaPelnyEtat, 'kwota', dzien, sl.minimalnaPodstawa.wartosc).wartosc;
+    return etat === null ? pelna : zaokraglijDoGrosza((pelna * etat.licznik) / etat.mianownik);
+  };
+  const zMinimalna = (podstawa: Grosze, opis: string): PodstawaWymiaru => {
+    if (!minimumObowiazuje) return wynik(podstawa, opis);
+    const zakres = zakresZasilku(dane, zdarzenie);
+    const naPoczatku = minimumWDniu(zakres.od);
+    const kwotaPoczatkowa = Math.max(podstawa, naPoczatku);
+    const zmiany: { od: DataISO; kwota: Grosze }[] = [];
+    let poprzednia = kwotaPoczatkowa;
+    for (let m = dodajMiesiaceDoMiesiaca(miesiacZDaty(zakres.od), 1); `${m}-01` <= zakres.do; m = dodajMiesiaceDoMiesiaca(m, 1)) {
+      const dzien = `${m}-01` as DataISO;
+      const kwota = Math.max(podstawa, minimumWDniu(dzien));
+      if (kwota !== poprzednia) zmiany.push({ od: dzien, kwota });
+      poprzednia = kwota;
+    }
+    const bazowy =
+      podstawa < naPoczatku
+        ? wynik(naPoczatku, P.minimalna({ wyliczona: formatujKwote(podstawa), minimalna: formatujKwote(naPoczatku) }))
+        : wynik(podstawa, opis);
+    return zmiany.length === 0 ? bazowy : { ...bazowy, zmianyWOkresie: zmiany };
+  };
 
   const poprzedni = dane.poprzedniZasilek.wartosc;
   if (poprzedni !== null && porownajDaty(poprzedni.dataKonca, zdarzenie.data) < 0 && porownajDaty(zdarzenie.data, dodajMiesiace(poprzedni.dataKonca, 1)) <= 0) {
@@ -735,9 +764,14 @@ export function ustalPodstaweZeSprawy(dane: DaneSprawy, katalog: Katalog): Podst
     const bazowa = pomniejsz(najnizsza, procent);
     if (pelneMiesiace === 0 || wOknie.length === 0) return wynik(bazowa, P.jdgPrzedPelnymMiesiacem({ najnizsza: formatujKwote(najnizsza) }));
     if (pelneMiesiace < MIESIACE_PODSTAWY) {
-      const nadwyzki = wOknie.reduce((suma, k) => suma + Math.max(0, k.kwota - najnizsza), 0);
+      // Najniższa podstawa wymiaru składek obowiązująca w każdym pełnym miesiącu ubezpieczenia.
+      const najnizszaW = (m: MiesiacISO) => najnizszaWMiesiacu(katalog, m, najnizsza);
+      const miesiacePelne = Array.from({ length: pelneMiesiace }, (_, i) => dodajMiesiaceDoMiesiaca(pierwszyPelny, i));
+      const przecietna = zaokraglijDoGrosza(miesiacePelne.reduce((suma, m) => suma + najnizszaW(m), 0) / pelneMiesiace);
+      const bazowaKrotko = pomniejsz(przecietna, procent);
+      const nadwyzki = wOknie.reduce((suma, k) => suma + Math.max(0, k.kwota - najnizszaW(k.miesiac)), 0);
       const dodatek = zaokraglijDoGrosza((nadwyzki * (100 - procent)) / 100 / MIESIACE_PODSTAWY);
-      return wynik(bazowa + dodatek, P.jdgKrotko({ najnizsza: formatujKwote(najnizsza), bazowa: formatujKwote(bazowa), dodatek: formatujKwote(dodatek) }));
+      return wynik(bazowaKrotko + dodatek, P.jdgKrotko({ najnizsza: formatujKwote(przecietna), bazowa: formatujKwote(bazowaKrotko), dodatek: formatujKwote(dodatek) }));
     }
   }
 
@@ -746,7 +780,7 @@ export function ustalPodstaweZeSprawy(dane: DaneSprawy, katalog: Katalog): Podst
     const zMiesiacaZdarzenia = kwoty.filter((k) => k.miesiac === miesiacPrawa);
     if (zMiesiacaZdarzenia.length === 0) return { kod: '0094' };
     const kwota = pomniejsz(zMiesiacaZdarzenia[0].kwota, procent);
-    return wynik(pelnyEtat ? Math.max(kwota, sl.minimalnaPodstawa.wartosc) : kwota, P.miesiacZdarzenia);
+    return zMinimalna(kwota, P.miesiacZdarzenia);
   }
 
   const kazdyPonizejPolowy = wOknie.every((k) => uzupelnionaKwota(k, false) === null);
@@ -755,10 +789,30 @@ export function ustalPodstaweZeSprawy(dane: DaneSprawy, katalog: Katalog): Podst
   const srednia = uzupelnione.reduce((a, b) => a + b, 0) / uzupelnione.length;
   const podstawa = pomniejsz(srednia, procent);
   const opis = zPoswiadczenia ? P.zPoswiadczenia : tytul === 'zleceniobiorca' ? P.zZ3a : P.zZ3;
-  if (pelnyEtat && podstawa < sl.minimalnaPodstawa.wartosc) {
-    return wynik(sl.minimalnaPodstawa.wartosc, P.minimalna({ wyliczona: formatujKwote(podstawa), minimalna: formatujKwote(sl.minimalnaPodstawa.wartosc) }));
-  }
-  return wynik(podstawa, opis);
+  return zMinimalna(podstawa, opis);
+}
+
+/** Najniższa podstawa wymiaru składek osoby prowadzącej pozarolniczą działalność obowiązująca w miesiącu `m`. */
+function najnizszaWMiesiacu(k: Katalog, m: MiesiacISO, domyslna: number): number {
+  return zeSlownika(k, ID_KWOT.najnizszaPodstawaJdg, 'kwota', `${m}-01` as DataISO, domyslna).wartosc;
+}
+
+/** Wymiar etatu sprawy jako ułamek; null, gdy pole jest puste albo nieprawidłowe. */
+export function wymiarEtatuSprawy(d: DaneSprawy): { licznik: number; mianownik: number } | null {
+  const tekst = d.wymiarEtatu?.wartosc?.trim() ?? '';
+  const dopasowanie = /^(\d+)\/(\d+)$/.exec(tekst);
+  if (dopasowanie === null) return null;
+  const licznik = Number(dopasowanie[1]);
+  const mianownik = Number(dopasowanie[2]);
+  if (licznik < 1 || licznik >= mianownik || mianownik > 99) return null;
+  return { licznik, mianownik };
+}
+
+/** Zakres dni zasiłku z wniosku albo od daty zdarzenia do końca okresu z wniosku. */
+function zakresZasilku(d: DaneSprawy, zdarzenie: ZdarzenieSprawy): Okres {
+  const okresy = okresyZWniosku(d);
+  if (okresy.length === 0) return { od: zdarzenie.data, do: zdarzenie.data };
+  return { od: okresy[0].od, do: okresy.reduce((koniec, o) => maxData(koniec, o.do), okresy[0].do) };
 }
 
 function roznicaMiesiecy(od: MiesiacISO, do_: MiesiacISO): number {
@@ -783,7 +837,11 @@ export function dniPobytuWOkresieLiczenia(d: DaneSprawy): { dni: number; pierwsz
   if (tydzien <= 27 || (masa !== null && masa <= 1000)) okno = { od: porod, do: dodajDni(porod, 104) };
   else if (tydzien <= 36) okno = { od: porod, do: dodajDni(porod, 55) };
   else {
-    if (liczbaDniWlacznie(pobyt) < 2 || pierwszyDzien < 5 || pierwszyDzien > 28) return { dni: 0, pierwszyDzien };
+    // Co najmniej 2 kolejne dni pobytu, z których pierwszy przypada od 5. do 28. dnia po porodzie.
+    const pierwszyLiczony = maxData(pobyt.od, dodajDni(porod, 5));
+    if (porownajDaty(pierwszyLiczony, dodajDni(porod, 28)) > 0 || porownajDaty(dodajDni(pierwszyLiczony, 1), pobyt.do) > 0) {
+      return { dni: 0, pierwszyDzien };
+    }
     okno = { od: dodajDni(porod, 5), do: dodajDni(porod, 56) };
   }
   const od = maxData(okno.od, pobyt.od);
@@ -820,7 +878,7 @@ export function daneWejscioweZeSprawy(dane: DaneSprawy): DaneWejscioweKalkulator
       : { wartosc: { forma, dobrowolne }, zrodlo: ZRODLO },
     formaDrugiegoRodzica: ojciec
       ? { wartosc: { forma, dobrowolne }, zrodlo: ZRODLO }
-      : { wartosc: { forma: 'umowa-o-prace', dobrowolne: false }, zrodlo: 'wartosc-domyslna' },
+      : { wartosc: { forma: 'brak-drugiego-rodzica', dobrowolne: false }, zrodlo: 'wartosc-domyslna' },
   };
 }
 
@@ -844,7 +902,8 @@ function okresScenariusza(
 ): OkresScenariusza {
   const surowa = zaokraglijDoGrosza((podstawa * stawka) / 100);
   const miesiecznie = minimum !== null && surowa < minimum ? minimum : surowa;
-  const zaOkres = zaokraglijDoGrosza(((podstawa / 30) * stawka * dni) / 100);
+  // Stawka dzienna: podstawa / 30 zaokrąglona do grosza, × stawka, ponownie zaokrąglona do grosza.
+  const zaOkres = stawkaDzienna(podstawa, stawka) * dni;
   return { rodzic, rodzaj, od, do: dodajDni(od, dni - 1), dni, stawka, miesiecznie, zaOkres };
 }
 

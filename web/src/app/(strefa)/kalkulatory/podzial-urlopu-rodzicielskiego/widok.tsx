@@ -363,6 +363,7 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
               />
               <div className="mt-6 flex flex-col gap-3">
                 {!bezPrawa ? <Notatka>{t.notatkaStawki}</Notatka> : null}
+                {wyliczenie.wynik.ponadPoUrodzinach ? <Notatka>{t.notatkaPoUrodzinach}</Notatka> : null}
                 <Notatka>
                   {t.notatkaCzesci}{' '}
                   <Odnosnik href={trasy.ViewCalcMaternityResult()} wTekscie>{t.kalkulatorzeZasilku}</Odnosnik>

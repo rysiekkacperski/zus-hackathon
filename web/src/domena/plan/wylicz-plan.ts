@@ -11,7 +11,7 @@ import { ETAPY, indeksEtapu, wyznaczBiezacyEtap } from '@/domena/plan/etap';
 import { krokiPlanu } from '@/domena/plan/kroki';
 import { czyStatusZachowywany } from '@/domena/plan/statusy';
 import { faktyRodziny } from '@/domena/plan/warunki';
-import { dodaneSprawy, porownajPlany } from '@/domena/plan/zmiany';
+import { bezZmianZPierwszegoOdczytuZus, dodaneSprawy, porownajPlany } from '@/domena/plan/zmiany';
 import type { WejsciePlanu } from '@/domena/przeliczenie';
 import { czyWracaDoZrobienia } from '@/domena/terminy/wylicz-terminy';
 import type { DataISO, IdSprawy, PlanRodziny, PozycjaPlanu } from '@/domena/typy';
@@ -99,7 +99,8 @@ export function wyliczPlan(w: WejsciePlanu): PlanRodziny {
   pozycje = uporzadkuj(pozycje.filter((p) => ETAPY.includes(p.etap)));
 
   const biezacyEtap = wyznaczBiezacyEtap(w.zgoda ? w.daneCiazy : null, w.dzis);
-  const zmiany = porownajPlany(poprzedni, pozycje);
+  const zDanymiZusMatki = w.daneZusMatki !== null;
+  const zmiany = bezZmianZPierwszegoOdczytuZus(porownajPlany(poprzedni, pozycje), poprzedni, pozycje, zDanymiZusMatki);
   const zmianaEtapu = poprzedni && poprzedni.biezacyEtap !== biezacyEtap ? { z: poprzedni.biezacyEtap, na: biezacyEtap } : undefined;
 
   // Lista zmian dotyczy ostatniego przeliczenia, które coś zmieniło: przeliczenie bez zmian tego samego dnia
@@ -125,5 +126,6 @@ export function wyliczPlan(w: WejsciePlanu): PlanRodziny {
   };
   const etap = zostawPoprzednie ? poprzedni.zmianaEtapu : zmianaEtapu;
   if (etap) plan.zmianaEtapu = etap;
+  if (!zDanymiZusMatki) plan.bezDanychZusMatki = true;
   return plan;
 }

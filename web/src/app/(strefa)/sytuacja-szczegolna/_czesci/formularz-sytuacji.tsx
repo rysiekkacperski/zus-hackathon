@@ -15,6 +15,7 @@ import { trasy } from '@/komponenty/rama/trasy';
 import type { WalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { formatujDate } from '@/domena/daty';
 import {
+  czyBrakZgodyMatki,
   czyDotyczyDziecka,
   czyPoleLiczbyDzieci,
   czyStrataCiazy,
@@ -53,6 +54,8 @@ interface FormularzSytuacjiProps {
   walidacja: WalidacjaNaBiezaco<PoleSytuacji>;
   czesci: CzesciFormularza;
   onDalej: (zgloszenie: ZgloszenieSytuacji) => void;
+  /** Konto ojca bez zgody konta matki na dane dotyczące zdrowia (komunikat 0277 przy rodzajach zdrowia matki). */
+  brakZgodyMatki?: boolean;
 }
 
 function Sekcja({ tytul, wAkordeonie, children }: { tytul: string; wAkordeonie: boolean; children: ReactNode }) {
@@ -91,6 +94,7 @@ export function FormularzSytuacji({
   walidacja,
   czesci,
   onDalej,
+  brakZgodyMatki = false,
 }: FormularzSytuacjiProps) {
   const potwierdzona = Boolean(daneCiazy?.dataPoroduPotwierdzona && daneCiazy.dataPorodu);
   const liczbaZCiazy = liczbaDzieciZCiazy(daneCiazy);
@@ -114,7 +118,7 @@ export function FormularzSytuacji({
   function przejdzDalej() {
     // Na części 1 sprawdza rodzaj sytuacji, na ostatniej cały formularz z fokusem na pierwszym polu z błędem.
     czesci.dalej(() => {
-      const zgloszenie = zgloszenieZFormularza(formularz, daneCiazy, dzis);
+      const zgloszenie = zgloszenieZFormularza(formularz, daneCiazy, dzis, brakZgodyMatki);
       if (zgloszenie !== null) onDalej(zgloszenie);
     });
   }
@@ -136,6 +140,7 @@ export function FormularzSytuacji({
             onOpuszczenie={() => walidacja.onOpuszczenie('rodzaj')}
             blad={walidacja.blad('rodzaj') === '0006' ? '0006' : null}
             pokazBrakDatyPorodu={rodzaj !== null && czyWymagaDatyPorodu(rodzaj) && !potwierdzona}
+            pokazBrakZgodyMatki={czyBrakZgodyMatki(rodzaj, brakZgodyMatki)}
           />
         </Sekcja>
       ) : null}

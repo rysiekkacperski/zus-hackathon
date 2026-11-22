@@ -1,7 +1,7 @@
 'use client';
 
 // Karty ViewFamilyPlan (wzór Plan-rodziny): Twoja ścieżka z przejściem do stron etapów, Najbliższe terminy,
-// Na skróty, Dane, z których powstał plan, Co się zmieniło w planie. Właściciel: u12.
+// Sytuacje szczególne, Co się zmieniło w planie. Właściciel: u12.
 import { dodajMiesiaceDoMiesiaca, formatujDate, porownajDaty } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
 import {
@@ -12,11 +12,10 @@ import {
 } from '@/domena/plan/straznik';
 import type { KontekstRodziny } from '@/dane/magazyn/hooki';
 import { OPIS_ZMIANY } from '@/domena/plan/zmiany';
-import type { DanaZeZrodla, Etap, PozycjaPlanu, StatusSprawy, ZmianaPlanu, ZrodloDanej } from '@/domena/typy';
+import type { Etap, PozycjaPlanu, StatusSprawy, ZmianaPlanu } from '@/domena/typy';
+import { czySpokojnyTryb } from '@/domena/rodzina/sytuacje';
 import { formatujMiesiac } from '@/komponenty/format';
-import { Kafelki, Statystyki } from '@/komponenty/kafelki';
 import { Karta } from '@/komponenty/karta';
-import { ListaDefinicji, type PozycjaListyDefinicji } from '@/komponenty/lista-definicji';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { PrzyciskLink } from '@/komponenty/przycisk';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
@@ -24,7 +23,8 @@ import { Tabela } from '@/komponenty/tabela';
 import { Znaczek } from '@/komponenty/znaczek';
 import { teksty } from '@/teksty';
 import { sciezkaEtapu } from './sciezka-etapu';
-import { ETAPY, czyOtwarta, nazwaEtapu, nazwaFormy, numerEtapu, tytulSprawy } from './sprawy';
+import { ETAPY, czyOtwarta, nazwaEtapu, numerEtapu, tytulSprawy } from './sprawy';
+import { SlotAkcjaSytuacjaSzczegolna } from '@/app/(strefa)/plan-rodziny/_sloty/akcja-sytuacja-szczegolna';
 
 const t = teksty.ViewFamilyPlan;
 
@@ -44,14 +44,19 @@ export function KartaSciezki({ pozycje, biezacyEtap, ostrzezeniaStraznika = 0 }:
     <Karta tytul={t.sciezka.tytul} bezLinii>
       <div className="flex flex-col gap-6">
         <p className="m-0 text-body">{t.sciezka.wstep}</p>
-        <Statystyki
-          pozycje={[
+        <dl className="m-0 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
             { etykieta: t.sciezka.wPlanie, wartosc: pozycje.length },
             { etykieta: t.sciezka.doZrobienia, wartosc: doZrobienia },
             { etykieta: t.sciezka.zlozone, wartosc: zlozone },
             { etykieta: t.sciezka.zalatwione, wartosc: zalatwione },
-          ]}
-        />
+          ].map((p) => (
+            <div key={p.etykieta} className="min-w-0 rounded-md bg-surface-page p-4">
+              <dt className="text-body text-ink">{p.etykieta}</dt>
+              <dd className="m-0 mt-1 text-amount text-ink-strong">{p.wartosc}</dd>
+            </div>
+          ))}
+        </dl>
         <h3 className="m-0 text-body-strong text-ink">{t.sciezka.etapyPlanu}</h3>
         <ol className="m-0 flex list-none flex-col gap-2 p-0">
           {ETAPY.map((etap, indeks) => {
@@ -87,8 +92,7 @@ export function KartaSciezki({ pozycje, biezacyEtap, ostrzezeniaStraznika = 0 }:
                     </span>
                   ) : null}
                 </span>
-                {biezacy ? <Znaczek>{t.biezacyEtap}</Znaczek> : null}
-                {indeks < indeksBiezacego ? <span className="text-small-strong text-ink">{t.etapZakonczony}</span> : null}
+                <OznaczenieEtapu stan={stanEtapu(indeks, indeksBiezacego, sprawy)} />
               </li>
             );
           })}
@@ -96,6 +100,25 @@ export function KartaSciezki({ pozycje, biezacyEtap, ostrzezeniaStraznika = 0 }:
       </div>
     </Karta>
   );
+}
+
+export type StanEtapu = 'biezacy' | 'zakonczony' | 'otwarte-sprawy' | 'przyszly';
+
+/**
+ * Stan etapu względem bieżącego etapu: etap przed bieżącym jest zakończony, gdy nie ma w nim spraw do zrobienia,
+ * a z otwartą sprawą pokazuje, że zostały w nim sprawy do zrobienia.
+ */
+export function stanEtapu(indeks: number, indeksBiezacego: number, sprawy: PozycjaPlanu[]): StanEtapu {
+  if (indeks === indeksBiezacego) return 'biezacy';
+  if (indeks > indeksBiezacego) return 'przyszly';
+  return sprawy.some((p) => czyOtwarta(p.status)) ? 'otwarte-sprawy' : 'zakonczony';
+}
+
+export function OznaczenieEtapu({ stan }: { stan: StanEtapu }) {
+  if (stan === 'biezacy') return <Znaczek>{t.biezacyEtap}</Znaczek>;
+  if (stan === 'zakonczony') return <span className="text-small-strong text-ink">{t.etapZakonczony}</span>;
+  if (stan === 'otwarte-sprawy') return <span className="text-small-strong text-ink">{t.etapZOtwartymiSprawami}</span>;
+  return null;
 }
 
 /** Liczniki spraw etapu: „Sprawy: 5, do zrobienia: 3, złożone: 1”. */
@@ -109,6 +132,9 @@ export function licznikSprawEtapu(sprawy: PozycjaPlanu[]): string {
   if (za > 0) czesci.push(t.sciezka.licznikZalatwionych({ liczba: String(za) }));
   return czesci.join(', ');
 }
+
+/** Liczba terminów na karcie Najbliższe terminy. */
+const LIMIT_NAJBLIZSZYCH = 3;
 
 interface WpisTerminu {
   id: string;
@@ -127,21 +153,20 @@ export function KartaTerminow({ kontekst, ocena }: { kontekst: KontekstRodziny; 
     if (porownajDaty(termin.termin, dzis) < 0) continue;
     wpisy.push({ id: termin.idSprawy, data: termin.termin, tytul: tytulSprawy(katalog, sprawa) });
   }
-  if (ocena?.oplacenie && !wpisy.some((w) => w.id === ocena.oplacenie?.idSprawy)) {
-    const sprawa = pozycje.find((p) => p.idSprawy === ocena.oplacenie?.idSprawy);
+  const oplacenie = ocena?.oplacenie ?? null;
+  if (oplacenie && porownajDaty(oplacenie.termin, dzis) >= 0 && !wpisy.some((w) => w.id === oplacenie.idSprawy)) {
+    const sprawa = pozycje.find((p) => p.idSprawy === oplacenie.idSprawy);
     if (!sprawa || czyOtwarta(sprawa.status)) {
       wpisy.push({
-        id: ocena.oplacenie.idSprawy,
-        data: ocena.oplacenie.termin,
-        tytul: t.oplacenie.tytul({ miesiac: formatujMiesiac(ocena.oplacenie.miesiac) }),
+        id: oplacenie.idSprawy,
+        data: oplacenie.termin,
+        tytul: t.oplacenie.tytul({ miesiac: formatujMiesiac(oplacenie.miesiac) }),
       });
     }
   }
-  wpisy.sort((a, b) => porownajDaty(a.data, b.data));
-  const najblizsze = wpisy.slice(0, 3);
-  if (ocena?.oplacenie) {
-    const nastepny = dodajMiesiaceDoMiesiaca(ocena.oplacenie.miesiac, 1);
-    najblizsze.push({
+  if (oplacenie) {
+    const nastepny = dodajMiesiaceDoMiesiaca(oplacenie.miesiac, 1);
+    wpisy.push({
       id: `nastepna-${nastepny}`,
       data: terminOplaceniaSkladek(nastepny),
       tytul: t.oplacenie.tytul({ miesiac: formatujMiesiac(nastepny) }),
@@ -149,14 +174,21 @@ export function KartaTerminow({ kontekst, ocena }: { kontekst: KontekstRodziny; 
     });
   }
   const daneCiazy = rodzina.daneCiazy;
-  if (daneCiazy?.przewidywanyTerminPorodu && !daneCiazy.dataPoroduPotwierdzona) {
-    najblizsze.push({
+  if (
+    daneCiazy?.przewidywanyTerminPorodu &&
+    !daneCiazy.dataPoroduPotwierdzona &&
+    porownajDaty(daneCiazy.przewidywanyTerminPorodu, dzis) >= 0
+  ) {
+    wpisy.push({
       id: 'ptp',
       data: daneCiazy.przewidywanyTerminPorodu,
       tytul: t.najblizszeTerminy.ptp,
       opis: t.najblizszeTerminy.ptpOpis,
     });
   }
+  // Pełna lista terminów w kolejności dat, z której karta pokazuje trzy najbliższe.
+  wpisy.sort((a, b) => porownajDaty(a.data, b.data) || a.id.localeCompare(b.id));
+  const najblizsze = wpisy.slice(0, LIMIT_NAJBLIZSZYCH);
   return (
     <Karta tytul={t.najblizszeTerminy.tytul} bezLinii>
       <div className="flex flex-col gap-6">
@@ -181,78 +213,17 @@ export function KartaTerminow({ kontekst, ocena }: { kontekst: KontekstRodziny; 
   );
 }
 
-export function KartaNaSkroty() {
+/** Karta Sytuacje szczególne pod najbliższymi terminami; w spokojnym trybie karta trybu z datą włączenia. */
+export function KartaSytuacjiSzczegolnych({ kontekst }: { kontekst: KontekstRodziny }) {
+  if (kontekst.rola !== 'rodzic' && kontekst.rola !== 'drugi-rodzic') return null;
+  if (czySpokojnyTryb(kontekst.rodzina.daneCiazy)) return <SlotAkcjaSytuacjaSzczegolna kontekst={kontekst} />;
   return (
-    <Karta tytul={t.naSkroty.tytul} bezLinii>
-      <Kafelki
-        kolumny={2}
-        kafelki={[
-          { href: sciezkaWidoku('ViewZusAccountData'), etykieta: t.naSkroty.daneKontaZus },
-          { href: sciezkaWidoku('ViewZusQuestion'), etykieta: t.naSkroty.pytanieDoZus },
-        ]}
-      />
-    </Karta>
-  );
-}
-
-function zZrodlem(wartosc: string, dana: DanaZeZrodla<unknown> | null | undefined): string {
-  if (!dana) return wartosc;
-  const zrodlo = t.daneProfilu.zrodla[dana.zrodlo as ZrodloDanej];
-  return zrodlo ? t.daneProfilu.zZrodlem({ wartosc, zrodlo }) : wartosc;
-}
-
-export function KartaDanychPlanu({ kontekst }: { kontekst: KontekstRodziny }) {
-  const { rodzina, daneZusMatki, dzis } = kontekst;
-  const dane = rodzina.daneRodziny;
-  const ciaza = rodzina.daneCiazy;
-  const d = t.daneProfilu;
-  const pozycje: PozycjaListyDefinicji[] = [];
-  if (daneZusMatki) pozycje.push({ etykieta: d.matka, wartosc: `${daneZusMatki.imie} ${daneZusMatki.nazwisko}` });
-  const formaMatki = dane.matka.formaZatrudnienia;
-  if (formaMatki) pozycje.push({ etykieta: d.formaMatki, wartosc: zZrodlem(nazwaFormy(formaMatki.wartosc), formaMatki) });
-  const duch = dane.matka.dobrowolneChorobowe;
-  if (duch && (formaMatki?.wartosc === 'jdg' || formaMatki?.wartosc === 'umowa-zlecenia')) {
-    pozycje.push({ etykieta: d.duch, wartosc: zZrodlem(duch.wartosc ? d.tak : d.nie, duch) });
-  }
-  const formaDrugiego = dane.drugiRodzic.formaZatrudnienia;
-  if (formaDrugiego) {
-    const imie = [dane.drugiRodzic.imie, dane.drugiRodzic.nazwisko].filter(Boolean).join(' ');
-    const forma = nazwaFormy(formaDrugiego.wartosc);
-    pozycje.push({
-      etykieta: d.drugiRodzic,
-      wartosc:
-        formaDrugiego.wartosc === 'brak-drugiego-rodzica' || !imie ? forma : d.osobaZForma({ osoba: imie, forma: forma.toLowerCase() }),
-    });
-  }
-  if (dane.stanCywilny) pozycje.push({ etykieta: d.stanCywilny, wartosc: d.stanyCywilne[dane.stanCywilny.wartosc] });
-  if (ciaza?.dataPoroduPotwierdzona && ciaza.dataPorodu) {
-    pozycje.push({ etykieta: d.dataPorodu, wartosc: formatujDate(ciaza.dataPorodu) });
-  } else if (ciaza?.przewidywanyTerminPorodu) {
-    pozycje.push({ etykieta: d.ptp, wartosc: formatujDate(ciaza.przewidywanyTerminPorodu) });
-  }
-  if (ciaza?.dataPierwszejWizyty) {
-    pozycje.push({
-      etykieta: d.wizyta,
-      wartosc: ciaza.dataPierwszejWizyty === 'brak-wizyty' ? d.brakWizyty : formatujDate(ciaza.dataPierwszejWizyty),
-    });
-  }
-  if (dane.dochodNaOsobe) {
-    const dochod = dane.dochodNaOsobe.wartosc;
-    pozycje.push({ etykieta: d.dochod, wartosc: dochod === 'nieznany' ? d.dochodNieznany : formatujKwote(dochod) });
-  }
-  if (ciaza) pozycje.push({ etykieta: d.liczbaDzieci, wartosc: String(ciaza.liczbaUrodzonychDzieci ?? ciaza.liczbaDzieciZCiazy ?? 1) });
-
-  return (
-    <Karta tytul={d.tytul} bezLinii>
+    <Karta tytul={t.sytuacjeSzczegolne.tytul} bezLinii>
       <div className="flex flex-col gap-6">
-        <p className="m-0 text-body-strong">{teksty.wspolne.stanNa({ data: formatujDate(dzis) })}</p>
-        <ListaDefinicji pozycje={pozycje} />
-        <div className="flex flex-wrap items-center gap-4">
-          <PrzyciskLink wariant="drugorzedny" href={sciezkaWidoku('ViewProfileSummary', { tryb: 'rodzina' })}>
-            {t.otworzProfil}
-          </PrzyciskLink>
-          <p className="m-0 min-w-0 flex-1 basis-60 text-body">{d.przelicz}</p>
-        </div>
+        <p className="m-0 text-body">{t.sytuacjeSzczegolne.opis}</p>
+        <PrzyciskLink wariant="drugorzedny" szerokosc="pelna" href={sciezkaWidoku('ViewSpecialSituation')}>
+          {t.sytuacjeSzczegolne.przejdz}
+        </PrzyciskLink>
       </div>
     </Karta>
   );

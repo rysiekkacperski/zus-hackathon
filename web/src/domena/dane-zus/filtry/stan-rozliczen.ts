@@ -1,12 +1,13 @@
 // Filtr odczytu danych z konta ZUS `stanRozliczen` (kontrakt, sekcja 7.2; ANALIZY/17 R1, R2, R5, R6).
 // Właściciel: u14. Konto z tytułem osoby prowadzącej pozarolniczą działalność dostaje stan rozliczeń
-// na dzień odczytu i na dni powstania prawa nie późniejsze niż dzień odczytu: pierwszy dzień niezdolności
-// z ostatniego e-ZLA i dzień urodzenia dziecka z danych członków rodziny. Oś zadłużenia trafia do kopii,
+// na dzień odczytu i na dni powstania prawa nie późniejsze niż dzień odczytu: pierwszy dzień ostatniej
+// nieprzerwanej niezdolności do pracy z e-ZLA albo dzień nabycia prawa po okresie wyczekiwania i dzień
+// urodzenia dziecka z danych członków rodziny. Oś zadłużenia trafia do kopii,
 // żeby widok ustalił stan na dzień porodu z profilu rodziny.
 import { dataZeZnacznika } from '@/domena/daty';
 import type { FiltrOdczytu } from '@/domena/dane-zus/filtry/typ';
 import type { DataISO, StanRozliczenSkladek } from '@/domena/typy';
-import { ostatnieZaswiadczenie, stanNaDzien } from '@/domena/zasilki/stan-rozliczen';
+import { dzienPrawaChorobowego, stanNaDzien } from '@/domena/zasilki/stan-rozliczen';
 import '@/domena/zasilki/rozszerzenia-typow';
 
 export const stanRozliczen: FiltrOdczytu = (kopia, w) => {
@@ -33,8 +34,10 @@ export const stanRozliczen: FiltrOdczytu = (kopia, w) => {
     stany.push({ ...stanNaDzien(os, dzien, w.teraz), zrodloDniaPrawa });
   };
 
-  const ostatnie = ostatnieZaswiadczenie(w.zrodlo.zaswiadczeniaEzla);
-  if (ostatnie) dodaj(ostatnie.od, 'e-zla');
+  // Pierwszy dzień ostatniej nieprzerwanej niezdolności do pracy, a w okresie wyczekiwania dzień nabycia prawa.
+  const chorobowe = dzialalnosc.find((t) => t.ubezpieczenieChorobowe.rodzaj === 'dobrowolne')?.ubezpieczenieChorobowe;
+  const chorobowy = dzienPrawaChorobowego(w.zrodlo.zaswiadczeniaEzla, { poczatekChorobowego: chorobowe?.od ?? null });
+  if (chorobowy) dodaj(chorobowy.dzien, 'e-zla');
   for (const czlonek of w.zrodlo.czlonkowieRodziny) dodaj(czlonek.dataUrodzenia, 'porod');
 
   return { ...bezRozliczen, stanyRozliczen: stany, osZadluzenia: os };

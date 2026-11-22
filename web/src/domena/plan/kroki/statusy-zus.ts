@@ -21,7 +21,10 @@ import type {
   ZasilekWyplacony,
 } from '@/domena/typy';
 
-/** Sprawa planu, do której trafia wniosek danego rodzaju (R1). Dobry Start 300+ nie ma sprawy w katalogu. */
+/**
+ * Sprawa planu, do której trafia wniosek danego rodzaju (R1). Aktualizacja statusu spraw i powiadomienie
+ * o zmianie statusu obejmują wnioski o 800+, o świadczenia z programu Aktywny Rodzic i o zasiłek macierzyński.
+ */
 export const SPRAWA_WNIOSKU_ZUS: Readonly<Partial<Record<RodzajWnioskuZus, IdPozycji>>> = {
   'swiadczenie-800-plus': 'K12',
   '800-plus-kolejny-okres': 'K13',

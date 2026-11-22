@@ -193,6 +193,23 @@ function lancuchZaswiadczen(ezla: readonly ZaswiadczenieEzla[], katalog: Katalog
   return lancuch;
 }
 
+/** Ostatnia nieprzerwana niezdolność do pracy z jednego albo kilku następujących po sobie zaświadczeń e-ZLA. */
+export function ostatniaNieprzerwanaNiezdolnosc(ezla: readonly ZaswiadczenieEzla[]): { od: DataISO; do: DataISO } | null {
+  if (ezla.length === 0) return null;
+  const lista = [...ezla].sort((a, b) => porownajDaty(a.od, b.od));
+  let od = lista[0].od;
+  let koniec = lista[0].do;
+  for (const z of lista.slice(1)) {
+    if (porownajDaty(z.od, dodajDni(koniec, 1)) <= 0) {
+      if (porownajDaty(z.do, koniec) > 0) koniec = z.do;
+    } else {
+      od = z.od;
+      koniec = z.do;
+    }
+  }
+  return { od, do: koniec };
+}
+
 function okresZasilkowyZ(p: Przygotowanie, katalog: Katalog, dzis: DataISO): OkresZasilkowy | null {
   const lancuch = lancuchZaswiadczen(p.ezla, katalog, dzis);
   if (lancuch.length === 0) return null;
@@ -207,9 +224,13 @@ function okresZasilkowyZ(p: Przygotowanie, katalog: Katalog, dzis: DataISO): Okr
   let wykorzystane = 0;
   let dzienWyczerpania: DataISO | undefined;
   let ostatniDzien = lancuch[0].do;
+  // Dzień objęty kilkoma zaświadczeniami, także wystawionymi dla różnych płatników, system liczy raz.
+  const policzone = new Set<DataISO>();
   for (const z of lancuch) {
     for (const d of dni(z.od, z.do)) {
       if (nabycie !== undefined && porownajDaty(d, nabycie) < 0) continue;
+      if (policzone.has(d)) continue;
+      policzone.add(d);
       licznik += 1;
       if (porownajDaty(d, dzis) <= 0) wykorzystane += 1;
       if (licznik === limit) dzienWyczerpania = d;
@@ -222,14 +243,12 @@ function okresZasilkowyZ(p: Przygotowanie, katalog: Katalog, dzis: DataISO): Okr
   if (p.forma === 'umowa-o-prace') {
     const rok = Number(ostatniDzien.slice(0, 4));
     const limitW = limitWynagrodzenia(katalog, rok, p.rokUrodzenia, ostatniDzien);
-    let dniRoku = 0;
-    for (const z of p.ezla) {
-      for (const d of dni(z.od, z.do)) {
-        if (Number(d.slice(0, 4)) !== rok) continue;
-        if (nabycie !== undefined && porownajDaty(d, nabycie) < 0) continue;
-        dniRoku += 1;
-      }
-    }
+    const dniRoku = podzialZaswiadczenia(p.ezla, {
+      forma: p.forma, ...(nabycie !== undefined ? { dzienNabycia: nabycie } : {}), rokUrodzenia: p.rokUrodzenia, katalog,
+      wyplacaZasilek: '', wyplacaWynagrodzenie: '',
+    })
+      .filter((s) => s.rodzaj === 'wynagrodzenie-chorobowe' && Number(s.od.slice(0, 4)) === rok)
+      .reduce((suma, s) => suma + s.dni, 0);
     wynagrodzenie = { rok, limit: limitW, wykorzystane: Math.min(dniRoku, limitW) };
   }
   return {
@@ -265,13 +284,21 @@ export function podzialZaswiadczenia(
   const lista = (Array.isArray(z) ? [...z] : [z as ZaswiadczenieEzla]).sort((a, b) => porownajDaty(a.od, b.od));
   const licznikRoku = new Map<number, number>();
   const wynik: PodzialZaswiadczenia = [];
+  const policzone = new Set<DataISO>();
   for (const zaswiadczenie of lista) {
     const stawkaZasilku = zaswiadczenie.kodyLiterowe.includes('B') ? 100 : 80;
     for (const d of dni(zaswiadczenie.od, zaswiadczenie.do)) {
       if (k.dzienNabycia !== undefined && porownajDaty(d, k.dzienNabycia) < 0) continue;
+      if (policzone.has(d)) continue;
+      policzone.add(d);
       const rok = Number(d.slice(0, 4));
+      const ostatniOdcinek = wynik[wynik.length - 1];
+      // Przełom roku: zasiłek chorobowy przysługujący 31 grudnia trwa za cały okres nieprzerwanej niezdolności.
+      const zasilekZPoprzedniegoRoku = ostatniOdcinek !== undefined && ostatniOdcinek.rodzaj === 'zasilek-chorobowy'
+        && dodajDni(ostatniOdcinek.do, 1) === d && Number(ostatniOdcinek.do.slice(0, 4)) <= rok;
       let rodzaj: PodzialZaswiadczenia[number]['rodzaj'];
       if (k.koniecUbezpieczenia !== undefined && porownajDaty(d, k.koniecUbezpieczenia) > 0) rodzaj = 'zasilek-po-ustaniu';
+      else if (zasilekZPoprzedniegoRoku) rodzaj = 'zasilek-chorobowy';
       else if (k.forma === 'umowa-o-prace' && (licznikRoku.get(rok) ?? 0) < limitWynagrodzenia(k.katalog, rok, k.rokUrodzenia, d)) {
         rodzaj = 'wynagrodzenie-chorobowe';
         licznikRoku.set(rok, (licznikRoku.get(rok) ?? 0) + 1);
@@ -342,6 +369,12 @@ export interface UstalenieSwiadczenia {
   ustaniePrzedPorodem?: DataISO;
   /** Warunek braku zadłużenia ponad próg przy braku stanu rozliczeń (0155). */
   warunekZadluzenia?: Grosze;
+  /** Zasiłek chorobowy: dni od porodu do ostatniego dnia zaświadczenia e-ZLA, za które przysługuje zasiłek macierzyński. */
+  macierzynskiZaDni?: { od: DataISO; do: DataISO };
+  /** Zasiłek chorobowy: dni niezdolności w okresie wyczekiwania, za które zasiłek nie przysługuje. */
+  wyczekiwanieZaDni?: { od: DataISO; do: DataISO };
+  /** Świadczenie rehabilitacyjne: ostatni dzień stawki 100% podstawy wymiaru, czyli dzień przed porodem. */
+  stawkaCiazyDo?: DataISO;
   platnikNieustalony: boolean;
 }
 
@@ -486,8 +519,20 @@ function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): Usta
     };
   }
 
-  // 3. Okres wyczekiwania.
-  let od = an.dzienNabycia;
+  // 3. Okres wyczekiwania. Niezdolność, która zaczyna się w okresie wyczekiwania i trwa po jego upływie,
+  // daje prawo od dnia nabycia prawa do ostatniego dnia zaświadczenia.
+  const nieprzerwana = ostatniaNieprzerwanaNiezdolnosc(p.ezla);
+  const wNiezdolnosci = nieprzerwana !== null && porownajDaty(nieprzerwana.od, D) <= 0 && porownajDaty(D, nieprzerwana.do) <= 0;
+  let od = wNiezdolnosci && nieprzerwana ? nieprzerwana.od : an.dzienNabycia;
+  let wyczekiwanieWNiezdolnosci: WynikUstaleniaPrawa['przyczyna'] | undefined;
+  if (wNiezdolnosci && nieprzerwana && porownajDaty(nieprzerwana.od, an.dzienNabycia) < 0
+    && porownajDaty(an.dzienNabycia, nieprzerwana.do) <= 0) {
+    od = an.dzienNabycia;
+    wyczekiwanieWNiezdolnosci = {
+      rodzaj: 'okres-wyczekiwania', ostatniDzien: an.ostatniDzienWyczekiwania, dzienNabycia: an.dzienNabycia,
+      dni: an.dniWyczekiwania === 30 ? 30 : 90,
+    };
+  }
   if (porownajDaty(D, an.dzienNabycia) < 0) {
     const niezdolnosc = p.ezla.find((z) => porownajDaty(z.od, D) <= 0 && porownajDaty(D, z.do) <= 0);
     if (!niezdolnosc || porownajDaty(niezdolnosc.do, an.dzienNabycia) < 0) {
@@ -532,24 +577,48 @@ function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): Usta
     }
   }
 
-  const koniec = an.okres.do;
+  const koniecUbezpieczenia = an.okres.do;
+  // Zasiłek przysługuje do ostatniego dnia niezdolności z zaświadczenia e-ZLA, a przy porodzie w okresie
+  // niezdolności do dnia poprzedzającego dzień porodu; od dnia porodu przysługuje zasiłek macierzyński.
+  let koniec = wNiezdolnosci && nieprzerwana ? nieprzerwana.do : koniecUbezpieczenia;
+  let macierzynskiZaDni: { od: DataISO; do: DataISO } | undefined;
+  if (wNiezdolnosci && nieprzerwana && p.dataPorodu && porownajDaty(od, p.dataPorodu) < 0
+    && porownajDaty(p.dataPorodu, nieprzerwana.do) <= 0) {
+    koniec = dodajDni(p.dataPorodu, -1);
+    macierzynskiZaDni = { od: p.dataPorodu, do: nieprzerwana.do };
+  }
   const ustaniePrzedPorodem = p.koniecZProfilu && porownajDaty(p.koniecZProfilu, w.dzis) > 0
     && (p.ptp === undefined || porownajDaty(p.koniecZProfilu, p.ptp) < 0) ? p.koniecZProfilu : undefined;
-  const podzial = p.ezla.length > 0
+  const podzialPelny = p.ezla.length > 0
     ? podzialZaswiadczenia(p.ezla, {
-        forma: p.forma, dzienNabycia: an.dzienNabycia, ...(koniec ? { koniecUbezpieczenia: koniec } : {}), rokUrodzenia: p.rokUrodzenia,
+        forma: p.forma, dzienNabycia: an.dzienNabycia, ...(koniecUbezpieczenia ? { koniecUbezpieczenia } : {}), rokUrodzenia: p.rokUrodzenia,
         katalog: k, wyplacaZasilek: wyplaca, wyplacaWynagrodzenie: opisPracodawcy(p.tytulGlowny),
       })
     : undefined;
+  // Podział za okres ustalonego prawa: odcinki wcześniejszej niezdolności liczą się wyłącznie do limitu dni w roku.
+  const podzial = podzialPelny && wNiezdolnosci
+    ? podzialPelny
+        .filter((s) => porownajDaty(s.do, od) >= 0 && (koniec === undefined || porownajDaty(s.od, koniec) <= 0))
+        .map((s) => {
+          const poczatek = porownajDaty(s.od, od) < 0 ? od : s.od;
+          const kres = koniec !== undefined && porownajDaty(s.do, koniec) > 0 ? koniec : s.do;
+          return { ...s, od: poczatek, do: kres, dni: roznicaDni(poczatek, kres) + 1 };
+        })
+    : podzialPelny;
   return {
     wynik: {
       ...baza, postac: 'przysluguje', od, ...(koniec ? { do: koniec } : {}), wyplaca, stawka: stawka.wartosc,
       ...(podzial ? { podzial } : {}),
+      ...(wyczekiwanieWNiezdolnosci ? { przyczyna: wyczekiwanieWNiezdolnosci } : {}),
       ...(warunekZadluzenia !== undefined ? { kodKomunikatu: '0155' as const, parametryKomunikatu: { prog: formatujKwote(warunekZadluzenia) } } : {}),
     },
     wartosci,
     ...(ustaniePrzedPorodem ? { ustaniePrzedPorodem } : {}),
     ...(warunekZadluzenia !== undefined ? { warunekZadluzenia } : {}),
+    ...(macierzynskiZaDni ? { macierzynskiZaDni } : {}),
+    ...(wyczekiwanieWNiezdolnosci?.rodzaj === 'okres-wyczekiwania' && nieprzerwana
+      ? { wyczekiwanieZaDni: { od: nieprzerwana.od, do: wyczekiwanieWNiezdolnosci.ostatniDzien } }
+      : {}),
     platnikNieustalony,
   };
 }
@@ -582,9 +651,12 @@ function ustalRehabilitacyjne(w: WejscieUstaleniaPrawa, p: Przygotowanie): Ustal
   const oz = p.zgoda ? okresZasilkowyZ(p, k, w.dzis) : null;
   if (oz && oz.wyczerpany && porownajDaty(oz.ostatniDzien, w.dzis) >= 0) {
     const od = dodajDni(oz.dzienWyczerpania, 1);
+    // Stawka 100% podstawy wymiaru za niezdolność w ciąży trwa do dnia poprzedzającego dzień porodu.
+    const porod = p.dataPorodu ?? p.ptp;
     return {
       wynik: { ...baza, wskazanyDzien: od, postac: 'przysluguje', od, do: dodajDni(dodajMiesiace(od, okres.wartosc), -1), wyplaca, stawka: stawka.wartosc },
       wartosci, platnikNieustalony: platnikSw === null,
+      ...(porod ? { stawkaCiazyDo: dodajDni(porod, -1) } : {}),
     };
   }
   return { wynik: { ...baza, postac: 'warunek', wyplaca, stawka: stawka.wartosc }, wartosci, platnikNieustalony: platnikSw === null };
@@ -704,12 +776,19 @@ export interface SwiadczeniaWCiazy {
 /** Wskazane dni czterech świadczeń zgodnie z regułą Ustalenie prawa (ANALIZY/05 sekcja 5.2). */
 export function wskazaneDni(w: WejscieSwiadczen): Record<SwiadczenieWCiazy, DataISO> {
   const p = przygotuj({ ...w, swiadczenie: 'zasilek-chorobowy', wskazanyDzien: w.dzis });
-  const lancuch = lancuchZaswiadczen(p.ezla, w.katalog, w.dzis);
+  const nieprzerwana = ostatniaNieprzerwanaNiezdolnosc(p.ezla);
   const oz = okresZasilkowyZ(p, w.katalog, w.dzis);
   const zmiana = w.daneRodziny.matka.zmianaZatrudnienia;
   const ustanie = zmiana?.rodzaj.wartosc === 'ustanie' ? zmiana.data?.wartosc : undefined;
+  // Zasiłek chorobowy: pierwszy dzień ostatniej nieprzerwanej niezdolności, a przy niezdolności, która zaczyna się
+  // w okresie wyczekiwania i trwa po jego upływie, dzień nabycia prawa.
+  let dzienChorobowego = nieprzerwana?.od ?? w.dzis;
+  if (nieprzerwana) {
+    const nabycie = analizujUbezpieczenie(p.tytuly, nieprzerwana.od, w.katalog, p.koniecZProfilu)?.dzienNabycia;
+    if (nabycie && porownajDaty(nieprzerwana.od, nabycie) < 0 && porownajDaty(nabycie, nieprzerwana.do) <= 0) dzienChorobowego = nabycie;
+  }
   return {
-    'zasilek-chorobowy': lancuch[0]?.od ?? w.dzis,
+    'zasilek-chorobowy': dzienChorobowego,
     'swiadczenie-rehabilitacyjne': oz ? dodajDni(oz.dzienWyczerpania, 1) : w.dzis,
     zwzm: ustanie ? dodajDni(ustanie, 1) : w.dzis,
     'zasilek-macierzynski': p.dataPorodu ?? p.ptp ?? w.dzis,

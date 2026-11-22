@@ -54,6 +54,7 @@ export function przygotujKopie(w: {
   zrodlo: ZrodloweDaneKontaZus;
   poprzednia: DaneZKontaZus | null;
   teraz: ZnacznikCzasu;
+  zgodaNaDaneZdrowia?: boolean;
 }): DaneZKontaZus {
   const { zrodlo, poprzednia, teraz } = w;
   const dzien = dataZeZnacznika(teraz);
@@ -81,7 +82,7 @@ export function przygotujKopie(w: {
     ...(poprzednia === null ? {} : { poprzedniOdczyt: poprzednia.odczytano }),
   };
 
-  return zastosujFiltryOdczytu(kopia, { zrodlo, poprzednia, teraz });
+  return zastosujFiltryOdczytu(kopia, { zrodlo, poprzednia, teraz, zgodaNaDaneZdrowia: w.zgodaNaDaneZdrowia });
 }
 
 /** Liczba części odczytu pokazywanych w stanie odczytu w toku (6 części). */

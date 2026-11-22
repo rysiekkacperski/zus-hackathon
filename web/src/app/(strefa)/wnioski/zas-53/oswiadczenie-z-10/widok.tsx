@@ -1,7 +1,8 @@
 'use client';
 
-// ViewZas53AfterInsurance: oświadczenie Z-10 po ustaniu tytułu ubezpieczenia chorobowego (0006, 0010, 0237–0240).
-// Każde z pięciu pytań ma własną część kroku (?czesc=1..5), żeby część z polami warunkowymi mieściła się w oknie.
+// ViewZas53AfterInsurance: oświadczenie Z-10 po ustaniu tytułu ubezpieczenia chorobowego (0006, 0010, 0110,
+// 0237–0240, 0270). Każde z siedmiu pytań ma własną część kroku (?czesc=1..7), żeby część z polami warunkowymi
+// mieściła się w oknie.
 import { useEffect, useRef, useState } from 'react';
 import { formatujDate } from '@/domena/daty';
 import type { KodKomunikatu } from '@/domena/typy';
@@ -10,6 +11,8 @@ import {
   pytanieWylaczajace,
   PYTANIA_Z10,
   PYTANIA_Z_INFORMACJA,
+  PYTANIE_URLOPU_Z10,
+  RODZAJ_Z_HEKTARAMI,
   RODZAJE_DZIALALNOSCI_Z10,
   walidujZ10,
   type FormularzZ10,
@@ -53,7 +56,9 @@ function idPola(pole: PoleZ10): string {
 }
 
 function polaPytania(nr: NumerPytaniaZ10): PoleZ10[] {
-  return nr === 4 ? [`odpowiedz-${nr}`, 'rodzaj', `data-${nr}`] : [`odpowiedz-${nr}`, `informacja-${nr}`, `data-${nr}`];
+  if (nr === PYTANIE_URLOPU_Z10) return [`odpowiedz-${nr}`, 'urlop-od', 'urlop-do'];
+  if (nr === 4) return [`odpowiedz-${nr}`, 'rodzaj', 'hektary', `data-${nr}`];
+  return [`odpowiedz-${nr}`, `informacja-${nr}`, `data-${nr}`];
 }
 
 const KOLEJNOSC: PoleZ10[] = PYTANIA_Z10.flatMap(polaPytania);
@@ -190,7 +195,7 @@ function FormularzOswiadczenia({ k }: { k: NonNullable<ReturnType<typeof useWnio
                       {PYTANIA_Z_INFORMACJA.includes(nr) ? (
                         <PoleTekstowe
                           id={idPola(`informacja-${nr}`)}
-                          etykieta={t.informacja[nr as 1 | 2]}
+                          etykieta={t.informacja[nr as 1 | 2 | 6]}
                           wartosc={f.informacja[nr] ?? ''}
                           onZmiana={(w) => zmien((s) => ({ ...s, informacja: { ...s.informacja, [nr]: w.slice(0, 100) } }))}
                           maksDlugosc={100}
@@ -209,15 +214,51 @@ function FormularzOswiadczenia({ k }: { k: NonNullable<ReturnType<typeof useWnio
                           {...walidacja.pole('rodzaj')}
                         />
                       ) : null}
-                      <PoleDaty
-                        id={idPola(`data-${nr}`)}
-                        etykieta={t.data[nr]}
-                        podpowiedz={t.podpowiedzDaty}
-                        wartosc={f.data[nr] ?? ''}
-                        onZmiana={(w) => zmien((s) => ({ ...s, data: { ...s.data, [nr]: w } }))}
-                        {...walidacja.pole(`data-${nr}`)}
-                        szerokosc="srednia"
-                      />
+                      {nr === 4 && f.rodzajDzialalnosci === RODZAJ_Z_HEKTARAMI ? (
+                        <PoleTekstowe
+                          id={idPola('hektary')}
+                          etykieta={t.hektary}
+                          podpowiedz={t.podpowiedzHektarow}
+                          wartosc={f.hektary}
+                          onZmiana={(w) => zmien((s) => ({ ...s, hektary: w }))}
+                          inputMode="decimal"
+                          autoComplete="off"
+                          {...walidacja.pole('hektary')}
+                          szerokosc="srednia"
+                        />
+                      ) : null}
+                      {nr === PYTANIE_URLOPU_Z10 ? (
+                        <>
+                          <PoleDaty
+                            id={idPola('urlop-od')}
+                            etykieta={t.urlopOd}
+                            podpowiedz={t.podpowiedzDaty}
+                            wartosc={f.urlopOd}
+                            onZmiana={(w) => zmien((s) => ({ ...s, urlopOd: w }))}
+                            {...walidacja.pole('urlop-od')}
+                            szerokosc="srednia"
+                          />
+                          <PoleDaty
+                            id={idPola('urlop-do')}
+                            etykieta={t.urlopDo}
+                            podpowiedz={t.podpowiedzDaty}
+                            wartosc={f.urlopDo}
+                            onZmiana={(w) => zmien((s) => ({ ...s, urlopDo: w }))}
+                            {...walidacja.pole('urlop-do')}
+                            szerokosc="srednia"
+                          />
+                        </>
+                      ) : (
+                        <PoleDaty
+                          id={idPola(`data-${nr}`)}
+                          etykieta={t.data[nr as Exclude<NumerPytaniaZ10, 7>]}
+                          podpowiedz={t.podpowiedzDaty}
+                          wartosc={f.data[nr] ?? ''}
+                          onZmiana={(w) => zmien((s) => ({ ...s, data: { ...s.data, [nr]: w } }))}
+                          {...walidacja.pole(`data-${nr}`)}
+                          szerokosc="srednia"
+                        />
+                      )}
                     </div>
                   ) : null}
                 </div>

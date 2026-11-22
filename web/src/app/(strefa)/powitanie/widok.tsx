@@ -74,13 +74,14 @@ export function WidokPowitania() {
                 ))}
               </div>
             </div>
-            <div className="mt-7.5 flex justify-center">
-              <Przycisk wariant="glowny" szerokosc="szeroka" zajety={zajety} onClick={() => ustawArkuszOtwarty(true)}>
-                {t.rozpocznij}
-              </Przycisk>
-            </div>
           </Karta>
         </Stos>
+        {/* Poniżej lg przycisk przykleja się do dolnej krawędzi okna, więc jest widoczny bez przewijania. */}
+        <div className="sticky bottom-0 z-10 -mx-4 mt-7.5 flex justify-center border-t border-line-soft bg-surface-page px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
+          <Przycisk wariant="glowny" szerokosc="szeroka" zajety={zajety} onClick={() => ustawArkuszOtwarty(true)}>
+            {t.rozpocznij}
+          </Przycisk>
+        </div>
       </div>
       <ArkuszZgody
         otwarte={arkuszOtwarty}

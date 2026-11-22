@@ -35,18 +35,18 @@ export function ArkuszWycofaniaZgody({ otwarte, onZamknij, terminPorodu, onPotwi
       tytul={t.tytul}
       stopka={
         <>
-          <Przycisk wariant="glowny" onClick={potwierdz}>
-            {t.potwierdz}
-          </Przycisk>
           <Przycisk wariant="drugorzedny" onClick={onZamknij}>
             {t.anuluj}
+          </Przycisk>
+          <Przycisk wariant="glowny" onClick={potwierdz} className="ml-auto">
+            {t.potwierdz}
           </Przycisk>
         </>
       }
     >
       <div className="rounded-sm bg-surface-page px-5 py-4">
         <h3 className="m-0 mb-2 text-body-strong text-ink">{t.skutkiTytul}</h3>
-        <ul className="m-0 pl-6 text-body">
+        <ul className="m-0 list-disc pl-6 text-body">
           <li>
             {terminPorodu
               ? t.skutekDaneZTerminemPorodu({ terminPorodu: formatujDate(terminPorodu) })

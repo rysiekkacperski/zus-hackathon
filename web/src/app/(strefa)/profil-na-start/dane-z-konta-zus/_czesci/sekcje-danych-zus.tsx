@@ -4,7 +4,8 @@
 // z ubezpieczeniem chorobowym i podstawami składek, płatnicy składek, członkowie rodziny z oznaczeniem nowego
 // dziecka, zasiłki z ostatnich 6 miesięcy, adres i kontakt, także stan pustych danych (wzory P02-04 … P02-13).
 // Gospodarz: widok ViewProfileZusData (u07). Teksty: teksty.ViewProfileZusData.sekcjeDanychZus.
-import { dodajMiesiaceDoMiesiaca, dataZeZnacznika, miesiacZDaty } from '@/domena/daty';
+import { koniecOknaPodstaw } from '@/domena/dane-zus/filtry/podstawowe';
+import { dodajMiesiaceDoMiesiaca, dataZeZnacznika } from '@/domena/daty';
 import type {
   CzlonekRodzinyZus,
   DaneZKontaZus,
@@ -88,15 +89,15 @@ function ciagiPodstaw(podstawy: PodstawaSkladek[]): CiagPodstaw[] {
   return ciagi;
 }
 
-/** Opis podstaw składek tytułu, na przykład „6 000,00 zł w każdym miesiącu” albo „5 652,00 zł w październiku i listopadzie 2026”. */
-function opisPodstaw(podstawy: PodstawaSkladek[], miesiacOdczytu: MiesiacISO): string {
+/** Opis podstaw składek tytułu, na przykład „6 000,00 zł w każdym miesiącu” albo „5 652,00 zł w październiku 2026”. */
+function opisPodstaw(podstawy: PodstawaSkladek[], koniecOkna: MiesiacISO): string {
   const ciagi = ciagiPodstaw(podstawy);
   if (ciagi.length === 0) return tekst.brakWartosci;
-  const pelneOkno = dodajMiesiaceDoMiesiaca(miesiacOdczytu, -11);
+  const pelneOkno = dodajMiesiaceDoMiesiaca(koniecOkna, -11);
   return ciagi
     .map((c) => {
       const kwota = formatujKwote(c.kwota);
-      if (c.liczba === 12 && c.od === pelneOkno && c.do === miesiacOdczytu) return tekst.podstawy.wKazdymMiesiacu({ kwota });
+      if (c.liczba === 12 && c.od === pelneOkno && c.do === koniecOkna) return tekst.podstawy.wKazdymMiesiacu({ kwota });
       if (c.liczba >= 3) {
         return tekst.podstawy.wKazdymMiesiacuOdDo({
           kwota,
@@ -151,13 +152,13 @@ function SekcjaTytulow({ kopia }: { kopia: DaneZKontaZus }) {
     );
   }
 
-  const miesiacOdczytu = miesiacZDaty(dataZeZnacznika(kopia.odczytano));
+  const dzienOdczytu = dataZeZnacznika(kopia.odczytano);
   const wiersze: WierszTytulu[] = kopia.tytuly.map((tytul) => ({
     id: tytul.id,
     tytul: tekst.rodzajeTytulu[tytul.rodzaj],
     okres: <Mocny>{okres(tytul.od, tytul.do)}</Mocny>,
     chorobowe: opisChorobowego(tytul),
-    podstawa: <Mocny>{opisPodstaw(tytul.podstawySkladek, miesiacOdczytu)}</Mocny>,
+    podstawa: <Mocny>{opisPodstaw(tytul.podstawySkladek, koniecOknaPodstaw(tytul, dzienOdczytu))}</Mocny>,
   }));
   if (kopia.brakTytuluOd !== undefined) {
     wiersze.push({
@@ -206,6 +207,14 @@ function SekcjaTytulow({ kopia }: { kopia: DaneZKontaZus }) {
   );
 }
 
+/** Informacja, czy płatnik wypłaca zasiłki, z datą stanu, na który ZUS ją ustalił. */
+function opisWyplatyZasilkow(tytul: TytulUbezpieczenia): string {
+  const { wyplacaZasilki, wyplacaZasilkiStanNa } = tytul.platnik;
+  const wartosc = tekst.platnicy.wyplaca[wyplacaZasilki];
+  if (wyplacaZasilkiStanNa === undefined || (wyplacaZasilki !== 'tak' && wyplacaZasilki !== 'nie')) return wartosc;
+  return tekst.platnicy.wyplacaStanNa({ wartosc, data: formatujDate(wyplacaZasilkiStanNa) });
+}
+
 function SekcjaPlatnikow({ tytuly }: { tytuly: TytulUbezpieczenia[] }) {
   if (tytuly.length === 0) return null;
   const bezInformacji = tytuly
@@ -241,7 +250,7 @@ function SekcjaPlatnikow({ tytuly }: { tytuly: TytulUbezpieczenia[] }) {
           platnik: tytul.platnik.nazwa,
           nip: <Mocny>{tytul.platnik.nip}</Mocny>,
           regon: <Mocny>{tytul.platnik.regon}</Mocny>,
-          wyplaca: tekst.platnicy.wyplaca[tytul.platnik.wyplacaZasilki],
+          wyplaca: opisWyplatyZasilkow(tytul),
         }))}
       />
       <Notatka className="mt-4">
@@ -332,6 +341,7 @@ function SekcjaZasilkow({ zasilki, klasy }: { zasilki: ZasilekWyplacony[]; klasy
         etykietaPrzewijania={tekst.zasilki.przewijanie}
         kolumny={[
           { klucz: 'rodzaj', naglowek: tekst.zasilki.kolumny.rodzaj },
+          { klucz: 'okres', naglowek: tekst.zasilki.kolumny.okres },
           { klucz: 'data', naglowek: tekst.zasilki.kolumny.data },
           { klucz: 'kwota', naglowek: tekst.zasilki.kolumny.kwota, liczbowa: true },
           { klucz: 'sposob', naglowek: tekst.zasilki.kolumny.sposob },
@@ -340,6 +350,7 @@ function SekcjaZasilkow({ zasilki, klasy }: { zasilki: ZasilekWyplacony[]; klasy
         wiersze={zasilki.map((z, i) => ({
           id: `${z.dataWyplaty}-${i}`,
           rodzaj: nazwaZasilku(z),
+          okres: <span className="text-ink-strong">{okres(z.okresOd, z.okresDo) || tekst.brakWartosci}</span>,
           data: <span className="whitespace-nowrap text-ink-strong">{formatujDate(z.dataWyplaty)}</span>,
           kwota: <Mocny>{formatujKwote(z.kwota)}</Mocny>,
           sposob: etykieta(tekst.zasilki.sposoby, z.sposobWyplaty),

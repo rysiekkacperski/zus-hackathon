@@ -6,6 +6,7 @@
 // ze źródłem, akcja zaproszenia i sprawdzenia pełnomocnictwa PEL, gdy drugi rodzic nie dołączył, akcja odłączenia,
 // gdy dołączył, oraz widok Drugiego rodzica ze zmianą wyłącznie własnych danych.
 import { useMemo, useState, type ReactNode } from 'react';
+import { useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { ArkuszOdlaczenia } from '@/app/(strefa)/profil-rodziny/_czesci/arkusz-odlaczenia';
 import { ArkuszZaproszenia } from '@/app/(strefa)/profil-rodziny/_czesci/arkusz-zaproszenia';
 import { useStanKontaOsoby, useStanSymulowanegoZus } from '@/dane/magazyn/hooki';
@@ -124,7 +125,7 @@ function wierszeZPelnomocnictwa(drugi: DrugiRodzic): Wiersz[] {
       ? t.podstawaStala({ kwota: formatujKwote(ostatnia.kwota) })
       : t.podstawaOstatnia({ kwota: formatujKwote(ostatnia.kwota), miesiac: formatujMiesiac(ostatnia.miesiac) })
     : t.brakPodstaw;
-  const zasilki = dane?.zasilki ?? [];
+  // Zakres pełnomocnictwa PEL (3.3.3.2.2 KA-01): tytuły, ubezpieczenie chorobowe, podstawy i wypłata zasiłków przez płatnika.
   return [
     { id: 'imie', dane: t.wiersze.imieINazwisko, wartosc: imieINazwisko(drugi), zrodlo: zrodloPel },
     { id: 'forma', dane: t.wiersze.forma, wartosc: forma, zrodlo: zrodloPel },
@@ -139,17 +140,6 @@ function wierszeZPelnomocnictwa(drugi: DrugiRodzic): Wiersz[] {
       id: 'platnik-wyplaca',
       dane: t.wiersze.platnikWyplaca,
       wartosc: tytul ? t.wyplacaZasilki[tytul.platnik.wyplacaZasilki] : t.wyplacaZasilki['nie-dotyczy'],
-      zrodlo: zrodloPel,
-    },
-    {
-      id: 'zasilki',
-      dane: t.wiersze.zasilki,
-      wartosc:
-        zasilki.length === 0
-          ? t.brakZasilkow
-          : zasilki
-              .map((z) => t.zasilek({ rodzaj: z.rodzaj, kwota: formatujKwote(z.kwota), data: formatujDate(z.dataWyplaty) }))
-              .join('; '),
       zrodlo: zrodloPel,
     },
   ];
@@ -169,8 +159,9 @@ export function SlotSekcjaDrugiegoRodzica({ tryb, konto, kontekst }: PropsSlotu<
 }
 
 function SekcjaDrugiegoRodzica({ konto, kontekst }: { konto: KontoPrzewodnika; kontekst: KontekstRodziny }) {
-  const [zaproszenie, ustawZaproszenie] = useState<{ link: string; wazneDo: DataISO } | null>(null);
-  const [odlaczenieOtwarte, ustawOdlaczenieOtwarte] = useState(false);
+  // Arkusze w stanie chwilowym: po powrocie na podsumowanie (Cache Components) nie otwierają się ponownie.
+  const [zaproszenie, ustawZaproszenie] = useStanChwilowy<{ link: string; wazneDo: DataISO } | null>(null);
+  const [odlaczenieOtwarte, ustawOdlaczenieOtwarte] = useStanChwilowy(false);
   const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
 
   const daneRodziny = kontekst.rodzina.daneRodziny;

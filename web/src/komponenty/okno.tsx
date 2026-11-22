@@ -155,7 +155,10 @@ function Okno({
         ) : null}
         {children}
       </div>
-      {stopka ? <div className="mt-7.5 flex flex-wrap gap-4">{stopka}</div> : null}
+      {stopka ? (
+        // Stopka przykleja się do dołu przewijanego okna, więc akcje są widoczne przy długiej treści.
+        <div className="sticky bottom-0 -mx-5 -mb-5 mt-3.5 flex flex-wrap gap-4 bg-surface-card px-5 pt-4 pb-5">{stopka}</div>
+      ) : null}
     </dialog>
   );
 }

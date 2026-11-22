@@ -13,12 +13,11 @@ import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import {
   ETAPY,
   KOTWICE_NOWEJ_POZYCJI,
-  MAKS_DLUGOSC_OPISU,
-  MAKS_DLUGOSC_TYTULU,
   RODZAJE_POZYCJI,
   RODZICE_NOWEJ_POZYCJI,
   UBEZPIECZENIA_CHOROBOWE,
   formularzNowejPozycjiPoczatkowy,
+  maksDlugoscPola,
   nastepnyIdentyfikator,
   walidujNowaPozycje,
   type FormularzNowejPozycji,
@@ -47,6 +46,7 @@ const ID_POL: Record<PoleNowejPozycji, string> = {
   formyZatrudnienia: 'formy-umowa-o-prace',
   instytucjaIKanal: 'instytucja',
   przesuniecie: 'przesuniecie',
+  kosztSpoznienia: 'koszt',
 };
 
 const CZESCI_POZYCJI = ['sprawa', 'warunek', 'kanal', 'termin'] as const;
@@ -54,7 +54,7 @@ const PODZIAL_POZYCJI: readonly (readonly PoleNowejPozycji[])[] = [
   ['tytul', 'rodzaj', 'etap'],
   ['rodzic', 'formyZatrudnienia'],
   ['instytucjaIKanal'],
-  ['przesuniecie'],
+  ['przesuniecie', 'kosztSpoznienia'],
 ];
 
 export function WidokDodaniaPozycjiKatalogu() {
@@ -79,6 +79,16 @@ export function WidokDodaniaPozycjiKatalogu() {
 
   const lista = trasy.ViewCatalogList({ zakladka: 'pozycje' });
   const nastepnyId = nastepnyIdentyfikator(katalog);
+
+  /** Pole z błędem 0271 (3.5.1.2.6) pokazuje dozwoloną liczbę znaków. */
+  function poleZLimitem(pole: PoleNowejPozycji) {
+    const propsy = walidacja.pole(pole);
+    return {
+      ...propsy,
+      parametryBledu:
+        propsy.blad === '0271' ? { liczbaZnakow: String(maksDlugoscPola(pole)) } : undefined,
+    };
+  }
 
   function zmien<P extends keyof FormularzNowejPozycji>(pole: P, wartosc: FormularzNowejPozycji[P]) {
     setFormularz((poprzedni) => ({ ...poprzedni, [pole]: wartosc }));
@@ -134,9 +144,8 @@ export function WidokDodaniaPozycjiKatalogu() {
                 podpowiedz={t.sprawa.podpowiedzTytulu}
                 wartosc={formularz.tytul}
                 onZmiana={(w) => zmien('tytul', w)}
-                maksDlugosc={MAKS_DLUGOSC_TYTULU}
                 autoComplete="off"
-                {...walidacja.pole('tytul')}
+                {...poleZLimitem('tytul')}
                 wymagane
               />
               <PoleWyboru
@@ -197,7 +206,7 @@ export function WidokDodaniaPozycjiKatalogu() {
         </CzescFormularza>
 
         <CzescFormularza czesci={czesci} numer={3}>
-          <Karta tytul={t.kanal.naglowek} bezLinii>
+          <Karta tytul={t.czesci.kanal} bezLinii>
             <div className="flex max-w-160 flex-col gap-6">
               <PoleTekstuDlugiego
                 id={ID_POL.instytucjaIKanal}
@@ -205,9 +214,8 @@ export function WidokDodaniaPozycjiKatalogu() {
                 podpowiedz={t.kanal.podpowiedzInstytucji}
                 wartosc={formularz.instytucjaIKanal}
                 onZmiana={(w) => zmien('instytucjaIKanal', w)}
-                maksDlugosc={MAKS_DLUGOSC_OPISU}
                 wiersze={3}
-                {...walidacja.pole('instytucjaIKanal')}
+                {...poleZLimitem('instytucjaIKanal')}
                 wymagane
               />
             </div>
@@ -215,7 +223,7 @@ export function WidokDodaniaPozycjiKatalogu() {
         </CzescFormularza>
 
         <CzescFormularza czesci={czesci} numer={4}>
-          <Karta tytul={t.kanal.naglowek} bezLinii>
+          <Karta tytul={t.czesci.termin} bezLinii>
             <div className="flex max-w-160 flex-col gap-6">
               <PoleWyboru
                 id="kotwica"
@@ -242,13 +250,13 @@ export function WidokDodaniaPozycjiKatalogu() {
                 />
               )}
               <PoleTekstuDlugiego
-                id="koszt"
+                id={ID_POL.kosztSpoznienia}
                 etykieta={t.kanal.koszt}
                 podpowiedz={t.kanal.podpowiedzKosztu}
                 wartosc={formularz.kosztSpoznienia}
                 onZmiana={(w) => zmien('kosztSpoznienia', w)}
-                maksDlugosc={MAKS_DLUGOSC_OPISU}
                 wiersze={3}
+                {...poleZLimitem('kosztSpoznienia')}
               />
             </div>
           </Karta>
@@ -258,6 +266,7 @@ export function WidokDodaniaPozycjiKatalogu() {
           czesci={czesci}
           onAkcjaKroku={zapisz}
           etykietaAkcji={t.zapisz}
+          onWrocKroku={() => przejdz(lista)}
           zajety={zapisywanie}
           dodatkowe={
             <PrzyciskLink href={lista} wariant="drugorzedny">

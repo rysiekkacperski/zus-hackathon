@@ -5,7 +5,7 @@
 // akcją „Zmień” przy każdej sekcji i zapisem profilu (wzory cz1/P03-24 i cz1/P03-25).
 // Tryb rodziny (/profil-rodziny, Rodzic i Drugi rodzic): zapisany profil, zmiana sekcji w szkicu zmiany
 // profilu ze śladem „Zmienione, przed zmianą”, anulowanie i zapis zmian (wzory cz1/Profil-rodziny i cz1/P03-26).
-// Sekcje profilu i sekcje ze slotów stoją w zakładkach (ZakladkiPodsumowania), a przyciski pod panelem zakładek,
+// Sekcje profilu, w trybie rodziny zakładka „Dane planu” i sekcje ze slotów stoją w zakładkach (ZakladkiPodsumowania), a przyciski pod panelem zakładek,
 // więc strona mieści się w oknie 1440×800 bez przewijania. Po nieudanym zapisie widok wybiera pierwszą zakładkę
 // ze wskaźnikiem błędu i przenosi fokus na komunikat.
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
@@ -31,6 +31,7 @@ import { teksty } from '@/teksty';
 import { SzkieletKreatoraProfilu } from '../_czesci/szkielet-kreatora-profilu';
 import { sciezkaPowrotuProfilu } from '../_czesci/trasy-profilu';
 import { slotyPodsumowania } from './_sloty';
+import { KartaDanychPlanu } from './_czesci/karta-danych-planu';
 import { KartaSekcjiProfilu } from './_czesci/karta-sekcji-profilu';
 import { sekcjeProfilu, wartosciWierszy, type ProfilDoPokazania, type SekcjaProfilu } from './_czesci/sekcje-profilu';
 import { ZakladkiPodsumowania, zakladkaSlotu, type PanelZakladki } from './_czesci/zakladki-podsumowania';
@@ -201,8 +202,14 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
     tresc: <Komponent tryb={tryb} konto={konto} szkic={szkic} kontekst={kontekst} />,
   }));
 
+  // Tryb rodziny: zakładka „Dane planu” z danymi, z których powstał plan, za sekcjami profilu.
+  const panelyZDanymiPlanu: PanelZakladki[] =
+    tryb === 'rodzina' && kontekst !== null
+      ? [...panelySekcji, { id: 'dane-planu', etykieta: t.zakladki.danePlanu, tresc: <KartaDanychPlanu kontekst={kontekst} /> }]
+      : panelySekcji;
+
   const zakladkiProfilu = (
-    <ZakladkiPodsumowania sekcje={panelySekcji} sloty={panelySlotow} wyborPoProbie={wyborPoProbie} />
+    <ZakladkiPodsumowania sekcje={panelyZDanymiPlanu} sloty={panelySlotow} wyborPoProbie={wyborPoProbie} />
   );
 
   const komunikatBledu = blad ? (

@@ -45,14 +45,14 @@ export function idOpcjiGrupy(nazwa: string, wartosc: string) {
 const klasyListy = {
   karty: 'flex flex-col gap-3',
   poziomo: 'flex flex-wrap gap-3',
-  proste: 'flex flex-col gap-3',
+  proste: 'flex flex-col gap-3 group-data-blad:border-l-2 group-data-blad:border-ink-strong group-data-blad:pl-3',
 } as const;
 
 const klasyKarty = {
   zaznaczona:
     'flex min-w-0 cursor-pointer items-center gap-3 box-border min-h-control rounded-sm border-2 border-brand bg-brand-wash px-[0.9375rem] py-[0.4375rem] font-semibold',
   niezaznaczona:
-    'flex min-w-0 cursor-pointer items-center gap-3 box-border min-h-control rounded-sm border border-brand bg-surface-card px-4 py-2 transition-colors duration-150 hover:bg-brand-wash motion-reduce:transition-none',
+    'flex min-w-0 cursor-pointer items-center gap-3 box-border min-h-control rounded-sm border border-brand bg-surface-card px-4 py-2 transition-colors duration-150 hover:bg-brand-wash group-data-blad:border-ink-strong group-data-blad:bg-surface-sunken group-data-blad:shadow-[inset_0_0_0_1px_var(--color-ink-strong)] motion-reduce:transition-none',
   wylaczona:
     'flex min-w-0 cursor-not-allowed items-center gap-3 box-border min-h-control rounded-sm border border-line bg-surface-sunken px-4 py-2 text-ink-muted',
 } as const;
@@ -89,7 +89,8 @@ export function GrupaOpcji<W extends string = string>({
         if (onOpuszczenie && opuszczonoKontener(e)) onOpuszczenie();
       }}
       aria-describedby={polaczOpisy(podpowiedz ? idPodpowiedzi(idGrupy) : null, maBlad ? idBledu(idGrupy) : null)}
-      className={['m-0 min-w-0 border-0 p-0', className].filter(Boolean).join(' ')}
+      data-blad={maBlad ? '' : undefined}
+      className={['group m-0 min-w-0 border-0 p-0', className].filter(Boolean).join(' ')}
     >
       <legend className={legendaUkryta ? 'sr-only' : 'm-0 mb-3 p-0 text-body-strong'}>{legenda}</legend>
       {podpowiedz ? <PodpowiedzPola id={idPodpowiedzi(idGrupy)}>{podpowiedz}</PodpowiedzPola> : null}

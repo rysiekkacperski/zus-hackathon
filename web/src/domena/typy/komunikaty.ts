@@ -1,10 +1,10 @@
 // Kody i typy komunikatów z docs/03-user-stories/tablica-komunikatow.md (kolumny ID, Nazwa i Typ).
 // Treści komunikatów leżą w teksty.komunikaty w src/teksty.ts.
 
-// komunikaty.ts: zamknięta unia wszystkich 261 kodów tablicy komunikatów
+// komunikaty.ts: zamknięta unia wszystkich 334 kodów tablicy komunikatów
 export type KodKomunikatu =
   | '0001' // Brak połączenia z danymi konta ZUS
-  | '0002' // Nieaktualne dane z konta ZUS
+  | '0002' // Nieaktualne dane konta ZUS
   | '0003' // Błąd zapisu danych
   | '0004' // Brak zgody na dane dotyczące zdrowia
   | '0005' // Zgoda na dane dotyczące zdrowia wycofana
@@ -35,7 +35,7 @@ export type KodKomunikatu =
   | '0030' // Niedozwolone znaki w imieniu lub nazwisku
   | '0031' // Puste pole miejsca urodzenia
   | '0032' // Nowe dziecko w danych ZUS
-  | '0033' // Sprawa oznaczona jako załatwiona
+  | '0033' // Sprawa oznaczona jako złożona albo załatwiona
   | '0034' // Cofnięcie oznaczenia sprawy
   | '0035' // Błąd otwarcia kanału instytucji
   | '0036' // Wniosek ZAM niedostępny dla pracownika
@@ -120,7 +120,7 @@ export type KodKomunikatu =
   | '0115' // Okres zasiłkowy bliski wyczerpania
   | '0116' // Zadłużenie z tytułu składek
   | '0117' // Brak zadłużenia z tytułu składek
-  | '0118' // Zaświadczenie o stanie rozliczeń wystawione
+  | '0118' // Zaświadczenie o niezaleganiu wydane
   | '0119' // Tytuł ubezpieczenia podjęty w ciąży
   | '0120' // Brak ubezpieczenia chorobowego w dniu porodu
   | '0121' // Umowa przedłużona do dnia porodu
@@ -196,7 +196,7 @@ export type KodKomunikatu =
   | '0191' // Data urodzenia dziecka w przyszłości
   | '0192' // Brak daty uprawomocnienia przysposobienia
   | '0193' // Puste pole daty zdarzenia
-  | '0194' // Zaświadczenie o martwym urodzeniu przy poronieniu
+  | '0194' // Poronienie potwierdzone zaświadczeniem o martwym urodzeniu
   | '0195' // Puste pole adresu do doręczenia
   | '0196' // Brak kodu pocztowego w adresie
   | '0197' // Pierwszy odpis skrócony bezpłatnie
@@ -263,7 +263,80 @@ export type KodKomunikatu =
   | '0258' // Rezygnacja przy ojcu bez ubezpieczenia chorobowego
   | '0259' // Brak daty uprawomocnienia przysposobienia przy zgłoszeniu do ubezpieczenia zdrowotnego
   | '0260' // Zaświadczenie płatnika składek Z-3a do wniosku o zasiłek macierzyński
-  | '0261'; // Rezygnacja z części zasiłku macierzyńskiego u zleceniodawcy
+  | '0261' // Rezygnacja z części zasiłku macierzyńskiego u zleceniodawcy
+  | '0262' // Decyzja o odmowie wydania zaświadczenia o niezaleganiu
+  | '0263' // Dzieci po wieku granicznym poza wymiarem urlopu
+  | '0264' // Uzyskanie zaświadczenia o martwym urodzeniu po poronieniu
+  | '0265' // Prawo do urlopu i zasiłku po poronieniu po przedstawieniu zaświadczenia
+  | '0266' // Zasiłek chorobowy i zasiłek w wysokości zasiłku macierzyńskiego za ten sam okres
+  | '0267' // Wyrównanie zasiłku do 100% po przyjęciu dziecka
+  | '0268' // Uzupełniający urlop macierzyński drugiego rodzica
+  | '0269' // Wniosek o zasiłek za uzupełniający urlop macierzyński po końcu urlopu macierzyńskiego
+  | '0270' // Nieprawidłowa liczba hektarów przeliczeniowych
+  | '0271' // Zbyt długi tekst pola
+  | '0272' // Płatnik zasiłku przewidywany
+  | '0273' // Pusta data wystąpienia do sądu o przysposobienie
+  | '0274' // Data wystąpienia do sądu o przysposobienie zbyt odległa
+  | '0275' // Pytanie medyczne do asystenta
+  | '0276' // Pytanie podatkowe do asystenta
+  | '0277' // Brak zgody matki na dane dotyczące zdrowia
+  | '0278' // Niezdolność do pracy w czasie urlopu wychowawczego albo bezpłatnego
+  | '0279' // Praca zarobkowa w czasie zwolnienia lekarskiego
+  | '0280' // Nieprawidłowy numer KRS organizacji
+  | '0281' // Wniosek o urlop wychowawczy później niż 21 dni przed urlopem
+  | '0282' // Wniosek o obniżenie wymiaru czasu pracy później niż 21 dni przed obniżeniem
+  | '0283' // Przekroczony wymiar urlopu wychowawczego
+  | '0284' // Nieprawidłowy wymiar czasu pracy po obniżeniu
+  | '0285' // Okres obniżenia wymiaru czasu pracy dłuższy niż pozostały urlop wychowawczy
+  | '0286' // Wniosek o obniżenie wymiaru czasu pracy wysłany
+  | '0287' // Urlop wychowawczy przed 6 miesiącami zatrudnienia
+  | '0288' // Przekroczona liczba części urlopu wychowawczego
+  | '0289' // Nieprawidłowa liczba dni pobytu dziecka w szpitalu po porodzie
+  | '0290' // Ostatni dzień urlopu rodzicielskiego w wymiarze 38 albo 62 tygodni
+  | '0291' // Zaświadczenie według stanu w dniu wydania
+  | '0292' // Rezygnacja z części zasiłku po wniosku ZAM o 14 tygodni
+  | '0293' // Dodatek z tytułu urodzenia dziecka po zgonie dziecka
+  | '0294' // Nieprawidłowy wymiar etatu
+  | '0295' // Brak adresu do e-Doręczeń wnioskodawcy
+  | '0296' // Wymiar urlopu rodzicielskiego dla jednego przyjętego dziecka
+  | '0297' // Świadczenie za okres życia dziecka po zgonie dziecka
+  | '0298' // Brak ubezpieczenia chorobowego przy zasiłku opiekuńczym
+  | '0299' // Brak zaświadczenia lekarskiego na opiekę nad wybraną osobą
+  | '0300' // Kolejny okres opieki nad tą samą osobą
+  | '0301' // Dni bez ubezpieczenia chorobowego w okresie opieki
+  | '0302' // Zamknięcie placówki zapowiedziane co najmniej 7 dni wcześniej
+  | '0303' // Wiek dziecka poza sytuacją opieki
+  | '0304' // Brak okresu opieki
+  | '0305' // Puste pole daty we wniosku o zasiłek opiekuńczy
+  | '0306' // Własny urlop w okresie opieki
+  | '0307' // Dni opieki drugiego rodzica nad tą samą osobą
+  | '0308' // Przekroczony limit dni zasiłku opiekuńczego
+  | '0309' // Drugi rodzic na urlopie w okresie opieki
+  | '0310' // Dni zwolnienia od pracy z wynagrodzeniem wyłączone z wniosku
+  | '0311' // Własna niezdolność do pracy w okresie opieki
+  | '0312' // Dni opieki objęte innym wnioskiem
+  | '0313' // Wniosek bez dni zasiłku opiekuńczego
+  | '0314' // Brak wspólnego gospodarstwa domowego z osobą pod opieką
+  | '0315' // Nieprawidłowa liczba dni zasiłku opiekuńczego
+  | '0316' // Liczba dni mniejsza niż dni z wniosków w przewodniku
+  | '0317' // Przekroczona liczba dni zwolnienia od pracy
+  | '0318' // Szacunkowa kwota zasiłku opiekuńczego
+  | '0319' // Zasiłek opiekuńczy bez podstawy wymiaru w przewodniku
+  | '0320' // Termin złożenia wniosku o zasiłek opiekuńczy
+  | '0321' // Przedawnienie zasiłku opiekuńczego za okres opieki
+  | '0322' // Zaświadczenie płatnika składek do wniosku o zasiłek opiekuńczy
+  | '0323' // Wniosek o zasiłek opiekuńczy przygotowany dla płatnika
+  | '0324' // Płatnik zasiłku nieustalony we wniosku o zasiłek opiekuńczy
+  | '0325' // Wypłata zasiłku opiekuńczego przez płatnika składek
+  | '0326' // Wniosek o zasiłek opiekuńczy przekazany płatnikowi
+  | '0327' // Sytuacja matki po upływie 8 tygodni od porodu
+  | '0328' // Data porzucenia dziecka przed dniem porodu
+  | '0329' // Data wypisu matki ze szpitala poza zakresem
+  | '0330' // Okres poza dodatkowym zasiłkiem opiekuńczym
+  | '0331' // Matka bez zasiłku macierzyńskiego w 8 tygodniach po porodzie
+  | '0332' // Ojciec bez przerwy w pracy
+  | '0333' // Dodatkowy zasiłek opiekuńczy poza limitem dni
+  | '0334'; // Pobyt matki w szpitalu bez daty wypisu
 
 // Wartości kolumny Typ tablicy komunikatów.
 export type TypKomunikatu = 'ERROR' | 'WARNING' | 'INFO';
@@ -382,7 +455,7 @@ export const typyKomunikatow: Record<KodKomunikatu, TypKomunikatu> = {
   '0110': 'ERROR',
   '0111': 'INFO',
   '0112': 'WARNING',
-  '0113': 'INFO',
+  '0113': 'WARNING',
   '0114': 'INFO',
   '0115': 'WARNING',
   '0116': 'WARNING',
@@ -423,7 +496,7 @@ export const typyKomunikatow: Record<KodKomunikatu, TypKomunikatu> = {
   '0151': 'ERROR',
   '0152': 'ERROR',
   '0153': 'ERROR',
-  '0154': 'INFO',
+  '0154': 'WARNING',
   '0155': 'INFO',
   '0156': 'INFO',
   '0157': 'INFO',
@@ -531,4 +604,77 @@ export const typyKomunikatow: Record<KodKomunikatu, TypKomunikatu> = {
   '0259': 'INFO',
   '0260': 'INFO',
   '0261': 'INFO',
+  '0262': 'WARNING',
+  '0263': 'INFO',
+  '0264': 'INFO',
+  '0265': 'INFO',
+  '0266': 'INFO',
+  '0267': 'INFO',
+  '0268': 'ERROR',
+  '0269': 'WARNING',
+  '0270': 'ERROR',
+  '0271': 'ERROR',
+  '0272': 'INFO',
+  '0273': 'ERROR',
+  '0274': 'ERROR',
+  '0275': 'INFO',
+  '0276': 'INFO',
+  '0277': 'WARNING',
+  '0278': 'INFO',
+  '0279': 'INFO',
+  '0280': 'ERROR',
+  '0281': 'WARNING',
+  '0282': 'WARNING',
+  '0283': 'ERROR',
+  '0284': 'ERROR',
+  '0285': 'ERROR',
+  '0286': 'INFO',
+  '0287': 'INFO',
+  '0288': 'ERROR',
+  '0289': 'ERROR',
+  '0290': 'INFO',
+  '0291': 'INFO',
+  '0292': 'INFO',
+  '0293': 'INFO',
+  '0294': 'ERROR',
+  '0295': 'WARNING',
+  '0296': 'INFO',
+  '0297': 'INFO',
+  '0298': 'INFO',
+  '0299': 'INFO',
+  '0300': 'INFO',
+  '0301': 'INFO',
+  '0302': 'ERROR',
+  '0303': 'ERROR',
+  '0304': 'ERROR',
+  '0305': 'ERROR',
+  '0306': 'INFO',
+  '0307': 'INFO',
+  '0308': 'ERROR',
+  '0309': 'WARNING',
+  '0310': 'INFO',
+  '0311': 'INFO',
+  '0312': 'INFO',
+  '0313': 'ERROR',
+  '0314': 'ERROR',
+  '0315': 'ERROR',
+  '0316': 'ERROR',
+  '0317': 'ERROR',
+  '0318': 'INFO',
+  '0319': 'INFO',
+  '0320': 'INFO',
+  '0321': 'WARNING',
+  '0322': 'INFO',
+  '0323': 'INFO',
+  '0324': 'INFO',
+  '0325': 'INFO',
+  '0326': 'INFO',
+  '0327': 'ERROR',
+  '0328': 'ERROR',
+  '0329': 'ERROR',
+  '0330': 'ERROR',
+  '0331': 'WARNING',
+  '0332': 'WARNING',
+  '0333': 'INFO',
+  '0334': 'INFO',
 };

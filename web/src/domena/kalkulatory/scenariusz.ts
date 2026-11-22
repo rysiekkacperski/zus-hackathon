@@ -5,7 +5,7 @@
 // stawki wariantu, kwoty, harmonogram z podwyższeniem i wyrównaniem, daty powrotu, tygodnie i uprawnienia.
 import { dodajDni, dodajLata, formatujDate, maxData, minData, miesiacZDaty, porownajDaty, roznicaDni } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
-import { harmonogramZPodstaw, sumyHarmonogramu, type WyrownanieDoStu } from '@/domena/kalkulatory/harmonogram';
+import { harmonogramZPodstaw, sumyHarmonogramu, type OkresZPodstawa, type WyrownanieDoStu } from '@/domena/kalkulatory/harmonogram';
 import {
   czyZgonPoOsmiuTygodniach,
   liczbaDzieciWZakresie,
@@ -19,7 +19,7 @@ import {
 } from '@/domena/kalkulatory/okresy';
 import { koniecCzesci, uprawnieniaPoPowrocie, zastosujDatePowrotu } from '@/domena/kalkulatory/powrot';
 import { prawoZFormy, ustalPrawoDoZasilku } from '@/domena/kalkulatory/prawo';
-import { kwotaMiesieczna, kwotaZaDni } from '@/domena/kalkulatory/rachunek';
+import { kwotaMiesieczna, kwotaZaDni, stawkaDzienna, stawkaDziennaLaczenia } from '@/domena/kalkulatory/rachunek';
 import { RejestrRegul } from '@/domena/kalkulatory/slowniki';
 import type {
   CzescUrlopuRodzicielskiego,
@@ -39,7 +39,16 @@ import type {
 } from '@/domena/typy';
 
 type Rodzaj = OkresScenariusza['rodzaj'];
-interface Odcinek { rodzic: RodzicWRodzinie; rodzaj: Rodzaj; od: DataISO; do: DataISO; stawka: Procent; pozaSumami?: boolean }
+interface Odcinek {
+  rodzic: RodzicWRodzinie;
+  rodzaj: Rodzaj;
+  od: DataISO;
+  do: DataISO;
+  stawka: Procent;
+  pozaSumami?: boolean;
+  /** Stawka okresu i wymiar pracy przy łączeniu urlopu z pracą. */
+  laczenie?: { stawkaOkresu: Procent; wymiarPracy: Procent };
+}
 type Komunikat = WynikScenariusza['komunikaty'][number];
 
 /** Układ scenariusza bez kwot: daty bazowe, prawo rodziców i domyślne części, z których korzystają arkusze kalkulatora. */
@@ -411,19 +420,33 @@ export function wyliczScenariusz(
     }
   }
 
-  // Wyrównanie do 100%: wariant 81,5% po porodzie, gdy żaden dzień urlopu rodzicielskiego matki nie przypada przed pierwszymi urodzinami.
-  const pierwszeUrodziny = dodajLata(data, 1);
-  const wyrownanie =
-    wariant === '81-5' &&
-    !przyjecie &&
-    u.prawo.matka &&
-    !czesci.some((c) => c.rodzic === 'matka' && porownajDaty(c.od, pierwszeUrodziny) < 0);
-  if (wyrownanie) komunikaty.push({ kod: '0174' });
-
   // Stawki części: drugi rodzic w wariancie 81,5% za pierwsze 9 tygodni 70%, ponad nie 81,5%.
   const posortowane = [...czesci].sort((a, b) => porownajDaty(a.od, b.od));
-  let dniDrugiegoPrzy70 = 0;
   const limit70 = u.nieprzenoszalna * 7;
+
+  // Wyrównanie do 100% w wariancie 81,5%: po porodzie, gdy żaden dzień urlopu rodzicielskiego matki ani tygodni drugiego
+  // rodzica ponad jego 9 tygodni nie przypada przed pierwszymi urodzinami dziecka; po przyjęciu, gdy żaden dzień urlopu
+  // rodzicielskiego rodzica, który przyjął dziecko, nie przypada przed pierwszymi urodzinami dziecka.
+  const dataUrodzeniaDziecka = przyjecie ? d.przyjecie?.wartosc.dataUrodzeniaDziecka : data;
+  const pierwszeUrodziny = dodajLata(dataUrodzeniaDziecka ?? data, 1);
+  const przedUrodzinami = (od: DataISO) => porownajDaty(od, pierwszeUrodziny) < 0;
+  let dniPonad = 0;
+  let ponadPrzedUrodzinami = false;
+  for (const c of posortowane) {
+    if (c.rodzic !== 'drugi-rodzic') continue;
+    const dni = roznicaDni(c.od, koniecCzesci(c)) + 1;
+    const przy70 = Math.min(Math.max(0, limit70 - dniPonad), dni);
+    dniPonad += przy70;
+    if (przy70 < dni && przedUrodzinami(dodajDni(c.od, przy70))) ponadPrzedUrodzinami = true;
+  }
+  const rodzicielskiMatkiPrzedUrodzinami = czesci.some((c) => c.rodzic === 'matka' && przedUrodzinami(c.od));
+  const wyrownanie =
+    wariant === '81-5' &&
+    u.prawo.matka &&
+    !rodzicielskiMatkiPrzedUrodzinami &&
+    (przyjecie || !ponadPrzedUrodzinami);
+  if (wyrownanie) komunikaty.push({ kod: przyjecie ? '0267' : '0174' });
+  let dniDrugiegoPrzy70 = 0;
   for (const c of posortowane) {
     const do_ = koniecCzesci(c);
     const bazowy: Odcinek = { rodzic: c.rodzic, rodzaj: 'rodzicielski', od: c.od, do: do_, stawka: 0 };
@@ -438,7 +461,7 @@ export function wyliczScenariusz(
       const stawka70 = r.wez('stawka815DrugiRodzic');
       kawalki = [];
       if (przy70 > 0) kawalki.push({ ...bazowy, do: dodajDni(c.od, przy70 - 1), stawka: stawka70 });
-      if (przy70 < dni) kawalki.push({ ...bazowy, od: dodajDni(c.od, przy70), stawka: s815() });
+      if (przy70 < dni) kawalki.push({ ...bazowy, od: dodajDni(c.od, przy70), stawka: wyrownanie ? s70() : s815() });
     } else {
       kawalki = [{ ...bazowy, stawka: s70() }];
     }
@@ -448,12 +471,20 @@ export function wyliczScenariusz(
       const wynik: Odcinek[] = [];
       for (const k of kawalki) {
         const [przed, po] = podzielOdcinek(k, granica);
-        if (przed) wynik.push({ ...przed, rodzaj: 'laczenie-z-praca', stawka: przed.stawka * mnoznik });
+        if (przed) {
+          wynik.push({
+            ...przed,
+            rodzaj: 'laczenie-z-praca',
+            stawka: przed.stawka * mnoznik,
+            laczenie: { stawkaOkresu: przed.stawka, wymiarPracy: wydluzenie.wymiarPracy },
+          });
+        }
         if (po) wynik.push(po);
       }
+      // W okresie wydłużenia rodzic korzysta z urlopu rodzicielskiego w pełnym wymiarze, więc zasiłek ma pełną stawkę okresu.
       const ostatniaStawka = kawalki[kawalki.length - 1].stawka;
       if (porownajDaty(wydluzenie.od, wydluzenie.do) <= 0) {
-        wynik.push({ rodzic: c.rodzic, rodzaj: 'wydluzenie-rodzicielskiego', od: wydluzenie.od, do: wydluzenie.do, stawka: ostatniaStawka * mnoznik });
+        wynik.push({ rodzic: c.rodzic, rodzaj: 'wydluzenie-rodzicielskiego', od: wydluzenie.od, do: wydluzenie.do, stawka: ostatniaStawka });
       }
       kawalki = wynik;
     }
@@ -475,12 +506,15 @@ export function wyliczScenariusz(
   }
 
   const podstawaRodzica = (rodzic: RodzicWRodzinie): Grosze => podstawy[rodzic]?.kwota ?? 0;
-  const okresy: (OkresScenariusza & { podstawa: Grosze; pozaSumami?: boolean })[] = koncowe
+  const okresy: (OkresZPodstawa & { pozaSumami?: boolean })[] = koncowe
     .sort((a, b) => (a.rodzic === b.rodzic ? porownajDaty(a.od, b.od) : a.rodzic === 'matka' ? -1 : 1))
     .map((o) => {
       const dni = roznicaDni(o.od, o.do) + 1;
       const podstawa = podstawaRodzica(o.rodzic);
       const stawka = Math.round(o.stawka * 100) / 100;
+      const dzienna = o.laczenie
+        ? stawkaDziennaLaczenia(podstawa, o.laczenie.stawkaOkresu, o.laczenie.wymiarPracy)
+        : stawkaDzienna(podstawa, stawka);
       return {
         rodzic: o.rodzic,
         rodzaj: o.rodzaj,
@@ -489,8 +523,9 @@ export function wyliczScenariusz(
         dni,
         stawka,
         miesiecznie: kwotaMiesieczna(podstawa, stawka),
-        zaOkres: kwotaZaDni(podstawa, stawka, dni),
+        zaOkres: dzienna * dni,
         podstawa,
+        dzienna,
         ...(o.pozaSumami ? { pozaSumami: true } : {}),
       };
     });
@@ -498,7 +533,9 @@ export function wyliczScenariusz(
   // Wyrównanie zasiłku za urlop macierzyński do 100%, w miesiącu po końcu urlopu macierzyńskiego matki.
   const wyrownania: WyrownanieDoStu[] = [];
   if (wyrownanie) {
-    const macMatki = okresy.filter((o) => o.rodzic === 'matka' && o.rodzaj === 'macierzynski');
+    const macMatki = okresy.filter(
+      (o) => o.rodzic === 'matka' && (o.rodzaj === 'macierzynski' || o.rodzaj === 'na-warunkach-macierzynskiego'),
+    );
     const roznica = macMatki.reduce((s, o) => s + kwotaZaDni(o.podstawa, s100(), o.dni) - o.zaOkres, 0);
     if (roznica > 0 && macMatki.length > 0) {
       const koniec = macMatki.map((o) => o.do).reduce((a, b) => maxData(a, b));

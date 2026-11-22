@@ -190,12 +190,15 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
       idWlasciciela = wlasciciel.wartosc.id;
     }
     ustawBladZapisu(null);
+    // Ponowne obliczenie bez zmiany danych zachowuje ustawienia wyniku: wariant, podział, łączenie i daty powrotu.
+    const bezZmianDanych =
+      stanRoboczy !== null && stanRoboczy.konto === idWlasciciela && JSON.stringify(stanRoboczy.dane) === JSON.stringify(dane);
     ustawStanRoboczy({
       konto: idWlasciciela,
       dane,
       podstawy: { ...(stanRoboczy?.podstawy ?? {}), ...podstawyZeSlotu },
       pelnyEtat: stanRoboczy?.pelnyEtat ?? {},
-      parametry: null,
+      parametry: bezZmianDanych ? stanRoboczy.parametry : null,
     });
     przejdz(
       trasy.ViewCalcMaternityResult({
@@ -532,8 +535,9 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
         return (
           <Karta tytul={t.kartaForm} bezLinii>
             <p className="m-0 mb-6 text-body">{zdarzenie === 'przyjecie' ? t.formyOpisPrzyjecie : t.formyOpisPorod}</p>
-            <div className="flex flex-wrap gap-6">
-              <div className="grid min-w-0 grow basis-65 content-start gap-1">
+            {/* Pola jedno pod drugim na pełną szerokość karty, bo opcje form zatrudnienia mają długie nazwy. */}
+            <div className="flex flex-col gap-6">
+              <div className="grid min-w-0 content-start gap-1">
                 <PoleWyboru<OpcjaFormyMatki>
                   id={idPola('formaMatki')}
                   etykieta={etykietaMatki}
@@ -545,7 +549,7 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
                 />
                 {f.formaMatki.wartosc !== '' ? <ZrodloPola zrodlo={f.formaMatki.zrodlo} /> : null}
               </div>
-              <div className="grid min-w-0 grow basis-65 content-start gap-1">
+              <div className="grid min-w-0 content-start gap-1">
                 <PoleWyboru<OpcjaFormyDrugiego>
                   id={idPola('formaDrugiego')}
                   etykieta={etykietaDrugiego}
@@ -566,7 +570,11 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
   // Wiersz przycisków części: „Wróć” od części 2, „Przejdź dalej”, a na ostatniej części „Oblicz zasiłek”.
   const przyciski = (
     <div className="flex min-w-0 flex-wrap items-center justify-end gap-4">
-      {czesci.czyPierwsza ? (
+      {czesci.czyPierwsza && czesc === 'sprawa' ? (
+        <Odnosnik href={trasy.ViewSampleCaseVerification()} className="mr-auto">
+          {t.daneZPrzykladowejSprawy.wrocDoWeryfikacji}
+        </Odnosnik>
+      ) : czesci.czyPierwsza ? (
         kontekst.nowyUzytkownik ? null : (
           <Odnosnik href={trasy.ViewFamilyPlan()} className="mr-auto">
             {t.wrocDoPlanu}
@@ -587,8 +595,9 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
 
   return (
     <>
-      <NaglowekStrony tytul={t.naglowek} stanNa={dzis} wstep={czesci.czyPierwsza ? wstep : undefined} powrot={false} />
-      {kontekst.gosc && czesci.czyPierwsza ? (
+      {/* W kroku przykładowej sprawy wstęp pokazuje slot sprawy, więc wstęp profilu i komunikaty konta są ukryte. */}
+      <NaglowekStrony tytul={t.naglowek} stanNa={dzis} wstep={czesci.czyPierwsza && czesc !== 'sprawa' ? wstep : undefined} powrot={false} />
+      {czesc === 'sprawa' ? null : kontekst.gosc && czesci.czyPierwsza ? (
         <Komunikat
           typ="INFO"
           tresc={t.goscKomunikat}

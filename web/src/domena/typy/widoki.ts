@@ -66,6 +66,13 @@ export type IdWidoku =
   | 'ViewZas53Data'
   | 'ViewZas53Summary'
   | 'ViewZas53Sent'
+  | 'ViewZ15Start' // P
+  | 'ViewZ15Situation'
+  | 'ViewZ15Statements'
+  | 'ViewZ15Data'
+  | 'ViewZ15Summary'
+  | 'ViewZ15Sent'
+  | 'ViewZ15ForPayer'
   | 'ViewLeaveRequestType'
   | 'ViewLeaveRequestForm'
   | 'ViewLeaveRequestSummary'

@@ -1,28 +1,36 @@
 'use client';
 
 // ViewFamilyPlan: strona główna Rodzica i Drugiego rodzica (historyjki 3.6.1.2.1, 3.6.1.3.1, 3.6.1.4.1,
-// wzory Plan-rodziny, P06-04 … P06-13). Pulpit pokazuje kolejno: okno nowego dziecka, Twoją ścieżkę z etapami
-// i najbliższe terminy, akcje „Co możesz zrobić”, zmiany w planie, skróty i dane, z których powstał plan.
+// wzory Plan-rodziny, P06-04 … P06-13). Nagłówek ma akcję „Zgłoś narodziny” do potwierdzenia daty porodu. Pulpit
+// pokazuje kolejno: okno nowego dziecka, Twoją ścieżkę z etapami obok trzech najbliższych terminów i karty
+// Sytuacje szczególne oraz zmiany w planie. Dane, z których powstał plan, pokazuje Profil rodziny.
 // Sprawy etapów z blokiem strażnika ubezpieczenia chorobowego pokazuje strona etapu ViewFamilyPlanStage.
 // Właściciel: u12.
-import { useKontekstRodziny } from '@/dane/magazyn/hooki';
+import { useKontekstRodziny, useStanKonta } from '@/dane/magazyn/hooki';
 import { wyznaczBiezacyEtap } from '@/domena/plan/etap';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { Odnosnik } from '@/komponenty/odnosnik';
+import { PrzyciskLink } from '@/komponenty/przycisk';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
+import { SzkieletWidoku } from '@/komponenty/szkielet-widoku';
 import { Stos, UkladDwuKolumnowy } from '@/komponenty/uklad';
 import { teksty } from '@/teksty';
-import { KartaDanychPlanu, KartaNaSkroty, KartaSciezki, KartaTerminow, KartaZmian } from './_czesci/karty-planu';
+import { KartaSciezki, KartaSytuacjiSzczegolnych, KartaTerminow, KartaZmian } from './_czesci/karty-planu';
 import { useOcenaStraznika } from './_czesci/ocena-straznika';
-import { slotyAkcji, slotyNadPlanem } from './_sloty';
+import { slotyNadPlanem } from './_sloty';
+import { czyZgloszenieNarodzinDostepne } from './_sloty/akcja-zglos-narodziny';
 
 const t = teksty.ViewFamilyPlan;
 
 export function WidokPlanuRodziny() {
   const kontekst = useKontekstRodziny();
   const ocena = useOcenaStraznika(kontekst);
+  const odczytZusTrwa = useStanKonta()?.stanOdczytuZus?.stan === 'trwa';
+
+  // Plan czeka na koniec odczytu Danych z konta ZUS, z których wynikają statusy i terminy spraw.
+  if (odczytZusTrwa) return <SzkieletWidoku />;
 
   if (kontekst === null) {
     return (
@@ -45,7 +53,13 @@ export function WidokPlanuRodziny() {
         tytul={t.naglowek}
         stanNa={dzis}
         powrot={false}
-        akcje={<Odnosnik href={sciezkaWidoku('ViewProfileSummary', { tryb: 'rodzina' })}>{t.otworzProfil}</Odnosnik>}
+        akcje={
+          czyZgloszenieNarodzinDostepne(kontekst) ? (
+            <PrzyciskLink wariant="glowny" href={sciezkaWidoku('ViewBirthDate', { tryb: 'pakiet' })}>
+              {t.akcjaZglosNarodziny.zglos}
+            </PrzyciskLink>
+          ) : undefined
+        }
       />
       <Stos odstep={7.5}>
         {stanZgody !== 'udzielona' ? (
@@ -62,26 +76,15 @@ export function WidokPlanuRodziny() {
         ) : (
           <UkladDwuKolumnowy
             tresc={<KartaSciezki pozycje={pozycje} biezacyEtap={biezacyEtap} ostrzezeniaStraznika={ostrzezeniaStraznika} />}
-            boczna={<KartaTerminow kontekst={kontekst} ocena={ocena} />}
+            boczna={
+              <Stos odstep={7.5}>
+                <KartaTerminow kontekst={kontekst} ocena={ocena} />
+                <KartaSytuacjiSzczegolnych kontekst={kontekst} />
+              </Stos>
+            }
           />
         )}
-        <section aria-labelledby="co-mozesz-zrobic" className="flex min-w-0 flex-col gap-4">
-          <h2 id="co-mozesz-zrobic" className="m-0 text-section-title text-ink">
-            {t.coMozeszZrobic}
-          </h2>
-          <div className="grid grid-cols-1 gap-7.5 md:grid-cols-2">
-            {slotyAkcji.map(({ id, Komponent }) => (
-              <Komponent key={id} kontekst={kontekst} />
-            ))}
-          </div>
-        </section>
-        {plan === null ? null : (
-          <>
-            <KartaZmian kontekst={kontekst} />
-            <KartaNaSkroty />
-            <KartaDanychPlanu kontekst={kontekst} />
-          </>
-        )}
+        {plan === null ? null : <KartaZmian kontekst={kontekst} />}
       </Stos>
     </>
   );

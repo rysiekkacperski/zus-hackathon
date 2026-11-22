@@ -1,7 +1,7 @@
 // Rachunek kwot kalkulatora na liczbach całkowitych w groszach (kontrakt, sekcja 1.3).
 // Właściciel: u09 (Silnik kalkulatora zasiłku macierzyńskiego).
-// Dzienna stawka to podstawa wymiaru podzielona przez 30 bez zaokrąglenia pośredniego, więc kwoty liczymy
-// jako jeden ułamek i zaokrąglamy połowę grosza w górę.
+// Stawka dzienna to podstawa wymiaru podzielona przez 30 i zaokrąglona do grosza, pomnożona przez stawkę i ponownie
+// zaokrąglona do grosza, a kwota za okres to stawka dzienna pomnożona przez liczbę dni. Połowę grosza zaokrąglamy w górę.
 import type { Grosze, Procent } from '@/domena/typy';
 
 // Dzielenie z zaokrągleniem połowy w górę dla licznika ≥ 0 i mianownika > 0.
@@ -20,9 +20,26 @@ export function kwotaMiesieczna(podstawa: Grosze, stawka: Procent): Grosze {
   return podzielZaokraglij(Math.round(podstawa) * stawkaWSetnych(stawka), 10000);
 }
 
-/** Kwota za dni: podstawa / 30 × stawka × liczba dni, zaokrąglona do grosza. */
+/** Stawka dzienna: podstawa / 30 zaokrąglona do grosza, pomnożona przez stawkę i ponownie zaokrąglona do grosza. */
+export function stawkaDzienna(podstawa: Grosze, stawka: Procent): Grosze {
+  const dzienna = podzielZaokraglij(Math.round(podstawa), 30);
+  return podzielZaokraglij(dzienna * stawkaWSetnych(stawka), 10000);
+}
+
+/** Kwota za dni: stawka dzienna × liczba dni. */
 export function kwotaZaDni(podstawa: Grosze, stawka: Procent, dni: number): Grosze {
-  return podzielZaokraglij(Math.round(podstawa) * stawkaWSetnych(stawka) * dni, 300000);
+  return stawkaDzienna(podstawa, stawka) * dni;
+}
+
+/**
+ * Stawka dzienna za okres łączenia urlopu z pracą: stawka dzienna okresu pomniejszona o iloczyn tej stawki
+ * i wymiaru pracy zaokrąglony do grosza, z iloczynem kończącym się połową grosza zaokrąglonym w dół.
+ */
+export function stawkaDziennaLaczenia(podstawa: Grosze, stawkaOkresu: Procent, wymiarPracy: Procent): Grosze {
+  const pelna = stawkaDzienna(podstawa, stawkaOkresu);
+  const licznik = pelna * Math.round(wymiarPracy * 100);
+  const iloczyn = Math.ceil((2 * licznik - 10000) / 20000);
+  return pelna - Math.max(0, iloczyn);
 }
 
 /** Procent kwoty zaokrąglony do grosza, np. pomniejszenie 13,71% podstawy. */

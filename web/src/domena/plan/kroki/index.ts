@@ -4,7 +4,7 @@ import type { KrokPlanu } from '@/domena/plan/kroki/typ';
 import { okresZasilkowyEzla } from '@/domena/plan/kroki/okres-zasilkowy-ezla';
 import { pakietNarodzin } from '@/domena/plan/kroki/pakiet-narodzin';
 import { prawoWCiazy } from '@/domena/plan/kroki/prawo-w-ciazy';
-import { przyjecieDziecka } from '@/domena/plan/kroki/przyjecie-dziecka';
+import { przyjecieDziecka, przyjecieDzieckaPorzadek } from '@/domena/plan/kroki/przyjecie-dziecka';
 import { ryzykaCiazy } from '@/domena/plan/kroki/ryzyka-ciazy';
 import { statusyZus } from '@/domena/plan/kroki/statusy-zus';
 import { straznik } from '@/domena/plan/kroki/straznik';
@@ -23,4 +23,5 @@ export const krokiPlanu: KrokPlanu[] = [
   straznik,             // u12
   ryzykaCiazy,          // u22
   statusyZus,           // u14
+  przyjecieDzieckaPorzadek, // u24
 ];

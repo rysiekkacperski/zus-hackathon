@@ -41,6 +41,7 @@ import {
   useZapisDoDokonczenia,
   type DaneWnioskuZam,
 } from '../_czesci/kreator';
+import { FormularzOkresuPrzyjecia } from './_czesci/okres-przyjecia';
 
 const t = teksty.ViewZamPeriod;
 const tk = teksty.ViewZamLeaveType.kreator;
@@ -52,6 +53,7 @@ const POLA: Record<PoleOkresuZam, string> = {
   dataPoczatku: 'zam-data-poczatku',
   tygodnie: 'zam-tygodnie',
   dataOjcowskiego: 'zam-data-ojcowskiego',
+  dniOjcowskiego: 'zam-dni-ojcowskiego',
 };
 const KOLEJNOSC_POL = Object.keys(POLA) as PoleOkresuZam[];
 
@@ -71,6 +73,7 @@ function formularzPoczatkowy(dane: DaneWnioskuZam): FormularzOkresuZam {
     dataPoczatku: w.rodzicielski?.tryb === 'pozniej' && w.rodzicielski.dataPoczatku ? formatujDate(w.rodzicielski.dataPoczatku) : '',
     tygodnie: w.rodzicielski?.tygodnie !== undefined ? String(w.rodzicielski.tygodnie) : '',
     dataOjcowskiego: ojcowski ? formatujDate(ojcowski.od) : '',
+    dniOjcowskiego: ojcowski?.dni !== undefined ? String(ojcowski.dni) : '',
   };
 }
 
@@ -246,7 +249,7 @@ function FormularzOkresu({ dane }: { dane: DaneWnioskuZam }) {
     );
   } else if (rodzaj === 'rodzicielski') {
     const podglad = walidujOkresZam(rodzaj, f, k, dzis);
-    const zakres = p.rodzicielski.zakres;
+    const zakres = p.rodzicielski.zakresPozniej;
     const maBledy = Object.values(walidacja.bledy).some(Boolean);
     tresc = (
       <Karta tytul={t.rodzicielski.tytul} bezLinii>
@@ -288,9 +291,7 @@ function FormularzOkresu({ dane }: { dane: DaneWnioskuZam }) {
               id={POLA.tygodnie}
               etykieta={t.rodzicielski.tygodnie}
               podpowiedz={
-                k.rodzic === 'drugi-rodzic'
-                  ? t.rodzicielski.podpowiedzTygodniDrugiegoRodzica
-                  : t.rodzicielski.podpowiedzTygodni({ maks: p.rodzicielski.maksTygodni, przy })
+                t.rodzicielski.podpowiedzTygodni({ maks: p.rodzicielski.maksTygodni, przy })
               }
               wartosc={f.tygodnie}
               onZmiana={(w) => zmien('tygodnie', w)}
@@ -326,12 +327,22 @@ function FormularzOkresu({ dane }: { dane: DaneWnioskuZam }) {
             onZmiana={(w) => zmien('dataOjcowskiego', w)}
             {...walidacja.pole('dataOjcowskiego')}
           />
+          <PoleLiczby
+            id={POLA.dniOjcowskiego}
+            etykieta={t.ojcowski.liczbaDni}
+            podpowiedz={t.ojcowski.podpowiedzDni({ od: p.ojcowski.minDni, do_: p.ojcowski.maksDni })}
+            wartosc={f.dniOjcowskiego ?? ''}
+            onZmiana={(w) => zmien('dniOjcowskiego', w)}
+            {...walidacja.pole('dniOjcowskiego')}
+            szerokosc="waska"
+            maksDlugosc={2}
+          />
           <WierszOkresu
             pozycje={[
               {
                 etykieta: t.rodzicielski.okres,
                 wartosc:
-                  podglad.ok && podglad.zmiana.okresy[0] && !walidacja.blad('dataOjcowskiego')
+                  podglad.ok && podglad.zmiana.okresy[0] && !walidacja.blad('dataOjcowskiego') && !walidacja.blad('dniOjcowskiego')
                     ? tekstOkresu(podglad.zmiana.okresy[0])
                     : t.rodzicielski.wyliczymy,
               },
@@ -399,5 +410,10 @@ function FormularzOkresu({ dane }: { dane: DaneWnioskuZam }) {
 export function WidokOkresuZasilkuZam() {
   const { dane } = useWniosekZam();
   if (dane === null) return <BrakWnioskuZam ekran="ViewZamPeriod" />;
+  const przyjecie = dane.kontekst.rodzina.daneCiazy?.przyjecie;
+  const rodzaj = dane.wniosek.rodzajUrlopu;
+  if (przyjecie && (rodzaj === 'na-warunkach-macierzynskiego' || rodzaj === 'rodzicielski')) {
+    return <FormularzOkresuPrzyjecia key={dane.wniosek.idWniosku} dane={dane} przyjecie={przyjecie} />;
+  }
   return <FormularzOkresu key={dane.wniosek.idWniosku} dane={dane} />;
 }

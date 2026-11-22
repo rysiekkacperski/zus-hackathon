@@ -26,7 +26,7 @@ export function WidokStartuPrzewodnika() {
   const poWygasnieciu = komunikaty.some((k) => k.kod === '0212');
 
   return (
-    <div className="mx-auto w-full max-w-300">
+    <div className="w-full">
       <NaglowekStrony tytul={tekst.naglowek} wstep={tekst.wstep} powrot={false} stronaGlowna />
       <div className="grid items-start gap-7.5 md:grid-cols-2 lg:grid-cols-[40rem_minmax(0,1fr)]">
         <KartaLogowania

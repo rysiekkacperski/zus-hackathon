@@ -13,6 +13,7 @@ import { trasy } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { teksty } from '@/teksty';
 import { DaneNaTle, useKreatorUrlopu } from '../_czesci/kreator';
+import { pozycjeOkresuWychowawczego, pozycjeOswiadczenWychowawczego } from '../_czesci/pozycje-wychowawczego';
 
 const t = teksty.ViewLeaveRequestSent;
 const tf = teksty.ViewLeaveRequestForm;
@@ -33,8 +34,15 @@ export function WidokWyslanegoWnioskuOUrlop() {
   const data = formatujDate(wniosek.dataZlozenia);
   const ochrona = wniosek.dataPoczatkuOchrony ? formatujDate(wniosek.dataPoczatkuOchrony) : data;
   const komunikat =
-    kod === '0199' ? (
+    wniosek.rodzaj === 'rezygnacja-z-czesci-zasilku' ? (
+      <Komunikat kod="0143" />
+    ) : kod === '0199' ? (
       <Komunikat kod="0199" parametry={{ data, dataPoczatkuOchrony: ochrona }} />
+    ) : kod === '0286' ? (
+      <Komunikat
+        kod="0286"
+        parametry={{ data, dataPoczatkuOchrony: ochrona, dataKoncaOchrony: wniosek.dataKoncaOchrony ? formatujDate(wniosek.dataKoncaOchrony) : ochrona }}
+      />
     ) : kod === '0200' ? (
       <Komunikat kod="0200" parametry={{ data }} />
     ) : (
@@ -51,6 +59,10 @@ export function WidokWyslanegoWnioskuOUrlop() {
     pozycje.push({ etykieta: t.czescZWydluzenia, wartosc: wniosek.oswiadczenia.laczenieCzesciZWydluzenia ? tf.tak : tf.nie });
     pozycje.push({ etykieta: t.wydluzenie, wartosc: tf.liczbaDni({ n: l.dniWydluzenia }) });
     pozycje.push({ etykieta: t.ostatniDzien, wartosc: formatujDate(l.ostatniDzienUrlopu) });
+  } else if (wniosek.wychowawczy) {
+    pozycje.push(...pozycjeOkresuWychowawczego(wniosek), ...pozycjeOswiadczenWychowawczego(wniosek));
+  } else if (wniosek.rezygnacja) {
+    pozycje.push({ etykieta: teksty.ViewMaternityResignation.poleDatyPowrotu, wartosc: formatujDate(wniosek.rezygnacja.dataPowrotu) });
   } else {
     pozycje.push({
       etykieta: t.okresy,
@@ -72,7 +84,8 @@ export function WidokWyslanegoWnioskuOUrlop() {
   }
   pozycje.push({ etykieta: t.adresat, wartosc: t.adresatOpis({ nazwa: dane.pracodawca ?? '', email: wniosek.emailPracodawcy ?? '' }) });
   pozycje.push({ etykieta: t.dataZlozenia, wartosc: data });
-  pozycje.push({ etykieta: t.poczatekOchrony, wartosc: ochrona });
+  if (!wniosek.rezygnacja) pozycje.push({ etykieta: t.poczatekOchrony, wartosc: ochrona });
+  if (wniosek.dataKoncaOchrony) pozycje.push({ etykieta: t.koniecOchrony, wartosc: formatujDate(wniosek.dataKoncaOchrony) });
   if (wniosek.potwierdzenie) pozycje.push({ etykieta: t.potwierdzenie, wartosc: wniosek.potwierdzenie });
 
   return (
@@ -105,7 +118,7 @@ export function WidokWyslanegoWnioskuOUrlop() {
             </Karta>
             {kod === '0199' ? (
               <Karta tytul={t.dlaczegoPozniejTytul} bezLinii>
-                <p className="m-0">{t.dlaczegoPozniej}</p>
+                <p className="m-0">{wniosek.wychowawczy ? t.dlaczegoPozniejWychowawczy : t.dlaczegoPozniej}</p>
               </Karta>
             ) : null}
           </aside>

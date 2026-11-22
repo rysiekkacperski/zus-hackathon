@@ -1,6 +1,6 @@
 'use client';
 
-// ViewSickLeaveList (3.4.4.1.1, 3.4.4.1.2; wzory cz2/Zaswiadczenia-e-ZLA i P16-02…P16-09). Właściciel: u14.
+// ViewSickLeaveList (3.4.4.1.1–3.4.4.1.4; wzory cz2/Zaswiadczenia-e-ZLA i P16-02…P16-09). Właściciel: u14.
 import { useState } from 'react';
 import {
   KartaOdczytuDanychZus,
@@ -47,7 +47,7 @@ export function WidokZaswiadczenEZla() {
   const [ponawianie, setPonawianie] = useState(false);
 
   if (!dane || !stanKonta) return null;
-  const { konto, kopia, wyliczenia, rodzina } = dane;
+  const { konto, kopia, wyliczenia, rodzina, zgoda } = dane;
   const stanOdczytu = stanKonta.stanOdczytuZus;
   const brakPolaczenia = kopia === null && stanOdczytu.stan !== 'trwa';
   const odczytBezKopii = kopia === null && stanOdczytu.stan === 'trwa';
@@ -92,6 +92,18 @@ export function WidokZaswiadczenEZla() {
               </StanPusty>
             </Karta>
           </>
+        ) : kopia && !zgoda ? (
+          <Karta tytul={t.listaTytul}>
+            <div className="flex flex-col gap-4">
+              <Komunikat kod="0004" />
+              <p className="m-0">{t.brakZgodyOpis}</p>
+              <div>
+                <PrzyciskLink href={trasy.ViewGuideSettings()} wariant="glowny">
+                  {t.przejdzDoUstawien}
+                </PrzyciskLink>
+              </div>
+            </div>
+          </Karta>
         ) : kopia && wyliczenia ? (
           <>
             {nieaktualne ? <Komunikat kod="0002" parametry={{ dataOdczytu: formatujDate(kopia.odczytano) }} /> : null}
@@ -218,6 +230,7 @@ function KartaListy({
 function KartyWyliczen({ wyliczenia, dzien, ptp }: { wyliczenia: WyliczeniaEzla; dzien: string; ptp?: string }) {
   const { okres, wynagrodzenie, wariant, zaswiadczenia } = wyliczenia;
   const stan = t.stanNa({ data: formatujDate(dzien) });
+  const bezTytulu = useWyliczeniaEzlaKonta()?.profil.forma === 'brak-tytulu';
 
   const kartaOkresu =
     wariant === 'bez-ubezpieczenia' ? (
@@ -225,7 +238,7 @@ function KartyWyliczen({ wyliczenia, dzien, ptp }: { wyliczenia: WyliczeniaEzla;
         <div className="flex flex-col gap-4">
           <Komunikat kod="0083" />
           <p className="m-0">
-            {t.bezUbezpieczeniaOpis}{' '}
+            {bezTytulu ? t.bezTytuluOpis : t.bezUbezpieczeniaOpis}{' '}
             <Odnosnik href={trasy.ViewFamilyPlan()} wTekscie>
               {t.planRodzinyOdnosnik}
             </Odnosnik>
@@ -254,6 +267,7 @@ function KartyWyliczen({ wyliczenia, dzien, ptp }: { wyliczenia: WyliczeniaEzla;
             ]}
           />
           <Notatka>{t.notatkaOkresu}</Notatka>
+          {wariant === 'po-ustaniu-ubezpieczenia' ? <p className="m-0">{t.poUstaniuOpis}</p> : null}
           {ptp && okres.dataWyczerpania ? (
             <p className="m-0">
               {okres.dataWyczerpania < ptp
@@ -286,6 +300,14 @@ function KartyWyliczen({ wyliczenia, dzien, ptp }: { wyliczenia: WyliczeniaEzla;
               ...(wynagrodzenie.zasilekOd ? [{ etykieta: t.zasilekOd, wartosc: formatujDate(wynagrodzenie.zasilekOd) }] : []),
             ]}
           />
+          {wynagrodzenie.zasilekOd && wynagrodzenie.zasilekZaNiezdolnoscOd ? (
+            <p className="m-0">
+              {t.przelomRoku({
+                data: formatujDate(wynagrodzenie.zasilekOd),
+                od: formatujDate(wynagrodzenie.zasilekZaNiezdolnoscOd),
+              })}
+            </p>
+          ) : null}
           {wynagrodzenie.wykorzystane > 0 ? <Notatka>{t.notatkaWynagrodzenia({ limit: wynagrodzenie.limit })}</Notatka> : null}
           {bezB.length > 0 && wynagrodzenie.wykorzystane > 0 ? (
             <p className="m-0">{t.wliczoneBezB({ rok: wynagrodzenie.rok, numery: listaNumerow(bezB) })}</p>

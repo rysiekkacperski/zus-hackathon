@@ -18,11 +18,24 @@ import type {
   RodzicWRodzinie,
   Rola,
   StanRodziny,
+  Wniosek,
   WniosekZam,
 } from '@/domena/typy';
-import { normalizujRachunek, walidujImieNazwisko, walidujRachunek } from '@/domena/walidacje';
+import { normalizujRachunek, normalizujTelefon, walidujImieNazwisko, walidujRachunek, walidujTelefon } from '@/domena/walidacje';
+import { sprawdzPrzyjecieDoWniosku } from '@/domena/wnioski/zam-przyjecie';
 
 export type TrybWnioskuZam = 'przed-porodem' | 'po-porodzie' | 'przyjecie' | 'przejecie';
+
+// 3.9.1.1.7 i 3.9.1.1.8: numer telefonu, dane płatnika składek i objęcie ubezpieczeniem chorobowym we wniosku ZAM.
+declare module '@/domena/typy/wnioski' {
+  interface WniosekZam {
+    numerTelefonu?: string;
+    platnikSkladek?: { nazwa: string; nip: string; regon: string; adres?: string };
+    objecieChorobowym?: boolean;
+    /** Numer części urlopu rodzicielskiego albo ojcowskiego wyliczony z wniosków obojga rodziców. */
+    numerCzesci?: number;
+  }
+}
 
 /** Wejście sprawdzenia prawa do wniosku ZAM. */
 export interface WejsciePrawaDoWnioskuZam {
@@ -41,11 +54,13 @@ export interface FormularzDanychZam {
   peselDziecka: string;
   miejsceUrodzenia: string;
   numerRachunku: string;
+  /** Numer telefonu wnioskodawcy, pole opcjonalne (3.9.1.1.7). */
+  numerTelefonu?: string;
   /** Data porodu z profilu rodziny do zgodności z numerem PESEL dziecka. */
   dataPorodu?: DataISO;
 }
 
-export type PoleDanychZam = 'imieDziecka' | 'nazwiskoDziecka' | 'peselDziecka' | 'miejsceUrodzenia' | 'numerRachunku';
+export type PoleDanychZam = 'imieDziecka' | 'nazwiskoDziecka' | 'peselDziecka' | 'miejsceUrodzenia' | 'numerRachunku' | 'numerTelefonu';
 
 export const MAKS_DLUGOSC_MIEJSCOWOSCI = 60;
 
@@ -84,19 +99,28 @@ export function sprawdzPrawoDoWnioskuZam(w: WejsciePrawaDoWnioskuZam): {
   cel: IdWidoku;
   kod?: KodKomunikatu;
   tryb?: TrybWnioskuZam;
-  /** Sprawa celu ViewCaseGuide (K07 przy 0036). */
+  /** Sprawa celu ViewCaseGuide (K07 przy 0036, K31 po przyjęciu dziecka). */
   idSprawy?: IdSprawy;
+  /** Parametry komunikatu, na przykład wiek przy 0091. */
+  parametry?: Record<string, string>;
 } {
   const { konto, rodzina } = w;
   if (rodzina === null) return { cel: 'ViewFamilyPlan', kod: '0064' };
   const rodzic = rodzicKontaWRodzinie(konto, rodzina);
   const d = daneRodzicaWniosku(rodzina, rodzic);
-  if (d.forma === 'umowa-o-prace') return { cel: 'ViewCaseGuide', kod: '0036', idSprawy: 'K07' };
+  const ciaza = rodzina.daneCiazy;
+  if (d.forma === 'umowa-o-prace') return { cel: 'ViewCaseGuide', kod: '0036', idSprawy: ciaza?.przyjecie ? 'K31' : 'K07' };
   if (d.forma === null || d.forma === 'brak-tytulu' || d.dobrowolneChorobowe?.wartosc !== true) {
     return { cel: 'ViewFamilyPlan', kod: '0064' };
   }
-  const ciaza = rodzina.daneCiazy;
-  if (ciaza?.przyjecie) return { cel: 'ViewZamLeaveType', tryb: 'przyjecie' };
+  if (ciaza?.przyjecie) {
+    const brakPrawa = sprawdzPrzyjecieDoWniosku(ciaza.przyjecie);
+    if (brakPrawa) return { cel: 'ViewFamilyPlan', kod: brakPrawa.kod, ...('parametry' in brakPrawa ? { parametry: brakPrawa.parametry } : {}) };
+    if (d.forma === 'umowa-zlecenia' && platnikZasilkuWniosku(rodzina, rodzic) === 'nieustalony') {
+      return { cel: 'ViewProfilePayer', tryb: 'przyjecie' };
+    }
+    return { cel: 'ViewZamLeaveType', tryb: 'przyjecie' };
+  }
   const porodPotwierdzony = ciaza?.dataPoroduPotwierdzona === true && ciaza.dataPorodu !== undefined;
   if (!porodPotwierdzony) {
     if (rodzic === 'matka' && ciaza?.przewidywanyTerminPorodu) {
@@ -113,13 +137,43 @@ export function sprawdzPrawoDoWnioskuZam(w: WejsciePrawaDoWnioskuZam): {
   return { cel: 'ViewZamLeaveType', tryb: 'po-porodzie' };
 }
 
-/** Rodzaje urlopu dostępne we wniosku ZAM dla roli i trybu (R2). */
-export function dostepneRodzajeUrlopu(rola: Rola, plan: PlanRodziny | null, tryb: TrybWnioskuZam): RodzajUrlopu[] {
+/** Wniosek drugiej roli o uzupełniający urlop macierzyński wysłany albo przygotowany (3.9.1.1.5). */
+export function czyDrugaRolaWnioskowalaOUzupelniajacy(rola: Rola, wnioski: Wniosek[]): boolean {
+  return wnioski.some(
+    (w) =>
+      w.rola !== rola &&
+      w.stan !== 'szkic' &&
+      ((w.rodzaj === 'zam' && w.rodzajUrlopu === 'uzupelniajacy') ||
+        ((w.rodzaj === 'urlop-do-pracodawcy' || w.rodzaj === 'wniosek-ojca-o-urlop') && w.podrodzaj === 'uzupelniajacy')),
+  );
+}
+
+/** Termin wniosku o zasiłek za uzupełniający urlop macierzyński minął (0269): dziś przypada po końcu urlopu macierzyńskiego. */
+export function czyMinalTerminUzupelniajacego(koniecMacierzynskiego: DataISO | null | undefined, dzis: DataISO): boolean {
+  return Boolean(koniecMacierzynskiego) && porownajDaty(dzis, koniecMacierzynskiego as DataISO) > 0;
+}
+
+/** Kontekst dostępności uzupełniającego urlopu macierzyńskiego (3.9.1.1.5). */
+export interface KontekstRodzajowUrlopu {
+  wnioski: Wniosek[];
+  koniecMacierzynskiego?: DataISO | null;
+  dzis: DataISO;
+}
+
+/** Rodzaje urlopu dostępne we wniosku ZAM dla roli i trybu (R2, 3.9.1.1.5). */
+export function dostepneRodzajeUrlopu(
+  rola: Rola,
+  plan: PlanRodziny | null,
+  tryb: TrybWnioskuZam,
+  kontekst?: KontekstRodzajowUrlopu,
+): RodzajUrlopu[] {
   if (tryb === 'przed-porodem') return ['macierzynski'];
   if (tryb === 'przyjecie') return ['na-warunkach-macierzynskiego', 'rodzicielski'];
-  if (rola === 'drugi-rodzic') return ['ojcowski', 'rodzicielski'];
-  const rodzaje: RodzajUrlopu[] = ['macierzynski', 'rodzicielski'];
-  if (plan?.pozycje.some((p) => p.idPozycji === 'K11')) rodzaje.push('uzupelniajacy');
+  const rodzaje: RodzajUrlopu[] = rola === 'drugi-rodzic' ? ['ojcowski', 'rodzicielski'] : ['macierzynski', 'rodzicielski'];
+  const zK11 = plan?.pozycje.some((p) => p.idPozycji === 'K11') ?? false;
+  const wnioskowalaDrugaRola = kontekst ? czyDrugaRolaWnioskowalaOUzupelniajacy(rola, kontekst.wnioski) : false;
+  const poTerminie = kontekst ? czyMinalTerminUzupelniajacego(kontekst.koniecMacierzynskiego, kontekst.dzis) : false;
+  if (zK11 && !wnioskowalaDrugaRola && !poTerminie) rodzaje.push('uzupelniajacy');
   return rodzaje;
 }
 
@@ -137,9 +191,20 @@ export function walidujDaneZam(f: FormularzDanychZam): BledyPol<string> {
     const miejsce = f.miejsceUrodzenia.trim();
     if (miejsce === '' || miejsce.length > MAKS_DLUGOSC_MIEJSCOWOSCI) bledy.miejsceUrodzenia = '0031';
   }
-  const rachunek = walidujRachunek(f.numerRachunku, true);
+  // 3.9.1.1.7: numer rachunku jest opcjonalny, pusty rachunek przy płatniku ZUS oznacza przekaz pocztowy (0241).
+  const rachunek = walidujRachunek(f.numerRachunku, false);
   if (rachunek) bledy.numerRachunku = rachunek;
+  if (f.numerTelefonu !== undefined && f.numerTelefonu.trim() !== '') {
+    const telefon = walidujTelefon(f.numerTelefonu);
+    if (telefon) bledy.numerTelefonu = telefon;
+  }
   return bledy;
+}
+
+/** Numer telefonu do zapisu: 9 cyfr bez prefiksu i spacji albo brak. */
+export function telefonDoZapisu(tekst: string): string | undefined {
+  const numer = normalizujTelefon(tekst);
+  return numer === '' ? undefined : numer;
 }
 
 /** Numer rachunku do zapisu: 26 cyfr bez spacji. */

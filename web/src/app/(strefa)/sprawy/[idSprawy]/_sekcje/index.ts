@@ -13,6 +13,7 @@ import { SekcjaWsparcieK35 } from './wsparcie-k35';
 import { SekcjaSytuacjaSzczegolnaK34 } from './sytuacja-szczegolna-k34';
 import { SekcjaPrzyjecieK31K33 } from './przyjecie-k31-k33';
 import { SekcjaWniosekZas53 } from './wniosek-zas53';
+import { SekcjaWniosekZ15 } from './wniosek-z15';
 import { SekcjaStraznikOplacenieSkladek } from './straznik-oplacenie-skladek';
 
 export type { MiejsceSlotu, PropsSlotu, WpisSlotu } from './typy';
@@ -30,5 +31,6 @@ export const sekcjeSprawy: WpisSlotu<'sekcja'>[] = [
   { id: 'sytuacja-szczegolna-k34', Komponent: SekcjaSytuacjaSzczegolnaK34 }, // u25
   { id: 'przyjecie-k31-k33', Komponent: SekcjaPrzyjecieK31K33 }, // u24
   { id: 'wniosek-zas53', Komponent: SekcjaWniosekZas53 }, // u30
+  { id: 'wniosek-z15', Komponent: SekcjaWniosekZ15 }, // u30
   { id: 'straznik-oplacenie-skladek', Komponent: SekcjaStraznikOplacenieSkladek }, // u12
 ];

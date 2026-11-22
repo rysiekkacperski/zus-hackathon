@@ -10,9 +10,11 @@ import { interakcjeAsystentaPuste } from '@/dane/magazyn/stan-poczatkowy';
 import { przytnijWiadomosc, walidujWiadomosc } from '@/domena/asystent/intencje';
 import { zbudujKontekstAsystenta } from '@/domena/asystent/kontekst';
 import { dozwoloneDzialanie } from '@/domena/asystent/uprawnienia';
+import { roznicaDni } from '@/domena/daty';
 import { stanZgody } from '@/domena/konto';
 import type {
   BladAsystenta,
+  DataISO,
   InterakcjeAsystenta,
   KontekstAsystenta,
   KontekstOperacji,
@@ -23,6 +25,7 @@ import type {
   WiadomoscAsystenta,
   WynikOperacji,
   ZapytanieAsystenta,
+  ZnacznikCzasu,
 } from '@/domena/typy';
 import { teksty } from '@/teksty';
 
@@ -65,6 +68,27 @@ export function zapiszSzkicWiadomosci(szkic: string, ctx: KontekstOperacji): Wyn
   });
 }
 
+/**
+ * Parametr systemu „okres przechowywania logu rozmowy” w dniach (R-AS-LOG). Wartość ustala zespół, a demo przyjmuje 365 dni.
+ */
+export const OKRES_PRZECHOWYWANIA_LOGU_ROZMOWY_DNI = 365;
+
+/**
+ * Porządek logu rozmowy (R-AS-LOG, KA-06 i KA-07 3.11.1.1.3): usuwa wpisy starsze niż okres przechowywania logu rozmowy,
+ * a dla konta bez zgody na dane dotyczące zdrowia zostawia z wcześniejszych rozmów wynik klasyfikacji intencji,
+ * datę i godzinę oraz decyzje o działaniach, bez treści wiadomości.
+ */
+export function uporzadkujLogRozmowy(i: InterakcjeAsystenta, zgoda: boolean, dzis: DataISO): InterakcjeAsystenta {
+  const aktualny = (czas: ZnacznikCzasu) => roznicaDni(czas.slice(0, 10), dzis) <= OKRES_PRZECHOWYWANIA_LOGU_ROZMOWY_DNI;
+  const rozmowy = i.rozmowy
+    .map((r) => ({
+      ...r,
+      wiadomosci: r.wiadomosci.filter((w) => aktualny(w.czas)).map((w) => (zgoda ? w : { ...w, tresc: '' })),
+    }))
+    .filter((r) => r.wiadomosci.length > 0);
+  return { rozmowy, audyt: i.audyt.filter((a) => aktualny(a.czas)) };
+}
+
 /** Nowa rozmowa w logu konta i w stanie sesji; Nowy użytkownik dostaje pierwszą wiadomość 0256. */
 export function nowaRozmowa(ctx: KontekstOperacji): WynikOperacji<{ idRozmowy: string }> {
   const zalogowany = odczytajZalogowanego();
@@ -88,7 +112,7 @@ export function nowaRozmowa(ctx: KontekstOperacji): WynikOperacji<{ idRozmowy: s
       : [];
   return wykonajOperacje(() => {
     zmienStanKonta(sesja.pesel, (stan) => {
-      const i = interakcje(stan);
+      const i = uporzadkujLogRozmowy(interakcje(stan), stanZgody(stan.konto.decyzjeOZgodzie) === 'udzielona', ctx.dzis);
       return { ...stan, interakcjeAsystenta: { ...i, rozmowy: [...i.rozmowy, { idRozmowy, konto: sesja.pesel, rozpoczeto: ctx.teraz, wiadomosci }] } };
     });
     zmienStanSesji(sesja.idSesji, (s) => ({ ...s, panelAsystenta: { ...s.panelAsystenta, idRozmowy } }));

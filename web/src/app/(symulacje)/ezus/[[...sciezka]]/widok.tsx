@@ -3,7 +3,10 @@
 // Symulowany eZUS (ViewEzusHome, ViewEzus800Application, ViewEzusActiveParentApplication, ViewEzusApplicationDetails).
 // Przewodnik otwiera te ekrany w nowej karcie w trybie demonstracyjnym (KA-06, KA-07 3.8.1.1.1). Właściciel: u17.
 import { notFound } from 'next/navigation';
-import { use } from 'react';
+import { use, useMemo } from 'react';
+import { useKontekstRodziny } from '@/dane/magazyn/hooki';
+import type { DaneDrugiegoRodzicaZKonta, DaneZKontaZus } from '@/domena/typy';
+import { formatujDate } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { ListaKrokow } from '@/komponenty/kroki';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -35,6 +38,62 @@ function StronaWniosku({ grupa }: { grupa: (typeof teksty)['ViewEzus800Applicati
   );
 }
 
+function czyKopiaZWnioskami(d: DaneZKontaZus | DaneDrugiegoRodzicaZKonta | null): d is DaneZKontaZus {
+  return d !== null && 'wnioski' in d;
+}
+
+/** Szczegóły wniosku z danych konta ZUS rodziny wraz z odpowiedzią ZUS (KA-03 i KA-04 3.4.2.1.1). */
+function SzczegolyWniosku({ idWniosku }: { idWniosku: string }) {
+  const t = teksty.ViewEzusApplicationDetails;
+  const ts = teksty.ViewCaseDetails.sekcjaStatusWnioskuZus;
+  const kontekst = useKontekstRodziny();
+  const wniosek = useMemo(() => {
+    if (!kontekst) return null;
+    const kopie = [kontekst.daneZusKonta, kontekst.daneZusMatki, kontekst.daneZusDrugiegoRodzica].filter(czyKopiaZWnioskami);
+    for (const kopia of kopie) {
+      const w = kopia.wnioski.find((x) => x.idWniosku === idWniosku);
+      if (w) return w;
+    }
+    return null;
+  }, [kontekst, idWniosku]);
+  const wiersz = (etykieta: string, wartosc: string) => (
+    <div key={etykieta}>
+      <dt className="text-body">{etykieta}</dt>
+      <dd className="m-0 mt-1 text-body-strong break-all text-ink-strong">{wartosc}</dd>
+    </div>
+  );
+  const zakonczony = wniosek?.status === 'przyznanie' || wniosek?.status === 'odmowa';
+  return (
+    <>
+      <NaglowekStrony tytul={t.naglowek} powrot={false} bezKomunikatowPoPrzejsciu />
+      <Stos odstep={7.5}>
+        <Karta>
+          <dl className="m-0 flex flex-col gap-4">
+            {wiersz(t.numerWniosku, idWniosku)}
+            {wniosek ? wiersz(t.rodzajWniosku, t.rodzaje[wniosek.rodzaj]) : null}
+            {wniosek ? wiersz(t.dataZlozenia, formatujDate(wniosek.dataZlozenia)) : null}
+            {wniosek ? wiersz(t.kanal, ts.kanaly[wniosek.kanal]) : null}
+            {wiersz(t.status, wniosek ? ts.statusy[wniosek.status] : t.statusWartosc)}
+            {wniosek && !zakonczony && wniosek.planowyTerminZalatwienia
+              ? wiersz(t.planowyTermin, formatujDate(wniosek.planowyTerminZalatwienia))
+              : null}
+          </dl>
+        </Karta>
+        {wniosek ? (
+          <Karta tytul={t.odpowiedzZus}>
+            <Stos odstep={6}>
+              <p className="m-0 text-body">{t.odpowiedzi[wniosek.status]}</p>
+              <div>
+                <PrzyciskZamknieciaKarty />
+              </div>
+            </Stos>
+          </Karta>
+        ) : null}
+      </Stos>
+    </>
+  );
+}
+
 export function WidokEzus({ params }: { params: PageProps<'/ezus/[[...sciezka]]'>['params'] }) {
   const { sciezka } = use(params);
   const trasa = dopasujTrase(['', 'ezus', ...(sciezka ?? []).map(encodeURIComponent)].join('/'));
@@ -45,26 +104,8 @@ export function WidokEzus({ params }: { params: PageProps<'/ezus/[[...sciezka]]'
       return <StronaWniosku grupa={teksty.ViewEzus800Application} />;
     case 'ViewEzusActiveParentApplication':
       return <StronaWniosku grupa={teksty.ViewEzusActiveParentApplication} />;
-    case 'ViewEzusApplicationDetails': {
-      const t = teksty.ViewEzusApplicationDetails;
-      return (
-        <>
-          <NaglowekStrony tytul={t.naglowek} powrot={false} bezKomunikatowPoPrzejsciu />
-          <Karta>
-            <dl className="m-0 flex flex-col gap-4">
-              <div>
-                <dt className="text-body">{t.numerWniosku}</dt>
-                <dd className="m-0 mt-1 text-body-strong break-all text-ink-strong">{trasa.parametry.idWniosku}</dd>
-              </div>
-              <div>
-                <dt className="text-body">{t.status}</dt>
-                <dd className="m-0 mt-1 text-body-strong text-ink-strong">{t.statusWartosc}</dd>
-              </div>
-            </dl>
-          </Karta>
-        </>
-      );
-    }
+    case 'ViewEzusApplicationDetails':
+      return <SzczegolyWniosku idWniosku={trasa.parametry.idWniosku} />;
     default: {
       const t = teksty.ViewEzusHome;
       return (

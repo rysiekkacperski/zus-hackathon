@@ -34,7 +34,25 @@ export function OknoPodgladuWiadomosci({ otwarte, onZamknij, wniosek, dane, emai
     { etykieta: t.temat, wartosc: t.tematWiadomosci({ rodzaj, pracownik: dane.imieINazwisko }) },
     { etykieta: t.zalaczniki, wartosc: [nazwaPlikuWniosku(wniosek.podrodzaj), ...dolaczone.map((z) => z.plik!.nazwa)].join(', ') },
   ];
-  const akapity = t.trescWiadomosci({
+  // Rezygnacja matki z dalszej części urlopu (u34) ma własny temat i treść wiadomości.
+  const wr = teksty.ViewMaternityResignation.wiadomoscDoPracodawcy;
+  const zalacznikiRezygnacji = wniosek.zalaczniki
+    .map((z) => (wr.zalaczniki as Record<string, string>)[z.rodzaj] ?? z.opis ?? z.rodzaj)
+    .join(', ');
+  if (wniosek.rezygnacja) {
+    pozycje[1] = { etykieta: t.temat, wartosc: wr.temat({ imieINazwisko: dane.imieINazwisko }) };
+  }
+  const akapity = wniosek.rezygnacja
+    ? [
+        wr.tresc({
+          dataZlozenia: formatujDate(dzis),
+          dataPowrotu: formatujDate(wniosek.rezygnacja.dataPowrotu),
+          listaZalacznikow: zalacznikiRezygnacji,
+          email: dane.emailPracownika ?? t.brakAdresuPracownika,
+          imieINazwisko: dane.imieINazwisko,
+        }),
+      ]
+    : t.trescWiadomosci({
     rodzaj: rodzaj.charAt(0).toLowerCase() + rodzaj.slice(1),
     dataZlozenia: formatujDate(dzis),
     od: zakres ? formatujDate(zakres.od) : '',

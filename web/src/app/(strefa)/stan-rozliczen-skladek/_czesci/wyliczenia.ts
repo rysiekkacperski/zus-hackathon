@@ -14,6 +14,7 @@ import {
   progZadluzenia,
   stanZKopii,
   tytulDzialalnosci,
+  wyczekiwanieDobrowolneZKatalogu,
   type DzienPowstaniaPrawa,
   type KomunikatStanu,
 } from '@/domena/zasilki/stan-rozliczen';
@@ -72,10 +73,19 @@ export function useStanRozliczenKonta(): StanRozliczenKonta | null {
     const okresSplaty = okresSplatyZKatalogu(katalog, dzis);
 
     const karty: KartaStanu[] = [];
-    const dni = maChorobowe ? dniPowstaniaPrawaZPodstawa(rodzina?.daneCiazy ?? null, kopia.zaswiadczeniaEzla) : [];
+    const chorobowe = dzialalnosc.ubezpieczenieChorobowe;
+    const dni = maChorobowe
+      ? dniPowstaniaPrawaZPodstawa(rodzina?.daneCiazy ?? null, kopia.zaswiadczeniaEzla, {
+          wnioski: rodzina?.wnioski ?? [],
+          pesel: dane.konto.pesel,
+          poczatekChorobowego: chorobowe.rodzaj === 'dobrowolne' ? (chorobowe.od ?? null) : null,
+          wyczekiwanieDni: wyczekiwanieDobrowolneZKatalogu(katalog, dzis),
+        })
+      : [];
     for (const d of dni) {
       const stan = d.dzien <= dzienOdczytu ? (stanZKopii(kopia, d.dzien) ?? stanOdczytu) : stanOdczytu;
-      const progDnia = progZadluzenia(katalog, d.dzien <= dzis ? d.dzien : dzis).prog;
+      // Próg zadłużenia obowiązujący w dniu powstania prawa (48,06 zł do 31.12.2026, 49,50 zł od 01.01.2027).
+      const progDnia = progZadluzenia(katalog, d.dzien).prog;
       karty.push({
         klucz: d.swiadczenie,
         dzienPrawa: d,

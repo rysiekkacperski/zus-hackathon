@@ -375,9 +375,30 @@ export function odpowiedziProponowane(
   if (propozycja.oswiadczenia?.wczesniejszyOjcowski) odp.wczesniejszyOjcowski = propozycja.oswiadczenia.wczesniejszyOjcowski;
   if (podrodzaj === 'uzupelniajacy' && dane.wymiarK11) odp.tygodnie = String(dane.wymiarK11);
   if (podrodzaj === 'ojcowski' && odp.wczesniejszyOjcowski === '7-dni') odp.dni = '7';
+  const scenariusz = dane.scenariusz;
+  if (podrodzaj === 'ojcowski' && scenariusz?.ojcowski) {
+    if (!odp.dni) odp.dni = String(scenariusz.ojcowski.dni);
+    odp.dataPoczatku = formatuj(scenariusz.ojcowski.od);
+  }
   if (podrodzaj === 'rodzicielski') {
     const poprzedni = koniecUrlopuPrzedRodzicielskim(dane);
     if (poprzedni && wykorzystanieRodzicielskiego(dane).numerCzesci === 1) odp.dataPoczatku = formatuj(dodajDni(poprzedni, 1));
+    if (scenariusz?.rodzicielski) {
+      if (!odp.dataPoczatku) odp.dataPoczatku = formatuj(scenariusz.rodzicielski.od);
+      odp.tygodnie = String(scenariusz.rodzicielski.tygodnie);
+    }
+  }
+  if (podrodzaj === 'laczenie-z-praca' && scenariusz?.laczenie) {
+    odp.wymiarPracy = String(scenariusz.laczenie.wymiarPracy);
+    odp.dataPoczatku = formatuj(scenariusz.laczenie.od);
+    odp.dataKonca = formatuj(scenariusz.laczenie.do);
+  }
+  // R-10: propozycja „tak” w oświadczeniu o zamiarze, gdy drugi rodzic wysłał wniosek o urlop rodzicielski.
+  if (podrodzaj === 'macierzynski-z-rodzicielskim' || podrodzaj === 'rodzicielski') {
+    const drugiZRodzicielskim = dane.wyslane.some(
+      (w) => w.rodzic !== dane.rodzic && w.wniosek.okresy.some((o) => o.rodzajUrlopu === 'rodzicielski'),
+    );
+    if (drugiZRodzicielskim) odp.zamiarDrugiegoRodzica = true;
   }
   return odp;
 }

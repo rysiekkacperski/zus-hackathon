@@ -23,7 +23,6 @@ import {
   decyzjaOdswiezenia,
   przywrocOdpowiedziRodzica,
   wybierzPelnomocnictwo,
-  zasilkiZOstatnichMiesiecy,
   zastosujDaneZPelnomocnictwa,
 } from '@/domena/rodzina/pelnomocnictwo';
 import { czyProfilMaDrugiegoRodzica, dolaczonyDrugiRodzic } from '@/domena/rodzina/zaproszenia';
@@ -70,7 +69,7 @@ export function odczytajDaneMocodawcy(p: PelnomocnictwoPel, ctx: KontekstOperacj
     nazwisko: zrodlo.nazwisko,
     tytuly: zrodlo.tytuly,
     czlonkowieRodziny: [],
-    zasilki: zasilkiZOstatnichMiesiecy(zrodlo.zasilki, ctx.dzis),
+    zasilki: [],
     swiadczeniaRodzinne: [],
     wnioski: [],
     zaswiadczeniaEzla: [],

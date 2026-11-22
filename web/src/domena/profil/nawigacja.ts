@@ -68,6 +68,8 @@ function nastepnyPoSytuacji(szkic: SzkicProfilu, zgoda: boolean): IdWidoku {
   const sytuacja = sytuacjaSzkicu(szkic);
   if (sytuacja === null) return 'ViewProfileSituation';
   if (sytuacja === 'planowanie') return 'ViewCalcMaternityInput';
+  // Dane przyjęcia dziecka rodzic podaje z udzieloną zgodą na dane dotyczące zdrowia i bez niej (KA-01 3.3.1.4.2).
+  if (sytuacja === 'przyjecie') return EKRAN_SYTUACJI.przyjecie;
   return zgoda ? EKRAN_SYTUACJI[sytuacja] : 'ViewProfileFamily';
 }
 
@@ -123,8 +125,8 @@ export function poprzedniEkran(szkic: SzkicProfilu, zgoda: boolean): IdWidoku {
       if (sytuacja === 'oczekiwanie') return 'ViewProfilePregnancy';
       return 'ViewProfileSituation';
     case 'ViewProfileFamily':
-      if (!zgoda || sytuacja === null || sytuacja === 'planowanie') return 'ViewProfileSituation';
       if (sytuacja === 'przyjecie') return 'ViewProfileChildAdoption';
+      if (!zgoda || sytuacja === null || sytuacja === 'planowanie') return 'ViewProfileSituation';
       return 'ViewProfileEmploymentChange';
     case 'ViewProfileSecondParent':
       return 'ViewProfileFamily';
@@ -244,7 +246,7 @@ function ekranySciezki(
   if (biezacy === 'ViewProfilePayer' || czyEkranPlatnika(szkic)) ekrany.push(ekran('ViewProfilePayer'));
   ekrany.push(ekran('ViewProfileSituation'));
   const naEkranieCiazy = EKRANY_CIAZY_ALBO_DZIECKA.includes(biezacy);
-  if (zgoda || naEkranieCiazy) {
+  if (zgoda || naEkranieCiazy || sytuacja === 'przyjecie') {
     const ekranSytuacji = sytuacja === null || sytuacja === 'planowanie' ? null : EKRAN_SYTUACJI[sytuacja];
     const ekranCiazy = naEkranieCiazy ? biezacy : ekranSytuacji;
     ekrany.push(ekranCiazy ? ekran(ekranCiazy) : { id: 'ciaza-albo-dziecko' });
@@ -305,7 +307,7 @@ export function krokiProfilu(szkic: SzkicProfilu, zgoda: boolean, biezacy: IdWid
   const sytuacjaZDanymi = sytuacja === 'oczekiwanie' || sytuacja === 'narodziny' || sytuacja === 'przyjecie';
   const pominiete = new Set<number>();
   if (!zgoda && sytuacjaZDanymi) {
-    pominiete.add(2);
+    if (sytuacja !== 'przyjecie') pominiete.add(2);
     pominiete.add(3);
   }
   if (sytuacja === 'przyjecie') pominiete.add(3);

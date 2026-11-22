@@ -59,8 +59,8 @@ export function WidokKatalogu() {
     kwoty: t.zakladki.kwoty({ liczba: String(kwoty.length) }),
     wymiary: t.zakladki.wymiary({ liczba: String(wymiary.length) }),
     pozycje: t.zakladki.pozycje({ liczba: String(katalog.pozycje.length) }),
-    reguly: t.zakladki.reguly,
-    dokumenty: t.zakladki.dokumenty,
+    reguly: t.zakladki.reguly({ liczba: String(katalog.reguly.length) }),
+    dokumenty: t.zakladki.dokumenty({ liczba: String(katalog.dokumenty.length) }),
   };
 
   function wybierzZakladke(nowa: ZakladkaKatalogu) {
@@ -78,9 +78,14 @@ export function WidokKatalogu() {
         powrot={false}
         bezKomunikatowPoPrzejsciu
         akcje={
-          <PrzyciskLink href={trasy.ViewCatalogItemAdd()} wariant="glowny" ikona="plus">
-            {t.dodajPozycje}
-          </PrzyciskLink>
+          <>
+            <PrzyciskLink href={trasy.ViewCatalogSupportOrganizations()} wariant="drugorzedny" ikona="serce">
+              {teksty.ViewCatalogSupportOrganizations.otworzSlownik}
+            </PrzyciskLink>
+            <PrzyciskLink href={trasy.ViewCatalogItemAdd()} wariant="glowny" ikona="plus">
+              {t.dodajPozycje}
+            </PrzyciskLink>
+          </>
         }
       />
       <div className="flex max-w-tresc min-w-0 flex-col gap-7.5">

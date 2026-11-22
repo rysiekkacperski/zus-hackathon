@@ -6,7 +6,7 @@
 // P19-17 (ograniczone do korespondencji), P19-18 (wygasło).
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
-import { useKontekstRodziny, useStanSymulowanegoZus } from '@/dane/magazyn/hooki';
+import { useKontekstRodziny, useStanKonta, useStanSymulowanegoZus } from '@/dane/magazyn/hooki';
 import { odczytajDaneZPelnomocnictwa } from '@/dane/magazyn/operacje/drugi-rodzic';
 import { pelnomocnictwaKonta } from '@/dane/magazyn/operacje/po-odczycie-zus/odswiez-pelnomocnictwo';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
@@ -129,32 +129,47 @@ function KartaZakresuDanych({ zNotatkaOdswiezania }: { zNotatkaOdswiezania: bool
   );
 }
 
+// Instrukcja udzielenia pełnomocnictwa w 5 krokach (3.3.3.2.2 KA-02).
 function Instrukcja({
   konto,
+  adres,
   wstep,
   poWyslaniu,
   onSprawdz,
 }: {
   konto: KontoPrzewodnika;
+  adres: string | undefined;
   wstep: string;
   poWyslaniu: string;
   onSprawdz: () => void;
 }) {
   const i = t.instrukcja;
   const kroki = [
-    i.krok1,
+    <>
+      {i.krok1.przed}
+      <strong className="font-semibold">{i.krok1.wyroznienie}</strong>
+      {i.krok1.po}
+    </>,
     <>
       {i.krok2.przed}
-      <strong className="font-semibold">{i.krok2.wyroznienie}</strong>
+      <strong className="font-semibold">{konto.imie}</strong>
+      {i.krok2.nazwisko}
+      <strong className="font-semibold">{konto.nazwisko}</strong>
+      {i.krok2.pesel}
+      <strong className="font-semibold text-ink-max">{konto.pesel}</strong>
+      {adres ? (
+        <>
+          {i.krok2.adres}
+          <strong className="font-semibold">{adres}</strong>
+        </>
+      ) : (
+        i.krok2.adresBezDanych
+      )}
       {i.krok2.po}
     </>,
     <>
       {i.krok3.przed}
-      <strong className="font-semibold">{konto.imie}</strong>
-      {i.krok3.nazwisko}
-      <strong className="font-semibold">{konto.nazwisko}</strong>
-      {i.krok3.pesel}
-      <strong className="font-semibold text-ink-max">{konto.pesel}</strong>
+      <strong className="font-semibold">{i.krok3.wyroznienie}</strong>
       {i.krok3.po}
     </>,
     <>
@@ -163,6 +178,7 @@ function Instrukcja({
       {i.krok4.zakres}
       {i.krok4.po}
     </>,
+    i.krok5,
   ];
   return (
     <Karta tytul={i.tytul} bezLinii>
@@ -183,6 +199,7 @@ function Instrukcja({
 
 export function WidokPelnomocnictwa() {
   const kontekst = useKontekstRodziny();
+  const stanKonta = useStanKonta();
   const pesel = kontekst?.konto.pesel;
   const stanZus = useStanSymulowanegoZus(pesel);
   const { pokaz } = useKomunikatChwilowy();
@@ -355,7 +372,15 @@ export function WidokPelnomocnictwa() {
       {naglowek}
       {baner}
       <UkladDwuKolumnowy
-        tresc={<Instrukcja konto={konto} wstep={wstep} poWyslaniu={poWyslaniu} onSprawdz={sprawdzPonownie} />}
+        tresc={
+          <Instrukcja
+            konto={konto}
+            adres={stanKonta?.kopiaDanychZus?.adres}
+            wstep={wstep}
+            poWyslaniu={poWyslaniu}
+            onSprawdz={sprawdzPonownie}
+          />
+        }
         boczna={
           <Karta tytul={pelnomocnictwo === null ? t.tytulStanu : t.tytulPelnomocnictwa} bezLinii>
             <ListaOpisowa pozycje={pozycje} />

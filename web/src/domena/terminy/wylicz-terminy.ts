@@ -9,10 +9,18 @@ import {
   REGULY_POZYCJI,
   regulaPozycji,
   terminCorocznyNaDzien,
+  terminCorocznyZOstatnim,
   terminZReguly,
   type KotwiceTerminow,
 } from '@/domena/terminy/reguly';
 import { wymiarUrlopuMacierzynskiego } from '@/domena/terminy/slowniki';
+import {
+  dzieciPrzedUkonczeniemLat,
+  dzieciWWiekuUprawniajacym,
+  najmlodsze,
+  najstarsze,
+  poczatekTerminowPrzyjecia,
+} from '@/domena/rodzina/przyjecie';
 import type {
   DaneCiazyIDziecka,
   DaneRodziny,
@@ -67,7 +75,8 @@ function kotwiceRodziny(d: DatyRodziny): KotwiceTerminow {
     'koniec-10-tygodnia': d.ptp ? dodajDni(d.ptp, -211) : undefined,
     'data-porodu': d.przyjecie ? undefined : d.urodzenie,
     'data-urodzenia-dziecka': d.urodzenie,
-    'data-przyjecia': d.przyjecie?.dataPrzyjecia,
+    // 3.3.4.1.4: przy przysposobieniu terminy K31 i K32 biegną od późniejszej z dat przyjęcia i wystąpienia do sądu.
+    'data-przyjecia': d.przyjecie ? poczatekTerminowPrzyjecia(d.przyjecie) : undefined,
     'data-uprawomocnienia': d.przyjecie?.dataUprawomocnienia,
   };
 }
@@ -101,8 +110,20 @@ function opisPrzesuniecia(r: Extract<RegulaTerminu, { typ: 'przesuniecie' }>, ba
   return r.jednostka === 'dni' ? tk.plusDni({ nazwa, data: formatujDate(baza), liczba }) : tk.plusMiesiace({ nazwa, data: formatujDate(baza), liczba });
 }
 
-/** Termin sprawy po przyjęciu dziecka na wychowanie (reguły 3.3.4.1.2). */
-function terminPoPrzyjeciu(id: string, d: DatyRodziny, sprawa: PozycjaPlanu, katalog: Katalog): WynikReguly | null {
+/**
+ * Czy rodzic, którego dotyczy sprawa, pracuje na umowie o pracę (Story 3.7.1.1.3, wymaganie Zakres rodziców).
+ * Sprawy K09 i K10 dotyczą drugiego rodzica, a pozostałe rodzica wskazanego w sprawie.
+ */
+function czyUmowaOPrace(id: string, sprawa: PozycjaPlanu, w: WejscieTerminow): boolean {
+  const { matka, drugiRodzic } = w.daneRodziny;
+  const przyjmujacyOjciec = w.daneCiazy?.przyjecie?.rolaRodzicaPrzyjmujacego === 'ojciec';
+  const drugi = id === 'K09' || id === 'K10' || sprawa.rodzic === 'drugi-rodzic' || (sprawa.rodzic === 'rodzic-przyjmujacy' && przyjmujacyOjciec);
+  const forma = drugi ? drugiRodzic?.formaZatrudnienia?.wartosc : matka?.formaZatrudnienia?.wartosc;
+  return forma === 'umowa-o-prace';
+}
+
+/** Termin sprawy po przyjęciu dziecka na wychowanie (reguły 3.3.4.1.2 i 3.7.1.1.3). */
+function terminPoPrzyjeciu(id: string, d: DatyRodziny, sprawa: PozycjaPlanu, katalog: Katalog, umowa: boolean): WynikReguly | null {
   const p = d.przyjecie;
   if (!p) return null;
   const przyjecie = p.dataPrzyjecia;
@@ -131,19 +152,25 @@ function terminPoPrzyjeciu(id: string, d: DatyRodziny, sprawa: PozycjaPlanu, kat
     case 'K09': {
       if (p.forma !== 'przysposobienie') return BRAK;
       if (!p.dataUprawomocnienia) return { ...BRAK, kodBrakuTerminu: '0192' };
-      const limit = dodajDni(dodajLata(urodzenie, 14), -14);
+      // 3.3.4.1.4, KA-07: limit od najstarszego dziecka, które w dniu przyjęcia nie ukończyło 14 lat.
+      const limit = dodajDni(dodajLata(najstarsze(dzieciPrzedUkonczeniemLat(p, 14)) ?? urodzenie, 14), -14);
+      const termin = minData(dodajDni(dodajMiesiace(p.dataUprawomocnienia, 12), -13), limit);
+      const opis = umowa ? tk.k09PrzysposobienieUmowa : tk.k09Przysposobienie;
       return {
-        termin: minData(dodajDni(dodajMiesiace(p.dataUprawomocnienia, 12), -14), limit),
-        kotwica: kotwa('data-uprawomocnienia', p.dataUprawomocnienia, tk.k09Przysposobienie({ data: formatujDate(p.dataUprawomocnienia), limit: formatujDate(limit) })),
+        termin: umowa ? dodajDni(termin, -7) : termin,
+        kotwica: kotwa('data-uprawomocnienia', p.dataUprawomocnienia, opis({ data: formatujDate(p.dataUprawomocnienia), limit: formatujDate(limit) })),
         szacowany: false,
       };
     }
     case 'K10': {
       if (p.forma === 'rodzina-zastepcza-zawodowa') return BRAK;
       const lata = p.forma === 'przysposobienie' ? 14 : p.odroczenieObowiazkuSzkolnego ? 10 : 7;
+      const odjete = umowa ? 83 : 62;
+      // 3.3.4.1.4, KA-06: termin od najmłodszego dziecka w wieku uprawniającym do urlopu.
+      const mlodsze = najmlodsze(dzieciWWiekuUprawniajacym(p, katalog)) ?? urodzenie;
       return {
-        termin: dodajDni(dodajLata(urodzenie, lata), -1),
-        kotwica: kotwa('data-urodzenia-dziecka', urodzenie, tk.dzienPrzedUrodzinami({ data: formatujDate(urodzenie), lata: String(lata) })),
+        termin: dodajDni(dodajDni(dodajLata(mlodsze, lata), -1), -odjete),
+        kotwica: kotwa('data-urodzenia-dziecka', mlodsze, tk.k10Przyjecie({ data: formatujDate(mlodsze), lata: String(lata), dni: String(odjete) })),
         szacowany: false,
       };
     }
@@ -156,12 +183,15 @@ function terminPoPrzyjeciu(id: string, d: DatyRodziny, sprawa: PozycjaPlanu, kat
       const limit = dodajDni(dodajLata(urodzenie, 18), -1);
       return wynik.termin ? { ...wynik, termin: minData(wynik.termin, limit) } : wynik;
     }
-    case 'K15':
+    case 'K15': {
+      // 3.3.4.1.4, KA-08: termin od najstarszego dziecka, które w dniu przyjęcia nie ukończyło roku.
+      const niemowle = najstarsze(dzieciPrzedUkonczeniemLat(p, 1)) ?? urodzenie;
       return {
-        termin: dodajDni(dodajLata(urodzenie, 1), -1),
-        kotwica: kotwa('data-urodzenia-dziecka', urodzenie, tk.dzienPrzedPierwszymiUrodzinami({ data: formatujDate(urodzenie) })),
+        termin: dodajDni(dodajLata(niemowle, 1), -1),
+        kotwica: kotwa('data-urodzenia-dziecka', niemowle, tk.dzienPrzedPierwszymiUrodzinami({ data: formatujDate(niemowle) })),
         szacowany: false,
       };
+    }
     case 'K18': {
       const dwunastyMiesiac = dodajMiesiace(urodzenie, 12);
       if (dwunastyMiesiac <= przyjecie) {
@@ -181,7 +211,8 @@ function terminPoPrzyjeciu(id: string, d: DatyRodziny, sprawa: PozycjaPlanu, kat
 
 /** Termin sprawy z reguły pozycji, z opisem daty kotwiczącej. */
 function terminRegulyPozycji(id: string, sprawa: PozycjaPlanu, d: DatyRodziny, w: WejscieTerminow): WynikReguly {
-  const poPrzyjeciu = terminPoPrzyjeciu(id, d, sprawa, w.katalog);
+  const umowa = czyUmowaOPrace(id, sprawa, w);
+  const poPrzyjeciu = terminPoPrzyjeciu(id, d, sprawa, w.katalog, umowa);
   if (poPrzyjeciu) return poPrzyjeciu;
 
   const r = regulaPozycji(id, w.katalog);
@@ -203,8 +234,13 @@ function terminRegulyPozycji(id: string, sprawa: PozycjaPlanu, d: DatyRodziny, w
         return { termin, kotwica: kotwa('przewidywany-termin-porodu', baza, opis), szacowany: false };
       }
       if (r.kotwica === 'data-porodu') {
+        const rodzajKotwicy = d.szacowane ? 'przewidywany-termin-porodu' : 'data-porodu';
+        // K09 przy umowie o pracę: ostatni dzień złożenia pracodawcy wniosku, 7 dni przed rozpoczęciem urlopu.
+        if (id === 'K09' && umowa) {
+          return { termin: dodajDni(termin, -7), kotwica: kotwa(rodzajKotwicy, baza, tk.plus12MinusDniUmowa({ nazwa: nazwaPorodu, data: formatujDate(baza) })), szacowany: d.szacowane };
+        }
         const opis = id === 'K15' ? tk.dzienPrzedPierwszymiUrodzinami({ data: formatujDate(baza) }) : opisPrzesuniecia(r, baza, nazwaPorodu);
-        return { termin, kotwica: kotwa(d.szacowane ? 'przewidywany-termin-porodu' : 'data-porodu', baza, opis), szacowany: d.szacowane };
+        return { termin, kotwica: kotwa(rodzajKotwicy, baza, opis), szacowany: d.szacowane };
       }
       const nazwa = r.kotwica === 'data-przyjecia' ? tk.nazwy.dataPrzyjecia : r.kotwica === 'data-uprawomocnienia' ? tk.nazwy.dataUprawomocnienia : tk.nazwy.kotwica;
       const wynik: WynikReguly = { termin, kotwica: kotwa(r.kotwica, baza, opisPrzesuniecia(r, baza, nazwa)), szacowany: false };
@@ -221,10 +257,29 @@ function terminRegulyPozycji(id: string, sprawa: PozycjaPlanu, d: DatyRodziny, w
     case 'plus-wymiar': {
       const baza = kotwice[r.kotwica] as DataISO;
       const tygodnie = wymiarUrlopuMacierzynskiego(w.katalog, liczbaDzieci, baza, r.idWpisu);
-      return { termin, kotwica: kotwa(d.szacowane ? 'przewidywany-termin-porodu' : 'data-porodu', baza, tk.plusTygodnie({ nazwa: nazwaPorodu, data: formatujDate(baza), liczba: String(tygodnie) })), szacowany: d.szacowane };
+      const rodzajKotwicy = d.szacowane ? 'przewidywany-termin-porodu' : 'data-porodu';
+      const parametry = { nazwa: nazwaPorodu, data: formatujDate(baza), liczba: String(tygodnie) };
+      // K11 (Story 3.7.1.1.3): przy umowie o pracę ostatni dzień urlopu macierzyńskiego pomniejszony o 21 dni,
+      // w pozostałych przypadkach ostatni dzień okresu zasiłku za urlop macierzyński.
+      if (id === 'K11') {
+        return umowa
+          ? { termin: dodajDni(termin, -22), kotwica: kotwa(rodzajKotwicy, baza, tk.k11Umowa(parametry)), szacowany: d.szacowane }
+          : { termin: dodajDni(termin, -1), kotwica: kotwa(rodzajKotwicy, baza, tk.k11KoniecOkresu(parametry)), szacowany: d.szacowane };
+      }
+      return { termin, kotwica: kotwa(rodzajKotwicy, baza, tk.plusTygodnie(parametry)), szacowany: d.szacowane };
     }
-    case 'koniec-roku-urodzin':
-      return { termin, kotwica: kotwa('data-urodzenia-dziecka', urodzenie, tk.koniecRokuUrodzin({ data: formatujDate(urodzenie), rok: termin.slice(0, 4) })), szacowany: d.szacowane };
+    case 'koniec-roku-urodzin': {
+      const rokTerminu = termin.slice(0, 4);
+      const dataU = formatujDate(urodzenie);
+      if (id === 'K10') {
+        const odjete = umowa ? 83 : 62;
+        return { termin: dodajDni(termin, -odjete), kotwica: kotwa('data-urodzenia-dziecka', urodzenie, tk.k10({ data: dataU, rok: rokTerminu, dni: String(odjete) })), szacowany: d.szacowane };
+      }
+      if (id === 'K23') {
+        return { termin: dodajDni(termin, -21), kotwica: kotwa('data-urodzenia-dziecka', urodzenie, tk.k23({ data: dataU, rok: rokTerminu })), szacowany: d.szacowane };
+      }
+      return { termin, kotwica: kotwa('data-urodzenia-dziecka', urodzenie, tk.koniecRokuUrodzin({ data: dataU, rok: rokTerminu })), szacowany: d.szacowane };
+    }
     case 'dzien-przed-urodzinami':
       return { termin, kotwica: kotwa('data-urodzenia-dziecka', urodzenie, tk.dzienPrzedUrodzinami({ data: formatujDate(urodzenie), lata: String(r.lata) })), szacowany: d.szacowane };
     case 'koniec-miesiaca-wieku':
@@ -236,9 +291,12 @@ function terminRegulyPozycji(id: string, sprawa: PozycjaPlanu, d: DatyRodziny, w
       };
     case 'coroczny': {
       const biezacy = terminCorocznyNaDzien(r, urodzenie, w.dzis);
+      const ostatni = !r.poczatekSkladania && termin.slice(5) !== r.dzien;
       const opis = r.poczatekSkladania
         ? tk.k13({ data: formatujDate(urodzenie) })
-        : tk.k21({ od: urodzenie.slice(0, 4), doRoku: String(Number(urodzenie.slice(0, 4)) + (r.doRokuUrodzin ?? 0)) });
+        : ostatni
+          ? tk.k21Ostatni({ data: formatujDate(urodzenie) })
+          : tk.k21({ od: urodzenie.slice(0, 4), doRoku: String(Number(urodzenie.slice(0, 4)) + (r.doRokuUrodzin ?? 0)) });
       return {
         termin,
         kotwica: kotwa('rok-kalendarzowy', urodzenie, opis),
@@ -290,7 +348,10 @@ function terminSprawy(sprawa: PozycjaPlanu, w: WejscieTerminow, d: DatyRodziny):
     const nastepny = nastepnyTerminPowtarzalny(sprawa.idSprawy, sprawa.dataOznaczenia);
     const regula = REGULY_POZYCJI[sprawa.idPozycji];
     const limitRoku = regula.typ === 'coroczny' && regula.doRokuUrodzin !== undefined && d.urodzenie ? Number(d.urodzenie.slice(0, 4)) + regula.doRokuUrodzin : null;
-    const nastepnyWLimicie = nastepny && (limitRoku === null || Number(nastepny.slice(0, 4)) <= limitRoku) ? nastepny : undefined;
+    const nastepnyWLimicie =
+      nastepny && (limitRoku === null || Number(nastepny.slice(0, 4)) <= limitRoku)
+        ? regula.typ === 'coroczny' && d.urodzenie ? terminCorocznyZOstatnim(regula, d.urodzenie, nastepny) : nastepny
+        : undefined;
     return {
       idSprawy: sprawa.idSprawy,
       termin: null,
@@ -312,17 +373,27 @@ function terminSprawy(sprawa: PozycjaPlanu, w: WejscieTerminow, d: DatyRodziny):
 
   let wynik = sprawa.idPozycji === null ? terminOplaceniaSkladek(sprawa) : terminRegulyPozycji(sprawa.idPozycji, sprawa, d, w);
 
+  // Sytuacja szczególna (u25): po stracie dziecka K06 ma termin data porodu + 3 dni.
+  const terminPoStracie = sprawa.sytuacjaSzczegolna?.terminPoStracie;
+  if (terminPoStracie) wynik = { ...wynik, termin: terminPoStracie, szacowany: false };
+
   // Sprawa powtarzalna, która wróciła do statusu do zrobienia, ma termin następnego cyklu.
   if (czyWracaDoZrobienia(sprawa, w.dzis) && sprawa.dataOznaczenia) {
-    const nastepny = nastepnyTerminPowtarzalny(sprawa.idSprawy, sprawa.dataOznaczenia);
+    const surowy = nastepnyTerminPowtarzalny(sprawa.idSprawy, sprawa.dataOznaczenia);
+    const regula = sprawa.idPozycji ? REGULY_POZYCJI[sprawa.idPozycji] : undefined;
+    const nastepny = surowy && regula?.typ === 'coroczny' && d.urodzenie ? terminCorocznyZOstatnim(regula, d.urodzenie, surowy) : surowy;
     if (nastepny && (wynik.termin === null || wynik.termin < nastepny)) wynik = { ...wynik, termin: nastepny };
   }
 
   const termin = wynik.termin;
+  const zaZyciem = w.daneCiazy?.zaswiadczenieZaZyciem === true || w.daneCiazy?.ciezkaChorobaDziecka === true;
   const koszt =
     sprawa.idPozycji === null
       ? ({ rodzaj: 'brak' } as const)
-      : kosztSprawy(sprawa.idPozycji, pozycjaKatalogu?.kosztSpoznienia, termin, w.dzis, w.katalog, sprawa.liczbaDzieci, dochod);
+      : kosztSprawy(sprawa.idPozycji, pozycjaKatalogu?.kosztSpoznienia, termin, w.dzis, w.katalog, sprawa.liczbaDzieci, dochod, {
+          dataKotwicy: wynik.kotwica?.data,
+          zaZyciem,
+        });
   return {
     idSprawy: sprawa.idSprawy,
     termin,

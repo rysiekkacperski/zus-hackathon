@@ -29,13 +29,17 @@ export function WidokWyslanegoPytania({ params }: { params: PageProps<'/pytania-
   const stanKonta = useStanKonta();
   const stanZus = useStanSymulowanegoZus(konto?.pesel);
 
-  // Odczyt korespondencji przy otwarciu pytania: nowa odpowiedź ZUS trafia do kopii i do wiadomości (R5).
-  const odczytano = useRef(false);
+  // Odczyt korespondencji przy każdym otwarciu pytania, także po powrocie na trasę zachowaną przez Cache
+  // Components: nowa odpowiedź ZUS trafia do kopii i do wiadomości (R5). Odstęp 1 s chroni przed podwójnym
+  // odczytem przy ponownym montowaniu w trybie deweloperskim.
+  const pesel = konto?.pesel ?? null;
+  const ostatniOdczyt = useRef(0);
   useEffect(() => {
-    if (odczytano.current || konto === null) return;
-    odczytano.current = true;
-    odczytajKorespondencje(konto.pesel, pobierzKontekstOperacji());
-  }, [konto]);
+    const teraz = Date.now();
+    if (pesel === null || teraz - ostatniOdczyt.current < 1000) return;
+    ostatniOdczyt.current = teraz;
+    odczytajKorespondencje(pesel, pobierzKontekstOperacji());
+  }, [pesel]);
 
   const pytanie = useMemo(
     () =>

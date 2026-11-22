@@ -39,9 +39,15 @@ export function okresOchrony(wniosek: Pick<WniosekOUrlop, 'okresy'>): OkresWnios
   return wniosek.okresy[0] ?? null;
 }
 
-/** Komunikat na ViewLeaveRequestSent: 0200 przy łączeniu, 0199 gdy ochrona zaczyna się po dniu złożenia, inaczej 0135. */
-export function komunikatWyslania(wniosek: Pick<WniosekOUrlop, 'podrodzaj' | 'dataZlozenia' | 'dataPoczatkuOchrony'>): '0135' | '0199' | '0200' {
+/**
+ * Komunikat na ViewLeaveRequestSent: 0200 przy łączeniu, 0286 przy obniżeniu wymiaru czasu pracy, 0199 gdy ochrona
+ * zaczyna się po dniu złożenia, inaczej 0135.
+ */
+export function komunikatWyslania(
+  wniosek: Pick<WniosekOUrlop, 'podrodzaj' | 'dataZlozenia' | 'dataPoczatkuOchrony'>,
+): '0135' | '0199' | '0200' | '0286' {
   if (wniosek.podrodzaj === 'laczenie-z-praca') return '0200';
+  if (wniosek.podrodzaj === 'obnizenie-wymiaru') return '0286';
   if (wniosek.dataZlozenia && wniosek.dataPoczatkuOchrony && porownajDaty(wniosek.dataPoczatkuOchrony, wniosek.dataZlozenia) > 0) return '0199';
   return '0135';
 }

@@ -86,8 +86,8 @@ export function komunikatStanu(
 
 /**
  * Dane drugiego rodzica z kopii Danych z konta ZUS mocodawcy: wyłącznie tytuły i okresy ubezpieczenia
- * z ubezpieczeniem chorobowym, podstawami składek i informacją, czy płatnik składek wypłaca zasiłki,
- * oraz wypłacone zasiłki (R-PEL-ZAKRES). Zaświadczeń e-ZLA i pozostałych danych konta nie przenosi.
+ * z ubezpieczeniem chorobowym, podstawami składek i informacją, czy płatnik składek wypłaca zasiłki
+ * (R-PEL-ZAKRES, 3.3.3.2.2 KA-01). Lista wypłaconych zasiłków zostaje pusta.
  */
 export function daneZPelnomocnictwa(kopiaMocodawcy: DaneZKontaZus): DaneDrugiegoRodzicaZKonta {
   return {
@@ -101,7 +101,7 @@ export function daneZPelnomocnictwa(kopiaMocodawcy: DaneZKontaZus): DaneDrugiego
       podstawySkladek: t.podstawySkladek.map((p) => ({ ...p })),
       platnik: { ...t.platnik },
     })),
-    zasilki: kopiaMocodawcy.zasilki.map((z) => ({ ...z })),
+    zasilki: [],
     odczytano: kopiaMocodawcy.odczytano,
   };
 }

@@ -8,6 +8,7 @@ import { zastosujZmianeProfilu, zbudujProfilZeSzkicu } from '@/domena/profil/zap
 import type { KontekstOperacji, StanRodziny, WynikOperacji } from '@/domena/typy';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
+import { przeliczWnioskiZamPoPorodzie } from '@/dane/magazyn/operacje/wnioski-zam-rozszerzenia';
 import {
   odczytajStanRodziny,
   odczytajZalogowanego,
@@ -81,6 +82,9 @@ export function zapiszZmianyProfilu(ctx: KontekstOperacji): WynikOperacji {
 
     const przeliczenie = przeliczRodzine(rodzina.idRodziny, ctx);
     if (!przeliczenie.ok) return przeliczenie;
+    // Potwierdzona w profilu data porodu przelicza wnioski ZAM złożone przed porodem (KA-19, KA-20, KA-22 3.9.1.3.1).
+    const zam = przeliczWnioskiZamPoPorodzie(ctx);
+    if (!zam.ok) return zam;
     return { ok: true, wartosc: undefined };
   });
 }

@@ -85,6 +85,13 @@ export const idWidokowZTrasa = [
   'ViewZas53Data',
   'ViewZas53Summary',
   'ViewZas53Sent',
+  'ViewZ15Start',
+  'ViewZ15Situation',
+  'ViewZ15Statements',
+  'ViewZ15Data',
+  'ViewZ15Summary',
+  'ViewZ15Sent',
+  'ViewZ15ForPayer',
   'ViewLeaveRequestType',
   'ViewLeaveRequestForm',
   'ViewLeaveRequestSummary',
@@ -175,6 +182,8 @@ export const kanalEWizyty = 'e-wizyta';
 /** Widoki pozycji menu bocznego (sekcja menu według roli). */
 export type WidokMenu =
   | 'ViewFamilyPlan'
+  | 'ViewProfileSummary'
+  | 'ViewSpecialSituation'
   | 'ViewDeadlines'
   | 'ViewApplicationList'
   | 'ViewCalcMaternityInput'
@@ -344,18 +353,18 @@ export const mapaTras: readonly WpisTrasy[] = [
   {
     widok: 'ViewProfileSummary', tryb: 'rodzina', wzorzec: '/profil-rodziny', folder: '(strefa)/profil-rodziny',
     folderWidoku: '(strefa)/profil-na-start/podsumowanie',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR,
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewProfileSummary',
     rodzic: PLAN, nastepnyZastepczy: { widok: 'ViewSecondParentPowerOfAttorney' }, zapytanie: [], jednostka: 'u11',
   },
   {
     widok: 'ViewBirthDetails', tryb: 'zmiana', wzorzec: '/profil-rodziny/dane-dziecka', folder: '(strefa)/profil-rodziny/dane-dziecka',
     folderWidoku: '(strefa)/narodziny/dane-dziecka',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R,
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R, pozycjaMenu: 'ViewProfileSummary',
     rodzic: { widok: 'ViewProfileSummary', tryb: 'rodzina' }, nastepnyZastepczy: { widok: 'ViewProfileSummary', tryb: 'rodzina' }, zapytanie: [], jednostka: 'u19',
   },
   {
     widok: 'ViewSecondParentPowerOfAttorney', wzorzec: '/profil-rodziny/pelnomocnictwo', folder: '(strefa)/profil-rodziny/pelnomocnictwo',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R,
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R, pozycjaMenu: 'ViewProfileSummary',
     rodzic: { widok: 'ViewProfileSummary', tryb: 'rodzina' }, nastepnyZastepczy: { widok: 'ViewProfileSummary', tryb: 'rodzina' }, zapytanie: [], jednostka: 'u23',
   },
 
@@ -377,7 +386,7 @@ export const mapaTras: readonly WpisTrasy[] = [
   },
   {
     widok: 'ViewSpecialSituation', wzorzec: '/sytuacja-szczegolna', folder: '(strefa)/sytuacja-szczegolna',
-    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewFamilyPlan',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewSpecialSituation',
     rodzic: PLAN, nastepnyZastepczy: PLAN, zapytanie: [], jednostka: 'u25',
   },
 
@@ -585,6 +594,43 @@ export const mapaTras: readonly WpisTrasy[] = [
   {
     widok: 'ViewZas53Sent', wzorzec: '/wnioski/zas-53/wyslany', folder: '(strefa)/wnioski/zas-53/wyslany',
     grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R, pozycjaMenu: 'ViewApplicationList',
+    rodzic: WNIOSKI, nastepnyZastepczy: PLAN, zapytanie: ['wniosek'], jednostka: 'u30',
+  },
+
+  // Wniosek o zasiłek opiekuńczy Z-15
+  {
+    widok: 'ViewZ15Start', wzorzec: '/wnioski/z-15', folder: '(strefa)/wnioski/z-15',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewFamilyPlan',
+    rodzic: { widok: 'ViewFamilyPlan' }, nastepnyZastepczy: { widok: 'ViewZ15Situation' }, zapytanie: ['sprawa', 'sytuacja'], jednostka: 'u30',
+  },
+  {
+    widok: 'ViewZ15Situation', wzorzec: '/wnioski/z-15/sytuacja', folder: '(strefa)/wnioski/z-15/sytuacja',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewFamilyPlan',
+    rodzic: { widok: 'ViewZ15Start' }, nastepnyZastepczy: { widok: 'ViewZ15Statements' }, zapytanie: ['wniosek'], jednostka: 'u30',
+  },
+  {
+    widok: 'ViewZ15Statements', wzorzec: '/wnioski/z-15/oswiadczenia', folder: '(strefa)/wnioski/z-15/oswiadczenia',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewFamilyPlan',
+    rodzic: { widok: 'ViewZ15Situation' }, nastepnyZastepczy: { widok: 'ViewZ15Data' }, zapytanie: ['wniosek'], jednostka: 'u30',
+  },
+  {
+    widok: 'ViewZ15Data', wzorzec: '/wnioski/z-15/dane', folder: '(strefa)/wnioski/z-15/dane',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewFamilyPlan',
+    rodzic: { widok: 'ViewZ15Statements' }, nastepnyZastepczy: { widok: 'ViewZ15Summary' }, zapytanie: ['wniosek'], jednostka: 'u30',
+  },
+  {
+    widok: 'ViewZ15Summary', wzorzec: '/wnioski/z-15/podsumowanie', folder: '(strefa)/wnioski/z-15/podsumowanie',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewFamilyPlan',
+    rodzic: { widok: 'ViewZ15Data' }, nastepnyZastepczy: { widok: 'ViewZ15Sent' }, zapytanie: ['wniosek'], jednostka: 'u30',
+  },
+  {
+    widok: 'ViewZ15Sent', wzorzec: '/wnioski/z-15/wyslany', folder: '(strefa)/wnioski/z-15/wyslany',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewApplicationList',
+    rodzic: WNIOSKI, nastepnyZastepczy: PLAN, zapytanie: ['wniosek'], jednostka: 'u30',
+  },
+  {
+    widok: 'ViewZ15ForPayer', wzorzec: '/wnioski/z-15/dla-platnika', folder: '(strefa)/wnioski/z-15/dla-platnika',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_R_DR, pozycjaMenu: 'ViewApplicationList',
     rodzic: WNIOSKI, nastepnyZastepczy: PLAN, zapytanie: ['wniosek'], jednostka: 'u30',
   },
 

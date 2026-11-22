@@ -24,7 +24,13 @@ export interface FormularzPrzyjecia {
   rola: RolaRodzicaPrzyjmujacego | null;
   forma: FormaPrzyjecia | null;
   dataPrzyjecia: string;
+  dataWystapieniaDoSadu: string;               // tylko przysposobienie, obowiązkowo (3.3.4.1.3)
+  /** Data urodzenia pierwszego przyjętego dziecka; kolejne dzieci w polach dataUrodzenia2..5. */
   dataUrodzenia: string;
+  dataUrodzenia2: string;
+  dataUrodzenia3: string;
+  dataUrodzenia4: string;
+  dataUrodzenia5: string;
   liczbaDzieci: LiczbaDzieci | null;
   odroczenie: OdpowiedzTakNie | null;          // tylko rodzina zastępcza niezawodowa
   dataUprawomocnienia: string;                 // tylko przysposobienie, nieobowiązkowo
@@ -32,16 +38,36 @@ export interface FormularzPrzyjecia {
 
 export type PoleFormularzaPrzyjecia = keyof FormularzPrzyjecia;
 
+/** Pola dat urodzenia kolejnych przyjętych dzieci; przy pięciorgu i więcej pięć najmłodszych dzieci. */
+export const POLA_DAT_URODZENIA = [
+  'dataUrodzenia',
+  'dataUrodzenia2',
+  'dataUrodzenia3',
+  'dataUrodzenia4',
+  'dataUrodzenia5',
+] as const satisfies readonly PoleFormularzaPrzyjecia[];
+
+export type PoleDatyUrodzenia = (typeof POLA_DAT_URODZENIA)[number];
+
+/** Pola dat urodzenia pokazywane przy danej liczbie jednocześnie przyjętych dzieci. */
+export function polaDatUrodzenia(liczba: LiczbaDzieci | null): readonly PoleDatyUrodzenia[] {
+  return POLA_DAT_URODZENIA.slice(0, Math.min(Math.max(liczba ?? 1, 1), POLA_DAT_URODZENIA.length));
+}
+
 /** Kolejność pól na ekranie ze wzoru P21-02 (fokus na pierwszym polu z błędem). */
 export const KOLEJNOSC_POL_PRZYJECIA: readonly PoleFormularzaPrzyjecia[] = [
   'rola',
   'forma',
   'dataPrzyjecia',
-  'dataUrodzenia',
+  'dataWystapieniaDoSadu',
   'odroczenie',
   'dataUprawomocnienia',
   'liczbaDzieci',
+  ...POLA_DAT_URODZENIA,
 ];
+
+/** Horyzont daty wystąpienia do sądu opiekuńczego: dziś powiększone o 12 miesięcy. */
+export const HORYZONT_WYSTAPIENIA_DO_SADU_MIESIECY = 12;
 
 /** Horyzont daty przyjęcia: dziś powiększone o 12 miesięcy. */
 export const HORYZONT_PRZYJECIA_MIESIECY = 12;
@@ -68,17 +94,29 @@ export function formularzZPrzyjecia(
       rola: proponujRoleZPesel(pesel),
       forma: null,
       dataPrzyjecia: '',
+      dataWystapieniaDoSadu: '',
       dataUrodzenia: '',
+      dataUrodzenia2: '',
+      dataUrodzenia3: '',
+      dataUrodzenia4: '',
+      dataUrodzenia5: '',
       liczbaDzieci: 1,
       odroczenie: null,
       dataUprawomocnienia: '',
     };
   }
+  const daty = datyUrodzeniaPrzyjetych(przyjecie);
+  const data = (i: number) => (daty[i] ? formatuj(daty[i]) : '');
   return {
     rola: przyjecie.rolaRodzicaPrzyjmujacego,
     forma: przyjecie.forma,
     dataPrzyjecia: formatuj(przyjecie.dataPrzyjecia),
-    dataUrodzenia: formatuj(przyjecie.dataUrodzeniaDziecka),
+    dataWystapieniaDoSadu: przyjecie.dataWystapieniaDoSadu ? formatuj(przyjecie.dataWystapieniaDoSadu) : '',
+    dataUrodzenia: data(0),
+    dataUrodzenia2: data(1),
+    dataUrodzenia3: data(2),
+    dataUrodzenia4: data(3),
+    dataUrodzenia5: data(4),
     liczbaDzieci: przyjecie.liczbaPrzyjetychDzieci,
     odroczenie:
       przyjecie.odroczenieObowiazkuSzkolnego === undefined ? null : przyjecie.odroczenieObowiazkuSzkolnego ? 'tak' : 'nie',
@@ -111,11 +149,23 @@ export function walidujDanePrzyjecia(f: FormularzPrzyjecia, dzis: DataISO): Bled
   else if (porownajDaty(przyjecie.data, najpozniejszaDataPrzyjecia(dzis)) > 0) bledy.dataPrzyjecia = '0089';
   else dataPrzyjecia = przyjecie.data;
 
-  const urodzenie = odczytajDate(f.dataUrodzenia);
-  if ('pusta' in urodzenie) bledy.dataUrodzenia = '0163';
-  else if ('kod' in urodzenie) bledy.dataUrodzenia = urodzenie.kod;
-  else if (porownajDaty(urodzenie.data, dzis) > 0) bledy.dataUrodzenia = '0191';
-  else if (dataPrzyjecia !== null && porownajDaty(urodzenie.data, dataPrzyjecia) > 0) bledy.dataUrodzenia = '0090';
+  // Data urodzenia każdego przyjętego dziecka (3.3.4.1.3): 0163, 0010, 0191, 0090 przy polu dziecka.
+  for (const pole of polaDatUrodzenia(f.liczbaDzieci)) {
+    const urodzenie = odczytajDate(f[pole]);
+    if ('pusta' in urodzenie) bledy[pole] = '0163';
+    else if ('kod' in urodzenie) bledy[pole] = urodzenie.kod;
+    else if (porownajDaty(urodzenie.data, dzis) > 0) bledy[pole] = '0191';
+    else if (dataPrzyjecia !== null && porownajDaty(urodzenie.data, dataPrzyjecia) > 0) bledy[pole] = '0090';
+  }
+
+  if (f.forma === 'przysposobienie') {
+    const sad = odczytajDate(f.dataWystapieniaDoSadu);
+    if ('pusta' in sad) bledy.dataWystapieniaDoSadu = '0273';
+    else if ('kod' in sad) bledy.dataWystapieniaDoSadu = sad.kod;
+    else if (porownajDaty(sad.data, dodajMiesiace(dzis, HORYZONT_WYSTAPIENIA_DO_SADU_MIESIECY)) > 0) {
+      bledy.dataWystapieniaDoSadu = '0274';
+    }
+  }
 
   if (f.forma === 'przysposobienie') {
     const uprawomocnienie = odczytajDate(f.dataUprawomocnienia);
@@ -129,8 +179,16 @@ export function walidujDanePrzyjecia(f: FormularzPrzyjecia, dzis: DataISO): Bled
 export function zbudujPrzyjecie(f: FormularzPrzyjecia, dzis: DataISO): PrzyjecieDziecka | null {
   if (Object.keys(walidujDanePrzyjecia(f, dzis)).length > 0) return null;
   const dataPrzyjecia = parsujDate(f.dataPrzyjecia.trim());
-  const dataUrodzenia = parsujDate(f.dataUrodzenia.trim());
-  if (f.rola === null || f.forma === null || f.liczbaDzieci === null || dataPrzyjecia === null || dataUrodzenia === null) {
+  const datyUrodzenia = polaDatUrodzenia(f.liczbaDzieci).map((pole) => parsujDate(f[pole].trim()));
+  const dataUrodzenia = datyUrodzenia[0] ?? null;
+  if (
+    f.rola === null ||
+    f.forma === null ||
+    f.liczbaDzieci === null ||
+    dataPrzyjecia === null ||
+    dataUrodzenia === null ||
+    datyUrodzenia.some((d) => d === null)
+  ) {
     return null;
   }
   const przyjecie: PrzyjecieDziecka = {
@@ -138,11 +196,14 @@ export function zbudujPrzyjecie(f: FormularzPrzyjecia, dzis: DataISO): Przyjecie
     forma: f.forma,
     dataPrzyjecia,
     dataUrodzeniaDziecka: dataUrodzenia,
+    datyUrodzeniaDzieci: datyUrodzenia as DataISO[],
     liczbaPrzyjetychDzieci: f.liczbaDzieci,
     zrodlo: 'odpowiedz-rodzica',
   };
   if (f.forma === 'rodzina-zastepcza-niezawodowa') przyjecie.odroczenieObowiazkuSzkolnego = f.odroczenie === 'tak';
   if (f.forma === 'przysposobienie') {
+    const sad = parsujDate(f.dataWystapieniaDoSadu.trim());
+    if (sad !== null) przyjecie.dataWystapieniaDoSadu = sad;
     const uprawomocnienie = parsujDate(f.dataUprawomocnienia.trim());
     if (uprawomocnienie !== null) przyjecie.dataUprawomocnienia = uprawomocnienie;
   }
@@ -194,28 +255,66 @@ export function wiekGranicznyPrzyjecia(p: PrzyjecieDziecka, katalog: Katalog): n
   return wiekGraniczny(p.forma, p.odroczenieObowiazkuSzkolnego === true, katalog);
 }
 
-/** Czy dziecko w dniu przyjęcia nie ukończyło `lata` lat (urodziny kończą wiek). */
+/** Daty urodzenia wszystkich przyjętych dzieci (dane sprzed 3.3.4.1.3 mają jedną datę). */
+export function datyUrodzeniaPrzyjetych(p: PrzyjecieDziecka): DataISO[] {
+  return p.datyUrodzeniaDzieci && p.datyUrodzeniaDzieci.length > 0 ? p.datyUrodzeniaDzieci : [p.dataUrodzeniaDziecka];
+}
+
+/**
+ * Początek terminów spraw K31 i K32 (3.3.4.1.4): przy przysposobieniu późniejsza z dat przyjęcia dziecka
+ * i wystąpienia do sądu opiekuńczego, w pozostałych formach data przyjęcia dziecka.
+ */
+export function poczatekTerminowPrzyjecia(p: PrzyjecieDziecka): DataISO {
+  if (p.forma !== 'przysposobienie' || p.dataWystapieniaDoSadu === undefined) return p.dataPrzyjecia;
+  return porownajDaty(p.dataWystapieniaDoSadu, p.dataPrzyjecia) > 0 ? p.dataWystapieniaDoSadu : p.dataPrzyjecia;
+}
+
+/** Daty urodzenia dzieci, które w dniu przyjęcia nie ukończyły `lata` lat (urodziny kończą wiek). */
+export function dzieciPrzedUkonczeniemLat(p: PrzyjecieDziecka, lata: number): DataISO[] {
+  return datyUrodzeniaPrzyjetych(p).filter((d) => porownajDaty(p.dataPrzyjecia, dodajLata(d, lata)) < 0);
+}
+
+/** Daty urodzenia dzieci, które w dniu przyjęcia nie ukończyły `miesiace` miesięcy. */
+export function dzieciPrzedUkonczeniemMiesiecy(p: PrzyjecieDziecka, miesiace: number): DataISO[] {
+  return datyUrodzeniaPrzyjetych(p).filter((d) => porownajDaty(p.dataPrzyjecia, dodajMiesiace(d, miesiace)) < 0);
+}
+
+/** Czy co najmniej jedno przyjęte dziecko w dniu przyjęcia nie ukończyło `lata` lat. */
 export function przedUkonczeniemLat(p: PrzyjecieDziecka, lata: number): boolean {
-  return porownajDaty(p.dataPrzyjecia, dodajLata(p.dataUrodzeniaDziecka, lata)) < 0;
+  return dzieciPrzedUkonczeniemLat(p, lata).length > 0;
 }
 
-/** Czy dziecko w dniu przyjęcia nie ukończyło `miesiace` miesięcy. */
+/** Czy co najmniej jedno przyjęte dziecko w dniu przyjęcia nie ukończyło `miesiace` miesięcy. */
 export function przedUkonczeniemMiesiecy(p: PrzyjecieDziecka, miesiace: number): boolean {
-  return porownajDaty(p.dataPrzyjecia, dodajMiesiace(p.dataUrodzeniaDziecka, miesiace)) < 0;
+  return dzieciPrzedUkonczeniemMiesiecy(p, miesiace).length > 0;
 }
 
-/** Dziecko w wieku uprawniającym do urlopu na warunkach urlopu macierzyńskiego i rodzicielskiego. */
-export function czyWWiekuUprawniajacym(p: PrzyjecieDziecka, katalog: Katalog): boolean {
+/** Daty urodzenia dzieci w wieku uprawniającym do urlopu na warunkach urlopu macierzyńskiego i rodzicielskiego. */
+export function dzieciWWiekuUprawniajacym(p: PrzyjecieDziecka, katalog: Katalog): DataISO[] {
   const wiek = wiekGranicznyPrzyjecia(p, katalog);
-  return wiek > 0 && przedUkonczeniemLat(p, wiek);
+  return wiek > 0 ? dzieciPrzedUkonczeniemLat(p, wiek) : [];
+}
+
+/** Co najmniej jedno dziecko w wieku uprawniającym do urlopu na warunkach urlopu macierzyńskiego i rodzicielskiego. */
+export function czyWWiekuUprawniajacym(p: PrzyjecieDziecka, katalog: Katalog): boolean {
+  return dzieciWWiekuUprawniajacym(p, katalog).length > 0;
+}
+
+/** Najstarsze (najwcześniej urodzone) i najmłodsze dziecko z listy dat urodzenia. */
+export function najstarsze(daty: readonly DataISO[]): DataISO | undefined {
+  return [...daty].sort(porownajDaty)[0];
+}
+
+export function najmlodsze(daty: readonly DataISO[]): DataISO | undefined {
+  return [...daty].sort(porownajDaty).at(-1);
 }
 
 // --- Komunikaty planu ---------------------------------------------------------------------------
 
 export interface KomunikatPlanuPrzyjecia {
   etap: Etap;
-  kod: '0091' | '0092';
-  parametry?: { wiek: string };
+  kod: '0091' | '0092' | '0263';
+  parametry?: { wiek: string; liczbaDzieci?: string };
 }
 
 /**
@@ -231,8 +330,14 @@ export function komunikatyPlanuPoPrzyjeciu(
   if (p === undefined) return [];
   if (p.forma === 'rodzina-zastepcza-zawodowa') return [{ etap: 'urlopy-i-zasilek', kod: '0092' }];
   const wiek = wiekGranicznyPrzyjecia(p, katalog);
-  if (przedUkonczeniemLat(p, wiek)) return [];
-  return [{ etap: 'urlopy-i-zasilek', kod: '0091', parametry: { wiek: String(wiek) } }];
+  const wWieku = dzieciPrzedUkonczeniemLat(p, wiek).length;
+  const wszystkie = datyUrodzeniaPrzyjetych(p).length;
+  if (wWieku === 0) return [{ etap: 'urlopy-i-zasilek', kod: '0091', parametry: { wiek: String(wiek) } }];
+  // 3.3.4.1.4: część przyjętych dzieci ukończyła wiek graniczny, więc wymiar urlopu liczymy dla dzieci w wieku.
+  if (wWieku < wszystkie) {
+    return [{ etap: 'urlopy-i-zasilek', kod: '0263', parametry: { wiek: String(wiek), liczbaDzieci: String(wWieku) } }];
+  }
+  return [];
 }
 
 // --- Terminy spraw po przyjęciu -----------------------------------------------------------------
@@ -246,6 +351,38 @@ export interface TerminPoPrzyjeciu {
   kodBrakuTerminu?: '0192' | '0259';
 }
 
+/**
+ * Termin sprawy K09 po przysposobieniu (3.3.4.1.4, KA-07, KA-09): 7 dni przed ostatnim dniem rozpoczęcia
+ * urlopu ojcowskiego, czyli ostatni dzień złożenia pracodawcy wniosku o urlop. Ostatni dzień rozpoczęcia
+ * 14 dni urlopu przypada w 12 miesiącach od uprawomocnienia się orzeczenia i 14 dni przed ukończeniem
+ * 14 lat przez najstarsze dziecko poniżej tego wieku.
+ */
+export function terminK09PoPrzysposobieniu(p: PrzyjecieDziecka, dataUprawomocnienia: DataISO): DataISO {
+  const odUprawomocnienia = dodajDni(dodajMiesiace(dataUprawomocnienia, 12), -13);
+  const najstarszePonizej14 = najstarsze(dzieciPrzedUkonczeniemLat(p, 14)) ?? p.dataUrodzeniaDziecka;
+  const przed14 = dodajDni(dodajLata(najstarszePonizej14, 14), -14);
+  return dodajDni(minData(odUprawomocnienia, przed14), -7);
+}
+
+/** Liczba dzieci spełniających warunek wieku sprawy po przyjęciu (kwota za każde dziecko, 3.3.4.1.4). */
+export function liczbaDzieciSprawyPoPrzyjeciu(idPozycji: IdPozycji, p: PrzyjecieDziecka, katalog: Katalog): number {
+  switch (idPozycji) {
+    case 'K09':
+      return dzieciPrzedUkonczeniemLat(p, 14).length;
+    case 'K10':
+    case 'K16':
+    case 'K31':
+    case 'K32':
+      return dzieciWWiekuUprawniajacym(p, katalog).length;
+    case 'K15':
+      return dzieciPrzedUkonczeniemLat(p, 1).length;
+    case 'K18':
+      return dzieciPrzedUkonczeniemMiesiecy(p, 36).length;
+    default:
+      return p.liczbaPrzyjetychDzieci;
+  }
+}
+
 /** Sprawy, których terminy po przyjęciu dziecka liczy reguła tej jednostki. */
 export const SPRAWY_Z_TERMINEM_PRZYJECIA: readonly IdPozycji[] = [
   'K05', 'K09', 'K10', 'K12', 'K14', 'K15', 'K16', 'K17', 'K18', 'K31', 'K32', 'K33',
@@ -257,24 +394,29 @@ export const SPRAWY_Z_TERMINEM_PRZYJECIA: readonly IdPozycji[] = [
  */
 export function terminPoPrzyjeciu(idPozycji: IdPozycji, p: PrzyjecieDziecka, katalog: Katalog): TerminPoPrzyjeciu | null {
   const przyjecie = { rodzaj: 'data-przyjecia' as const, data: p.dataPrzyjecia };
-  const urodzenie = { rodzaj: 'data-urodzenia-dziecka' as const, data: p.dataUrodzeniaDziecka };
-  const przed18 = dodajDni(dodajLata(p.dataUrodzeniaDziecka, 18), -1);
+  const poczatek = { rodzaj: 'data-przyjecia' as const, data: poczatekTerminowPrzyjecia(p) };
+  // 3.3.4.1.4: termin zależny od wieku od najstarszego dziecka spełniającego warunek sprawy, K10 od najmłodszego.
+  const urodzenieZ = (daty: readonly DataISO[], najmlodszego = false) => {
+    const data = (najmlodszego ? najmlodsze(daty) : najstarsze(daty)) ?? p.dataUrodzeniaDziecka;
+    return { rodzaj: 'data-urodzenia-dziecka' as const, data };
+  };
+  const urodzenie = urodzenieZ(datyUrodzeniaPrzyjetych(p));
+  const przed18 = dodajDni(dodajLata(urodzenie.data, 18), -1);
   switch (idPozycji) {
     case 'K31':
-      return { termin: dodajDni(p.dataPrzyjecia, 7), drugiTermin: dodajDni(p.dataPrzyjecia, 21), kotwica: przyjecie };
+      return { termin: dodajDni(poczatek.data, 7), drugiTermin: dodajDni(poczatek.data, 21), kotwica: poczatek };
     case 'K32':
-      return { termin: dodajDni(p.dataPrzyjecia, 21), kotwica: przyjecie };
+      return { termin: dodajDni(poczatek.data, 21), kotwica: poczatek };
     case 'K33':
       return { termin: null, kotwica: null };
     case 'K09': {
       if (p.dataUprawomocnienia === undefined) return { termin: null, kotwica: null, kodBrakuTerminu: '0192' };
-      const odUprawomocnienia = dodajDni(dodajMiesiace(p.dataUprawomocnienia, 12), -14);
-      const przed14 = dodajDni(dodajLata(p.dataUrodzeniaDziecka, 14), -14);
-      return { termin: minData(odUprawomocnienia, przed14), kotwica: { rodzaj: 'data-uprawomocnienia', data: p.dataUprawomocnienia } };
+      return { termin: terminK09PoPrzysposobieniu(p, p.dataUprawomocnienia), kotwica: { rodzaj: 'data-uprawomocnienia', data: p.dataUprawomocnienia } };
     }
     case 'K10': {
       const wiek = wiekGranicznyPrzyjecia(p, katalog);
-      return { termin: dodajDni(dodajLata(p.dataUrodzeniaDziecka, wiek), -1), kotwica: urodzenie };
+      const u = urodzenieZ(dzieciWWiekuUprawniajacym(p, katalog), true);
+      return { termin: dodajDni(dodajLata(u.data, wiek), -1), kotwica: u };
     }
     case 'K05':
       if (p.forma !== 'przysposobienie') return { termin: dodajDni(p.dataPrzyjecia, 7), kotwica: przyjecie };
@@ -286,10 +428,12 @@ export function terminPoPrzyjeciu(idPozycji: IdPozycji, p: PrzyjecieDziecka, kat
     case 'K14':
     case 'K17':
       return { termin: minData(dodajMiesiace(p.dataPrzyjecia, 12), przed18), kotwica: przyjecie };
-    case 'K15':
-      return { termin: dodajDni(dodajLata(p.dataUrodzeniaDziecka, 1), -1), kotwica: urodzenie };
+    case 'K15': {
+      const u = urodzenieZ(dzieciPrzedUkonczeniemLat(p, 1));
+      return { termin: dodajDni(dodajLata(u.data, 1), -1), kotwica: u };
+    }
     case 'K18': {
-      const roczek = dodajMiesiace(p.dataUrodzeniaDziecka, 12);
+      const roczek = dodajMiesiace(urodzenieZ(dzieciPrzedUkonczeniemMiesiecy(p, 36)).data, 12);
       return porownajDaty(p.dataPrzyjecia, roczek) >= 0
         ? { termin: ostatniDzienMiesiaca(p.dataPrzyjecia), kotwica: przyjecie }
         : { termin: ostatniDzienMiesiaca(roczek), kotwica: urodzenie };

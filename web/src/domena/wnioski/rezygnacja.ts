@@ -299,3 +299,27 @@ export function komunikatPoWyslaniu(
   }
   return { kod: '0135', parametry: { data: formatuj(zlozono) } };
 }
+
+// --- Rezygnacja z części zasiłku po wniosku ZAM wyłącznie o 14 tygodni (3.9.2.1.3) ----------------
+
+/** Data rezygnacji z zasiłku i termin złożenia rezygnacji po wniosku ZAM matki wyłącznie o 14 tygodni. */
+export interface RezygnacjaPoZamZa14Tygodni {
+  /** Dzień następujący po ostatnim dniu 14. tygodnia po porodzie (D + 98). */
+  dataRezygnacji: DataISO;
+  /** Dzień poprzedzający dzień rezygnacji. */
+  termin: DataISO;
+}
+
+/**
+ * Rozpoznaje wniosek ZAM matki wyłącznie o 14 tygodni, czyli z jednym okresem urlopu macierzyńskiego od dnia
+ * porodu do ostatniego dnia 14. tygodnia, i zwraca datę rezygnacji z zasiłku oraz termin złożenia rezygnacji.
+ */
+export function rezygnacjaPoZamZa14Tygodni(wniosek: WniosekZam, dataPorodu: DataISO | null | undefined): RezygnacjaPoZamZa14Tygodni | null {
+  if (!dataPorodu || wniosek.przejecie) return null;
+  const okres = okresZamZa14Tygodni(dataPorodu);
+  const [jedyny, ...reszta] = wniosek.okresy;
+  if (!jedyny || reszta.length > 0 || jedyny.rodzajUrlopu !== 'macierzynski') return null;
+  if (jedyny.od !== okres.od || jedyny.do !== okres.do) return null;
+  const dataRezygnacji = dodajDni(dataPorodu, DNI_14_TYGODNI);
+  return { dataRezygnacji, termin: dodajDni(dataRezygnacji, -1) };
+}

@@ -23,6 +23,7 @@ import {
   proponujFormeZatrudnienia,
   tytulDlaFormy,
   tytulyTrwajace,
+  tytulyZakonczone,
 } from '@/domena/profil/forma-zatrudnienia';
 import {
   czesciDanychZKontaZus,
@@ -31,9 +32,10 @@ import {
   nastepnyEkran,
   poprzedniEkran,
 } from '@/domena/profil/nawigacja';
-import { ustalPlatnikaZasilku } from '@/domena/profil/platnik';
+import { czyPlatnikPrzewidywany, platnicyTytulow, ustalPlatnikaZasilku } from '@/domena/profil/platnik';
 import type {
   DanaZeZrodla,
+  DataISO,
   DaneRodzica,
   DaneZKontaZus,
   FormaZatrudnienia,
@@ -133,10 +135,42 @@ function opisBrakuTytulu(kopia: DaneZKontaZus | null): string {
   return od ? tekst.brakTytuluOd({ data: formatujDate(od) }) : tekst.brakTytulu;
 }
 
-function PlatnikZasilku({ forma, kopia }: { forma: DanaZeZrodla<FormaZatrudnienia>; kopia: DaneZKontaZus | null }) {
+/** Płatnik zasiłku przy każdym tytule z ubezpieczeniem chorobowym z oznaczeniem płatnika głównego (KA-01 3.3.1.1.5). */
+function PlatnicyTytulow({ kopia, glowny }: { kopia: DaneZKontaZus | null; glowny: TytulUbezpieczenia | undefined }) {
+  const p = tekst.platnicy;
+  if (kopia === null) return null;
+  const lista = platnicyTytulow(tytulyTrwajace(kopia), glowny);
+  if (lista.length < 2) return null;
+  return (
+    <span className="mt-3 block">
+      <span className="block text-small-strong">{p.kazdyTytulEtykieta}</span>
+      {lista.map((pt) => (
+        <span key={pt.tytul.id} className="block">
+          {p.kazdyTytul({
+            tytul: tekst.rodzajeTytulow[pt.tytul.rodzaj],
+            nazwa: pt.nazwaPlatnikaSkladek,
+            platnik: pt.platnik === 'platnik-skladek' ? pt.nazwaPlatnikaSkladek : pt.platnik === 'zus' ? p.zus : p.nieustalony,
+          })}
+          {pt.glowny ? ` (${p.glowny})` : null}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function PlatnikZasilku({
+  forma,
+  kopia,
+  dataZdarzenia,
+}: {
+  forma: DanaZeZrodla<FormaZatrudnienia>;
+  kopia: DaneZKontaZus | null;
+  dataZdarzenia?: DataISO;
+}) {
   const p = tekst.platnicy;
   const tytul = tytulDlaFormy(kopia, forma.wartosc);
-  const ustalenie = ustalPlatnikaZasilku(forma.wartosc, tytul, forma.zrodlo);
+  const zakonczone = kopia ? tytulyZakonczone(kopia) : [];
+  const ustalenie = ustalPlatnikaZasilku(forma.wartosc, tytul, forma.zrodlo, zakonczone);
   if ('pytaj' in ustalenie) {
     const opis = ustalenie.nazwaPlatnika
       ? p.brakInformacji({ nazwa: ustalenie.nazwaPlatnika })
@@ -156,6 +190,20 @@ function PlatnikZasilku({ forma, kopia }: { forma: DanaZeZrodla<FormaZatrudnieni
       </>
     );
   }
+  if (forma.wartosc === 'brak-tytulu' && ustalenie.platnik === 'zus') {
+    const koniec = zakonczone
+      .map((t) => t.do)
+      .filter((d): d is string => d !== undefined)
+      .sort()
+      .pop();
+    return (
+      <>
+        <span className="block">{p.zus}</span>
+        {koniec ? <span className="block">{p.poUstaniu({ data: formatujDate(koniec) })}</span> : null}
+        <ZrodloDanejPola zrodlo="konto-zus" className="mt-3" />
+      </>
+    );
+  }
   if (forma.wartosc === 'brak-tytulu') {
     return (
       <>
@@ -169,7 +217,14 @@ function PlatnikZasilku({ forma, kopia }: { forma: DanaZeZrodla<FormaZatrudnieni
     <>
       <span className="block">{wyplaca ? (ustalenie.nazwa ?? p.zus) : p.zus}</span>
       <span className="block">{wyplaca ? p.wyplaca : p.niewyplaca({ nazwa: ustalenie.nazwa ?? '' })}</span>
+      <span className="block">{p.dalszaWyplata}</span>
+      {czyPlatnikPrzewidywany(tytul, dataZdarzenia) ? (
+        <span className="mt-3 block">
+          <Komunikat kod="0272" />
+        </span>
+      ) : null}
       <ZrodloDanejPola zrodlo={ustalenie.zrodlo} className="mt-3" />
+      <PlatnicyTytulow kopia={kopia} glowny={tytul} />
     </>
   );
 }
@@ -295,7 +350,7 @@ export function WidokDanychZKontaZus() {
   const zapiszIPrzejdz = () => {
     if (!forma) return;
 
-    const ustalenie = ustalPlatnikaZasilku(forma.wartosc, tytulFormy, forma.zrodlo);
+    const ustalenie = ustalPlatnikaZasilku(forma.wartosc, tytulFormy, forma.zrodlo, zakonczone);
     let platnik: PlatnikRodzica | null;
     if ('pytaj' in ustalenie) {
       const poprzedni = zapisane.platnikZasilku;
@@ -442,7 +497,15 @@ export function WidokDanychZKontaZus() {
                       </WierszDanych>
                     ) : null}
                     <WierszDanych etykieta={tekst.etykiety.platnik} ostatni>
-                      <PlatnikZasilku forma={forma} kopia={kopia} />
+                      <PlatnikZasilku
+                        forma={forma}
+                        kopia={kopia}
+                        dataZdarzenia={
+                          szkic?.daneCiazy.przewidywanyTerminPorodu ??
+                          szkic?.daneCiazy.dataPorodu ??
+                          szkic?.daneCiazy.przyjecie?.dataPrzyjecia
+                        }
+                      />
                     </WierszDanych>
                   </dl>
                 ) : null}

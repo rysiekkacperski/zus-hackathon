@@ -1,13 +1,14 @@
 'use client';
 
 // Pole rodzaju sytuacji ze wzoru P22-02: fieldset z dwiema grupami przycisków radio (dziecka, matki),
-// błąd 0006 i komunikaty przy polu (0194 przy poronieniu, 0037 z akcją potwierdzenia daty porodu).
+// błąd 0006 i komunikaty przy polu (0264 przy poronieniu, 0194 przy poronieniu potwierdzonym zaświadczeniem,
+// 0037 z akcją potwierdzenia daty porodu, 0277 przy braku zgody konta matki na dane dotyczące zdrowia).
 // Opuszczenie pola (walidacja na bieżąco) następuje po wyjściu fokusu poza fieldset i po wyborze rodzaju.
 import { Komunikat } from '@/komponenty/komunikat';
 import { Odnosnik } from '@/komponenty/odnosnik';
 import { BladPola, idBledu, opuszczonoKontener } from '@/komponenty/pole';
 import { trasy } from '@/komponenty/rama/trasy';
-import { RODZAJE_DZIECKA, RODZAJE_MATKI } from '@/domena/rodzina/sytuacje';
+import { RODZAJE_DZIECKA, RODZAJE_MATKI, komunikatPrzyRodzaju } from '@/domena/rodzina/sytuacje';
 import type { KodKomunikatu, RodzajSytuacjiSzczegolnej } from '@/domena/typy';
 import { teksty } from '@/teksty';
 
@@ -27,6 +28,7 @@ interface PoleRodzajuProps {
   onOpuszczenie?: () => void;
   blad: KodKomunikatu | null;
   pokazBrakDatyPorodu: boolean;
+  pokazBrakZgodyMatki?: boolean;
 }
 
 function GrupaRodzajow({
@@ -71,8 +73,16 @@ function GrupaRodzajow({
   );
 }
 
-export function PoleRodzaju({ wartosc, onZmiana, onOpuszczenie, blad, pokazBrakDatyPorodu }: PoleRodzajuProps) {
+export function PoleRodzaju({
+  wartosc,
+  onZmiana,
+  onOpuszczenie,
+  blad,
+  pokazBrakDatyPorodu,
+  pokazBrakZgodyMatki = false,
+}: PoleRodzajuProps) {
   const bladWyboru = blad === '0006';
+  const informacja = komunikatPrzyRodzaju(wartosc);
   function wybierz(rodzaj: RodzajSytuacjiSzczegolnej) {
     onZmiana(rodzaj);
     onOpuszczenie?.();
@@ -93,7 +103,8 @@ export function PoleRodzaju({ wartosc, onZmiana, onOpuszczenie, blad, pokazBrakD
         <GrupaRodzajow podpis={t.dotyczyMatki} rodzaje={RODZAJE_MATKI} wartosc={wartosc} onZmiana={wybierz} />
         {bladWyboru ? <BladPola id={idBledu(ID_POLA)} kod="0006" /> : null}
       </fieldset>
-      {wartosc === 'poronienie' ? <Komunikat kod="0194" /> : null}
+      {informacja ? <Komunikat kod={informacja} /> : null}
+      {pokazBrakZgodyMatki ? <Komunikat kod="0277" /> : null}
       {pokazBrakDatyPorodu ? (
         <Komunikat
           kod="0037"

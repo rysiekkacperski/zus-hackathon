@@ -69,6 +69,18 @@ export const PARAMETRY_PRAWA_ZAS53: ParametryPrawaZas53 = {
   stawkaBezKoduB: 80,
 };
 
+/** Próg zadłużenia z tytułu składek (1% minimalnego wynagrodzenia) w wersjach słownika kwot i progów. */
+export const PROGI_ZADLUZENIA_ZAS53: readonly { od: DataISO; prog: Grosze }[] = [
+  { od: '2026-01-01', prog: 4806 },
+  { od: '2027-01-01', prog: 4950 },
+];
+
+/** Próg zadłużenia obowiązujący w dniu `dzien`, czyli w dniu powstania prawa do zasiłku. */
+export function progZadluzeniaWDniu(dzien: DataISO): Grosze {
+  const wersja = [...PROGI_ZADLUZENIA_ZAS53].reverse().find((w) => porownajDaty(w.od, dzien) <= 0);
+  return (wersja ?? PROGI_ZADLUZENIA_ZAS53[0]).prog;
+}
+
 export type SciezkaZas53 = 'w-ubezpieczeniu' | 'po-ustaniu';
 
 export type DostepZas53 =
@@ -253,9 +265,12 @@ export interface WejscieUstaleniaPrawaZas53 {
   parametry?: Partial<ParametryPrawaZas53>;
 }
 
-/** Kod B oznacza ciążę; zaświadczenie w trybie alternatywnym przyjmujemy jako wystawione w ciąży (wzór P29-22). */
-export function czyStawkaPelna(z: ZaswiadczenieWnioskuZas53): boolean {
-  return z.zrodlo === 'tryb-alternatywny' || z.kodyLiterowe.includes('B');
+/**
+ * Stawka 100%: kod B oznacza ciążę, zaświadczenie w trybie alternatywnym przyjmujemy jako wystawione w ciąży
+ * (wzór P29-22), a niezdolność będąca skutkiem wypadku albo choroby zawodowej daje 100% przy każdym zaświadczeniu.
+ */
+export function czyStawkaPelna(z: ZaswiadczenieWnioskuZas53, wypadek = false): boolean {
+  return wypadek || z.zrodlo === 'tryb-alternatywny' || z.kodyLiterowe.includes('B');
 }
 
 /**
@@ -340,19 +355,20 @@ export function ustalPrawoZas53(w: WejscieUstaleniaPrawaZas53): UstaleniePrawaZa
   );
   if (poprzedni) komunikaty.unshift({ kod: '0242' });
 
-  const stawka = czyStawkaPelna(z) ? p.stawkaZKodemB : p.stawkaBezKoduB;
+  const stawka = czyStawkaPelna(z, w.wypadek) ? p.stawkaZKodemB : p.stawkaBezKoduB;
   if (stawka === p.stawkaBezKoduB) komunikaty.push({ kod: '0234' });
 
-  // Zadłużenie z tytułu składek osoby prowadzącej działalność w dniu powstania prawa.
+  // Zadłużenie z tytułu składek osoby prowadzącej działalność w dniu powstania prawa, z progiem obowiązującym w tym dniu.
   let zadluzenie: WniosekZas53['zadluzenie'];
   if (tytul?.rodzaj === 'dzialalnosc') {
     const stan = [...(w.kopia?.stanyRozliczen ?? [])]
       .filter((s) => porownajDaty(s.dzien, od) <= 0)
       .sort((a, b) => porownajDaty(b.dzien, a.dzien))[0];
-    if (stan && stan.kwotaZadluzenia > p.progZadluzenia) {
+    const prog = w.parametry?.progZadluzenia ?? progZadluzeniaWDniu(od);
+    if (stan && stan.kwotaZadluzenia > prog) {
       const terminSplaty = dodajMiesiace(od, p.miesiaceSplatyZadluzenia);
-      zadluzenie = { kwota: stan.kwotaZadluzenia, dzien: stan.dzien, prog: p.progZadluzenia, terminSplaty };
-      komunikaty.push({ kod: '0182', parametry: { prog: formatujKwote(p.progZadluzenia), data: formatujDate(terminSplaty) } });
+      zadluzenie = { kwota: stan.kwotaZadluzenia, dzien: stan.dzien, prog, terminSplaty };
+      komunikaty.push({ kod: '0182', parametry: { prog: formatujKwote(prog), data: formatujDate(terminSplaty) } });
     }
   }
 

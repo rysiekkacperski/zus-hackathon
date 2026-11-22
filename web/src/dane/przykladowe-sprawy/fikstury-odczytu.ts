@@ -139,6 +139,21 @@ export const fiksturyOdczytu: Readonly<Record<string, WynikOdczytuDokumentu>> = 
     'dziecko.masaG': 1450,
     'dziecko.pobyt': json({ od: '2026-10-02', do: '2026-10-30' }),
   }),
+  // Czas trwania ciąży w dniu porodu 27 tygodni i 4 dni: odczyt przyjmuje liczbę ukończonych tygodni.
+  'szpital-27.pdf': odczyt('zaswiadczenie-szpitala', {
+    'ubezpieczony.imie': 'Agnieszka', 'ubezpieczony.nazwisko': 'Kowalczyk',
+    'dziecko.tydzienCiazy': 27,
+    'dziecko.masaG': 1150,
+    'dziecko.pobyt': json({ od: '2026-10-02', do: '2026-10-30' }),
+  }),
+  'zrzut-kowalczyk.png': odczyt('zrzut-zus', {
+    ...KOWALCZYK,
+    'tytul.rodzaj': 'pracownik',
+    'tytul.od': '2019-04-01',
+    'ubezpieczenieChorobowe.rodzaj': 'obowiazkowe',
+    'ubezpieczenieChorobowe.okresy': json([{ od: '2019-04-01' }]),
+    'swiadczeniaPrzyznane': json([{ rodzaj: 'zasilek-macierzynski', od: '2026-09-02', do: '2027-01-19', kwota: 604030 }]),
+  }),
   'zam-ojca-michalski.pdf': odczyt('zam', {
     'ubezpieczony.imie': 'Piotr', 'ubezpieczony.nazwisko': 'Michalski', 'ubezpieczony.pesel': '89120530653', 'ubezpieczony.rola': 'ojciec-przejmujacy',
     'zdarzenie.rodzaj': 'porod',

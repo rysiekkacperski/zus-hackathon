@@ -21,7 +21,8 @@ export type RodzajTytulu = 'pracownik' | 'zleceniobiorca' | 'dzialalnosc';
 export type RodzajUbezpieczeniaChorobowego = 'obowiazkowe' | 'dobrowolne' | 'brak';
 export type PlatnikWyplacaZasilki = 'tak' | 'nie' | 'brak-informacji' | 'nie-dotyczy';
 export interface PodstawaSkladek { miesiac: MiesiacISO; kwota: Grosze }
-export interface PlatnikSkladek { nazwa: string; nip: string; regon: string; wyplacaZasilki: PlatnikWyplacaZasilki }
+export interface PlatnikSkladek { nazwa: string; nip: string; regon: string; wyplacaZasilki: PlatnikWyplacaZasilki;
+  wyplacaZasilkiStanNa?: DataISO }                // data stanu, na który ZUS ustalił informację o wypłacie zasiłków
 export interface TytulUbezpieczenia {
   id: string; rodzaj: RodzajTytulu; od: DataISO; do?: DataISO;
   ubezpieczenieChorobowe: { rodzaj: RodzajUbezpieczeniaChorobowego; od?: DataISO; do?: DataISO };
@@ -29,14 +30,19 @@ export interface TytulUbezpieczenia {
   platnik: PlatnikSkladek;
 }
 export interface CzlonekRodzinyZus { imie: string; nazwisko: string; pesel: Pesel; dataUrodzenia: DataISO; noweDziecko: boolean }
-export interface ZasilekWyplacony { rodzaj: string; dataWyplaty: DataISO; kwota: Grosze; sposobWyplaty: 'przelew' | 'przekaz-pocztowy' }
+export interface ZasilekWyplacony {
+  rodzaj: string; dataWyplaty: DataISO; kwota: Grosze;     // kwota brutto
+  sposobWyplaty: 'przelew' | 'przekaz-pocztowy';
+  okresOd?: DataISO; okresDo?: DataISO;                    // okres, za który ZUS wypłacił zasiłek
+}
 export interface SwiadczenieRodzinneZus { rodzaj: '800-plus' | 'aktywny-rodzic'; kwota: Grosze; planowanyTerminWyplaty: DataISO }
 export type RodzajWnioskuZus = 'swiadczenie-800-plus' | '800-plus-kolejny-okres' | 'aktywny-rodzic' | 'dobry-start' | 'zasilek-macierzynski' | 'zasilek-chorobowy';
 export type StatusWnioskuZus = 'zlozony' | 'w-trakcie' | 'przyznanie' | 'odmowa';
 export interface WniosekZus { idWniosku: string; rodzaj: RodzajWnioskuZus; kanal: 'ezus' | 'mzus' | 'bankowosc' | 'empatia' | 'przewodnik';
   dataZlozenia: DataISO; status: StatusWnioskuZus; planowyTerminZalatwienia?: DataISO; idWnioskuPrzewodnika?: IdWniosku }
 export interface ZaswiadczenieEzla { seriaINumer: string; dataWystawienia: DataISO; od: DataISO; do: DataISO;
-  kodyLiterowe: ('B' | 'E')[]; platnik: string; rodzaj: 'choroba' | 'opieka' }
+  kodyLiterowe: ('B' | 'E')[]; platnik: string; rodzaj: 'choroba' | 'opieka';
+  czlonekRodziny?: { dataUrodzenia: DataISO; stopien: 'dziecko' | 'malzonek' } }  // zaświadczenie na opiekę (3.9.3)
 export interface UmowaOSplacie { rodzaj: 'uklad-ratalny' | 'odroczenie'; kwotaObjeta: Grosze; splacanaZgodnieZUmowa: boolean; caleZadluzenieObjete: boolean }
 export interface StanRozliczenSkladek { dzien: DataISO; kwotaZadluzenia: Grosze; umowa?: UmowaOSplacie; dataSplaty?: DataISO;
   opisZadluzenia?: string; zadluzenieOd?: DataISO; odczytano: ZnacznikCzasu }

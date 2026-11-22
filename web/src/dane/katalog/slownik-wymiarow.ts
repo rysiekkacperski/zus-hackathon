@@ -29,9 +29,17 @@ export const ID_WYMIAROW = {
   okresSplatyZadluzenia: 'okres-splaty-zadluzenia-z-tytulu-skladek',
   liczbaUbezpieczonychPlatnika: 'liczba-ubezpieczonych-platnika-wyplacajacego-zasilki',
   zasilekPoUstaniuChorobaZakazna: 'zasilek-chorobowy-po-ustaniu-przy-chorobie-zakaznej',
+  urlopWychowawczy: 'urlop-wychowawczy',
+  okresZatrudnieniaUrlopWychowawczy: 'okres-zatrudnienia-uprawniajacy-do-urlopu-wychowawczego',
+  obnizenieWymiaruUrlopWychowawczy: 'obnizenie-wymiaru-czasu-pracy-w-okresie-urlopu-wychowawczego',
+  okresSwiadczeniaRodzicielskiego: 'okres-swiadczenia-rodzicielskiego',
+  wydluzenieOkresuSwiadczeniaRodzicielskiego: 'wydluzenie-okresu-swiadczenia-rodzicielskiego',
 } as const;
 
-const OD_URUCHOMIENIA = '2026-01-01';
+/** Początek obowiązywania wartości słownika wymiarów i okresów (3.5.1.1.2). */
+const OD_URUCHOMIENIA = '2023-04-26';
+/** Początek obowiązywania uzupełniającego urlopu macierzyńskiego i wydłużenia okresu świadczenia rodzicielskiego. */
+const OD_UZUPELNIAJACEGO_URLOPU = '2025-03-19';
 
 export const wpisySlownikaWymiarow: readonly WpisSlownika[] = [
   {
@@ -110,7 +118,7 @@ export const wpisySlownikaWymiarow: readonly WpisSlownika[] = [
       { klucz: 'masaUrodzeniowa', etykieta: 'Graniczna masa urodzeniowa', jednostka: 'g' },
       { klucz: 'pozostale', etykieta: 'Najwyżej w pozostałych przypadkach', jednostka: 'tygodnie' },
     ],
-    wersje: [{ od: OD_URUCHOMIENIA, wartosci: { przedwczesnyPorod: 15, tydzienCiazy: 28, masaUrodzeniowa: 1000, pozostale: 8 } }],
+    wersje: [{ od: OD_UZUPELNIAJACEGO_URLOPU, wartosci: { przedwczesnyPorod: 15, tydzienCiazy: 28, masaUrodzeniowa: 1000, pozostale: 8 } }],
     szablonOpisu:
       'do {przedwczesnyPorod} tygodni przy porodzie przed ukończeniem {tydzienCiazy}. tygodnia ciąży albo masie urodzeniowej do {masaUrodzeniowa} g, do {pozostale} tygodni w pozostałych przypadkach, tydzień urlopu za każdy rozpoczęty tydzień pobytu dziecka w szpitalu',
     edytowalny: true,
@@ -274,6 +282,90 @@ export const wpisySlownikaWymiarow: readonly WpisSlownika[] = [
       '{dni} dni, jednorazowo albo w {czesci} częściach po co najmniej {dniCzesci} dni, do ukończenia przez dziecko {wiekDzieckaMiesiace} miesięcy albo do upływu {odPrzysposobieniaMiesiace} miesięcy od uprawomocnienia się orzeczenia o przysposobieniu, nie dłużej niż do ukończenia przez dziecko {wiekGranicznyLata} lat',
     edytowalny: true,
     kolejnosc: 13,
+  },
+  {
+    id: ID_WYMIAROW.urlopWychowawczy,
+    slownik: 'wymiary-i-okresy',
+    nazwa: 'Urlop wychowawczy',
+    warianty: [
+      { klucz: 'miesiace', etykieta: 'Łącznie dla obojga rodziców', jednostka: 'miesiace' },
+      { klucz: 'wylacznie', etykieta: 'Wyłącznie dla każdego rodzica', jednostka: 'miesiace' },
+      { klucz: 'czesci', etykieta: 'Najwyższa liczba części', jednostka: 'czesci' },
+      { klucz: 'lata', etykieta: 'Wykorzystanie do 31 grudnia roku, w którym dziecko kończy', jednostka: 'lata' },
+      {
+        klucz: 'niepelnosprawnosc',
+        etykieta: 'Na dziecko z orzeczeniem o niepełnosprawności, niezależnie',
+        jednostka: 'miesiace',
+      },
+      {
+        klucz: 'wiekNiepelnosprawnosc',
+        etykieta: 'Wiek dziecka z orzeczeniem o niepełnosprawności',
+        jednostka: 'lata',
+      },
+    ],
+    wersje: [
+      {
+        od: OD_URUCHOMIENIA,
+        wartosci: { miesiace: 36, wylacznie: 1, czesci: 5, lata: 6, niepelnosprawnosc: 36, wiekNiepelnosprawnosc: 18 },
+      },
+    ],
+    szablonOpisu:
+      'do {miesiace} miesięcy łącznie dla obojga rodziców, z czego {wylacznie} miesiąc wyłącznie dla każdego rodzica, a do {miesiace} miesięcy dla jednego rodzica, gdy drugi rodzic nie żyje albo nie ma władzy rodzicielskiej, najwyżej w {czesci} częściach, do 31 grudnia roku, w którym dziecko kończy {lata} lat, a niezależnie do {niepelnosprawnosc} miesięcy na dziecko z orzeczeniem o niepełnosprawności, do ukończenia przez dziecko {wiekNiepelnosprawnosc} lat',
+    edytowalny: true,
+    kolejnosc: 13.1,
+  },
+  {
+    id: ID_WYMIAROW.okresZatrudnieniaUrlopWychowawczy,
+    slownik: 'wymiary-i-okresy',
+    nazwa: 'Okres zatrudnienia uprawniający do urlopu wychowawczego',
+    warianty: [{ klucz: 'miesiace', etykieta: 'Okres zatrudnienia', jednostka: 'miesiace' }],
+    wersje: [{ od: OD_URUCHOMIENIA, wartosci: { miesiace: 6 } }],
+    szablonOpisu: '{miesiace} miesięcy z wliczeniem poprzednich okresów zatrudnienia',
+    edytowalny: true,
+    kolejnosc: 13.2,
+  },
+  {
+    id: ID_WYMIAROW.obnizenieWymiaruUrlopWychowawczy,
+    slownik: 'wymiary-i-okresy',
+    nazwa: 'Obniżenie wymiaru czasu pracy w okresie urlopu wychowawczego',
+    warianty: [
+      { klucz: 'dni', etykieta: 'Wniosek najpóźniej przed rozpoczęciem pracy w obniżonym wymiarze', jednostka: 'dni' },
+    ],
+    wersje: [{ od: OD_URUCHOMIENIA, wartosci: { dni: 21 } }],
+    szablonOpisu:
+      'do co najmniej połowy pełnego wymiaru czasu pracy, wniosek co najmniej {dni} dni przed rozpoczęciem pracy w obniżonym wymiarze',
+    edytowalny: true,
+    kolejnosc: 13.3,
+  },
+  {
+    id: ID_WYMIAROW.okresSwiadczeniaRodzicielskiego,
+    slownik: 'wymiary-i-okresy',
+    nazwa: 'Okres świadczenia rodzicielskiego',
+    warianty: [
+      { klucz: 'jednoDziecko', etykieta: 'Przy jednym dziecku', jednostka: 'tygodnie' },
+      { klucz: 'dwojeDzieci', etykieta: 'Przy dwojgu dzieci', jednostka: 'tygodnie' },
+      { klucz: 'trojeDzieci', etykieta: 'Przy trojgu dzieci', jednostka: 'tygodnie' },
+      { klucz: 'czworoDzieci', etykieta: 'Przy czworgu dzieci', jednostka: 'tygodnie' },
+      { klucz: 'piecioroDzieci', etykieta: 'Przy pięciorgu i więcej dzieciach', jednostka: 'tygodnie' },
+    ],
+    wersje: [
+      { od: OD_URUCHOMIENIA, wartosci: { jednoDziecko: 52, dwojeDzieci: 65, trojeDzieci: 67, czworoDzieci: 69, piecioroDzieci: 71 } },
+    ],
+    szablonOpisu:
+      '{jednoDziecko} tygodnie przy jednym dziecku, {dwojeDzieci} przy dwojgu, {trojeDzieci} przy trojgu, {czworoDzieci} przy czworgu i {piecioroDzieci} przy pięciorgu i więcej dzieciach urodzonych przy jednym porodzie, przysposobionych albo objętych opieką',
+    edytowalny: true,
+    kolejnosc: 13.4,
+  },
+  {
+    id: ID_WYMIAROW.wydluzenieOkresuSwiadczeniaRodzicielskiego,
+    slownik: 'wymiary-i-okresy',
+    nazwa: 'Wydłużenie okresu świadczenia rodzicielskiego',
+    warianty: [],
+    wersje: [{ od: OD_UZUPELNIAJACEGO_URLOPU, wartosci: {} }],
+    szablonOpisu:
+      'tydzień za każdy tydzień pobytu dziecka w szpitalu na zasadach uzupełniającego urlopu macierzyńskiego, na wniosek złożony najpóźniej w ostatnim dniu miesiąca następującego po upływie okresu świadczenia rodzicielskiego',
+    edytowalny: false,
+    kolejnosc: 13.5,
   },
   {
     id: ID_WYMIAROW.terminWnioskuWariant815,

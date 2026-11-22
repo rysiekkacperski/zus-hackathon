@@ -31,6 +31,7 @@ declare module '@/domena/typy/plan' {
 /** Kolejność rodzajów jak we wzorze P22-02: najpierw sytuacje dziecka, potem sytuacje matki. */
 export const RODZAJE_DZIECKA: readonly RodzajSytuacjiSzczegolnej[] = [
   'martwe-urodzenie',
+  'poronienie-bez-zaswiadczenia',
   'poronienie',
   'zgon-dziecka',
   'przedwczesny-porod',
@@ -39,12 +40,22 @@ export const RODZAJE_DZIECKA: readonly RodzajSytuacjiSzczegolnej[] = [
 export const RODZAJE_MATKI: readonly RodzajSytuacjiSzczegolnej[] = ['szpital', 'orzeczenie', 'porzucenie', 'smierc-matki'];
 
 /** Rodzaje, po których liczba dzieci pozostałych przy życiu maleje. */
-export const RODZAJE_STRATY: readonly RodzajSytuacjiSzczegolnej[] = ['martwe-urodzenie', 'poronienie', 'zgon-dziecka'];
+export const RODZAJE_STRATY: readonly RodzajSytuacjiSzczegolnej[] = [
+  'martwe-urodzenie',
+  'poronienie-bez-zaswiadczenia',
+  'poronienie',
+  'zgon-dziecka',
+];
 /** Rodzaje straty ciąży: data zdarzenia staje się datą porodu, dziecko nie urodziło się żywe. */
 export const RODZAJE_STRATY_CIAZY: readonly RodzajSytuacjiSzczegolnej[] = ['martwe-urodzenie', 'poronienie'];
+/** Rodzaje, po których dziecko nie urodziło się żywe, także poronienie przed dopisaniem zaświadczenia. */
+const RODZAJE_BEZ_URODZENIA_ZYWO: readonly RodzajSytuacjiSzczegolnej[] = [...RODZAJE_STRATY_CIAZY, 'poronienie-bez-zaswiadczenia'];
+/** Rodzaje sytuacji matki z danymi o zdrowiu matki: konto ojca zapisuje je przy zgodzie konta matki. */
+export const RODZAJE_ZDROWIA_MATKI: readonly RodzajSytuacjiSzczegolnej[] = ['szpital', 'orzeczenie'];
 /** Rodzaje, po których plan pokazuje sprawę K35 Wsparcie organizacji w sytuacji szczególnej. */
 export const RODZAJE_Z_K35: readonly RodzajSytuacjiSzczegolnej[] = [
   'martwe-urodzenie',
+  'poronienie-bez-zaswiadczenia',
   'poronienie',
   'zgon-dziecka',
   'przedwczesny-porod',
@@ -103,7 +114,7 @@ export function liczbyDzieci(daneCiazy: DaneCiazyIDziecka | null): LiczbyDzieciR
   const zCiazy = liczbaDzieciZCiazy(daneCiazy);
   const sytuacje = daneCiazy?.sytuacjeSzczegolne ?? [];
   const przyZyciu = Math.max(0, zCiazy - sumaDzieci(sytuacje, RODZAJE_STRATY));
-  const urodzoneZywo = Math.max(0, zCiazy - sumaDzieci(sytuacje, RODZAJE_STRATY_CIAZY));
+  const urodzoneZywo = Math.max(0, zCiazy - sumaDzieci(sytuacje, RODZAJE_BEZ_URODZENIA_ZYWO));
   return { zCiazy, przyZyciu, urodzoneZywo, urodzoneZywoZaZyciem: daneCiazy?.zaswiadczenieZaZyciem ? urodzoneZywo : 0 };
 }
 
@@ -127,12 +138,26 @@ export function czyPoleLiczbyDzieci(rodzaj: RodzajSytuacjiSzczegolnej | null, da
   return rodzaj !== null && czyDotyczyDziecka(rodzaj) && liczbaDzieciZCiazy(daneCiazy) > 1;
 }
 
-/** Błędy zgłoszenia sytuacji: 0006, 0037, 0193, 0010, 0127, 0102. Komunikat 0194 pokazuje widok. */
-export function walidujSytuacje(f: FormularzSytuacji, daneCiazy: DaneCiazyIDziecka | null, dzis: DataISO): BledyPol<PoleSytuacji> {
+/** Czy konto ojca zapisuje rodzaj z danymi o zdrowiu matki bez zgody konta matki (komunikat 0277). */
+export function czyBrakZgodyMatki(rodzaj: RodzajSytuacjiSzczegolnej | null, brakZgodyMatki: boolean): boolean {
+  return rodzaj !== null && brakZgodyMatki && RODZAJE_ZDROWIA_MATKI.includes(rodzaj);
+}
+
+/**
+ * Błędy zgłoszenia sytuacji: 0006, 0037, 0277, 0193, 0010, 0127, 0102. Komunikaty 0264 i 0194 pokazuje widok.
+ * `brakZgodyMatki` jest prawdą dla konta ojca, gdy konto matki nie ma udzielonej zgody na dane dotyczące zdrowia.
+ */
+export function walidujSytuacje(
+  f: FormularzSytuacji,
+  daneCiazy: DaneCiazyIDziecka | null,
+  dzis: DataISO,
+  brakZgodyMatki = false,
+): BledyPol<PoleSytuacji> {
   const bledy: BledyPol<PoleSytuacji> = {};
   const potwierdzona = Boolean(daneCiazy?.dataPoroduPotwierdzona && daneCiazy.dataPorodu);
   if (f.rodzaj === null) bledy.rodzaj = '0006';
   else if (czyWymagaDatyPorodu(f.rodzaj) && !potwierdzona) bledy.rodzaj = '0037';
+  else if (czyBrakZgodyMatki(f.rodzaj, brakZgodyMatki)) bledy.rodzaj = '0277';
 
   if (dataZdarzeniaZProfilu(f.rodzaj, daneCiazy) === null) {
     const tekst = f.dataZdarzenia.trim();
@@ -154,8 +179,9 @@ export function walidujSytuacje(f: FormularzSytuacji, daneCiazy: DaneCiazyIDziec
   return bledy;
 }
 
-/** Komunikat informacyjny przy polu rodzaju: 0194 po wyborze poronienia. */
+/** Komunikat informacyjny przy polu rodzaju: 0264 przy poronieniu, 0194 przy poronieniu z zaświadczeniem. */
 export function komunikatPrzyRodzaju(rodzaj: RodzajSytuacjiSzczegolnej | null): KodKomunikatu | null {
+  if (rodzaj === 'poronienie-bez-zaswiadczenia') return '0264';
   return rodzaj === 'poronienie' ? '0194' : null;
 }
 
@@ -170,8 +196,9 @@ export function zgloszenieZFormularza(
   f: FormularzSytuacji,
   daneCiazy: DaneCiazyIDziecka | null,
   dzis: DataISO,
+  brakZgodyMatki = false,
 ): ZgloszenieSytuacji | null {
-  if (Object.keys(walidujSytuacje(f, daneCiazy, dzis)).length > 0 || f.rodzaj === null) return null;
+  if (Object.keys(walidujSytuacje(f, daneCiazy, dzis, brakZgodyMatki)).length > 0 || f.rodzaj === null) return null;
   const data = dataZdarzeniaZProfilu(f.rodzaj, daneCiazy) ?? parsujDate(f.dataZdarzenia.trim());
   if (data === null) return null;
   const liczbaDzieci = czyPoleLiczbyDzieci(f.rodzaj, daneCiazy) ? Number(f.liczbaDzieci) : 1;
@@ -226,6 +253,41 @@ export function zapiszSytuacjeWDanychCiazy(
   return { ...nowe, liczbaDzieciUrodzonychZywo: liczby.urodzoneZywo };
 }
 
+/** Czy rodzina czeka na dopisanie zaświadczenia o martwym urodzeniu do zapisanego poronienia. */
+export function czyPoronienieBezZaswiadczenia(daneCiazy: DaneCiazyIDziecka | null | undefined): boolean {
+  return Boolean(daneCiazy?.sytuacjeSzczegolne?.some((s) => s.rodzaj === 'poronienie-bez-zaswiadczenia'));
+}
+
+/** Zgłoszenie dopisania zaświadczenia: poronienie potwierdzone z datą zdarzenia i liczbą dzieci zapisanego poronienia. */
+export function zgloszenieDopisaniaZaswiadczenia(s: SytuacjaSzczegolna): ZgloszenieSytuacji {
+  return { rodzaj: 'poronienie', dataZdarzenia: s.dataZdarzenia, liczbaDzieci: s.liczbaDzieci ?? 1 };
+}
+
+/**
+ * Dopisanie zaświadczenia o martwym urodzeniu do zapisanego poronienia: rodzaj zmienia się na poronienie potwierdzone
+ * zaświadczeniem, a profil bez potwierdzonej daty porodu dostaje datę porodu równą dacie zdarzenia.
+ */
+export function dopiszZaswiadczenieWDanychCiazy(daneCiazy: DaneCiazyIDziecka, idSytuacji: string): DaneCiazyIDziecka | null {
+  const sytuacja = daneCiazy.sytuacjeSzczegolne.find((s) => s.id === idSytuacji && s.rodzaj === 'poronienie-bez-zaswiadczenia');
+  if (!sytuacja) return null;
+  let nowe: DaneCiazyIDziecka = {
+    ...daneCiazy,
+    sytuacjeSzczegolne: daneCiazy.sytuacjeSzczegolne.map(
+      (s): SytuacjaSzczegolna => (s.id === idSytuacji ? { ...s, rodzaj: 'poronienie' } : s),
+    ),
+  };
+  if (!(daneCiazy.dataPoroduPotwierdzona && daneCiazy.dataPorodu)) {
+    nowe = {
+      ...nowe,
+      dataPorodu: sytuacja.dataZdarzenia,
+      dataPoroduPotwierdzona: true,
+      zrodloDatyPorodu: 'odpowiedz-rodzica',
+      liczbaUrodzonychDzieci: jakoLiczbaDzieci(liczbaDzieciZCiazy(daneCiazy)),
+    };
+  }
+  return { ...nowe, liczbaDzieciUrodzonychZywo: liczbyDzieci(nowe).urodzoneZywo };
+}
+
 /** Wyłączenie spokojnego trybu: sytuacje zostają, tryb wyłączony z datą wyłączenia. */
 export function wylaczSpokojnyTrybWDanychCiazy(daneCiazy: DaneCiazyIDziecka, dzis: DataISO): DaneCiazyIDziecka {
   return { ...daneCiazy, spokojnyTryb: { ...daneCiazy.spokojnyTryb, wlaczony: false, wylaczono: dzis } };
@@ -246,12 +308,19 @@ export function czyTresciGratulacyjne(daneCiazy: DaneCiazyIDziecka | null | unde
   return !czySpokojnyTryb(daneCiazy);
 }
 
-/** Termin sprawy K06 po urodzeniu martwego dziecka albo poronieniu: data porodu + 3 dni. */
+/**
+ * Termin sprawy K06 po urodzeniu martwego dziecka: data porodu + 3 dni, a po poronieniu: data zdarzenia + 3 dni.
+ */
 export function terminK06PoStracie(daneCiazy: DaneCiazyIDziecka | null): DataISO | null {
-  if (daneCiazy === null || !daneCiazy.dataPorodu) return null;
+  if (daneCiazy === null) return null;
   const liczby = liczbyDzieci(daneCiazy);
+  if (liczby.urodzoneZywo !== 0) return null;
+  const poronienie = daneCiazy.sytuacjeSzczegolne.find(
+    (s) => s.rodzaj === 'poronienie' || s.rodzaj === 'poronienie-bez-zaswiadczenia',
+  );
+  if (poronienie) return dodajDni(poronienie.dataZdarzenia, 3);
   const strataCiazy = daneCiazy.sytuacjeSzczegolne.some((s) => czyStrataCiazy(s.rodzaj));
-  return strataCiazy && liczby.urodzoneZywo === 0 ? dodajDni(daneCiazy.dataPorodu, 3) : null;
+  return strataCiazy && daneCiazy.dataPorodu ? dodajDni(daneCiazy.dataPorodu, 3) : null;
 }
 
 /** Czy profil zawiera drugiego rodzica. */

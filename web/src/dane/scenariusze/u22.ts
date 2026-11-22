@@ -15,6 +15,9 @@ import type {
   WniosekOUrlop,
   ZmianaZatrudnieniaWCiazy,
 } from '@/domena/typy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const PAULINA: Pesel = '95082103460';
 const KAROLINA: Pesel = '96020377745';
@@ -86,6 +89,10 @@ function rodzina(pesel: Pesel, m: DaneRodzica, ciaza: DaneCiazyIDziecka, ctx: Ko
   };
 }
 
+function poPorodzie(r: StanRodziny): StanRodziny {
+  return { ...r, daneRodziny: { ...r.daneRodziny, sytuacja: { wartosc: 'narodziny', zrodlo: 'odpowiedz-rodzica' } } };
+}
+
 function tytul(rodzaj: TytulUbezpieczenia['rodzaj'], od: DataISO, chorobowe: 'obowiazkowe' | 'dobrowolne'): TytulUbezpieczenia {
   return {
     id: `${rodzaj}-${od}`,
@@ -100,8 +107,8 @@ function tytul(rodzaj: TytulUbezpieczenia['rodzaj'], od: DataISO, chorobowe: 'ob
 export const scenariuszeU22: readonly ScenariuszDemo[] = [
   {
     id: 'u22-paulina-k28',
-    nazwa: 'Paulina Wrona: działalność podjęta w ciąży',
-    opis: 'Rozpoczęcie jednoosobowej działalności gospodarczej 01.10.2026, przewidywany termin porodu 15.03.2027 (sprawa K28 z ostrzeżeniem 0119).',
+    nazwa: tekst['u22-paulina-k28'].nazwa,
+    opis: tekst['u22-paulina-k28'].opis,
     pesel: PAULINA,
     zastosuj: (ctx) => ({
       konto: { konto: kontoRodzica(PAULINA, ctx) },
@@ -116,8 +123,8 @@ export const scenariuszeU22: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u22-karolina-k29',
-    nazwa: 'Karolina Lis: koniec umowy zlecenia przed porodem',
-    opis: 'Umowa zlecenia z dobrowolnym ubezpieczeniem chorobowym od 01.02.2025 ustaje 31.01.2027, przewidywany termin porodu 15.03.2027 (sprawa K29 z ostrzeżeniem 0120).',
+    nazwa: tekst['u22-karolina-k29'].nazwa,
+    opis: tekst['u22-karolina-k29'].opis,
     pesel: KAROLINA,
     zastosuj: (ctx) => ({
       konto: { konto: kontoRodzica(KAROLINA, ctx) },
@@ -135,9 +142,33 @@ export const scenariuszeU22: readonly ScenariuszDemo[] = [
     }),
   },
   {
+    id: 'u22-zleceniobiorczyni-k29-tytul-pracownika',
+    nazwa: tekst['u22-zleceniobiorczyni-k29-tytul-pracownika'].nazwa,
+    opis: tekst['u22-zleceniobiorczyni-k29-tytul-pracownika'].opis,
+    pesel: KAROLINA,
+    zastosuj: (ctx) => ({
+      konto: { konto: kontoRodzica(KAROLINA, ctx) },
+      rodzina: rodzina(
+        KAROLINA,
+        matka(odpowiedz('umowa-zlecenia'), {
+          rodzaj: odpowiedz('ustanie'),
+          forma: odpowiedz('umowa-zlecenia'),
+          data: odpowiedz('2027-01-31'),
+        }),
+        daneCiazy('2027-03-15'),
+        ctx,
+      ),
+      zus: {
+        nadpisania: {
+          tytuly: [tytul('zleceniobiorca', '2025-02-01', 'dobrowolne'), tytul('pracownik', '2025-06-01', 'obowiazkowe')],
+        },
+      },
+    }),
+  },
+  {
     id: 'u22-ewa-k30-umowa-terminowa',
-    nazwa: 'Ewa Kamińska: koniec umowy terminowej bez rodzaju umowy',
-    opis: 'Umowa o pracę kończy się 31.01.2027 z przyczyną koniec umowy na czas określony albo na okres próbny, przewidywany termin porodu 30.06.2027 (sprawa K29 z przejściem do przedłużenia umowy w K30).',
+    nazwa: tekst['u22-ewa-k30-umowa-terminowa'].nazwa,
+    opis: tekst['u22-ewa-k30-umowa-terminowa'].opis,
     pesel: EWA,
     zastosuj: (ctx) => ({
       konto: { konto: kontoRodzica(EWA, ctx) },
@@ -157,8 +188,8 @@ export const scenariuszeU22: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u22-magdalena-k30-wniosek',
-    nazwa: 'Magdalena Wójcik: okres ochrony z wniosku o urlop rodzicielski',
-    opis: 'Umowa o pracę, przewidywany termin porodu 15.03.2027, wniosek o urlop rodzicielski od 02.08.2027 do 31.10.2027 złożony pracodawcy 21.11.2026 (sprawa K30 z komunikatem 0158).',
+    nazwa: tekst['u22-magdalena-k30-wniosek'].nazwa,
+    opis: tekst['u22-magdalena-k30-wniosek'].opis,
     pesel: MAGDALENA,
     zastosuj: (ctx) => ({
       konto: { konto: kontoRodzica(MAGDALENA, ctx) },
@@ -180,6 +211,39 @@ export const scenariuszeU22: readonly ScenariuszDemo[] = [
           oswiadczenia: {},
         },
       ]),
+    }),
+  },
+  {
+    id: 'u22-karolina-k35-przedwczesny-porod',
+    nazwa: tekst['u22-karolina-k35-przedwczesny-porod'].nazwa,
+    opis: tekst['u22-karolina-k35-przedwczesny-porod'].opis,
+    pesel: KAROLINA,
+    zastosuj: (ctx) => ({
+      konto: { konto: kontoRodzica(KAROLINA, ctx) },
+      rodzina: poPorodzie(rodzina(
+        KAROLINA,
+        matka(odpowiedz('umowa-zlecenia')),
+        {
+          ...daneCiazy('2027-01-05'),
+          dataPorodu: '2026-11-10',
+          dataPoroduPotwierdzona: true,
+          zrodloDatyPorodu: 'odpowiedz-rodzica',
+          liczbaUrodzonychDzieci: 1,
+          tydzienCiazyWDniuPorodu: 32,
+          sytuacjeSzczegolne: [
+            {
+              id: 'S-DEMO-U22-1',
+              rodzaj: 'przedwczesny-porod',
+              dataZdarzenia: '2026-11-10',
+              zrodlo: 'odpowiedz-rodzica',
+              kontoZapisujace: KAROLINA,
+              zapisano: ctx.teraz,
+            },
+          ],
+        },
+        ctx,
+      )),
+      zus: { nadpisania: { tytuly: [tytul('zleceniobiorca', '2025-02-01', 'dobrowolne')] } },
     }),
   },
 ];

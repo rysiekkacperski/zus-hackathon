@@ -1,18 +1,15 @@
 'use client';
 
 // Slot ViewProfileSummary „sekcja-przyjecia” w liście slotyPodsumowania (kontrakt, sekcja 12.4). Właściciel: u24.
-// Wzory P21-08 (sekcja danych przyjęcia w miejscu danych ciąży) i P21-09 (konto bez zgody, komunikat 0004).
+// Wzór P21-08 (sekcja danych przyjęcia w miejscu danych ciąży). Dane przyjęcia sekcja pokazuje z udzieloną zgodą
+// na dane dotyczące zdrowia i bez niej (KA-01 3.3.1.4.2).
 // Teksty: teksty.ViewProfileSummary.sekcjaPrzyjecia.
-import { useState } from 'react';
 import { Karta } from '@/komponenty/karta';
-import { Komunikat } from '@/komponenty/komunikat';
 import { ListaDefinicji, type PozycjaListyDefinicji } from '@/komponenty/lista-definicji';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
-import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
+import { PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
-import { Stos } from '@/komponenty/uklad';
-import { czyMaZgode } from '@/domena/konto/zgoda';
 import { formatujDate } from '@/domena/daty';
 import type { DataISO, PrzyjecieDziecka } from '@/domena/typy';
 import { teksty } from '@/teksty';
@@ -54,38 +51,12 @@ function pozycjePrzyjecia(p: PrzyjecieDziecka, zapisane: PrzyjecieDziecka | unde
   return pozycje;
 }
 
-export function SlotSekcjaPrzyjecia({ konto, szkic, kontekst }: PropsSlotu<'sekcja'>) {
-  const [brakZgodyPokazany, ustawBrakZgodyPokazany] = useState(false);
-  const zgoda = czyMaZgode(konto.decyzjeOZgodzie);
+export function SlotSekcjaPrzyjecia({ szkic, kontekst }: PropsSlotu<'sekcja'>) {
   const zapisaneCiaza = kontekst?.rodzina.daneCiazy ?? null;
   const zapisane = zapisaneCiaza?.przyjecie;
   const przyjecie = szkic ? szkic.daneCiazy.przyjecie : zapisane;
   const porodPotwierdzony = (szkic ? szkic.daneCiazy.dataPoroduPotwierdzona : zapisaneCiaza?.dataPoroduPotwierdzona) === true;
   const adresZmiany = trasy.ViewProfileChildAdoption({ powrot: 'podsumowanie' });
-
-  if (!zgoda) {
-    // Karty obok siebie, żeby panel zakładki podsumowania zmieścił się w oknie bez przewijania.
-    return (
-      <Stos odstep={7.5}>
-        {brakZgodyPokazany ? <Komunikat kod="0004" /> : null}
-        <div className="flex min-w-0 flex-wrap items-start gap-7.5">
-          <Karta tytul={t.bezDanych.tytul} bezLinii className="grow basis-84">
-            <p className="mt-0 mb-6">{t.bezDanych.opis}</p>
-            <Przycisk wariant="drugorzedny" onClick={() => ustawBrakZgodyPokazany(true)}>
-              {t.bezDanych.podaj}
-            </Przycisk>
-          </Karta>
-          <Karta tytul={t.zgoda.tytul} bezLinii className="grow basis-84">
-            <p className="mt-0 mb-4">{t.zgoda.opis}</p>
-            <p className="mt-0 mb-6">{t.zgoda.ustawienia}</p>
-            <PrzyciskLink href={trasy.ViewGuideSettings()} wariant="drugorzedny" szerokosc="pelna">
-              {t.zgoda.przejdz}
-            </PrzyciskLink>
-          </Karta>
-        </div>
-      </Stos>
-    );
-  }
 
   if (przyjecie !== undefined) {
     const porownuj = szkic !== null && szkic.kontekst === 'zmiana-profilu' && zapisane !== undefined;

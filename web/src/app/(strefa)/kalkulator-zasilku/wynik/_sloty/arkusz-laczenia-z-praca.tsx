@@ -179,7 +179,7 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
               pustaOpcja={t.wybierz}
               {...walidacja.pole('indeksCzesci')}
             />
-            <div className="flex flex-wrap items-start gap-4">
+            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
               <PoleLiczby
                 id={`${ID}-tygodnie`}
                 etykieta={t.tygodnie}

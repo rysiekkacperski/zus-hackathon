@@ -15,6 +15,9 @@ import type {
   StanKonta,
   StanRodziny,
 } from '@/domena/typy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const PESEL_ANNY = '93041231085';
 const ZOFIA = { imie: 'Zofia', nazwisko: 'Nowak', pesel: '26311907825', dataUrodzenia: '2026-11-19' };
@@ -85,15 +88,26 @@ function kontoScenariusza(ctx: KontekstOperacji): Partial<StanKonta> {
 export const scenariuszeU19: readonly ScenariuszDemo[] = [
   {
     id: 'u19-anna-przed-porodem',
-    nazwa: 'Anna Nowak przed porodem',
-    opis: 'Profil z przewidywanym terminem porodu 15.03.2027, bez potwierdzonej daty porodu. Plan pokazuje akcję „Zgłoś narodziny”.',
+    nazwa: tekst['u19-anna-przed-porodem'].nazwa,
+    opis: tekst['u19-anna-przed-porodem'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({ konto: kontoScenariusza(ctx), rodzina: rodzinaAnny(ctx, daneCiazyAnny()) }),
   },
   {
+    // 3.3.2.1.4 KA-01: potwierdzenie daty porodu 19.11.2026 daje sprawę K12 z terminem 19.02.2027.
+    id: 'u19-anna-termin-26-11-2026',
+    nazwa: tekst['u19-anna-termin-26-11-2026'].nazwa,
+    opis: tekst['u19-anna-termin-26-11-2026'].opis,
+    pesel: PESEL_ANNY,
+    zastosuj: (ctx) => ({
+      konto: kontoScenariusza(ctx),
+      rodzina: rodzinaAnny(ctx, daneCiazyAnny({ przewidywanyTerminPorodu: '2026-11-26', dataPierwszejWizyty: '2026-04-20' })),
+    }),
+  },
+  {
     id: 'u19-anna-nowe-dziecko-w-zus',
-    nazwa: 'Anna Nowak: nowe dziecko w danych ZUS',
-    opis: 'Bez potwierdzonej daty porodu; w danych ZUS pojawia się Zofia Nowak urodzona 19.11.2026. Po zalogowaniu plan pokazuje okno nowego dziecka.',
+    nazwa: tekst['u19-anna-nowe-dziecko-w-zus'].nazwa,
+    opis: tekst['u19-anna-nowe-dziecko-w-zus'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: kontoScenariusza(ctx),
@@ -103,8 +117,8 @@ export const scenariuszeU19: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u19-anna-blizneta-w-zus',
-    nazwa: 'Anna Nowak: bliźnięta w danych ZUS',
-    opis: 'Bez potwierdzonej daty porodu; w danych ZUS pojawiają się Zofia i Jan Nowak urodzeni 19.11.2026.',
+    nazwa: tekst['u19-anna-blizneta-w-zus'].nazwa,
+    opis: tekst['u19-anna-blizneta-w-zus'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: kontoScenariusza(ctx),
@@ -121,8 +135,8 @@ export const scenariuszeU19: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u19-anna-po-porodzie',
-    nazwa: 'Anna Nowak po porodzie 19.11.2026',
-    opis: 'Potwierdzona data porodu 19.11.2026, jedno dziecko. Pakiet narodzin pokazuje sprawy na pierwsze 3 miesiące.',
+    nazwa: tekst['u19-anna-po-porodzie'].nazwa,
+    opis: tekst['u19-anna-po-porodzie'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: kontoScenariusza(ctx),
@@ -137,8 +151,8 @@ export const scenariuszeU19: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u19-anna-rozna-data-porodu',
-    nazwa: 'Anna Nowak: data porodu różna od danych ZUS',
-    opis: 'Potwierdzona data porodu 18.11.2026; w danych ZUS pojawia się Zofia Nowak urodzona 19.11.2026. Po zalogowaniu przewodnik prowadzi do daty porodu z komunikatem 0063.',
+    nazwa: tekst['u19-anna-rozna-data-porodu'].nazwa,
+    opis: tekst['u19-anna-rozna-data-porodu'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: kontoScenariusza(ctx),

@@ -58,7 +58,7 @@ export function useWniosekZam(): { idWniosku: string | null; dane: DaneWnioskuZa
     const wniosek = znajdzWniosekZam(kontekst.rodzina, idWniosku, kontekst.konto.pesel);
     if (wniosek === null) return null;
     const rodzic = rodzicKontaWRodzinie(kontekst.konto, kontekst.rodzina);
-    const okresy = kontekstOkresowZam({ wniosek, daneCiazy: kontekst.rodzina.daneCiazy, plan: kontekst.rodzina.plan, rodzic });
+    const okresy = kontekstOkresowZam({ wniosek, daneCiazy: kontekst.rodzina.daneCiazy, plan: kontekst.rodzina.plan, rodzic, wnioski: kontekst.rodzina.wnioski });
     return { wniosek, kontekst, okresy };
   }, [kontekst, idWniosku]);
   return { idWniosku, dane, kontekst };
@@ -66,6 +66,8 @@ export function useWniosekZam(): { idWniosku: string | null; dane: DaneWnioskuZa
 
 /** Adres ekranu kreatora dla wniosku. */
 export function adresEkranuZam(ekran: IdWidoku, idWniosku: string): string {
+  // Urlop przejęty od matki (u34): ekran przejęcia w trybie kreatora ZAM.
+  if (ekran === 'ViewFatherTakeover') return trasy.ViewFatherTakeover({ tryb: 'zam', wniosek: idWniosku });
   return sciezkaWidoku(ekran, { wniosek: idWniosku });
 }
 

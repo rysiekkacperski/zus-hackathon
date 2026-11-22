@@ -37,6 +37,12 @@ export function podstawaZKontaZus(
   if (dane === null) return { rodzaj: 'brak-danych' };
   const podstawy = podstawyZChorobowym(dane);
   if (podstawy.length === 0) return { rodzaj: 'brak-podstaw' };
+  // Początek ubezpieczenia chorobowego rozstrzyga o regule najniższej podstawy przy działalności krótszej niż 12 miesięcy.
+  const poczatki = dane.tytuly
+    .filter((t) => t.ubezpieczenieChorobowe.rodzaj !== 'brak')
+    .map((t) => t.ubezpieczenieChorobowe.od ?? t.od)
+    .filter((d): d is DataISO => typeof d === 'string')
+    .sort();
   const wynik = wyliczPodstawe({
     podstawy,
     forma: forma ?? 'umowa-o-prace',
@@ -44,6 +50,7 @@ export function podstawaZKontaZus(
     miesiacPrawa: miesiacZDaty(dataPorodu),
     katalog,
     dzien: dataPorodu,
+    ...(poczatki.length > 0 ? { poczatekUbezpieczenia: poczatki[0] } : {}),
   });
   if ('kod' in wynik) return wynik.kod === '0173' ? { rodzaj: 'brak-danych' } : { rodzaj: 'brak-podstaw' };
   return { rodzaj: 'wyliczona', podstawa: wynik };

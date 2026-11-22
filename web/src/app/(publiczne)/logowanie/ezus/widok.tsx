@@ -1,7 +1,7 @@
 'use client';
 
 // ViewEzusLogin: makieta logowania loginem i hasłem eZUS (Story 3.1.1.1.2, KA-05, KA-07–KA-10;
-// wzory P01-05 i P01-06). Każdy niepusty login i niepuste hasło prowadzą do wyboru konta (R13),
+// Story 3.1.1.1.5, KA-01–KA-04; wzory P01-05 i P01-06). Każdy niepusty login i niepuste hasło prowadzą do wyboru konta (R13),
 // a hasło znika ze stanu formularza przed przejściem dalej. Błąd pola pokazuje się po opuszczeniu pola
 // i po próbie logowania. Właściciel: u01.
 import { useRef, useState, type FormEvent } from 'react';
@@ -33,11 +33,16 @@ interface BledyLogowania {
 // Kolejność pól na ekranie i cel fokusu pierwszego pola z błędem.
 const idPol = { login: ID_LOGINU, haslo: ID_HASLA } as const;
 
-/** Login i hasło makiety: pole wymagane, od 1 do 64 znaków (Walidacja Story 3.1.1.1.2). */
+// Parametr komunikatu 0271 o zbyt długim tekście pola.
+const PARAMETRY_DLUGOSCI = { liczbaZnakow: String(MAKS_DLUGOSC) };
+
+/** Login i hasło makiety: pole wymagane, od 1 do 64 znaków (Walidacja Story 3.1.1.1.5). */
 function walidujLogowanie({ login, haslo }: DaneLogowania): BledyLogowania {
   const bledy: BledyLogowania = {};
   if (login.trim() === '') bledy.login = '0248';
+  else if (login.length > MAKS_DLUGOSC) bledy.login = '0271';
   if (haslo === '') bledy.haslo = '0249';
+  else if (haslo.length > MAKS_DLUGOSC) bledy.haslo = '0271';
   return bledy;
 }
 
@@ -63,7 +68,7 @@ export function WidokLogowaniaEzus() {
   return (
     <>
       <NaglowekDemo tytul={tekst.naglowek} wstep={tekst.wstep} />
-      <Karta tytul={tekst.karta} bezLinii className="max-w-190">
+      <Karta tytul={tekst.karta} bezLinii>
         <form ref={formularz} noValidate onSubmit={zaloguj}>
           <div className="flex max-w-login-column flex-col gap-6">
             <PoleTekstowe
@@ -73,7 +78,7 @@ export function WidokLogowaniaEzus() {
               wartosc={login}
               onZmiana={ustawLogin}
               {...walidacja.pole('login')}
-              maksDlugosc={MAKS_DLUGOSC}
+              parametryBledu={PARAMETRY_DLUGOSCI}
               autoComplete="off"
               zwykla
             />
@@ -84,7 +89,7 @@ export function WidokLogowaniaEzus() {
               wartosc={haslo}
               onZmiana={ustawHaslo}
               {...walidacja.pole('haslo')}
-              maksDlugosc={MAKS_DLUGOSC}
+              parametryBledu={PARAMETRY_DLUGOSCI}
               autoComplete="off"
               zwykla
             />

@@ -62,7 +62,8 @@ export function zastosujDatePowrotu(
     dataPowrotu = dodajDni(koniec, 1);
   }
   return {
-    czesci: [...pozostale, ...nowe],
+    // Części w kolejności dat: parametry łączenia z pracą wskazują część po indeksie, więc kolejność musi zostać stała.
+    czesci: [...pozostale, ...nowe].sort((a, b) => porownajDaty(a.od, b.od)),
     dataPowrotu,
     ...(dopasowano ? { komunikat: { kod: '0245', parametry: { data: formatujDate(dataPowrotu) } } } : {}),
   };

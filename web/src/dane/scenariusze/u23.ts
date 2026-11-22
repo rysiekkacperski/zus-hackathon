@@ -19,6 +19,9 @@ import type {
   StanRodziny,
   ZnacznikCzasu,
 } from '@/domena/typy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const ANNA: Pesel = '93041231085';
 const MAGDALENA: Pesel = '90072551267';
@@ -163,14 +166,14 @@ function scenariuszAnny(
 export const scenariuszeU23: readonly ScenariuszDemo[] = [
   scenariuszAnny(
     'u23-anna-drugi-rodzic-nie-dolaczyl',
-    'Anna Nowak: drugi rodzic nie dołączył',
-    'Profil Anny Nowak z Tomaszem Nowakiem na umowie zlecenia (odpowiedź rodzica), który nie dołączył do planu. Pełnomocnictwo PEL od 01.10.2026 do odwołania. Dzisiaj 21.11.2026.',
+    tekst['u23-anna-drugi-rodzic-nie-dolaczyl'].nazwa,
+    tekst['u23-anna-drugi-rodzic-nie-dolaczyl'].opis,
     { dataDemo: '2026-11-21', drugi: tomaszWOdpowiedzi },
   ),
   scenariuszAnny(
     'u23-anna-pel-od-przyszlej-daty',
-    'Anna Nowak: pełnomocnictwo PEL od 01.12.2026',
-    'Tomasz Nowak udzielił Annie Nowak pełnomocnictwa PEL do roli Ubezpieczony od 01.12.2026. Dzisiaj 21.11.2026; po zmianie daty na 01.12.2026 przewodnik odczyta dane przy otwarciu.',
+    tekst['u23-anna-pel-od-przyszlej-daty'].nazwa,
+    tekst['u23-anna-pel-od-przyszlej-daty'].opis,
     {
       dataDemo: '2026-11-21',
       drugi: tomaszWOdpowiedzi,
@@ -179,14 +182,14 @@ export const scenariuszeU23: readonly ScenariuszDemo[] = [
   ),
   scenariuszAnny(
     'u23-anna-pel-odczytane-ponowny-odczyt',
-    'Anna Nowak: ponowny odczyt danych z pełnomocnictwa',
-    'Dane Tomasza Nowaka odczytane z pełnomocnictwa PEL 21.11.2026. Dzisiaj 05.12.2026; przy otwarciu przewodnik odczyta je ponownie.',
+    tekst['u23-anna-pel-odczytane-ponowny-odczyt'].nazwa,
+    tekst['u23-anna-pel-odczytane-ponowny-odczyt'].opis,
     { dataDemo: '2026-12-05', drugi: () => tomaszZPelnomocnictwa('2026-11-21T10:00:00') },
   ),
   scenariuszAnny(
     'u23-anna-pel-odwolane',
-    'Anna Nowak: pełnomocnictwo PEL odwołane',
-    'Dane Tomasza Nowaka odczytane z pełnomocnictwa PEL 21.11.2026, odwołanego formularzem PEL-O 10.12.2026. Dzisiaj 11.12.2026.',
+    tekst['u23-anna-pel-odwolane'].nazwa,
+    tekst['u23-anna-pel-odwolane'].opis,
     {
       dataDemo: '2026-12-11',
       drugi: () => tomaszZPelnomocnictwa('2026-11-21T10:00:00'),
@@ -195,8 +198,8 @@ export const scenariuszeU23: readonly ScenariuszDemo[] = [
   ),
   scenariuszAnny(
     'u23-anna-pel-wygaslo',
-    'Anna Nowak: pełnomocnictwo PEL wygasło 31.12.2026',
-    'Dane Tomasza Nowaka odczytane z pełnomocnictwa PEL obowiązującego do 31.12.2026. Dzisiaj 02.01.2027.',
+    tekst['u23-anna-pel-wygaslo'].nazwa,
+    tekst['u23-anna-pel-wygaslo'].opis,
     {
       dataDemo: '2027-01-02',
       drugi: () => tomaszZPelnomocnictwa('2026-12-20T10:00:00'),
@@ -205,8 +208,8 @@ export const scenariuszeU23: readonly ScenariuszDemo[] = [
   ),
   {
     id: 'u23-magdalena-pel-korespondencja',
-    nazwa: 'Magdalena Wójcik: pełnomocnictwo PEL do korespondencji',
-    opis: 'Profil Magdaleny Wójcik z Piotrem Wójcikiem na umowie o pracę (odpowiedź rodzica). Pełnomocnictwo PEL ograniczone do korespondencji.',
+    nazwa: tekst['u23-magdalena-pel-korespondencja'].nazwa,
+    opis: tekst['u23-magdalena-pel-korespondencja'].opis,
     pesel: MAGDALENA,
     zastosuj: (ctx) => ({
       parametry: { dataDemo: '2026-11-21' },
@@ -225,8 +228,8 @@ export const scenariuszeU23: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u23-karolina-pel-wygasle',
-    nazwa: 'Karolina Lis: pełnomocnictwo PEL wygasłe',
-    opis: 'Profil Karoliny Lis (Rodzic we własnej rodzinie) z Marcinem Lisem na umowie o pracę. Pełnomocnictwo PEL od 01.01.2026 do 31.10.2026. Dzisiaj 21.11.2026.',
+    nazwa: tekst['u23-karolina-pel-wygasle'].nazwa,
+    opis: tekst['u23-karolina-pel-wygasle'].opis,
     pesel: KAROLINA,
     zastosuj: (ctx) => ({
       parametry: { dataDemo: '2026-11-21' },
@@ -245,8 +248,8 @@ export const scenariuszeU23: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u23-joanna-bez-pelnomocnictwa',
-    nazwa: 'Joanna Mazur: drugi rodzic bez pełnomocnictwa',
-    opis: 'Profil Joanny Mazur z drugim rodzicem na umowie o pracę, który nie udzielił pełnomocnictwa PEL. Dzisiaj 21.11.2026.',
+    nazwa: tekst['u23-joanna-bez-pelnomocnictwa'].nazwa,
+    opis: tekst['u23-joanna-bez-pelnomocnictwa'].opis,
     pesel: JOANNA,
     zastosuj: (ctx) => ({
       parametry: { dataDemo: '2026-11-21' },

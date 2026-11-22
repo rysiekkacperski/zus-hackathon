@@ -253,6 +253,7 @@ export function FormularzWersji({ wpis, katalog, dzis, adresListy, historia }: F
         czesci={czesci}
         onAkcjaKroku={zapisz}
         etykietaAkcji={t.zapisz[rodzaj]}
+        onWrocKroku={() => przejdz(adresListy)}
         zajety={zapisywanie}
         dodatkowe={
           <PrzyciskLink href={adresListy} wariant="drugorzedny">

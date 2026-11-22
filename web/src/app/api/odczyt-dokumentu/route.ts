@@ -1,5 +1,6 @@
 // POST /api/odczyt-dokumentu (kontrakt, sekcja 10.2): multipart/form-data (plik, powiazania, rodzajOczekiwany?, tryb?)
-// → 200 WynikOdczytuDokumentu, 400 { kod: '0103' | '0104' }, 503 { status: 'niedostepny' } bez klucza albo po 30 s.
+// → 200 WynikOdczytuDokumentu, 400 { kod: '0103' | '0104' }, 503 { status: 'niedostepny' } bez klucza dostawcy
+// z MODEL_DOSTAWCA (DEEPSEEK_API_KEY albo ANTHROPIC_API_KEY), po błędzie modelu albo po 30 s.
 // Właściciel: u05. Pole `tryb` = 'fikstura' zwraca wynik pliku demonstracyjnego z dane/przykladowe-sprawy/fikstury-odczytu.ts.
 // Serwer zastępuje dane osobowe przed odpowiedzią i nie zapisuje pliku.
 import { fiksturaOdczytu } from '@/dane/przykladowe-sprawy/fikstury-odczytu';
@@ -51,6 +52,8 @@ export async function POST(zadanie: Request): Promise<Response> {
     return Response.json(wynik);
   }
 
+  // Plik PDF albo obraz czyta dostawca z MODEL_DOSTAWCA; bez jego klucza odczyt jest niedostępny.
+  // Limit 30 s obejmuje wgranie PDF do Files API DeepSeek, parsowanie dokumentu i oba wywołania modelu.
   if (!czyModelDostepny()) return niedostepny();
   const dane: PlikDoOdczytu = {
     dane: Buffer.from(await plik.arrayBuffer()).toString('base64'),

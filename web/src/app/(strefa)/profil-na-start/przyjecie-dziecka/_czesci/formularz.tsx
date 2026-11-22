@@ -19,6 +19,8 @@ import { formatujDate } from '@/domena/daty';
 import { CZESCI_PRZYJECIA_DZIECKA } from '@/domena/profil/nawigacja';
 import {
   najpozniejszaDataPrzyjecia,
+  POLA_DAT_URODZENIA,
+  polaDatUrodzenia,
   walidujDanePrzyjecia,
   type FormularzPrzyjecia,
   type OdpowiedzTakNie,
@@ -39,16 +41,23 @@ const ID_POLA = {
   rola: 'przyjecie-rola',
   forma: 'przyjecie-forma',
   dataPrzyjecia: 'przyjecie-data-przyjecia',
+  dataWystapieniaDoSadu: 'przyjecie-data-wystapienia-do-sadu',
   dataUrodzenia: 'przyjecie-data-urodzenia',
+  dataUrodzenia2: 'przyjecie-data-urodzenia-2',
+  dataUrodzenia3: 'przyjecie-data-urodzenia-3',
+  dataUrodzenia4: 'przyjecie-data-urodzenia-4',
+  dataUrodzenia5: 'przyjecie-data-urodzenia-5',
   odroczenie: 'przyjecie-odroczenie',
   dataUprawomocnienia: 'przyjecie-data-uprawomocnienia',
   liczbaDzieci: 'przyjecie-liczba',
 } as const satisfies Record<PoleFormularzaPrzyjecia, string>;
 
+// 3.3.4.1.3: liczba dzieci i daty urodzenia każdego dziecka w jednej części, żeby pola dat
+// pojawiały się przy wyborze liczby dzieci.
 const PODZIAL: readonly (readonly PoleFormularzaPrzyjecia[])[] = [
   ['rola', 'forma'],
-  ['dataPrzyjecia', 'dataUrodzenia', 'odroczenie', 'dataUprawomocnienia'],
-  ['liczbaDzieci'],
+  ['dataPrzyjecia', 'dataWystapieniaDoSadu', 'odroczenie', 'dataUprawomocnienia'],
+  ['liczbaDzieci', ...POLA_DAT_URODZENIA],
 ];
 
 // Data uprawomocnienia się orzeczenia jest nieobowiązkowa.
@@ -56,7 +65,8 @@ const WYMAGANE: readonly PoleFormularzaPrzyjecia[] = [
   'rola',
   'forma',
   'dataPrzyjecia',
-  'dataUrodzenia',
+  'dataWystapieniaDoSadu',
+  ...POLA_DAT_URODZENIA,
   'odroczenie',
   'liczbaDzieci',
 ];
@@ -95,6 +105,16 @@ export function FormularzDanychPrzyjecia({
 
   const zmien = <P extends PoleFormularzaPrzyjecia>(pole: P, wartosc: FormularzPrzyjecia[P]) =>
     ustawF((poprzedni) => ({ ...poprzedni, [pole]: wartosc }));
+
+  // 3.3.4.1.3, KA-03: zmniejszenie liczby dzieci usuwa pola dat ponad nową liczbę razem z wpisanymi datami.
+  const zmienLiczbeDzieci = (liczba: LiczbaDzieci) =>
+    ustawF((poprzedni) => {
+      const widoczne = polaDatUrodzenia(liczba);
+      const nowy: FormularzPrzyjecia = { ...poprzedni, liczbaDzieci: liczba };
+      for (const pole of POLA_DAT_URODZENIA) if (!widoczne.includes(pole)) nowy[pole] = '';
+      return nowy;
+    });
+  const polaDat = polaDatUrodzenia(f.liczbaDzieci);
 
   /** Błędy z zapisu: część z pierwszym polem z błędem i fokus na tym polu. */
   const pokazBledyZapisu = (nowe: BledyPol<PoleFormularzaPrzyjecia>) => {
@@ -174,15 +194,17 @@ export function FormularzDanychPrzyjecia({
               {...walidacja.pole('dataPrzyjecia')}
               szerokosc="waska"
             />
-            <PoleDaty
-              id={ID_POLA.dataUrodzenia}
-              etykieta={t.dataUrodzenia.etykieta}
-              podpowiedz={t.dataUrodzenia.podpowiedz}
-              wartosc={f.dataUrodzenia}
-              onZmiana={(w) => zmien('dataUrodzenia', w)}
-              {...walidacja.pole('dataUrodzenia')}
-              szerokosc="waska"
-            />
+            {f.forma === 'przysposobienie' ? (
+              <PoleDaty
+                id={ID_POLA.dataWystapieniaDoSadu}
+                etykieta={t.dataWystapieniaDoSadu.etykieta}
+                podpowiedz={t.dataWystapieniaDoSadu.podpowiedz}
+                wartosc={f.dataWystapieniaDoSadu}
+                onZmiana={(w) => zmien('dataWystapieniaDoSadu', w)}
+                {...walidacja.pole('dataWystapieniaDoSadu')}
+                szerokosc="waska"
+              />
+            ) : null}
             {f.forma === 'rodzina-zastepcza-niezawodowa' ? (
               <GrupaOpcji<OdpowiedzTakNie>
                 nazwa="przyjecie-odroczenie"
@@ -216,9 +238,24 @@ export function FormularzDanychPrzyjecia({
               uklad="poziomo"
               opcje={LICZBY.map((l) => ({ wartosc: String(l) as TekstLiczby, etykieta: t.liczbaDzieci.opcje[l] }))}
               wartosc={f.liczbaDzieci === null ? null : (String(f.liczbaDzieci) as TekstLiczby)}
-              onZmiana={(w) => zmien('liczbaDzieci', Number(w) as LiczbaDzieci)}
+              onZmiana={(w) => zmienLiczbeDzieci(Number(w) as LiczbaDzieci)}
               {...walidacja.pole('liczbaDzieci')}
             />
+            {polaDat.length > 1 ? <p className="my-0">{t.datyUrodzenia.wstep}</p> : null}
+            <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              {polaDat.map((pole, i) => (
+                <PoleDaty
+                  key={pole}
+                  id={ID_POLA[pole]}
+                  etykieta={polaDat.length > 1 ? t.datyUrodzenia.etykieta({ numer: String(i + 1) }) : t.dataUrodzenia.etykieta}
+                  podpowiedz={t.dataUrodzenia.podpowiedz}
+                  wartosc={f[pole]}
+                  onZmiana={(w) => zmien(pole, w)}
+                  {...walidacja.pole(pole)}
+                  szerokosc="waska"
+                />
+              ))}
+            </div>
             {trybZmiany ? null : <Notatka>{t.notatkaSciezki}</Notatka>}
           </CzescFormularza>
         </Stos>

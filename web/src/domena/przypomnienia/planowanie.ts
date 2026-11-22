@@ -69,16 +69,20 @@ export function czySmsPotwierdzony(u: Ustawienia): boolean {
 }
 
 /**
- * Brak adresu do przypomnień (komunikat 0218): włączone przypomnienia bez adresu e-mail w kanale e-mail
- * i bez potwierdzonego kanału SMS.
+ * Brak adresu do przypomnień (komunikat 0218; historyjka 3.2.1.1.3, wymaganie Kanały przypomnień):
+ * ani dane konta ZUS, ani ustawienia przewodnika konta nie zawierają adresu e-mail, a kanał SMS
+ * nie jest potwierdzony.
  */
-export function czyBrakAdresuDoPrzypomnien(u: Ustawienia): boolean {
-  if (!u.przypomnieniaWlaczone) return false;
-  const email = u.kanalEmail && u.adresEmail.trim() !== '';
+export function czyBrakAdresuDoPrzypomnien(u: Ustawienia, emailZKontaZus?: string): boolean {
+  const email = u.adresEmail.trim() !== '' || (emailZKontaZus?.trim() ?? '') !== '';
   return !email && !czySmsPotwierdzony(u);
 }
 
-/** Konta docelowe sprawy: sprawa drugiego rodzica trafia do konta Rodzic do czasu dołączenia drugiego rodzica. */
+/**
+ * Konta docelowe sprawy (historyjka 3.2.1.1.3, wymaganie Role): sprawa drugiego rodzica trafia do konta Rodzic
+ * do czasu dołączenia drugiego rodzica, a po dołączeniu do konta Drugi rodzic. Sprawa obojga rodziców
+ * i sprawa, którą załatwia matka albo ojciec, trafia do obu kont.
+ */
 export function kontaDocelowe(pozycja: PozycjaPlanu, daneRodziny: DaneRodziny): Pesel[] {
   const aktywne = daneRodziny.dostepKont.filter((d) => d.stan === 'aktywny');
   const peselRodzica = aktywne.find((d) => d.rola === 'rodzic')?.pesel ?? daneRodziny.idRodziny;
@@ -92,6 +96,7 @@ export function kontaDocelowe(pozycja: PozycjaPlanu, daneRodziny: DaneRodziny): 
     case 'drugi-rodzic':
       return [peselDrugiegoRodzica ?? peselRodzica];
     case 'oboje-rodzice':
+    case 'matka-albo-ojciec':
       return peselDolaczonego === undefined ? [peselRodzica] : [peselRodzica, peselDolaczonego];
     default:
       return [peselRodzica];

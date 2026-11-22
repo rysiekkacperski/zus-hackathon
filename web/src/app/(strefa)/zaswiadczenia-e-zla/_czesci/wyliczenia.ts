@@ -3,8 +3,10 @@
 // Wyliczenia z zaświadczeń e-ZLA zalogowanego konta (ANALIZY/16 R4–R9), wspólne dla ViewSickLeaveList,
 // bloku e-ZLA na ViewFamilyPlan i sekcji e-ZLA na ViewCaseDetails. Właściciel: u14.
 import { useMemo } from 'react';
-import { useDzis, useKatalog, useParametry, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
+import { useDzis, useKatalog, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
 import { osobyRodziny } from '@/dane/magazyn/stan';
+import { czyMaZgode } from '@/domena/konto/zgoda';
+import { analizujUbezpieczenie } from '@/domena/zasilki/okres-ubezpieczenia';
 import {
   profilZKopii,
   wyliczeniaEzla,
@@ -22,7 +24,7 @@ export function daneRodzicaKonta(konto: KontoPrzewodnika, rodzina: StanRodziny |
   return rodzina.daneRodziny.rodzicKonta === 'matka' ? rodzina.daneRodziny.matka : rodzina.daneRodziny.drugiRodzic;
 }
 
-/** Forma zatrudnienia i ubezpieczenie chorobowe konta: z profilu rodziny, a bez niego z Danych z konta ZUS. */
+/** Forma zatrudnienia i ubezpieczenie chorobowe konta: z profilu rodziny, a bez niego z Danych konta ZUS. */
 export function profilUbezpieczeniaKonta(
   konto: KontoPrzewodnika,
   rodzina: StanRodziny | null,
@@ -32,6 +34,8 @@ export function profilUbezpieczeniaKonta(
   const dane = daneRodzicaKonta(konto, rodzina);
   const forma = dane?.formaZatrudnienia?.wartosc;
   const zKopii = profilZKopii(kopia, dzis);
+  // Konto ZUS bez tytułu do ubezpieczenia w dniu wyliczeń rozstrzyga o wariancie wyliczeń (3.4.4.1.4).
+  if (zKopii.koniecUbezpieczenia !== undefined) return zKopii;
   if (!forma || forma === 'brak-drugiego-rodzica') return zKopii;
   if (forma === 'umowa-o-prace') return { forma, chorobowe: true };
   if (forma === 'brak-tytulu') return { forma, chorobowe: false };
@@ -44,32 +48,36 @@ export interface WyliczeniaKonta {
   kopia: DaneZKontaZus | null;
   rodzina: StanRodziny | null;
   profil: ProfilUbezpieczenia;
+  /** Zgoda konta na dane dotyczące zdrowia; bez niej ekran pokazuje komunikat 0004. */
+  zgoda: boolean;
   wyliczenia: WyliczeniaEzla | null;
 }
 
-/** Wyliczenia e-ZLA zalogowanego konta z jego kopii Danych z konta ZUS. */
+/** Wyliczenia e-ZLA zalogowanego konta z jego kopii Danych konta ZUS. */
 export function useWyliczeniaEzlaKonta(): WyliczeniaKonta | null {
   const stanKonta = useStanKonta();
   const rodzina = useRodzina();
   const katalog = useKatalog();
-  const parametry = useParametry();
   const dzis = useDzis();
 
   return useMemo(() => {
     if (!stanKonta) return null;
     const konto = stanKonta.konto;
     const kopia = stanKonta.kopiaDanychZus;
+    const zgoda = czyMaZgode(konto.decyzjeOZgodzie);
     const profil = profilUbezpieczeniaKonta(konto, rodzina, kopia, dzis);
+    const poczatekPrawa = kopia ? analizujUbezpieczenie(kopia.tytuly, dzis, katalog)?.dzienNabycia : undefined;
     const wyliczenia = kopia
       ? wyliczeniaEzla({
-          zaswiadczenia: kopia.zaswiadczeniaEzla,
+          // Zaświadczenia e-ZLA wyłącznie przy zgodzie na dane dotyczące zdrowia (3.4.4.1.3).
+          zaswiadczenia: zgoda ? kopia.zaswiadczeniaEzla : [],
           pesel: konto.pesel,
           profil,
           katalog,
           dzis,
-          progOstrzezenia: parametry.progOstrzezeniaOkresuZasilkowegoDni,
+          ...(poczatekPrawa ? { poczatekPrawa } : {}),
         })
       : null;
-    return { konto, kopia, rodzina, profil, wyliczenia };
-  }, [stanKonta, rodzina, katalog, parametry.progOstrzezeniaOkresuZasilkowegoDni, dzis]);
+    return { konto, kopia, rodzina, profil, zgoda, wyliczenia };
+  }, [stanKonta, rodzina, katalog, dzis]);
 }

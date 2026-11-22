@@ -9,7 +9,7 @@ import { formatujDate, roznicaDni } from '@/domena/daty';
 import { tytulSprawy } from '@/domena/katalog/odczyt';
 import { czyMaZgode } from '@/domena/konto';
 import { formatujKwote } from '@/domena/kwoty';
-import { dobierzPropozycjePakietu, koniecOknaPakietu } from '@/domena/rodzina/narodziny';
+import { czyUmowaOPraceTrwaPoPorodzie, dobierzPropozycjePakietu, koniecOknaPakietu } from '@/domena/rodzina/narodziny';
 import type { DaneRodzica, FormaZatrudnienia, KosztSpoznienia, PozycjaPlanu, TerminSprawy } from '@/domena/typy';
 import { Karta } from '@/komponenty/karta';
 import { ListaDefinicji } from '@/komponenty/lista-definicji';
@@ -134,8 +134,11 @@ export function WidokPakietuNarodzin() {
   const kalendarz = rodzina?.kalendarz ?? null;
 
   const propozycje = useMemo(
-    () => (plan !== null && dataPorodu !== undefined ? dobierzPropozycjePakietu(plan, kalendarz, forma, dataPorodu) : []),
-    [plan, kalendarz, forma, dataPorodu],
+    () =>
+      plan !== null && dataPorodu !== undefined
+        ? dobierzPropozycjePakietu(plan, kalendarz, forma, dataPorodu, czyUmowaOPraceTrwaPoPorodzie(matka, dataPorodu))
+        : [],
+    [plan, kalendarz, forma, dataPorodu, matka],
   );
 
   const powrot = { href: sciezkaWidoku('ViewFamilyPlan'), etykieta: t.powrotDoPlanu };
@@ -251,7 +254,7 @@ export function WidokPakietuNarodzin() {
         </Karta>
 
         <Wiersz odstep={6} className="flex-wrap">
-          <PrzyciskLink wariant="glowny" href={sciezkaWidoku('ViewFamilyPlanStage', { etap: 'pierwsze-tygodnie' })}>
+          <PrzyciskLink wariant="glowny" href={sciezkaWidoku('ViewFamilyPlan')}>
             {t.przejdzDoPlanu}
           </PrzyciskLink>
           <Odnosnik href={sciezkaWidoku('ViewDeadlines')}>{t.wszystkieTerminy}</Odnosnik>

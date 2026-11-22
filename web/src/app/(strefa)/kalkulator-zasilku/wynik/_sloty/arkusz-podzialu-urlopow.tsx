@@ -275,7 +275,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
             return (
               <fieldset key={i} className="m-0 flex min-w-0 flex-col gap-3 rounded-sm border border-line p-4">
                 <legend className="px-1 text-body-strong text-ink">{t.czesc({ numer })}</legend>
-                <div className="flex flex-wrap items-start gap-4">
+                <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,10rem)_auto]">
                   <PoleWyboru
                     id={`${ID}-czesc-${i}-rodzic`}
                     etykieta={t.rodzic}
@@ -338,7 +338,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
                 </p>
                 <Komunikat kod="0064" />
                 <p className="m-0 text-body">{t.ubezpieczenieOpis({ kto: drugi.mianownik })}</p>
-                <div className="flex flex-wrap items-start gap-4">
+                <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
                   <PoleDaty
                     id={`${ID}-dataUbezpieczenia`}
                     etykieta={t.dataUbezpieczenia}

@@ -15,6 +15,7 @@ import { formatujProcent } from '@/domena/kwoty';
 import type { DaneOsobyWniosku, KodKomunikatu } from '@/domena/typy';
 import { formatujRachunek } from '@/domena/walidacje';
 import { czyPotrzebneZ3a, daneRodzicaWniosku, zalacznikiZam } from '@/domena/wnioski/zam';
+import { listaDokumentowPrzyjecia } from '@/domena/wnioski/zam-przyjecie';
 import { parametryOkresuZam } from '@/domena/wnioski/zam-okresy';
 import { Ikona } from '@/komponenty/ikona';
 import { Karta } from '@/komponenty/karta';
@@ -185,8 +186,14 @@ function Podsumowanie({ dane }: { dane: DaneWnioskuZam }) {
       </div>,
     );
   }
-  if (zalaczniki.length > 0) {
-    komunikaty.push(<Komunikat key="0149" kod="0149" parametry={{ listaDokumentow: zalaczniki.map((z) => t.dokumenty[z]).join(', ') }} />);
+  // Przyjęcie dziecka na wychowanie (3.9.8.1.1): dokumenty przyjęcia dołączane do wniosku.
+  const przyjecieProfilu = kontekst.rodzina.daneCiazy?.przyjecie;
+  const dokumentyPrzyjecia = przyjecieProfilu
+    ? listaDokumentowPrzyjecia(przyjecieProfilu).map((d) => teksty.ViewZamForPayer.dokumentyPrzyjecia[d])
+    : [];
+  const listaZalacznikow = [...zalaczniki.map((z) => t.dokumenty[z]), ...dokumentyPrzyjecia];
+  if (listaZalacznikow.length > 0) {
+    komunikaty.push(<Komunikat key="0149" kod="0149" parametry={{ listaDokumentow: listaZalacznikow.join(', ') }} />);
   }
   if (czyPotrzebneZ3a(rodzicDane.forma, adresat)) komunikaty.push(<Komunikat key="0260" kod="0260" />);
 

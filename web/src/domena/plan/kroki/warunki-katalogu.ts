@@ -17,7 +17,8 @@ import {
   type WynikWarunku,
 } from '@/domena/plan/warunki';
 import type { WejsciePlanu } from '@/domena/przeliczenie';
-import type { Etap, IdPozycji, IdSprawy, PozycjaPlanu, RodzajPozycji, RodzicPozycji, RodzicSprawy, RodzicWRodzinie } from '@/domena/typy';
+import { regulaPozycji, terminZReguly } from '@/domena/terminy/reguly';
+import type { DataISO, Etap, IdPozycji, IdSprawy, PozycjaPlanu, RodzajPozycji, RodzicPozycji, RodzicSprawy, RodzicWRodzinie } from '@/domena/typy';
 
 interface PozycjaDoOceny {
   id: IdPozycji;
@@ -61,6 +62,19 @@ export function przeniesZPoprzedniej(nowa: PozycjaPlanu, przed: PozycjaPlanu | u
   return wynik;
 }
 
+/**
+ * Dzień, z którego bierzemy kwotę świadczenia: termin sprawy, gdy jest późniejszy niż dziś, bo rodzic dostanie kwotę
+ * obowiązującą w dniu złożenia wniosku (historyjka 3.5.1.2.1, KA-13). Bez terminu kwota z dnia wyliczenia planu.
+ */
+function dzienKwotySprawy(w: WejsciePlanu, id: IdPozycji): DataISO {
+  const d = w.zgoda ? w.daneCiazy : null;
+  const ptp = d?.przewidywanyTerminPorodu;
+  const urodzenie = (d?.dataPoroduPotwierdzona ? d.dataPorodu : undefined) ?? ptp;
+  const kotwice = { 'przewidywany-termin-porodu': ptp, 'data-porodu': urodzenie, 'data-urodzenia-dziecka': urodzenie };
+  const termin = terminZReguly(regulaPozycji(id, w.katalog), kotwice, w.katalog, 1, w.dzis);
+  return termin !== null && termin > w.dzis ? termin : w.dzis;
+}
+
 function nowaSprawa(
   w: WejsciePlanu,
   p: PozycjaDoOceny,
@@ -83,7 +97,7 @@ function nowaSprawa(
   };
   if (r.poPorodzie && !r.wymagaUzupelnienia) sprawa.poPorodzie = true;
   if (r.zalezyOdDochodu) sprawa.zalezyOdDochodu = true;
-  const kwota = kwotaSprawy(w.katalog, p.id, liczbaDzieci, w.dzis);
+  const kwota = kwotaSprawy(w.katalog, p.id, liczbaDzieci, dzienKwotySprawy(w, p.id));
   if (kwota) sprawa.kwota = kwota;
   return sprawa;
 }
@@ -98,7 +112,9 @@ export const warunkiKatalogu: KrokPlanu = (pozycje, w) => {
     if (!p.warunek) continue;
     const r = p.warunek(w);
     if (!r.spelniony) continue;
-    const sprawy: { idSprawy: IdSprawy; rodzic: RodzicSprawy }[] = czySprawaNaRodzica(p)
+    // Sprawa K21 jest jedna dla rodziny także przy pozycji katalogu „każdy rodzic na umowie o pracę” (3.6.1.1.3).
+    const naRodzica = czySprawaNaRodzica(p) && p.id !== 'K21';
+    const sprawy: { idSprawy: IdSprawy; rodzic: RodzicSprawy }[] = naRodzica
       ? (r.rodzice ?? rodziceZWyniku(r.rodzic)).map((rodzic) => ({ idSprawy: idSprawyDlaRodzica(p.id, rodzic), rodzic }))
       : [{ idSprawy: p.id, rodzic: r.rodzic }];
     for (const { idSprawy, rodzic } of sprawy) {

@@ -20,6 +20,18 @@ import { czyDotyczyDziecka, etykietaRodzica, kwotaSprawy, nazwaEtapu, opisSprawy
 
 const t = teksty.ViewFamilyPlan;
 
+// Poniżej md wiersze tabeli spraw układają się w karty: nagłówki kolumn zostają dla czytników ekranu,
+// a komórki sprawy, rodzica, statusu i kwoty stoją jedna pod drugą na całej szerokości karty.
+const KLASY_KART_PONIZEJ_MD = [
+  'max-md:overflow-visible',
+  'max-md:[&_table]:block max-md:[&_tbody]:flex max-md:[&_tbody]:flex-col max-md:[&_tbody]:gap-3',
+  'max-md:[&_thead]:sr-only',
+  'max-md:[&_tbody_tr]:flex max-md:[&_tbody_tr]:flex-col max-md:[&_tbody_tr]:items-start max-md:[&_tbody_tr]:gap-3',
+  'max-md:[&_tbody_tr]:rounded-md max-md:[&_tbody_tr]:border max-md:[&_tbody_tr]:border-line max-md:[&_tbody_tr]:p-4',
+  'max-md:[&_tbody_th]:block max-md:[&_tbody_th]:h-auto max-md:[&_tbody_th]:w-full max-md:[&_tbody_th]:border-0 max-md:[&_tbody_th]:p-0',
+  'max-md:[&_tbody_td]:block max-md:[&_tbody_td]:h-auto max-md:[&_tbody_td]:border-0 max-md:[&_tbody_td]:p-0 max-md:[&_tbody_td]:text-left',
+].join(' ');
+
 export interface EtapPlanuProps {
   etap: Etap;
   sprawy: PozycjaPlanu[];
@@ -86,6 +98,7 @@ export function EtapPlanu({ etap, sprawy, kontekst, terminy, przedTabela, poTabe
         {przedTabela}
         {sprawy.length > 0 ? (
           <Tabela
+            className={KLASY_KART_PONIZEJ_MD}
             podpis={t.podpisTabeli({ etap: nazwa })}
             etykietaPrzewijania={t.przewijanieTabeli({ etap: nazwa })}
             kolumny={[
@@ -104,9 +117,19 @@ export function EtapPlanu({ etap, sprawy, kontekst, terminy, przedTabela, poTabe
                   etap={etap}
                 />
               ),
-              kogo: etykietaRodzica(sprawa, kontekst.rola),
+              kogo: (
+                <>
+                  <span className="text-small-strong md:hidden">{t.kolumny.kogo}: </span>
+                  {etykietaRodzica(sprawa, kontekst.rola)}
+                </>
+              ),
               status: <StatusSprawy status={sprawa.status} />,
-              kwota: kwotaSprawy(sprawa),
+              kwota: (
+                <>
+                  <span className="text-small-strong md:hidden">{t.kolumny.kwota}: </span>
+                  {kwotaSprawy(sprawa)}
+                </>
+              ),
             }))}
           />
         ) : przedTabela ? null : (

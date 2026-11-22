@@ -16,7 +16,7 @@ import type {
   ZnacznikCzasu,
 } from '@/domena/typy/wspolne';
 
-export type RodzajWniosku = 'zam' | 'zas-53' | 'urlop-do-pracodawcy' | 'rezygnacja-z-czesci-zasilku' | 'wniosek-ojca-o-urlop' | 'odpis-aktu-urodzenia';
+export type RodzajWniosku = 'zam' | 'zas-53' | 'z-15' | 'urlop-do-pracodawcy' | 'rezygnacja-z-czesci-zasilku' | 'wniosek-ojca-o-urlop' | 'odpis-aktu-urodzenia';
 export type StanWniosku = 'szkic' | 'przygotowany' | 'wyslany' | 'zlozony';
 export type AdresatWniosku = 'zus' | 'platnik-skladek' | 'pracodawca' | 'rejestr-stanu-cywilnego';
 export type RodzajUrlopu = 'macierzynski' | 'czesc-przed-porodem' | 'rodzicielski' | 'uzupelniajacy' | 'ojcowski'
@@ -45,7 +45,7 @@ export interface WniosekZam extends WniosekBazowy {
   przekazanieDanychDziecka?: { czas: ZnacznikCzasu; dane: DaneOsobyWniosku[]; liczbaUrodzonychDzieci: number };
   nazwaPlikuDlaPlatnika?: string;
 }
-export interface OswiadczenieZ10 { odpowiedzi: { pytanie: 1 | 2 | 3 | 4 | 5; tak: boolean; podmiot?: string; miejsce?: string; rodzajDzialalnosci?: string; data?: DataISO }[]; wylaczenie0237?: boolean }
+export interface OswiadczenieZ10 { odpowiedzi: { pytanie: 1 | 2 | 3 | 4 | 5 | 6 | 7; tak: boolean; podmiot?: string; miejsce?: string; rodzajDzialalnosci?: string; hektary?: number; data?: DataISO; urlop?: Okres }[]; wylaczenie0237?: boolean }
 export interface WniosekZas53 extends WniosekBazowy {
   rodzaj: 'zas-53';
   zaswiadczenie?: { zrodlo: 'e-zla' | 'tryb-alternatywny'; seriaINumer?: string; od: DataISO; do: DataISO; kodyLiterowe: ('B' | 'E')[]; platnik?: string };
@@ -60,25 +60,58 @@ export interface WniosekZas53 extends WniosekBazowy {
   oswiadczenieZ10?: OswiadczenieZ10; oswiadczeniePotwierdzone: boolean;
 }
 export type PodrodzajWnioskuOUrlop = 'czesc-przed-porodem' | 'macierzynski-z-rodzicielskim' | 'rodzicielski' | 'ojcowski'
-  | 'uzupelniajacy' | 'na-warunkach-macierzynskiego' | 'laczenie-z-praca' | 'rezygnacja-matki' | 'pozostala-czesc-macierzynskiego';
+  | 'uzupelniajacy' | 'na-warunkach-macierzynskiego' | 'laczenie-z-praca' | 'rezygnacja-matki' | 'pozostala-czesc-macierzynskiego'
+  | 'wychowawczy' | 'obnizenie-wymiaru';
 export interface WniosekOUrlop extends WniosekBazowy {
   rodzaj: 'urlop-do-pracodawcy' | 'rezygnacja-z-czesci-zasilku' | 'wniosek-ojca-o-urlop';
   podrodzaj?: PodrodzajWnioskuOUrlop; okresy: OkresWniosku[];
   zakres?: 'z-calym-rodzicielskim' | 'wylacznie-macierzynski' | 'wylacznie-na-warunkach'; numerCzesci?: number;
-  wariant?: '81-5' | '100-70'; stawkaWSzkicu?: '81-5' | '100-70';
+  wariant?: '81-5' | '100-70'; stawkaWSzkicu?: '81-5' | '100-70'; numerScenariusza?: number;
   oswiadczenia: { zamiarDrugiegoRodzica?: boolean; wczesniejszyOjcowski?: 'nie' | '7-dni'; drugiRodzicBezUzupelniajacego?: boolean;
     laczenieCzesciZWydluzenia?: boolean; wymiarWCzesciZWydluzenia?: number };
   laczenie?: { wymiarPracy: number; okres: Okres; dniLaczenia: number; dniWydluzenia: number; ostatniDzienUrlopu: DataISO };
   daneRodzica?: DaneOsobyWniosku; daneDziecka?: DaneOsobyWniosku;
-  emailPracodawcy?: string; dataPoczatkuOchrony?: DataISO; dataPrzygotowania?: DataISO;
+  emailPracodawcy?: string; dataPoczatkuOchrony?: DataISO; dataKoncaOchrony?: DataISO; dataPrzygotowania?: DataISO;
   rezygnacja?: { dataPowrotu: DataISO; zOrzeczeniem: boolean };
+  /** Urlop wychowawczy i obniżenie wymiaru czasu pracy (3.9.6.1.5); okres w miesiącach i dniach, miesiąc = 30 dni. */
+  wychowawczy?: { okres: Okres; rodzaj: 'do-6-lat' | 'niepelnosprawnosc'; miesiace: number; dni: number; numerCzesci: number;
+    pozostaloMiesiace: number; pozostaloDni: number; okresDrugiegoRodzica?: Okres; przyczyna36?: string;
+    wymiarPracy?: number; dotychczasowaPraca?: Okres | null };
   wniosekOjca?: { przyczyna: 'rezygnacja' | RodzajSytuacjiSzczegolnej; dataZdarzenia?: DataISO; dniPrzedPorodem: number; zobowiazanieOWypisie?: boolean };
 }
 export interface WniosekOOdpis extends WniosekBazowy {
   rodzaj: 'odpis-aktu-urodzenia'; rodzajOdpisu?: 'skrocony' | 'zupelny' | 'wielojezyczny';
   daneDziecka?: DaneOsobyWniosku; daneWnioskodawcy?: DaneOsobyWniosku;
-  cel?: 'sprawa-w-zus' | 'swiadczenie-socjalne' | 'opieka-albo-adopcja' | 'zatrudnienie' | 'inny';
+  cel?: 'sprawa-w-zus' | 'swiadczenie-socjalne' | 'alimenty' | 'opieka-albo-adopcja' | 'zatrudnienie' | 'dowod-osobisty-albo-paszport' | 'inny';
   oplataSkarbowa?: Grosze; sposobOdbioru?: 'e-doreczenia' | 'poczta' | 'osobiscie'; adresDoDoreczenia?: string;
   urzadStanuCywilnego?: string; przewidywanyDzienWydania?: DataISO;
 }
-export type Wniosek = WniosekZam | WniosekZas53 | WniosekOUrlop | WniosekOOdpis;
+// Wniosek o zasiłek opiekuńczy Z-15 (epik 3.9.3).
+export type SytuacjaOpiekiZ15 = 'chore-dziecko' | 'zamkniecie-placowki' | 'choroba-niani' | 'choroba-opiekuna-dziennego'
+  | 'porod-choroba-drugiego-rodzica' | 'szpital-drugiego-rodzica' | 'izolacja-dziecka' | 'chory-malzonek' | 'dodatkowy-nowo-narodzone';
+export type KategoriaLimituZ15 = 60 | 30 | 14 | 'poza-limitem';
+export interface OkresOpiekiZ15 { od: DataISO; do: DataISO; seriaINumer?: string; trybAlternatywny?: boolean }
+export interface OsobaPodOpiekaZ15 extends DaneOsobyWniosku { pokrewienstwo: 'dziecko' | 'malzonek' | 'rodzic-dziecka' }
+export interface DniWRokuZ15 { rok: number; kategoria: KategoriaLimituZ15; limitKategorii: number; limitLaczny: number;
+  dniWniosku: number; dniWykorzystane: number; dniPozostale: number }
+export interface OswiadczeniaZ15 {
+  domownik?: boolean; dniDomownika?: DataISO[]; wspolneGospodarstwo?: boolean;
+  zwolnienieZWynagrodzeniem?: boolean; dniZwolnienia?: DataISO[];
+  poprzedniPlatnik?: 'tak' | 'nie' | 'nie-zmienialem'; dniUPoprzedniegoPlatnika?: number;
+  drugiRodzicNieznany?: boolean; drugiRodzic?: DaneOsobyWniosku; drugiRodzicZasilek?: boolean; dniDrugiegoRodzica?: number;
+  innyCzlonekZasilek?: boolean; dniInnegoCzlonka?: number;
+  zasilekMacierzynskiMatki?: boolean; przerwaniePracy?: boolean;
+}
+export interface WniosekZ15 extends WniosekBazowy {
+  rodzaj: 'z-15';
+  osoba?: OsobaPodOpiekaZ15; orzeczenie?: boolean; sytuacja?: SytuacjaOpiekiZ15; okresy: OkresOpiekiZ15[];
+  placowka?: { rodzaj: 'zlobek' | 'klub-dzieciecy' | 'przedszkole' | 'szkola'; dataPowiadomienia?: DataISO };
+  sytuacjaMatki?: { rodzaj: 'szpital' | 'niezdolnosc' | 'niepelnosprawnosc' | 'porzucenie'; dataZdarzenia: DataISO; dataWypisu?: DataISO };
+  oswiadczenia: OswiadczeniaZ15; dniWRoku?: DniWRokuZ15[];
+  wnioskodawca?: DaneOsobyWniosku; platnik?: { nazwa: string; nip: string; regon: string };
+  platnikZasilku?: 'zus' | 'platnik-skladek' | 'nieustalony';
+  numerTelefonu?: string; numerRachunku?: string; uwagi?: string;
+  dniZasilku?: number; stawkaDzienna?: Grosze; szacunkowaKwota?: Grosze;
+  oswiadczeniePotwierdzone: boolean; dataPrzygotowania?: DataISO; dataPrzekazania?: DataISO;
+}
+export type Wniosek = WniosekZam | WniosekZas53 | WniosekOUrlop | WniosekOOdpis | WniosekZ15;

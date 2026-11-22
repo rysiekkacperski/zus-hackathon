@@ -76,7 +76,7 @@ export function WidokPrzykladowychSpraw() {
       sprawa: (
         <>
           <span className="block font-semibold text-ink-strong">{id}</span>
-          {t.zrodla[s.zrodlo]}
+          <span className="whitespace-nowrap">{t.zrodla[s.zrodlo]}</span>
         </>
       ),
       sytuacja: s.sytuacja ?? '',

@@ -3,6 +3,7 @@
 import type { CSSProperties } from 'react';
 import { Ikona } from '@/komponenty/ikona';
 import { Tabela } from '@/komponenty/tabela';
+import { dodajDni, formatujDate } from '@/domena/daty';
 import { formatujKwote, formatujProcent } from '@/domena/kwoty';
 import type { WynikPodzialu } from '@/domena/kalkulatory/podzial';
 import { teksty } from '@/teksty';
@@ -71,9 +72,19 @@ export function WynikPodzialuUrlopu({ wynik, tygodnieMatki: M, tygodnieDrugiego:
         </>
       ),
       tygodnie: String(w.tygodnie),
-      podstawa: w.podstawa === null ? brak : formatujKwote(w.podstawa),
+      podstawa: w.podstawa === null ? brak : w.zmiana ? (
+        <>
+          <span className="block">{t.podstawaPrzedZmiana({ data: formatujDate(dodajDni(w.zmiana.od, -1)) })}{formatujKwote(w.podstawa)}</span>
+          <span className="block">{t.podstawaOdZmiany({ data: formatujDate(w.zmiana.od), kwota: formatujKwote(w.zmiana.podstawa) })}</span>
+        </>
+      ) : formatujKwote(w.podstawa),
       stawka: w.stawka === null ? brak : formatujProcent(w.stawka),
-      miesiecznie: w.miesiecznie === null ? brak : formatujKwote(w.miesiecznie),
+      miesiecznie: w.miesiecznie === null ? brak : w.zmiana ? (
+        <>
+          <span className="block">{t.podstawaPrzedZmiana({ data: formatujDate(dodajDni(w.zmiana.od, -1)) })}{formatujKwote(w.miesiecznie)}</span>
+          <span className="block">{t.podstawaOdZmiany({ data: formatujDate(w.zmiana.od), kwota: formatujKwote(w.zmiana.miesiecznie) })}</span>
+        </>
+      ) : formatujKwote(w.miesiecznie),
       suma: w.suma === null ? brak : formatujKwote(w.suma),
     };
   });
@@ -118,7 +129,8 @@ export function WynikPodzialuUrlopu({ wynik, tygodnieMatki: M, tygodnieDrugiego:
         </div>
         <div className="flex h-6 w-full gap-0.5">
           <Segment szerokosc={procent(M)} klasa="rounded-l-sm bg-brand-chart" />
-          <Segment szerokosc={procent(Math.max(0, L - M - D - (bezPrawa ? 0 : 0)))} klasa="bg-surface-page" />
+          <Segment szerokosc={procent(Math.max(0, L - M - D - P))} klasa="bg-surface-page" />
+          <Segment szerokosc={procent(P)} klasa="bg-line-strong" />
           <Segment szerokosc={procent(D)} klasa="rounded-r-sm bg-brand" />
         </div>
         <div className="flex flex-wrap gap-6">
@@ -126,7 +138,7 @@ export function WynikPodzialuUrlopu({ wynik, tygodnieMatki: M, tygodnieDrugiego:
             <strong>{t.kafelMatka}</strong>
             {t.legendaMatka({ tygodnie: tyg(M), stawka: stawkaDopisek })}
           </span>
-          {w815 && drugiPonad > 0 ? (
+          {w815 && !wynik.ponadPoUrodzinach && drugiPonad > 0 ? (
             <>
               <span className="text-body">
                 <strong>{t.kafelDrugi}</strong>

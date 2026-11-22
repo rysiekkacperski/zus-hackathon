@@ -84,10 +84,10 @@
   --text-tile-title: 1.125rem;
   --text-tile-title--line-height: 1.75rem;
   --text-tile-title--font-weight: 600;
-  --text-small: 0.875rem;
-  --text-small--line-height: 1.25rem;
-  --text-small-strong: 0.875rem;
-  --text-small-strong--line-height: 1.25rem;
+  --text-small: 0.9375rem;
+  --text-small--line-height: 1.375rem;
+  --text-small-strong: 0.9375rem;
+  --text-small-strong--line-height: 1.375rem;
   --text-small-strong--font-weight: 600;
   --text-amount: 1.5rem;
   --text-amount--line-height: 2rem;

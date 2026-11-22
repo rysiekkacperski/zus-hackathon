@@ -7,6 +7,7 @@ import type { Fakt, KontekstAsystenta } from '@/domena/typy';
 export const PROMPT_KLASYFIKACJI = `Klasyfikujesz pytanie rodzica do asystenta przewodnika ZUS dla przyszłych i świeżo upieczonych rodziców.
 Zwróć intencję pytania z listy: ${INTENCJE_ASYSTENTA.join(', ')}.
 Zasady:
+- pytania o zwolnienie lekarskie i zaświadczenia lekarskie e-ZLA rodzica albo matki z rodziny konta to zaswiadczenia-lekarskie;
 - pytania medyczne (leki, objawy, zdrowie) to poza-zakresem-medyczne;
 - pytania podatkowe to poza-zakresem-podatkowe;
 - pytania o sprawy innych osób niż rodzina konta to poza-zakresem-inne-osoby;

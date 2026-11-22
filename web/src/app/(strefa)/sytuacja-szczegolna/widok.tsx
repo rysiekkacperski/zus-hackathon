@@ -22,13 +22,19 @@ import {
   PUSTY_FORMULARZ_SYTUACJI,
   czySpokojnyTryb,
   walidujSytuacje,
+  zgloszenieDopisaniaZaswiadczenia,
   type FormularzSytuacji as Formularz,
   type PoleSytuacji,
   type ZgloszenieSytuacji,
 } from '@/domena/rodzina/sytuacje';
-import type { BledyPol, KodKomunikatu } from '@/domena/typy';
+import type { BledyPol, KodKomunikatu, SytuacjaSzczegolna } from '@/domena/typy';
 import { useDzis, useKontekstRodziny } from '@/dane/magazyn/hooki';
-import { wylaczSpokojnyTryb, zapiszSytuacjeSzczegolna } from '@/dane/magazyn/operacje/sytuacje';
+import {
+  brakZgodyMatkiDlaKonta,
+  dopiszZaswiadczenieOMartwymUrodzeniu,
+  wylaczSpokojnyTryb,
+  zapiszSytuacjeSzczegolna,
+} from '@/dane/magazyn/operacje/sytuacje';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { teksty } from '@/teksty';
 import { ArkuszPotwierdzeniaSytuacji } from './_czesci/arkusz-potwierdzenia-sytuacji';
@@ -52,13 +58,16 @@ export function WidokSytuacjiSzczegolnej() {
   const [zgloszenie, setZgloszenie] = useStanChwilowy<ZgloszenieSytuacji | null>(null);
   const [komunikatArkusza, setKomunikatArkusza] = useState<KodKomunikatu | null>(null);
   const [komunikatWidoku, setKomunikatWidoku] = useState<KodKomunikatu | null>(null);
+  // Poronienie z listy zapisanych sytuacji, do którego rodzic dopisuje zaświadczenie o martwym urodzeniu.
+  const [dopisanie, setDopisanie] = useState<SytuacjaSzczegolna | null>(null);
 
   const daneCiazyRodziny = kontekst?.rodzina.daneCiazy ?? null;
+  const brakZgodyMatki = kontekst !== null ? brakZgodyMatkiDlaKonta(kontekst.konto.pesel, kontekst.rodzina) : false;
   const wAkordeonie = (daneCiazyRodziny?.sytuacjeSzczegolne ?? []).length > 0;
   // Błąd pola pokazuje się po opuszczeniu pola, a po próbie przejścia dalej przy każdej zmianie.
   const walidacja = useWalidacjaNaBiezaco({
     wartosci: formularz,
-    waliduj: (f: Formularz) => walidujSytuacje(f, daneCiazyRodziny, dzis),
+    waliduj: (f: Formularz) => walidujSytuacje(f, daneCiazyRodziny, dzis, brakZgodyMatki),
     pola: POLA_SYTUACJI,
   });
   const czesci = useCzesciFormularza({
@@ -92,7 +101,23 @@ export function WidokSytuacjiSzczegolnej() {
     setZgloszenie(z);
   }
 
+  function zapiszDopisanie() {
+    if (dopisanie === null) return;
+    ustawZajety(true);
+    const wynik = dopiszZaswiadczenieOMartwymUrodzeniu(dopisanie.id, pobierzKontekstOperacji());
+    ustawZajety(false);
+    if (wynik.ok) {
+      setDopisanie(null);
+      return;
+    }
+    setKomunikatArkusza(wynik.kod);
+  }
+
   function zapisz() {
+    if (dopisanie !== null) {
+      zapiszDopisanie();
+      return;
+    }
     if (zgloszenie === null) return;
     ustawZajety(true);
     const wynik = zapiszSytuacjeSzczegolna(formularz, pobierzKontekstOperacji());
@@ -129,14 +154,18 @@ export function WidokSytuacjiSzczegolnej() {
       walidacja={walidacja}
       czesci={czesci}
       onDalej={przejdzDoArkusza}
+      brakZgodyMatki={brakZgodyMatki}
     />
   );
 
   const arkusz = (
     <ArkuszPotwierdzeniaSytuacji
-      otwarte={zgloszenie !== null}
-      onZamknij={() => setZgloszenie(null)}
-      zgloszenie={zgloszenie}
+      otwarte={zgloszenie !== null || dopisanie !== null}
+      onZamknij={() => {
+        setZgloszenie(null);
+        setDopisanie(null);
+      }}
+      zgloszenie={dopisanie !== null ? zgloszenieDopisaniaZaswiadczenia(dopisanie) : zgloszenie}
       onZapisz={zapisz}
       zajety={zajety}
       komunikat={komunikatArkusza ? <Komunikat kod={komunikatArkusza} /> : null}
@@ -164,7 +193,21 @@ export function WidokSytuacjiSzczegolnej() {
     data: formatujDate(s.dataZdarzenia),
     liczba: String(s.liczbaDzieci ?? 1),
     zrodlo,
+    akcje:
+      s.rodzaj === 'poronienie-bez-zaswiadczenia' ? (
+        <Przycisk
+          type="button"
+          wariant="drugorzedny"
+          onClick={() => {
+            setKomunikatArkusza(null);
+            setDopisanie(s);
+          }}
+        >
+          {t.dopiszZaswiadczenie}
+        </Przycisk>
+      ) : null,
   }));
+  const zPoronieniem = sytuacje.some((s) => s.rodzaj === 'poronienie-bez-zaswiadczenia');
 
   return (
     <>
@@ -183,6 +226,7 @@ export function WidokSytuacjiSzczegolnej() {
                   { klucz: 'data', naglowek: t.kolumny.data },
                   { klucz: 'liczba', naglowek: t.kolumny.liczba },
                   { klucz: 'zrodlo', naglowek: t.kolumny.zrodlo },
+                  ...(zPoronieniem ? [{ klucz: 'akcje' as const, naglowek: t.kolumny.akcje }] : []),
                 ]}
                 wiersze={wiersze}
               />

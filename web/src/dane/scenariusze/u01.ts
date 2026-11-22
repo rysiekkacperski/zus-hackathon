@@ -1,9 +1,13 @@
 // Scenariusze demonstracyjne jednostki u01 (kontrakt, sekcja 6.6). Właściciel: u01.
-// Scenariusz odtwarza stan z kryteriów akceptacji historyjek jednostki.
+// Scenariusz odtwarza stan po symulacji uzupełnienia profilu z ViewDemoAccountPicker (symulujUzupelnienieProfilu).
+import { gminy } from '@/dane/gminy';
 import { kontoPrzykladowe } from '@/dane/konta-demo';
+import { zrodloweDaneKonta } from '@/dane/konta-zus';
 import { kontoPrzewodnikaZKontaDemo, wynikiKalkulacjiPuste } from '@/dane/magazyn/stan-poczatkowy';
-import { dodajDni } from '@/domena/daty';
-import { dzieckoZSymulacji } from '@/domena/dane-zus/symulacja-dziecka';
+import { przygotujKopie } from '@/domena/dane-zus/odczyt';
+import { WERSJA_TRESCI_ZGODY } from '@/domena/konto';
+import { szkicProfiluDemo } from '@/domena/profil/profil-demo';
+import { zbudujProfilZeSzkicu } from '@/domena/profil/zapis';
 import type { KontekstOperacji, Pesel, ScenariuszDemo, StanKonta, StanRodziny } from '@/domena/typy';
 import { teksty } from '@/teksty';
 
@@ -11,74 +15,45 @@ const tekst = teksty.ViewDemoSettings.scenariusze;
 
 const PESEL_ANNY: Pesel = '93041231085';
 
-/** Przewidywany termin porodu w scenariuszu: 7 dni po dniu demonstracyjnym. */
-const DNI_DO_TERMINU_PORODU = 7;
-/** Pierwsza wizyta u lekarza w 8. tygodniu ciąży: 224 dni przed terminem porodu. */
-const DNI_OD_PIERWSZEJ_WIZYTY_DO_TERMINU = 224;
-
-/** Konto Anny Nowak z rolą Rodzic, rodziną i zgodą na dane dotyczące zdrowia. */
-function kontoAnny(ctx: KontekstOperacji): Partial<StanKonta> {
+/** Konto Anny Nowak i jej rodzina po symulacji uzupełnienia profilu w dniu demonstracyjnym. */
+function stanAnnyPoSymulacji(ctx: KontekstOperacji): { konto: Partial<StanKonta>; rodzina: StanRodziny } {
   const demo = kontoPrzykladowe(PESEL_ANNY);
-  if (demo === undefined) throw new Error('Brak konta demonstracyjnego Anny Nowak.');
+  const gmina = gminy[0];
+  if (demo === undefined || gmina === undefined) throw new Error('Brak konta demonstracyjnego Anny Nowak albo gminy.');
+  const zrodlo = zrodloweDaneKonta(PESEL_ANNY, null, demo);
+  const kopia = zrodlo === null ? null : przygotujKopie({ zrodlo, poprzednia: null, teraz: ctx.teraz, zgodaNaDaneZdrowia: true });
+  const szkic = szkicProfiluDemo({ kopia, plec: demo.plec, gmina, dzis: ctx.dzis, teraz: ctx.teraz });
+  const { daneRodziny, daneCiazy } = zbudujProfilZeSzkicu(szkic, true, PESEL_ANNY, PESEL_ANNY, ctx.teraz);
   return {
     konto: {
-      ...kontoPrzewodnikaZKontaDemo(demo, ctx.teraz),
-      rola: 'rodzic',
-      idRodziny: PESEL_ANNY,
-      decyzjeOZgodzie: [{ rodzaj: 'udzielenie', wersjaTresci: '1.0', czas: ctx.teraz }],
-    },
-  };
-}
-
-/** Rodzina Anny Nowak przed porodem: JDG z dobrowolnym ubezpieczeniem chorobowym, termin porodu za 7 dni. */
-function rodzinaAnnyPrzedPorodem(ctx: KontekstOperacji): StanRodziny {
-  const termin = dodajDni(ctx.dzis, DNI_DO_TERMINU_PORODU);
-  return {
-    idRodziny: PESEL_ANNY,
-    daneRodziny: {
-      idRodziny: PESEL_ANNY,
-      sytuacja: { wartosc: 'oczekiwanie', zrodlo: 'odpowiedz-rodzica' },
-      rodzicKonta: 'matka',
-      matka: {
-        formaZatrudnienia: { wartosc: 'jdg', zrodlo: 'konto-zus' },
-        dobrowolneChorobowe: { wartosc: true, zrodlo: 'konto-zus' },
-        platnikZasilku: { wartosc: 'zus', zrodlo: 'konto-zus' },
-        potwierdzeniaSkladek: [],
+      konto: {
+        ...kontoPrzewodnikaZKontaDemo(demo, ctx.teraz),
+        rola: 'rodzic',
+        idRodziny: PESEL_ANNY,
+        decyzjeOZgodzie: [{ rodzaj: 'udzielenie', wersjaTresci: WERSJA_TRESCI_ZGODY, czas: ctx.teraz }],
       },
-      drugiRodzic: { formaZatrudnienia: null, dobrowolneChorobowe: null, platnikZasilku: null, potwierdzeniaSkladek: [] },
-      stanCywilny: null,
-      gmina: null,
-      dochodNaOsobe: null,
-      dostepKont: [{ pesel: PESEL_ANNY, rola: 'rodzic', dolaczono: ctx.dzis, stan: 'aktywny' }],
-      zapisano: ctx.teraz,
+      kopiaDanychZus: kopia,
+      stanOdczytuZus: kopia === null ? { stan: 'brak' } : { stan: 'udany', czas: ctx.teraz },
     },
-    daneCiazy: {
-      przewidywanyTerminPorodu: termin,
-      liczbaDzieciZCiazy: 1,
-      dataPierwszejWizyty: dodajDni(termin, -DNI_OD_PIERWSZEJ_WIZYTY_DO_TERMINU),
-      dataPoroduPotwierdzona: false,
-      dzieci: [],
-      sytuacjeSzczegolne: [],
-      spokojnyTryb: { wlaczony: false },
+    rodzina: {
+      idRodziny: PESEL_ANNY,
+      daneRodziny,
+      daneCiazy,
+      plan: null,
+      kalendarz: null,
+      wnioski: [],
+      wynikiKalkulacji: wynikiKalkulacjiPuste(),
     },
-    plan: null,
-    kalendarz: null,
-    wnioski: [],
-    wynikiKalkulacji: wynikiKalkulacjiPuste(),
   };
 }
 
 export const scenariuszeU01: readonly ScenariuszDemo[] = [
   {
-    // KA-03 i KA-04 Story 3.4.1.2.1: rodzina Anny Nowak z terminem porodu po symulacji narodzin dziecka w dniu demonstracyjnym.
-    id: 'u01-anna-nowak-narodziny-z-symulacji',
-    nazwa: tekst.u01AnnaNarodziny.nazwa,
-    opis: tekst.u01AnnaNarodziny.opis,
+    // Rodzina Anny Nowak po symulacji uzupełnienia profilu: termin porodu za 120 dni, plan w etapie Ciąża.
+    id: 'u01-anna-nowak-profil-demo',
+    nazwa: tekst.u01AnnaProfilDemo.nazwa,
+    opis: tekst.u01AnnaProfilDemo.opis,
     pesel: PESEL_ANNY,
-    zastosuj: (ctx) => ({
-      konto: kontoAnny(ctx),
-      rodzina: rodzinaAnnyPrzedPorodem(ctx),
-      zus: { dzieckoZSymulacji: dzieckoZSymulacji({ nazwisko: 'Nowak' }, ctx.dzis) },
-    }),
+    zastosuj: (ctx) => stanAnnyPoSymulacji(ctx),
   },
 ];

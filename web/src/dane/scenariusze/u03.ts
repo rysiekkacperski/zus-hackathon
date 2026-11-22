@@ -14,6 +14,9 @@ import type {
   StanKonta,
   StanSymulowanegoZus,
 } from '@/domena/typy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const PESEL_ANNY: Pesel = '93041231085';
 const PESEL_MAGDALENY: Pesel = '90072551267';
@@ -57,9 +60,9 @@ function stanZus(pesel: Pesel, zmiana: Partial<StanSymulowanegoZus>): StanSymulo
 export const scenariuszeU03: readonly ScenariuszDemo[] = [
   {
     id: 'u03-anna-nowe-dziecko',
-    nazwa: 'Anna Nowak: nowe dziecko w danych z konta ZUS',
+    nazwa: tekst['u03-anna-nowe-dziecko'].nazwa,
     opis:
-      'Konto Anna Nowak ma kopię z 20.11.2026, 18:30 bez członków rodziny, a dane konta ZUS pokazują Zofię Nowak urodzoną 19.11.2026. Odczyt 21.11.2026 oznacza ją jako nowe dziecko.',
+      tekst['u03-anna-nowe-dziecko'].opis,
     pesel: PESEL_ANNY,
     zastosuj: () => ({
       konto: kontoZKopia(PESEL_ANNY, null),
@@ -69,9 +72,9 @@ export const scenariuszeU03: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u03-anna-dziecko-w-kopii',
-    nazwa: 'Anna Nowak: dziecko obecne w poprzednim odczycie',
+    nazwa: tekst['u03-anna-dziecko-w-kopii'].nazwa,
     opis:
-      'Konto Anna Nowak ma kopię z 20.11.2026, 18:30 z Zofią Nowak. Odczyt 21.11.2026 zapisuje Zofię Nowak bez oznaczenia nowego dziecka.',
+      tekst['u03-anna-dziecko-w-kopii'].opis,
     pesel: PESEL_ANNY,
     zastosuj: () => ({
       konto: kontoZKopia(PESEL_ANNY, stanZus(PESEL_ANNY, { dzieckoZSymulacji: ZOFIA_NOWAK })),
@@ -81,9 +84,9 @@ export const scenariuszeU03: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u03-anna-nieaktualne-dane',
-    nazwa: 'Anna Nowak: dane konta ZUS niedostępne, kopia z 20.11.2026',
+    nazwa: tekst['u03-anna-nieaktualne-dane'].nazwa,
     opis:
-      'Konto Anna Nowak ma kopię z 20.11.2026, 18:30, a dane konta ZUS są niedostępne. Odczyt 21.11.2026 korzysta z kopii i pokazuje komunikat 0002.',
+      tekst['u03-anna-nieaktualne-dane'].opis,
     pesel: PESEL_ANNY,
     zastosuj: () => ({
       konto: kontoZKopia(PESEL_ANNY, null),
@@ -92,9 +95,9 @@ export const scenariuszeU03: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u03-joanna-brak-polaczenia',
-    nazwa: 'Joanna Mazur: dane konta ZUS niedostępne, brak kopii',
+    nazwa: tekst['u03-joanna-brak-polaczenia'].nazwa,
     opis:
-      'Konto Joanna Mazur nie ma kopii, a dane konta ZUS są niedostępne. Odczyt pokazuje komunikat 0001 z ponowieniem. Wyłącz symulację niedostępności danych ZUS i pobierz dane ponownie.',
+      tekst['u03-joanna-brak-polaczenia'].opis,
     pesel: PESEL_JOANNY,
     zastosuj: () => ({
       parametry: parametryScenariusza(true),
@@ -102,9 +105,9 @@ export const scenariuszeU03: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u03-pierwszy-odczyt-dziecko-z-2025',
-    nazwa: 'Magdalena Wójcik: pierwszy odczyt z dzieckiem urodzonym 05.05.2025',
+    nazwa: tekst['u03-pierwszy-odczyt-dziecko-z-2025'].nazwa,
     opis:
-      'Konto Magdalena Wójcik otwiera przewodnik po raz pierwszy, a dane konta ZUS pokazują członka rodziny urodzonego 05.05.2025. Odczyt zapisuje go bez oznaczenia nowego dziecka.',
+      tekst['u03-pierwszy-odczyt-dziecko-z-2025'].opis,
     pesel: PESEL_MAGDALENY,
     zastosuj: () => ({
       zus: {
@@ -119,9 +122,9 @@ export const scenariuszeU03: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u03-pierwszy-odczyt-dziecko-z-listopada',
-    nazwa: 'Karolina Lis: pierwszy odczyt z dzieckiem urodzonym 02.11.2026',
+    nazwa: tekst['u03-pierwszy-odczyt-dziecko-z-listopada'].nazwa,
     opis:
-      'Konto Karolina Lis otwiera przewodnik po raz pierwszy, a dane konta ZUS pokazują członka rodziny urodzonego 02.11.2026. Odczyt oznacza go jako nowe dziecko.',
+      tekst['u03-pierwszy-odczyt-dziecko-z-listopada'].opis,
     pesel: PESEL_KAROLINY,
     zastosuj: () => ({
       zus: {

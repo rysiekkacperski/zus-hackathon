@@ -7,6 +7,7 @@ import type { KrokPlanu } from '@/domena/plan/kroki/typ';
 import type { WejsciePlanu } from '@/domena/przeliczenie';
 import {
   czyWWiekuUprawniajacym,
+  liczbaDzieciSprawyPoPrzyjeciu,
   przedUkonczeniemLat,
   przedUkonczeniemMiesiecy,
 } from '@/domena/rodzina/przyjecie';
@@ -196,7 +197,9 @@ export const przyjecieDziecka: KrokPlanu = (pozycje, w) => {
   for (const s of sprawyPoPrzyjeciu(p, w)) {
     if (obecne.has(s.id)) continue;
     const baza = biezace.get(s.id) ?? poprzednie.get(s.id) ?? nowaPozycja(s.id, w);
-    const pozycja: PozycjaPlanu = { ...baza, idSprawy: s.id, idPozycji: s.id, rodzic: s.rodzic, liczbaDzieci };
+    // 3.3.4.1.4: kwota za każde dziecko liczona dla dzieci spełniających warunek wieku sprawy.
+    const liczbaSprawy = Math.max(1, liczbaDzieciSprawyPoPrzyjeciu(s.id, p, w.katalog));
+    const pozycja: PozycjaPlanu = { ...baza, idSprawy: s.id, idPozycji: s.id, rodzic: s.rodzic, liczbaDzieci: liczbaSprawy };
     if (s.zalezyOdDochodu) pozycja.zalezyOdDochodu = true;
     else delete pozycja.zalezyOdDochodu;
     dodane.push(pozycja);
@@ -205,9 +208,28 @@ export const przyjecieDziecka: KrokPlanu = (pozycje, w) => {
   const wynik = [...pozostale, ...dodane].map((poz) => {
     if (poz.idPozycji === null || czyZlozonaAlboZalatwiona(poz)) return poz;
     // Pozycje rodzica, który przyjął dziecko, i liczba dzieci z liczby jednocześnie przyjętych dzieci.
-    const zmiana: Partial<PozycjaPlanu> = { liczbaDzieci };
+    const zmiana: Partial<PozycjaPlanu> = {
+      liczbaDzieci: SPRAWY_PO_PRZYJECIU.includes(poz.idPozycji)
+        ? Math.max(1, liczbaDzieciSprawyPoPrzyjeciu(poz.idPozycji, p, w.katalog))
+        : liczbaDzieci,
+    };
     if (poz.idPozycji === 'K13') zmiana.rodzic = 'rodzic-przyjmujacy';
     return { ...poz, ...zmiana };
   });
   return wynik;
+};
+
+/**
+ * Krok końcowy po przyjęciu dziecka: usuwa sprawy ciąży i porodu, które dodały kroki wykonane
+ * po kroku `przyjecieDziecka`. Złożone i załatwione sprawy zostają w planie.
+ */
+export const przyjecieDzieckaPorzadek: KrokPlanu = (pozycje, w) => {
+  const p = w.zgoda ? w.daneCiazy?.przyjecie : undefined;
+  if (p === undefined) return pozycje;
+  const poprzednie = new Map((w.poprzedniPlan?.pozycje ?? []).map((poz) => [poz.idSprawy, poz]));
+  return pozycje.filter((poz) => {
+    const id = poz.idPozycji;
+    if (id === null || !SPRAWY_CIAZY_I_PORODU.includes(id)) return true;
+    return czyZlozonaAlboZalatwiona(poz) || czyZlozonaAlboZalatwiona(poprzednie.get(poz.idSprawy));
+  });
 };

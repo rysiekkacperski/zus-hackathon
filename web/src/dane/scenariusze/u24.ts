@@ -17,6 +17,9 @@ import type {
   ScenariuszDemo,
   StanRodziny,
 } from '@/domena/typy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const ANNA: Pesel = '93041231085';
 const MAGDALENA: Pesel = '90072551267';
@@ -51,6 +54,9 @@ const TOMASZ_DRUGI_RODZIC: DrugiRodzic = {
   imie: 'Tomasz',
   nazwisko: 'Nowak',
 };
+
+// 3.3.4.1.4, zadanie 8: drugi rodzic w profilu Magdaleny Wójcik.
+const PIOTR_DRUGI_RODZIC: DrugiRodzic = { ...TOMASZ_DRUGI_RODZIC, imie: 'Piotr', nazwisko: 'Wójcik' };
 
 const BEZ_DRUGIEGO_RODZICA: DrugiRodzic = {
   formaZatrudnienia: { wartosc: 'brak-drugiego-rodzica', zrodlo: 'odpowiedz-rodzica' },
@@ -135,8 +141,8 @@ const parametry = { dataDemo: DZIEN_DEMO };
 export const scenariuszeU24: readonly ScenariuszDemo[] = [
   {
     id: 'u24-tomasz-nowy-uzytkownik-przyjecie',
-    nazwa: 'Tomasz Nowak: profil na start, przyjęcie dziecka',
-    opis: 'Nowy użytkownik ze zgodą na dane zdrowia i sytuacją przyjęcia dziecka w szkicu profilu (3.3.4.1.1 KA-01, KA-03).',
+    nazwa: tekst['u24-tomasz-nowy-uzytkownik-przyjecie'].nazwa,
+    opis: tekst['u24-tomasz-nowy-uzytkownik-przyjecie'].opis,
     pesel: TOMASZ,
     zastosuj: (ctx) => ({
       parametry,
@@ -160,13 +166,13 @@ export const scenariuszeU24: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u24-magdalena-przysposobienie',
-    nazwa: 'Magdalena Wójcik: przysposobienie 16.11.2026',
-    opis: 'Rodzic na umowie o pracę z przysposobieniem bez daty uprawomocnienia, drugi rodzic Tomasz Nowak na umowie o pracę, K01 załatwiona oraz K04 i K24 do zrobienia przed zmianą (3.3.4.1.2 KA-01, KA-04, KA-06, KA-13 do KA-17, KA-19).',
+    nazwa: tekst['u24-magdalena-przysposobienie'].nazwa,
+    opis: tekst['u24-magdalena-przysposobienie'].opis,
     pesel: MAGDALENA,
     zastosuj: (ctx) => ({
       parametry,
       konto: { konto: konto(MAGDALENA, ctx, 'rodzic', 'udzielenie') },
-      rodzina: rodzina(MAGDALENA, ctx, rodzic('umowa-o-prace', null), TOMASZ_DRUGI_RODZIC, przyjecie({}), [
+      rodzina: rodzina(MAGDALENA, ctx, rodzic('umowa-o-prace', null), PIOTR_DRUGI_RODZIC, przyjecie({ dataWystapieniaDoSadu: '2026-11-16' }), [
         pozycja('K01', 'zalatwiona', 'ciaza'),
         pozycja('K04', 'do-zrobienia', 'ciaza'),
         pozycja('K24', 'do-zrobienia', 'ciaza'),
@@ -175,8 +181,8 @@ export const scenariuszeU24: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u24-magdalena-rodzina-zastepcza-zawodowa',
-    nazwa: 'Magdalena Wójcik: rodzina zastępcza zawodowa',
-    opis: 'Rodzina zastępcza zawodowa z datą przyjęcia 16.11.2026 i drugim rodzicem Tomaszem Nowakiem (3.3.4.1.2 KA-11, KA-18).',
+    nazwa: tekst['u24-magdalena-rodzina-zastepcza-zawodowa'].nazwa,
+    opis: tekst['u24-magdalena-rodzina-zastepcza-zawodowa'].opis,
     pesel: MAGDALENA,
     zastosuj: (ctx) => ({
       parametry,
@@ -185,15 +191,15 @@ export const scenariuszeU24: readonly ScenariuszDemo[] = [
         MAGDALENA,
         ctx,
         rodzic('umowa-o-prace', null),
-        TOMASZ_DRUGI_RODZIC,
+        PIOTR_DRUGI_RODZIC,
         przyjecie({ forma: 'rodzina-zastepcza-zawodowa' }),
       ),
     }),
   },
   {
     id: 'u24-anna-rodzina-zastepcza-odroczenie',
-    nazwa: 'Anna Nowak: rodzina zastępcza niezawodowa z odroczeniem',
-    opis: 'Działalność z dobrowolnym ubezpieczeniem chorobowym, przyjęcie 16.11.2026, dziecko urodzone 10.05.2019, odroczenie obowiązku szkolnego (3.3.4.1.2 KA-08, KA-09).',
+    nazwa: tekst['u24-anna-rodzina-zastepcza-odroczenie'].nazwa,
+    opis: tekst['u24-anna-rodzina-zastepcza-odroczenie'].opis,
     pesel: ANNA,
     zastosuj: (ctx) => ({
       parametry,
@@ -209,8 +215,8 @@ export const scenariuszeU24: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u24-anna-rodzina-zastepcza-poza-wiekiem',
-    nazwa: 'Anna Nowak: dziecko poza wiekiem urlopu',
-    opis: 'Rodzina zastępcza niezawodowa bez odroczenia, dziecko urodzone 10.05.2019, komunikat 0091 z wiekiem 7 lat (3.3.4.1.2 KA-07).',
+    nazwa: tekst['u24-anna-rodzina-zastepcza-poza-wiekiem'].nazwa,
+    opis: tekst['u24-anna-rodzina-zastepcza-poza-wiekiem'].opis,
     pesel: ANNA,
     zastosuj: (ctx) => ({
       parametry,
@@ -226,8 +232,8 @@ export const scenariuszeU24: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u24-anna-odmowa-zgody',
-    nazwa: 'Anna Nowak: odmowa zgody na dane zdrowia',
-    opis: 'Rodzic z zapisaną odmową zgody; akcja danych przyjęcia na profilu rodziny pokazuje komunikat 0004 (3.3.4.1.1 KA-07).',
+    nazwa: tekst['u24-anna-odmowa-zgody'].nazwa,
+    opis: tekst['u24-anna-odmowa-zgody'].opis,
     pesel: ANNA,
     zastosuj: (ctx) => ({
       parametry,
@@ -237,8 +243,8 @@ export const scenariuszeU24: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u24-tomasz-ojciec-uprawomocnienie',
-    nazwa: 'Tomasz Nowak: ojciec z datą uprawomocnienia',
-    opis: 'Ojciec na umowie o pracę, przysposobienie 02.03.2026, uprawomocnienie 15.10.2026 (3.3.4.1.2 KA-03, KA-20).',
+    nazwa: tekst['u24-tomasz-ojciec-uprawomocnienie'].nazwa,
+    opis: tekst['u24-tomasz-ojciec-uprawomocnienie'].opis,
     pesel: TOMASZ,
     zastosuj: (ctx) => ({
       parametry,
@@ -249,6 +255,27 @@ export const scenariuszeU24: readonly ScenariuszDemo[] = [
         rodzic('umowa-o-prace', null),
         BEZ_DRUGIEGO_RODZICA,
         przyjecie({ rolaRodzicaPrzyjmujacego: 'ojciec', dataPrzyjecia: '2026-03-02', dataUprawomocnienia: '2026-10-15' }),
+      ),
+    }),
+  },
+  {
+    id: 'u24-magdalena-dwoje-dzieci',
+    nazwa: tekst['u24-magdalena-dwoje-dzieci'].nazwa,
+    opis: tekst['u24-magdalena-dwoje-dzieci'].opis,
+    pesel: MAGDALENA,
+    zastosuj: (ctx) => ({
+      parametry,
+      konto: { konto: konto(MAGDALENA, ctx, 'rodzic', 'udzielenie') },
+      rodzina: rodzina(
+        MAGDALENA,
+        ctx,
+        rodzic('umowa-o-prace', null),
+        PIOTR_DRUGI_RODZIC,
+        przyjecie({
+          dataWystapieniaDoSadu: '2026-11-16',
+          liczbaPrzyjetychDzieci: 2,
+          datyUrodzeniaDzieci: ['2024-03-14', '2012-02-01'],
+        }),
       ),
     }),
   },

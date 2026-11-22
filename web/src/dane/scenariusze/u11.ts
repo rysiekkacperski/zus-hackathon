@@ -17,6 +17,9 @@ import type {
   SzkicProfilu,
 } from '@/domena/typy';
 import { wynikiKalkulacjiPuste } from '@/dane/magazyn/stan-poczatkowy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const PESEL_ANNY = '93041231085';
 
@@ -102,8 +105,8 @@ function rodzinaAnny(ctx: KontekstOperacji): StanRodziny {
 export const scenariuszeU11: readonly ScenariuszDemo[] = [
   {
     id: 'u11-anna-podsumowanie-profilu',
-    nazwa: 'Anna Nowak: podsumowanie profilu przed zapisem',
-    opis: 'Nowy użytkownik ze zgodą na dane dotyczące zdrowia i szkicem profilu na ekranie podsumowania: jednoosobowa działalność z konta ZUS, termin porodu 15.03.2027, gmina Bydgoszcz, drugi rodzic na umowie o pracę.',
+    nazwa: tekst['u11-anna-podsumowanie-profilu'].nazwa,
+    opis: tekst['u11-anna-podsumowanie-profilu'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: { konto: kontoAnny(ctx, 'nowy-uzytkownik'), szkicProfilu: szkicAnny(ctx, 'ViewProfileSummary', true) },
@@ -111,8 +114,8 @@ export const scenariuszeU11: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u11-anna-dane-rodziny',
-    nazwa: 'Anna Nowak: przerwany profil na ekranie danych rodziny',
-    opis: 'Nowy użytkownik, który zamknął przewodnik na ekranie danych rodziny z wybraną gminą Bydgoszcz.',
+    nazwa: tekst['u11-anna-dane-rodziny'].nazwa,
+    opis: tekst['u11-anna-dane-rodziny'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: { konto: kontoAnny(ctx, 'nowy-uzytkownik'), szkicProfilu: szkicAnny(ctx, 'ViewProfileFamily', false) },
@@ -120,8 +123,8 @@ export const scenariuszeU11: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u11-anna-profil-zapisany',
-    nazwa: 'Anna Nowak: zapisany profil rodziny',
-    opis: 'Rodzic z zapisanym profilem: jednoosobowa działalność z konta ZUS, termin porodu 15.03.2027, gmina Bydgoszcz, drugi rodzic na umowie o pracę.',
+    nazwa: tekst['u11-anna-profil-zapisany'].nazwa,
+    opis: tekst['u11-anna-profil-zapisany'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: { konto: kontoAnny(ctx, 'rodzic'), szkicProfilu: null },

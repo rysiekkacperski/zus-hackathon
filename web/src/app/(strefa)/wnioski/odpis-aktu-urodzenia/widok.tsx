@@ -3,13 +3,14 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { DanePytania } from '@/app/(strefa)/pytania-do-zus/_czesci/karta-kontekstu';
+import { gminy } from '@/dane/gminy';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { przygotujWniosekOOdpis, zlozWniosekOOdpis } from '@/dane/magazyn/operacje/kanaly-zus-usc';
 import { useDzis, useKatalog, useKonto, useRodzina } from '@/dane/magazyn/hooki';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { dodajDni } from '@/domena/daty';
 import { tytulSprawy } from '@/domena/katalog/odczyt';
-import type { BledyPol, KodKomunikatu, WniosekOOdpis } from '@/domena/typy';
+import type { BledyPol, Gmina, KodKomunikatu, WniosekOOdpis } from '@/domena/typy';
 import {
   CELE_ODPISU,
   DNI_DO_WYDANIA_ODPISU,
@@ -22,6 +23,7 @@ import {
   opcjeOdbioru,
   sposobPoZmianieRodzaju,
   sprawdzWejscieDoOdpisu,
+  urzadStanuCywilnego,
   walidujWniosekOOdpis,
   zrodloPolaDziecka,
   type FormularzOdpisu,
@@ -38,8 +40,9 @@ import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
-import { Odnosnik } from '@/komponenty/odnosnik';
+import { Odnosnik, OdnosnikZewnetrzny } from '@/komponenty/odnosnik';
 import { PoleTekstowe } from '@/komponenty/pole-tekstowe';
+import { PoleWyboru } from '@/komponenty/pole-wyboru';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { Stos, Wiersz } from '@/komponenty/uklad';
@@ -55,7 +58,24 @@ const ID_POLA: Record<Exclude<PoleOdpisu, 'rodzajOdpisu' | 'cel' | 'sposobOdbior
   miejsceUrodzenia: 'dziecko-miejsce-urodzenia',
   pesel: 'dziecko-pesel',
   adresDoDoreczenia: 'adres-do-doreczenia',
+  urzadStanuCywilnego: 'urzad-stanu-cywilnego',
 };
+
+// Usługa założenia adresu do e-Doręczeń na gov.pl (komunikat 0295).
+const ADRES_ZALOZENIA_E_DORECZEN = 'https://www.gov.pl/web/e-doreczenia';
+
+/** Nazwa urzędu stanu cywilnego w gminie, na przykład Urząd Stanu Cywilnego w Toruniu. */
+function nazwaUrzedu(gmina: Gmina | null): string | null {
+  return urzadStanuCywilnego(gmina, {
+    wMiejscowniku: (m) => t.urzadWMiejscowniku({ miejscownik: m }),
+    wGminie: (g) => t.urzadWGminie({ gmina: g }),
+  });
+}
+
+// Lista urzędów stanu cywilnego: urząd w każdej gminie słownika gmin, alfabetycznie.
+const URZEDY = [...gminy]
+  .sort((a, b) => a.nazwa.localeCompare(b.nazwa, 'pl'))
+  .map((g) => ({ wartosc: g.idTeryt, etykieta: nazwaUrzedu(g) ?? g.nazwa }));
 
 // Cel fokusu pól w kolejności na ekranie: grupy wyboru przez nazwę grupy radio, pozostałe przez id pola.
 const CELE_FOKUSU: Record<PoleOdpisu, string> = {
@@ -75,7 +95,7 @@ const POLA_CZESCI: Record<CzescOdpisu, readonly PoleOdpisu[]> = {
   urodzenie: ['dataUrodzenia', 'miejsceUrodzenia', 'pesel'],
   cel: ['cel'],
   odbior: ['sposobOdbioru', 'adresDoDoreczenia'],
-  wnioskodawca: [],
+  wnioskodawca: ['urzadStanuCywilnego'],
 };
 const PODZIAL_ODPISU = CZESCI_ODPISU.map((c) => POLA_CZESCI[c]);
 const NUMER_CZESCI_DZIECKA = CZESCI_ODPISU.indexOf('dziecko') + 1;
@@ -92,6 +112,8 @@ function formularzZWniosku(w: WniosekOOdpis, profil: FormularzOdpisu): Formularz
     cel: w.cel ?? null,
     sposobOdbioru: w.sposobOdbioru ?? null,
     adresDoDoreczenia: w.adresDoDoreczenia ?? '',
+    urzadStanuCywilnego:
+      URZEDY.find((u) => u.etykieta === w.urzadStanuCywilnego)?.wartosc ?? profil.urzadStanuCywilnego,
   };
 }
 
@@ -102,7 +124,11 @@ export function WidokWnioskuOOdpis() {
   const katalog = useKatalog();
   const dzis = useDzis();
 
-  const zProfilu = useMemo(() => formularzZProfilu(rodzina?.daneCiazy ?? null), [rodzina?.daneCiazy]);
+  const gminaProfilu = rodzina?.daneRodziny.gmina?.wartosc ?? null;
+  const zProfilu = useMemo(
+    () => formularzZProfilu(rodzina?.daneCiazy ?? null, gminaProfilu),
+    [rodzina?.daneCiazy, gminaProfilu],
+  );
   const [idWniosku, setIdWniosku] = useState<string | null>(() => {
     const id = parametry.get('wniosek');
     return id && rodzina?.wnioski.some((w) => w.idWniosku === id && w.stan === 'szkic') ? id : null;
@@ -177,12 +203,8 @@ export function WidokWnioskuOOdpis() {
     setF((poprzedni) => ({ ...poprzedni, rodzajOdpisu: rodzaj, sposobOdbioru: sposobPoZmianieRodzaju(rodzaj, poprzedni.sposobOdbioru) }));
   };
 
-  const gmina = rodzina.daneRodziny.gmina?.wartosc ?? null;
-  const urzad = gmina
-    ? gmina.urzadStanuCywilnegoMiejscownik
-      ? t.urzadWMiejscowniku({ miejscownik: gmina.urzadStanuCywilnegoMiejscownik })
-      : t.urzadWGminie({ gmina: gmina.nazwa })
-    : null;
+  const gmina = gminaProfilu;
+  const wybranyUrzad = gminy.find((g) => g.idTeryt === f.urzadStanuCywilnego) ?? null;
   const k06 = rodzina.plan?.pozycje.find((p) => p.idPozycji === 'K06');
   const komunikat0197 = komunikatPierwszegoOdpisu(rodzina.plan?.pozycje ?? []);
   const komunikat0198 = komunikatOdbioru(f.rodzajOdpisu);
@@ -274,7 +296,16 @@ export function WidokWnioskuOOdpis() {
             liczbaKrokow={czesci.liczba}
             nazwaKroku={t.czesci[czesc]}
           />
-          {bladOgolny ? <Komunikat kod={bladOgolny} /> : null}
+          {bladOgolny ? (
+            <Komunikat
+              kod={bladOgolny}
+              akcje={
+                bladOgolny === '0295' ? (
+                  <OdnosnikZewnetrzny href={ADRES_ZALOZENIA_E_DORECZEN}>{t.urzad.eDoreczenia}</OdnosnikZewnetrzny>
+                ) : undefined
+              }
+            />
+          ) : null}
 
           <CzescFormularza czesci={czesci} numer={1}>
             {komunikat0197 ? (
@@ -423,8 +454,8 @@ export function WidokWnioskuOOdpis() {
                     wartosc: s,
                     etykieta: t.odbior.opcje[s].etykieta,
                     opis:
-                      s === 'osobiscie' && gmina?.urzadStanuCywilnegoMiejscownik
-                        ? t.odbior.opisOsobiscieWMiejscowniku({ miejscownik: gmina.urzadStanuCywilnegoMiejscownik })
+                      s === 'osobiscie' && wybranyUrzad?.urzadStanuCywilnegoMiejscownik
+                        ? t.odbior.opisOsobiscieWMiejscowniku({ miejscownik: wybranyUrzad.urzadStanuCywilnegoMiejscownik })
                         : t.odbior.opcje[s].opis,
                   }))}
                 />
@@ -461,14 +492,19 @@ export function WidokWnioskuOOdpis() {
             </Karta>
             <Karta tytul={t.urzad.tytul} bezLinii>
               <Stos odstep={3}>
-                {urzad && gmina ? (
-                  <>
-                    <p className="m-0 text-body-strong">{urzad}</p>
-                    <p className="m-0 text-body">{t.urzad.gminaZProfilu({ gmina: gmina.nazwa })}</p>
-                  </>
-                ) : (
-                  <p className="m-0 text-body">{t.urzad.brakGminy}</p>
-                )}
+                <PoleWyboru
+                  id={ID_POLA.urzadStanuCywilnego}
+                  etykieta={t.urzad.pole}
+                  podpowiedz={t.urzad.podpowiedz}
+                  opcje={URZEDY}
+                  wartosc={f.urzadStanuCywilnego}
+                  onZmiana={(w) => zmien('urzadStanuCywilnego', w)}
+                  {...walidacja.pole('urzadStanuCywilnego')}
+                  szerokosc="srednia"
+                />
+                <p className="m-0 text-body">
+                  {gmina ? t.urzad.propozycja({ gmina: gmina.nazwa }) : t.urzad.brakGminy}
+                </p>
                 <p className="m-0 text-body">
                   {t.urzad.opisZlozenia({ data: formatujDate(dodajDni(dzis, DNI_DO_WYDANIA_ODPISU)) })}
                 </p>

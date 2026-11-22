@@ -1,6 +1,7 @@
 // Scenariusze demonstracyjne jednostki u34 (kontrakt, sekcja 6.6). Właściciel: u34.
 // Scenariusz odtwarza stan z kryteriów akceptacji historyjek jednostki.
-// Rezygnacja matki i wniosek ojca: Magdalena Wójcik (KA-01 3.9.2.1.1) i Anna Nowak (KA-14 3.9.2.1.1).
+// Rezygnacja matki i wniosek ojca: Magdalena Wójcik (KA-01 3.9.2.1.1), Anna Nowak (KA-14 3.9.2.1.1, KA-01 3.9.2.1.3)
+// i Karolina Lis (KA-02 3.9.2.1.3).
 import { kontaPrzykladowe } from '@/dane/konta-demo';
 import { kontoPrzewodnikaZKontaDemo, wynikiKalkulacjiPuste } from '@/dane/magazyn/stan-poczatkowy';
 import type {
@@ -14,6 +15,9 @@ import type {
   StanKonta,
   StanRodziny,
 } from '@/domena/typy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const DATA_PORODU: DataISO = '2026-11-19';
 
@@ -88,8 +92,8 @@ function stan(
 export const scenariuszeU34: readonly ScenariuszDemo[] = [
   {
     id: 'u34-rezygnacja-magdalena',
-    nazwa: 'Rezygnacja z dalszej części urlopu macierzyńskiego (Magdalena Wójcik)',
-    opis: 'Dzień 10.02.2027, umowa o pracę, poród 19.11.2026, drugi rodzic Piotr Wójcik na umowie o pracę, pracodawca kadry@przyklad.pl.',
+    nazwa: tekst['u34-rezygnacja-magdalena'].nazwa,
+    opis: tekst['u34-rezygnacja-magdalena'].opis,
     pesel: '90072551267',
     zastosuj: (ctx) => ({
       ...stan(
@@ -103,14 +107,29 @@ export const scenariuszeU34: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u34-zam-14-tygodni-anna',
-    nazwa: 'Wniosek ZAM wyłącznie o 14 tygodni (Anna Nowak)',
-    opis: 'Dzień 21.11.2026, działalność z dobrowolnym ubezpieczeniem chorobowym, poród 19.11.2026, bez wniosku ZAM.',
+    nazwa: tekst['u34-zam-14-tygodni-anna'].nazwa,
+    opis: tekst['u34-zam-14-tygodni-anna'].opis,
     pesel: '93041231085',
     zastosuj: (ctx) => ({
       ...stan(
         '93041231085',
         rodzic('jdg', true, 'zus'),
         drugiRodzic('Tomasz', 'Nowak', '90011555532', 'umowa-o-prace', 'Tomasza Nowaka'),
+        ctx,
+      ),
+      parametry: { dataDemo: '2026-11-21' },
+    }),
+  },
+  {
+    id: 'u34-zam-14-tygodni-karolina',
+    nazwa: tekst['u34-zam-14-tygodni-karolina'].nazwa,
+    opis: tekst['u34-zam-14-tygodni-karolina'].opis,
+    pesel: '96020377745',
+    zastosuj: (ctx) => ({
+      ...stan(
+        '96020377745',
+        rodzic('umowa-zlecenia', true, 'platnik-skladek'),
+        drugiRodzic('Marcin', 'Lis', '91080204172', 'jdg', 'Marcina Lisa'),
         ctx,
       ),
       parametry: { dataDemo: '2026-11-21' },

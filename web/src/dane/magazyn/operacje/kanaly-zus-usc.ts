@@ -1,7 +1,8 @@
 // Pytanie do ZUS, dane konta ubezpieczonego i wniosek o odpis aktu urodzenia (kontrakt, sekcja 6.5).
 // Właściciel: u29 (Pytanie do ZUS, dane konta i odpis aktu urodzenia).
 // Połączenie z PUE/eZUS i z rejestrem stanu cywilnego jest symulowane: pytanie trafia do korespondencji konta
-// w symulowanym ZUS i do kopii Danych z konta ZUS, a wniosek o odpis przyjmuje albo odrzuca symulowany rejestr.
+// w symulowanym ZUS i do kopii danych konta ZUS, a wniosek o odpis przyjmuje albo odrzuca symulowany rejestr.
+import { gminy } from '@/dane/gminy';
 import { adresyProdukcyjne } from '@/dane/parametry-produkcyjne';
 import { losowyCiag } from '@/dane/magazyn/losowanie';
 import { nastepnyNumerPotwierdzenia } from '@/dane/magazyn/operacje/konto';
@@ -148,9 +149,10 @@ export function adresEzus(): WynikOperacji<{ adres: string }> {
 
 // --- Wniosek o odpis aktu urodzenia (3.9.7.1.1, 3.9.7.1.2) ----------------------------------------
 
-function nazwaUrzedu(rodzina: StanRodziny): string | undefined {
+/** Nazwa urzędu stanu cywilnego wybranego we wniosku (identyfikator TERYT gminy urzędu). */
+function nazwaUrzedu(idTeryt: string): string | undefined {
   return (
-    urzadStanuCywilnego(rodzina.daneRodziny.gmina?.wartosc ?? null, {
+    urzadStanuCywilnego(gminy.find((g) => g.idTeryt === idTeryt) ?? null, {
       wMiejscowniku: (m) => teksty.ViewBirthCertificateRequest.urzadWMiejscowniku({ miejscownik: m }),
       wGminie: (g) => teksty.ViewBirthCertificateRequest.urzadWGminie({ gmina: g }),
     }) ?? undefined
@@ -186,7 +188,7 @@ export function przygotujWniosekOOdpis(
   const id = idWniosku ?? idZLosowych('W', ctx.teraz, losowyCiag(6));
   const poprzedni = rodzina.wnioski.find((w) => w.idWniosku === id);
   const pesel = f.pesel.trim();
-  const urzad = nazwaUrzedu(rodzina);
+  const urzad = nazwaUrzedu(f.urzadStanuCywilnego);
   const wniosek: WniosekOOdpis = {
     idWniosku: id,
     rodzaj: 'odpis-aktu-urodzenia',
@@ -224,7 +226,8 @@ export function przygotujWniosekOOdpis(
 }
 
 /**
- * Złożenie wniosku o odpis w rejestrze stanu cywilnego (R-9): rejestr niedostępny daje 0147, brak aktu 0146.
+ * Złożenie wniosku o odpis w rejestrze stanu cywilnego (R-9): rejestr niedostępny daje 0147, brak adresu do
+ * e-Doręczeń wnioskodawcy 0295, brak aktu 0146.
  * Przyjęty wniosek dostaje numer potwierdzenia, datę złożenia i przewidywany dzień wydania (+7 dni), dane
  * wpisane w puste pola profilu trafiają do profilu, a sprawa K36 dostaje status złożona.
  */
@@ -242,7 +245,8 @@ export async function zlozWniosekOOdpis(
     { ...wniosek, dataZlozenia: ctx.dzis },
     { daneRodziny: rodzina.daneRodziny, daneCiazy: rodzina.daneCiazy },
   );
-  if ('kod' in odpowiedz) return { ok: false, kod: odpowiedz.kod === '0146' ? '0146' : '0003' };
+  // Brak adresu do e-Doręczeń wnioskodawcy (0295) i brak aktu (0146): wniosek zostaje szkicem, a sprawa K36 zachowuje status.
+  if ('kod' in odpowiedz) return { ok: false, kod: odpowiedz.kod === '0145' ? '0003' : odpowiedz.kod };
 
   return wykonajOperacjeZWynikiem(() => {
     const potwierdzenie = nastepnyNumerPotwierdzenia('USC-DEMO', ctx.dzis);

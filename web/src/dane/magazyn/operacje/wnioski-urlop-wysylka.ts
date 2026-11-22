@@ -13,6 +13,7 @@ import type {
   WynikOperacji,
 } from '@/domena/typy';
 import { poczatekOchrony } from '@/domena/wnioski/ochrona';
+import { czyWychowawczy, ochronaWychowawczego } from '@/domena/wnioski/urlopy-wychowawczy';
 import { czyWyslanieZamykaSprawe, zbierzDaneKreatora } from '@/domena/wnioski/urlopy';
 import { okresOchrony, sprawdzTermin815, walidujWysylke } from '@/domena/wnioski/wysylka-do-pracodawcy';
 import { nastepnyNumerPotwierdzenia } from '@/dane/magazyn/operacje/konto';
@@ -30,6 +31,7 @@ import {
   zmienStanRodziny,
 } from '@/dane/magazyn/stan';
 import { znajdzWniosekOUrlop } from '@/dane/magazyn/operacje/wnioski-urlop';
+import { poWyslaniuDoPracodawcy } from '@/dane/magazyn/operacje/rezygnacja';
 
 interface KontekstWysylki {
   rodzina: StanRodziny;
@@ -86,9 +88,16 @@ export async function wyslijWniosekDoPracodawcy(id: IdWniosku, ctx: KontekstOper
     }
     if (czySymulacja('uslugaEmailNiedostepna')) return { rodzaj: 'blad', kod: '0138' };
     const pierwszy = okresOchrony(wniosek);
-    const dataPoczatkuOchrony = pierwszy
-      ? poczatekOchrony(ctx.dzis, pierwszy.od, pierwszy.rodzajUrlopu === 'laczenie-z-praca' ? 'rodzicielski' : pierwszy.rodzajUrlopu)
-      : ctx.dzis;
+    // Urlop wychowawczy i obniżenie wymiaru (3.9.6.2.2): ochrona od 21 dni przed początkiem okresu.
+    const ochronaWych =
+      wniosek.wychowawczy && czyWychowawczy(wniosek.podrodzaj)
+        ? ochronaWychowawczego(wniosek.wychowawczy, wniosek.podrodzaj, ctx.dzis)
+        : null;
+    const dataPoczatkuOchrony = ochronaWych
+      ? ochronaWych.od
+      : pierwszy
+        ? poczatekOchrony(ctx.dzis, pierwszy.od, pierwszy.rodzajUrlopu === 'laczenie-z-praca' ? 'rodzicielski' : pierwszy.rodzajUrlopu)
+        : ctx.dzis;
     const pliki = wniosek.zalaczniki.flatMap((z) => (z.plik ? [z.plik.idPliku] : []));
     const wyslany: WniosekOUrlop = {
       ...wniosek,
@@ -96,6 +105,7 @@ export async function wyslijWniosekDoPracodawcy(id: IdWniosku, ctx: KontekstOper
       adresat: 'pracodawca',
       dataZlozenia: ctx.dzis,
       dataPoczatkuOchrony,
+      ...(ochronaWych ? { dataKoncaOchrony: ochronaWych.do } : {}),
       potwierdzenie: czyTrybDemonstracyjny() ? nastepnyNumerPotwierdzenia('URLOP-DEMO', ctx.dzis) : undefined,
       zalaczniki: wniosek.zalaczniki.map((z) => (z.plik ? { ...z, plik: undefined, nazwaPoWyslaniu: z.plik.nazwa } : z)),
       ostatniEkran: 'ViewLeaveRequestSent',
@@ -109,6 +119,8 @@ export async function wyslijWniosekDoPracodawcy(id: IdWniosku, ctx: KontekstOper
   });
   if (!wynik.ok) return wynik;
   if (wynik.wartosc.rodzaj === 'blad') return { ok: false, kod: wynik.wartosc.kod };
+  // Rezygnacja matki i wniosek ojca (u34): powiadomienie drugiego rodzica i data początku ochrony ojca.
+  poWyslaniuDoPracodawcy(id, ctx);
   await Promise.all(wynik.wartosc.pliki.map((p) => usunPlik(p).catch(() => undefined)));
   return { ok: true, wartosc: undefined };
 }

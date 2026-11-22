@@ -2,129 +2,102 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
-import { ETAPY } from '@/domena/plan/etap';
-import type { Etap, IdWidoku, Pochodzenie, Rola } from '@/domena/typy';
+import { useEffect, type ReactNode } from 'react';
+import type { Pochodzenie, Rola } from '@/domena/typy';
 import { useCzyGosc, useKonto, useStanInterfejsu } from '@/dane/magazyn/hooki';
 import { ustawStanInterfejsu } from '@/dane/magazyn/stan';
 import { Ikona, type NazwaIkony } from '@/komponenty/ikona';
 import { useSciezkaLogowania } from '@/komponenty/rama/konto-w-naglowku';
-import { dopasujTrase, widokMenuDlaPochodzenia } from '@/komponenty/rama/mapa-tras';
-import { sciezkaWidoku, trasy } from '@/komponenty/rama/trasy';
+import { dopasujTrase, widokMenuDlaPochodzenia, type WidokMenu } from '@/komponenty/rama/mapa-tras';
+import { sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { teksty } from '@/teksty';
 
 interface PozycjaMenu {
-  idWidoku: IdWidoku;
+  idWidoku: WidokMenu;
+  href: string;
   ikona: NazwaIkony;
   etykieta: string;
 }
 
-const planRodziny: PozycjaMenu = { idWidoku: 'ViewFamilyPlan', ikona: 'plan', etykieta: teksty.rama.menu.planRodziny };
-const terminy: PozycjaMenu = { idWidoku: 'ViewDeadlines', ikona: 'kalendarz', etykieta: teksty.rama.menu.terminy };
-const twojeWnioski: PozycjaMenu = { idWidoku: 'ViewApplicationList', ikona: 'wnioski', etykieta: teksty.rama.menu.twojeWnioski };
-const kalkulator: PozycjaMenu = { idWidoku: 'ViewCalcMaternityInput', ikona: 'kalkulator', etykieta: teksty.rama.menu.kalkulator };
-const przykladoweSprawy: PozycjaMenu = { idWidoku: 'ViewSampleCaseList', ikona: 'folder', etykieta: teksty.rama.menu.przykladoweSprawy };
-const profilNaStart: PozycjaMenu = { idWidoku: 'ViewProfileZusData', ikona: 'profil', etykieta: teksty.rama.menu.profilNaStart };
-const katalog: PozycjaMenu = { idWidoku: 'ViewCatalogList', ikona: 'katalog', etykieta: teksty.rama.menu.katalog };
-const podmiotyWsparcia: PozycjaMenu = { idWidoku: 'ViewCatalogSupportOrganizations', ikona: 'serce', etykieta: teksty.rama.menu.podmiotyWsparcia };
+function pozycja(idWidoku: WidokMenu, ikona: NazwaIkony, etykieta: string, href = sciezkaWidoku(idWidoku)): PozycjaMenu {
+  return { idWidoku, href, ikona, etykieta };
+}
+
+const m = teksty.rama.menu;
+const planRodziny = pozycja('ViewFamilyPlan', 'plan', m.planRodziny);
+const profilRodziny = pozycja('ViewProfileSummary', 'profil', m.profilRodziny, sciezkaWidoku('ViewProfileSummary', { tryb: 'rodzina' }));
+const sytuacjeSzczegolne = pozycja('ViewSpecialSituation', 'serce', m.sytuacjeSzczegolne);
+const terminy = pozycja('ViewDeadlines', 'kalendarz', m.terminy);
+const twojeWnioski = pozycja('ViewApplicationList', 'wnioski', m.twojeWnioski);
+const kalkulator = pozycja('ViewCalcMaternityInput', 'kalkulator', m.kalkulator);
+const przykladoweSprawy = pozycja('ViewSampleCaseList', 'folder', m.przykladoweSprawy);
+const profilNaStart = pozycja('ViewProfileZusData', 'profil', m.profilNaStart);
+const katalog = pozycja('ViewCatalogList', 'katalog', m.katalog);
+const podmiotyWsparcia = pozycja('ViewCatalogSupportOrganizations', 'serce', m.podmiotyWsparcia);
 
 // Sekcja 3.2 kontraktu.
 const pozycjeRoli: Record<Rola, PozycjaMenu[]> = {
-  rodzic: [planRodziny, terminy, twojeWnioski, kalkulator, przykladoweSprawy],
-  'drugi-rodzic': [planRodziny, terminy, twojeWnioski, kalkulator, przykladoweSprawy],
-  'nowy-uzytkownik': [profilNaStart, kalkulator, przykladoweSprawy],
+  rodzic: [planRodziny, profilRodziny, sytuacjeSzczegolne, terminy, twojeWnioski],
+  'drugi-rodzic': [planRodziny, profilRodziny, sytuacjeSzczegolne, terminy, twojeWnioski],
+  'nowy-uzytkownik': [profilNaStart],
   administrator: [katalog, podmiotyWsparcia],
 };
 
 // Tryb gościa: kalkulator zasiłku i przykładowe sprawy, a pod nimi pozycja „Zaloguj się”.
 const pozycjeGoscia: PozycjaMenu[] = [kalkulator, przykladoweSprawy];
 
-// Podsekcje pozycji „Plan rodziny”: pięć etapów planu, a pod nimi strony z danymi z konta ZUS.
-interface PodsekcjaMenu {
-  klucz: Etap | IdWidoku;
-  href: string;
-  etykieta: string;
-}
-
-const etykietyPodsekcji = teksty.rama.menu.podsekcjePlanu;
-const podsekcjePlanu: readonly PodsekcjaMenu[] = [
-  ...ETAPY.map((etap) => ({ klucz: etap, href: trasy.ViewFamilyPlanStage({ etap }), etykieta: etykietyPodsekcji[etap] })),
-  { klucz: 'ViewPregnancyBenefits', href: trasy.ViewPregnancyBenefits(), etykieta: etykietyPodsekcji.swiadczeniaWCiazy },
-  { klucz: 'ViewSickLeaveList', href: trasy.ViewSickLeaveList(), etykieta: etykietyPodsekcji.zaswiadczeniaEzla },
-  { klucz: 'ViewContributionBalance', href: trasy.ViewContributionBalance(), etykieta: etykietyPodsekcji.stanRozliczenSkladek },
-];
-const widokiPodsekcji: readonly IdWidoku[] = ['ViewPregnancyBenefits', 'ViewSickLeaveList', 'ViewContributionBalance'];
-
-function czyEtap(wartosc: string | null | undefined): wartosc is Etap {
-  return ETAPY.includes(wartosc as Etap);
-}
-
 interface Biezace {
   /** Wyróżniona pozycja menu. */
-  pozycja: IdWidoku | undefined;
-  /** Widok bieżącej trasy. */
-  widok: IdWidoku | undefined;
-  /** Wyróżniona podsekcja „Plan rodziny”: etap albo widok. */
-  podsekcja: Etap | IdWidoku | undefined;
+  pozycja: WidokMenu | undefined;
+  /** Bieżąca trasa jest stroną wyróżnionej pozycji. */
+  naStroniePozycji: boolean;
 }
 
-// Parametr ?z= nadpisuje wyróżnienie na ViewCaseDetails i ViewCaseGuide (sekcja 3.2), a parametr ?etap=
-// wyróżnia etap, z którego rodzic wszedł do sprawy.
+// Parametr ?z= nadpisuje wyróżnienie na ViewCaseDetails i ViewCaseGuide (sekcja 3.2).
 function useBiezace(pozycje: PozycjaMenu[]): Biezace {
   const sciezka = usePathname();
   const zapytanie = useSearchParams();
   const z = zapytanie.get('z');
   const wpis = dopasujTrase(sciezka);
+  const naStronie = pozycje.find((p) => sciezka === p.href)?.idWidoku;
   if (wpis) {
     const zPochodzenia = z === null ? undefined : widokMenuDlaPochodzenia[z as Pochodzenie];
     const sprawa = wpis.idWidoku === 'ViewCaseDetails' || wpis.idWidoku === 'ViewCaseGuide';
     const pozycja = sprawa && zPochodzenia ? zPochodzenia : wpis.pozycjaMenu;
-    const etap = wpis.idWidoku === 'ViewFamilyPlanStage' ? wpis.parametry.etap : sprawa && pozycja === 'ViewFamilyPlan' ? zapytanie.get('etap') : null;
-    const podsekcja = widokiPodsekcji.includes(wpis.idWidoku) ? wpis.idWidoku : czyEtap(etap) ? etap : undefined;
-    return { pozycja, widok: wpis.idWidoku, podsekcja };
+    return { pozycja, naStroniePozycji: pozycja !== undefined && naStronie === pozycja };
   }
-  const pozycja = pozycje.find((p) => sciezka === sciezkaWidoku(p.idWidoku))?.idWidoku;
-  return { pozycja, widok: pozycja, podsekcja: undefined };
+  return { pozycja: naStronie, naStroniePozycji: naStronie !== undefined };
 }
 
-type StanPozycji = 'biezaca' | 'rodzic' | 'zwykla';
+// biezaca: strona pozycji; wyrozniona: pozycja nadrzędna bieżącej strony z tłem, np. „Plan rodziny” na stronie etapu.
+type StanPozycji = 'biezaca' | 'wyrozniona' | 'zwykla';
 
 const klasyPozycji: Record<StanPozycji, string> = {
   biezaca: 'bg-surface-card text-brand hover:text-brand cursor-default',
-  // Pozycja „Plan rodziny” na stronie podsekcji: pogrubiona, bez tła.
-  rodzic: 'font-semibold text-on-brand hover:bg-brand-raised hover:text-on-brand active:bg-brand-deep active:text-on-brand',
+  wyrozniona: 'bg-surface-card text-brand hover:text-brand',
   zwykla: 'text-on-brand hover:bg-brand-raised hover:text-on-brand active:bg-brand-deep active:text-on-brand',
 };
 
-const ariaCurrent: Record<StanPozycji, 'page' | 'true' | undefined> = { biezaca: 'page', rodzic: 'true', zwykla: undefined };
+const ariaCurrent: Record<StanPozycji, 'page' | 'true' | undefined> = {
+  biezaca: 'page',
+  wyrozniona: 'true',
+  zwykla: undefined,
+};
 
 function klasyLinku(zwiniete: boolean, stan: StanPozycji): string {
-  return `flex min-h-nav-item items-center gap-3 rounded-sm text-body no-underline transition-colors duration-150 focus-visible:outline-on-brand motion-reduce:transition-none ${zwiniete ? 'justify-center px-0' : 'px-4'} ${klasyPozycji[stan]}`;
+  return `relative flex min-h-nav-item items-center gap-3 rounded-sm text-body no-underline transition-colors duration-150 focus-visible:outline-on-brand motion-reduce:transition-none ${zwiniete ? 'group/link justify-center px-0' : 'px-4'} ${klasyPozycji[stan]}`;
 }
 
-function klasyPodsekcji(jestBiezaca: boolean): string {
-  return `flex min-h-9 items-center rounded-sm py-1 pr-3 pl-15 text-small no-underline transition-colors duration-150 focus-visible:outline-on-brand motion-reduce:transition-none ${jestBiezaca ? klasyPozycji.biezaca : klasyPozycji.zwykla}`;
-}
-
-function ListaPodsekcji({ biezaca, onWybor }: { biezaca: Biezace['podsekcja']; onWybor?: () => void }) {
+// Podpowiedź z nazwą pozycji w menu zwiniętym: widoczna po najechaniu i po fokusie z klawiatury.
+// Nazwę dostępną daje aria-label linku albo przycisku, więc podpowiedź jest ukryta przed czytnikiem.
+function Podpowiedz({ children }: { children: ReactNode }) {
   return (
-    <ul className="m-0 mt-1 flex list-none flex-col gap-0.5 p-0">
-      {podsekcjePlanu.map((p) => {
-        const jestBiezaca = p.klucz === biezaca;
-        return (
-          <li key={p.klucz}>
-            <Link
-              href={p.href}
-              aria-current={jestBiezaca ? 'page' : undefined}
-              onClick={onWybor}
-              className={klasyPodsekcji(jestBiezaca)}
-            >
-              <span className="min-w-0">{p.etykieta}</span>
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+    <span
+      aria-hidden="true"
+      className="pointer-events-none invisible absolute top-1/2 left-full z-40 ml-4 -translate-y-1/2 whitespace-nowrap rounded-sm bg-ink-strong px-3 py-1.5 text-small text-on-brand opacity-0 shadow-header transition-opacity duration-150 group-hover/link:visible group-hover/link:opacity-100 group-focus-visible/link:visible group-focus-visible/link:opacity-100 motion-reduce:transition-none"
+    >
+      {children}
+    </span>
   );
 }
 
@@ -145,30 +118,37 @@ function ListaPozycji({
   return (
     <ul className="m-0 flex list-none flex-col gap-1 p-0">
       {pozycje.map((p) => {
-        // Podsekcje „Plan rodziny” widać w menu rozwiniętym i mobilnym; w menu zwiniętym są ukryte.
-        const zPodsekcjami = p.idWidoku === 'ViewFamilyPlan' && !zwiniete;
         const stan: StanPozycji =
-          p.idWidoku !== biezaca.pozycja ? 'zwykla' : zPodsekcjami && biezaca.widok !== p.idWidoku ? 'rodzic' : 'biezaca';
+          p.idWidoku !== biezaca.pozycja ? 'zwykla' : biezaca.naStroniePozycji ? 'biezaca' : 'wyrozniona';
         return (
           <li key={p.idWidoku}>
             <Link
-              href={sciezkaWidoku(p.idWidoku)}
+              href={p.href}
               aria-current={ariaCurrent[stan]}
+              aria-label={zwiniete ? p.etykieta : undefined}
               onClick={onWybor}
               className={klasyLinku(zwiniete, stan)}
             >
               <Ikona nazwa={p.ikona} rozmiar={24} />
-              <span className={zwiniete ? 'sr-only' : 'min-w-0'}>{p.etykieta}</span>
+              {zwiniete ? <Podpowiedz>{p.etykieta}</Podpowiedz> : <span className="min-w-0">{p.etykieta}</span>}
             </Link>
-            {zPodsekcjami ? <ListaPodsekcji biezaca={biezaca.podsekcja} onWybor={onWybor} /> : null}
           </li>
         );
       })}
       {logowanie === undefined ? null : (
         <li>
-          <Link href={logowanie} onClick={onWybor} className={klasyLinku(zwiniete, 'zwykla')}>
+          <Link
+            href={logowanie}
+            aria-label={zwiniete ? teksty.rama.zalogujSie : undefined}
+            onClick={onWybor}
+            className={klasyLinku(zwiniete, 'zwykla')}
+          >
             <Ikona nazwa="konto" rozmiar={24} />
-            <span className={zwiniete ? 'sr-only' : 'min-w-0'}>{teksty.rama.zalogujSie}</span>
+            {zwiniete ? (
+              <Podpowiedz>{teksty.rama.zalogujSie}</Podpowiedz>
+            ) : (
+              <span className="min-w-0">{teksty.rama.zalogujSie}</span>
+            )}
           </Link>
         </li>
       )}
@@ -207,21 +187,25 @@ export function MenuBoczne({ idMobilne, mobilneOtwarte, onZamknijMobilne }: Menu
     <>
       <nav
         aria-label={teksty.rama.menuPrzewodnika}
+        data-menu-zwiniete={menuZwiniete ? '' : undefined}
         className={`hidden flex-col bg-brand px-3 pt-3 text-on-brand lg:flex ${menuZwiniete ? 'w-sidebar-zwiniety' : 'w-sidebar'}`}
       >
         <ListaPozycji pozycje={pozycje} biezaca={biezaca} zwiniete={menuZwiniete} logowanie={logowanie} />
         {/* Przycisk zwijania: ostatni element menu, przyklejony do dołu widocznego obszaru menu. */}
-        <div className="sticky bottom-0 mt-auto border-t border-brand-muted bg-brand pt-3 pb-3">
+        <div className="sticky bottom-0 z-10 mt-auto border-t border-brand-muted bg-brand pt-3 pb-3">
           <button
             type="button"
             aria-expanded={!menuZwiniete}
+            aria-label={menuZwiniete ? teksty.rama.rozwinMenu : undefined}
             onClick={przelaczZwiniecieMenu}
-            className={`flex min-h-nav-item w-full cursor-pointer items-center gap-3 rounded-sm border-0 bg-transparent text-body text-on-brand transition-colors duration-150 hover:bg-brand-raised active:bg-brand-deep focus-visible:outline-on-brand motion-reduce:transition-none ${menuZwiniete ? 'justify-center px-0' : 'px-4'}`}
+            className={`relative flex min-h-nav-item w-full cursor-pointer items-center gap-3 rounded-sm border-0 bg-transparent text-body text-on-brand transition-colors duration-150 hover:bg-brand-raised active:bg-brand-deep focus-visible:outline-on-brand motion-reduce:transition-none ${menuZwiniete ? 'group/link justify-center px-0' : 'px-4'}`}
           >
             <Ikona nazwa={menuZwiniete ? 'w-prawo' : 'w-lewo'} rozmiar={24} />
-            <span className={menuZwiniete ? 'sr-only' : 'min-w-0'}>
-              {menuZwiniete ? teksty.rama.rozwinMenu : teksty.rama.zwinMenu}
-            </span>
+            {menuZwiniete ? (
+              <Podpowiedz>{teksty.rama.rozwinMenu}</Podpowiedz>
+            ) : (
+              <span className="min-w-0">{teksty.rama.zwinMenu}</span>
+            )}
           </button>
         </div>
       </nav>

@@ -33,6 +33,8 @@ export const SWIADCZENIA_SLOWNIKA = {
 const S = SWIADCZENIA_SLOWNIKA;
 const TERMIN_ZAM_UOP = 'Data porodu powiększona o 21 dni dla wniosku o urlop macierzyński i rodzicielski w wariancie 81,5%.';
 const TERMIN_ZAM = 'Data porodu powiększona o 21 dni dla wniosku w wariancie 81,5%.';
+const TERMIN_PRZEDAWNIENIA = 'Roszczenie o wypłatę przedawnia się po upływie 6 miesięcy od ostatniego dnia okresu, za który zasiłek przysługuje.';
+const TERMIN_REHABILITACYJNEGO = 'Wniosek złóż co najmniej 6 tygodni przed dniem wyczerpania okresu zasiłkowego, czyli najpóźniej w dniu wyczerpania pomniejszonym o 42 dni. Roszczenie o wypłatę przedawnia się po upływie 6 miesięcy od ostatniego dnia okresu, za który świadczenie przysługuje.';
 
 export const wpisySlownikaDokumentow: readonly WpisSlownikaDokumentow[] = [
   {
@@ -42,7 +44,7 @@ export const wpisySlownikaDokumentow: readonly WpisSlownikaDokumentow[] = [
       'Zaświadczenie lekarskie e-ZLA, które trafia do ZUS i na profil pracodawcy w eZUS.',
       'Pracownica informuje pracodawcę o nieobecności w pracy.',
     ],
-    adresat: 'Pracodawca, który wypłaca zasiłek na podstawie zaświadczenia e-ZLA.', termin: 'Brak terminu.', kolejnosc: 1,
+    adresat: 'Pracodawca, który wypłaca zasiłek na podstawie zaświadczenia e-ZLA.', termin: TERMIN_PRZEDAWNIENIA, kolejnosc: 1,
   },
   {
     id: 'zc-uop-zus', grupa: 'zasilek-chorobowy', swiadczenieAlboWniosek: S.zasilekChorobowy,
@@ -52,13 +54,13 @@ export const wpisySlownikaDokumentow: readonly WpisSlownikaDokumentow[] = [
       'Pracownica informuje pracodawcę o nieobecności w pracy.',
       'Pracodawca przekazuje do ZUS zaświadczenie płatnika składek Z-3, a za dalszy okres niezdolności zaświadczenie ZAS-12.',
     ],
-    adresat: 'Pracodawca, który przekazuje dokumenty do ZUS, a zasiłek wypłaca ZUS.', termin: 'Brak terminu.', kolejnosc: 2,
+    adresat: 'Pracodawca, który przekazuje dokumenty do ZUS, a zasiłek wypłaca ZUS.', termin: TERMIN_PRZEDAWNIENIA, kolejnosc: 2,
   },
   {
     id: 'zc-uz-platnik', grupa: 'zasilek-chorobowy', swiadczenieAlboWniosek: S.zasilekChorobowy,
     klucz: { formy: ['umowa-zlecenia'], platnik: 'platnik-uprawniony' },
     dokumenty: ['Zaświadczenie lekarskie e-ZLA.', 'Zleceniobiorczyni powstrzymuje się od pracy.'],
-    adresat: 'Płatnik składek, który wypłaca zasiłek na podstawie zaświadczenia e-ZLA.', termin: 'Brak terminu.', kolejnosc: 3,
+    adresat: 'Płatnik składek, który wypłaca zasiłek na podstawie zaświadczenia e-ZLA.', termin: TERMIN_PRZEDAWNIENIA, kolejnosc: 3,
   },
   {
     id: 'zc-uz-zus', grupa: 'zasilek-chorobowy', swiadczenieAlboWniosek: S.zasilekChorobowy,
@@ -68,7 +70,7 @@ export const wpisySlownikaDokumentow: readonly WpisSlownikaDokumentow[] = [
       'Zleceniobiorczyni powstrzymuje się od pracy i składa dokumenty płatnikowi składek albo do ZUS.',
       'Płatnik składek przekazuje do ZUS zaświadczenie płatnika składek Z-3a.',
     ],
-    adresat: 'ZUS.', termin: 'Brak terminu.', kolejnosc: 4,
+    adresat: 'ZUS.', termin: TERMIN_PRZEDAWNIENIA, kolejnosc: 4,
   },
   {
     id: 'zc-jdg', grupa: 'zasilek-chorobowy', swiadczenieAlboWniosek: S.zasilekChorobowy,
@@ -77,7 +79,7 @@ export const wpisySlownikaDokumentow: readonly WpisSlownikaDokumentow[] = [
       'Zaświadczenie lekarskie e-ZLA i wniosek o zasiłek chorobowy ZAS-53 składany w eZUS, bez zaświadczenia płatnika składek.',
       'Osoba prowadząca działalność powstrzymuje się od pracy.',
     ],
-    adresat: 'ZUS.', termin: 'Brak terminu.', kolejnosc: 5,
+    adresat: 'ZUS.', termin: TERMIN_PRZEDAWNIENIA, kolejnosc: 5,
   },
   {
     id: 'zc-po-ustaniu', grupa: 'zasilek-chorobowy', swiadczenieAlboWniosek: S.zasilekChorobowy,
@@ -86,7 +88,7 @@ export const wpisySlownikaDokumentow: readonly WpisSlownikaDokumentow[] = [
       'Zaświadczenie lekarskie e-ZLA.',
       'Wniosek ZAS-53 z oświadczeniem osoby niezdolnej do pracy po ustaniu tytułu ubezpieczenia.',
     ],
-    adresat: 'ZUS.', termin: 'Brak terminu.', kolejnosc: 6,
+    adresat: 'ZUS.', termin: TERMIN_PRZEDAWNIENIA, kolejnosc: 6,
   },
   {
     id: 'sr-uop-uz', grupa: 'swiadczenie-rehabilitacyjne', swiadczenieAlboWniosek: S.swiadczenieRehabilitacyjne,
@@ -95,8 +97,10 @@ export const wpisySlownikaDokumentow: readonly WpisSlownikaDokumentow[] = [
       'Wniosek o świadczenie rehabilitacyjne ZNp-7.',
       'Zaświadczenie lekarza prowadzącego leczenie o stanie zdrowia OL-9 wystawione najwcześniej miesiąc przed złożeniem wniosku.',
       'Wywiad zawodowy z miejsca pracy OL-10.',
+      'Zaświadczenie lekarskie stwierdzające ciążę.',
+      'Gdy świadczenie wypłaca ZUS, a zasiłek chorobowy wypłacał płatnik składek, płatnik składek wypełnia części II i III wniosku ZNp-7 i wystawia zaświadczenie płatnika składek Z-3 dla pracownicy albo Z-3a dla zleceniobiorczyni.',
     ],
-    adresat: 'ZUS, o świadczeniu orzeka lekarz orzecznik ZUS.', termin: 'Brak terminu.', kolejnosc: 7,
+    adresat: 'ZUS, o świadczeniu orzeka lekarz orzecznik ZUS.', termin: TERMIN_REHABILITACYJNEGO, kolejnosc: 7,
   },
   {
     id: 'sr-jdg-po-ustaniu', grupa: 'swiadczenie-rehabilitacyjne', swiadczenieAlboWniosek: S.swiadczenieRehabilitacyjne,
@@ -104,9 +108,10 @@ export const wpisySlownikaDokumentow: readonly WpisSlownikaDokumentow[] = [
     dokumenty: [
       'Wniosek ZNp-7.',
       'Zaświadczenie OL-9 wystawione najwcześniej miesiąc przed złożeniem wniosku, bez wywiadu zawodowego.',
+      'Zaświadczenie lekarskie stwierdzające ciążę.',
       'Po ustaniu tytułu ubezpieczenia także oświadczenie osoby niezdolnej do pracy po ustaniu tytułu ubezpieczenia.',
     ],
-    adresat: 'ZUS, o świadczeniu orzeka lekarz orzecznik ZUS.', termin: 'Brak terminu.', kolejnosc: 8,
+    adresat: 'ZUS, o świadczeniu orzeka lekarz orzecznik ZUS.', termin: TERMIN_REHABILITACYJNEGO, kolejnosc: 8,
   },
   {
     id: 'zwzm-uop', grupa: 'zwzm', swiadczenieAlboWniosek: S.zwzm,
@@ -118,7 +123,7 @@ export const wpisySlownikaDokumentow: readonly WpisSlownikaDokumentow[] = [
       'Oświadczenie o braku innego zatrudnienia.',
       'Zaświadczenie płatnika składek Z-3.',
     ],
-    adresat: 'ZUS.', termin: 'Zasiłek przysługuje do dnia poprzedzającego dzień porodu.', kolejnosc: 9,
+    adresat: 'ZUS.', termin: `Zasiłek przysługuje do dnia poprzedzającego dzień porodu. ${TERMIN_PRZEDAWNIENIA}`, kolejnosc: 9,
   },
   {
     id: 'zm-uop-platnik', grupa: 'zasilek-macierzynski', swiadczenieAlboWniosek: S.zasilekMacierzynski,

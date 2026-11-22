@@ -1,7 +1,6 @@
 // Harmonogram miesięcznych wypłat zasiłku (kontrakt, sekcja 7.2). Właściciel: u09 (Silnik kalkulatora zasiłku macierzyńskiego).
-// Każdy okres każdego rodzica dzielimy na miesiące kalendarzowe. Kwota za miesiąc = podstawa / 30 × stawka × dni okresu
-// w miesiącu, zaokrąglona do grosza, a kwota za ostatni miesiąc okresu to suma za okres pomniejszona o kwoty za wcześniejsze
-// miesiące. Przyległe okresy jednego rodzica z tą samą stawką liczymy jako jeden okres. Podwyższenie do kwoty świadczenia
+// Każdy okres każdego rodzica dzielimy na miesiące kalendarzowe. Kwota za każdy miesiąc, także za ostatni, to stawka
+// dzienna okresu pomnożona przez liczbę dni okresu w miesiącu. Przyległe okresy jednego rodzica z tą samą stawką liczymy jako jeden okres. Podwyższenie do kwoty świadczenia
 // rodzicielskiego ustalamy dla rodzica i miesiąca z okresów urlopu macierzyńskiego, uzupełniającego, na warunkach urlopu
 // macierzyńskiego i rodzicielskiego (z łączeniem i wydłużeniem); urlop ojcowski nie podlega podwyższeniu.
 import {
@@ -16,7 +15,7 @@ import {
   roznicaDni,
   czesciDaty,
 } from '@/domena/daty';
-import { kwotaMiesieczna, kwotaZaDni, podzielKwote, wGoreDo10Groszy } from '@/domena/kalkulatory/rachunek';
+import { kwotaMiesieczna, podzielKwote, stawkaDzienna, wGoreDo10Groszy } from '@/domena/kalkulatory/rachunek';
 import { kwotaParametru } from '@/domena/kalkulatory/slowniki';
 import type { DataISO, Grosze, Katalog, MiesiacISO, OkresScenariusza, Procent, RodzicWRodzinie, WynikScenariusza } from '@/domena/typy';
 
@@ -30,8 +29,12 @@ interface Blok {
   do: DataISO;
   podstawa: Grosze;
   stawka: Procent;
+  dzienna: Grosze;
   podwyzszany: boolean;
 }
+
+/** Okres z podstawą wymiaru i opcjonalną stawką dzienną, np. za okres łączenia urlopu z pracą. */
+export type OkresZPodstawa = OkresScenariusza & { podstawa: Grosze; dzienna?: Grosze };
 
 export interface WyrownanieDoStu {
   rodzic: RodzicWRodzinie;
@@ -44,25 +47,27 @@ function kolejnoscRodzica(r: RodzicWRodzinie): number {
 }
 
 // Scala przyległe okresy jednego rodzica z tą samą dzienną stawką i tym samym prawem do podwyższenia.
-function bloki(okresy: (OkresScenariusza & { podstawa: Grosze })[]): Blok[] {
+function bloki(okresy: OkresZPodstawa[]): Blok[] {
   const posortowane = [...okresy].sort(
     (a, b) => kolejnoscRodzica(a.rodzic) - kolejnoscRodzica(b.rodzic) || porownajDaty(a.od, b.od),
   );
   const wynik: Blok[] = [];
   for (const o of posortowane) {
     const podwyzszany = !RODZAJE_BEZ_PODWYZSZENIA.has(o.rodzaj);
+    const dzienna = o.dzienna ?? stawkaDzienna(o.podstawa, o.stawka);
     const ostatni = wynik.at(-1);
     if (
       ostatni !== undefined &&
       ostatni.rodzic === o.rodzic &&
       ostatni.podstawa === o.podstawa &&
       ostatni.stawka === o.stawka &&
+      ostatni.dzienna === dzienna &&
       ostatni.podwyzszany === podwyzszany &&
       dodajDni(ostatni.do, 1) === o.od
     ) {
       ostatni.do = o.do;
     } else {
-      wynik.push({ rodzic: o.rodzic, od: o.od, do: o.do, podstawa: o.podstawa, stawka: o.stawka, podwyzszany });
+      wynik.push({ rodzic: o.rodzic, od: o.od, do: o.do, podstawa: o.podstawa, stawka: o.stawka, dzienna, podwyzszany });
     }
   }
   return wynik;
@@ -79,7 +84,7 @@ export function kwotaSwiadczeniaZaMiesiac(kwotaMiesiecznaSwiadczenia: Grosze, dn
  * odczytuje kwotę świadczenia rodzicielskiego (dzień porodu, przewidywanego terminu albo przyjęcia).
  */
 export function harmonogramZPodstaw(
-  okresy: (OkresScenariusza & { podstawa: Grosze })[],
+  okresy: OkresZPodstawa[],
   katalog: Katalog,
   dzienSlownika: DataISO,
   wyrownania: WyrownanieDoStu[] = [],
@@ -89,15 +94,11 @@ export function harmonogramZPodstaw(
   const klucz = (miesiac: MiesiacISO, rodzic: RodzicWRodzinie) => `${miesiac}|${rodzic}`;
 
   for (const b of bloki(okresy)) {
-    const suma = kwotaZaDni(b.podstawa, b.stawka, roznicaDni(b.od, b.do) + 1);
-    let wczesniej = 0;
     let poczatek = b.od;
     while (porownajDaty(poczatek, b.do) <= 0) {
       const koniec = minData(ostatniDzienMiesiaca(poczatek), b.do);
       const dni = roznicaDni(poczatek, koniec) + 1;
-      const ostatni = koniec === b.do;
-      const kwota = ostatni ? suma - wczesniej : kwotaZaDni(b.podstawa, b.stawka, dni);
-      wczesniej += kwota;
+      const kwota = b.dzienna * dni;
       const m = miesiacZDaty(poczatek);
       const k = klucz(m, b.rodzic);
       const pozycja = kwoty.get(k) ?? { kwota: 0, podwyzszana: 0, dniPodwyzszane: new Set<number>() };
@@ -137,7 +138,7 @@ function podstawaOkresu(o: OkresScenariusza): Grosze {
   const przyblizona = Math.round((o.miesiecznie * 100) / o.stawka);
   for (let r = 0; r <= 3; r += 1) {
     for (const p of [przyblizona - r, przyblizona + r]) {
-      if (kwotaMiesieczna(p, o.stawka) === o.miesiecznie && kwotaZaDni(p, o.stawka, o.dni) === o.zaOkres) return p;
+      if (kwotaMiesieczna(p, o.stawka) === o.miesiecznie && stawkaDzienna(p, o.stawka) * o.dni === o.zaOkres) return p;
     }
   }
   return przyblizona;
@@ -148,7 +149,11 @@ export function harmonogram(okresy: OkresScenariusza[], katalog: Katalog): Wynik
   if (okresy.length === 0) return [];
   const pierwszy = okresy.map((o) => o.od).reduce((a, b) => minData(a, b));
   return harmonogramZPodstaw(
-    okresy.map((o) => ({ ...o, podstawa: podstawaOkresu(o) })),
+    okresy.map((o) => ({
+      ...o,
+      podstawa: podstawaOkresu(o),
+      ...(o.dni > 0 && o.zaOkres % o.dni === 0 ? { dzienna: o.zaOkres / o.dni } : {}),
+    })),
     katalog,
     pierwszy,
   );

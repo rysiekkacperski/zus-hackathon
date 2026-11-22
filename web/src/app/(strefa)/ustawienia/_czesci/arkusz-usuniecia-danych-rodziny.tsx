@@ -44,7 +44,7 @@ export function ArkuszUsunieciaDanychRodziny({ otwarte, onZamknij }: ArkuszUsuni
   const { zajety, ustawZajety, przejdz } = useNawigacjaZLadowaniem();
   const rodzina = useRodzina();
   const biezacy = useMemo(() => zakresUsuniecia(rodzina), [rodzina]);
-  // Zakres pokazany w chwili potwierdzenia zostaje w arkuszu do przejścia na ekran powitalny.
+  // Zakres pokazany w chwili potwierdzenia zostaje w arkuszu do przejścia na ekran profilu na start.
   const [zamrozony, ustawZamrozony] = useStanChwilowy<ZakresUsuniecia | null>(null);
   const [bladZapisu, ustawBladZapisu] = useState(false);
   const zakres = zamrozony ?? biezacy;
@@ -64,7 +64,8 @@ export function ArkuszUsunieciaDanychRodziny({ otwarte, onZamknij }: ArkuszUsuni
       ustawBladZapisu(true);
       return;
     }
-    przejdz(trasy.ViewGuideWelcome());
+    // Konto Nowy użytkownik z zapisaną decyzją o zgodzie i bez szkicu profilu trafia do profilu na start (3.1.1.2.2, KA-02).
+    przejdz(trasy.ViewProfileZusData());
   }
 
   return (
@@ -77,17 +78,17 @@ export function ArkuszUsunieciaDanychRodziny({ otwarte, onZamknij }: ArkuszUsuni
       zamykanieZablokowane={zajety}
       stopka={
         <>
-          <Przycisk wariant="glowny" onClick={potwierdz} zajety={zajety}>
-            {t.potwierdz}
-          </Przycisk>
           <Przycisk wariant="drugorzedny" onClick={zamknij} disabled={zajety}>
             {t.anuluj}
+          </Przycisk>
+          <Przycisk wariant="glowny" onClick={potwierdz} zajety={zajety} className="ml-auto">
+            {t.potwierdz}
           </Przycisk>
         </>
       }
     >
       <div className="rounded-sm bg-surface-page px-5 py-4">
-        <ul className="m-0 pl-6 text-body">
+        <ul className="m-0 list-disc pl-6 text-body">
           <li>{t.profil}</li>
           <li>{zakres.liczbaSpraw !== null ? t.planZLiczbaSpraw({ liczba: zakres.liczbaSpraw }) : t.plan}</li>
           <li>{t.terminy}</li>

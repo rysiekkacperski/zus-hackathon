@@ -1,5 +1,6 @@
 // POST /api/asystent (kontrakt, sekcja 10.2): ZapytanieAsystenta → 200 OdpowiedzAsystenta,
-// 503 { kod: '0071' } bez klucza, przy błędzie modelu albo po 20 s, 400 { kod: '0006' } przy złym żądaniu.
+// 503 { kod: '0071' } przy błędzie modelu albo po 20 s, 400 { kod: '0006' } przy złym żądaniu.
+// Bez klucza wybranego dostawcy modelu (DEEPSEEK_API_KEY albo ANTHROPIC_API_KEY według MODEL_DOSTAWCA) trasa zwraca 503 { kod: '0071' }.
 // Właściciel: u31 (Asystent AI). Serwer niczego nie zapisuje.
 import { walidujWiadomosc } from '@/domena/asystent/intencje';
 import type { BladAsystenta, ZapytanieAsystenta } from '@/domena/typy';
@@ -41,6 +42,7 @@ export async function POST(zadanie: Request): Promise<Response> {
     return blad('0006', 400);
   }
   if (!czyZapytanie(tresc)) return blad('0006', 400);
+  // Historyjka 3.11.1.1.3: bez klucza wybranego dostawcy asystent jest niedostępny (komunikat 0071).
   if (!czyModelDostepny()) return blad('0071', 503);
   try {
     const odpowiedz = await odpowiedzAsystenta(tresc, AbortSignal.timeout(LIMIT_CZASU_ASYSTENTA_MS));

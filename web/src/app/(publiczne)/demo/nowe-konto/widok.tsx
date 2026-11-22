@@ -1,7 +1,7 @@
 'use client';
 
 // ViewDemoNewAccount: założenie nowego konta bez danych w ZUS (Story 3.1.1.1.3, KA-07–KA-09,
-// KA-13–KA-20; wzory P01-11, P01-12, P01-13). Błąd pola pokazuje się po opuszczeniu pola, a po próbie
+// KA-13–KA-20; Story 3.1.1.1.6, KA-02–KA-12; wzory P01-11, P01-12, P01-13). Błąd pola pokazuje się po opuszczeniu pola, a po próbie
 // założenia konta błędy wszystkich pól pokazują się naraz przy polach, wpisane wartości zostają, a fokus
 // przechodzi do pierwszego pola z błędem. Po założeniu konta system loguje użytkownika nowym kontem
 // i otwiera ekran startowy (ViewGuideWelcome). Właściciel: u01.
@@ -12,7 +12,12 @@ import { losuj } from '@/dane/magazyn/losowanie';
 import { zalozNoweKonto } from '@/dane/magazyn/operacje/konta-demo';
 import { zalogujKontem } from '@/dane/magazyn/operacje/konto';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
-import { walidujNoweKonto, type DaneNowegoKonta, type PoleNowegoKonta } from '@/domena/konto/nowe-konto';
+import {
+  MAKS_DLUGOSC_POLA_NOWEGO_KONTA,
+  walidujNoweKonto,
+  type DaneNowegoKonta,
+  type PoleNowegoKonta,
+} from '@/domena/konto/nowe-konto';
 import type { BledyPol, KodKomunikatu, Plec } from '@/domena/typy';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
@@ -83,16 +88,23 @@ export function WidokNowegoKonta() {
       ustawBladOgolny(logowanieKontem.kod);
       return;
     }
+    // Widok zostaje w pamięci trasy: po powrocie Wstecz formularz jest pusty, więc to samo konto
+    // nie powstaje drugi raz.
+    ustawImie('');
+    ustawNazwisko('');
+    ustawDateUrodzenia('');
+    ustawPlec('');
+    walidacja.resetuj();
     przejdz(logowanieKontem.wartosc.cel);
   };
 
   return (
     <>
       <NaglowekDemo tytul={tekst.naglowek} wstep={tekst.wstep} powrot={tekst.powrot} />
-      {bladOgolny ? <Komunikat kod={bladOgolny} className="mb-7.5 max-w-190" /> : null}
-      <Karta tytul={tekst.karta} bezLinii className="max-w-190">
+      {bladOgolny ? <Komunikat kod={bladOgolny} className="mb-7.5" /> : null}
+      <Karta tytul={tekst.karta} bezLinii>
         <form noValidate onSubmit={zaloz}>
-          <div className="flex max-w-login-column flex-col gap-6">
+          <div className="flex flex-col gap-5">
             <PoleTekstowe
               id={idPol.imie}
               nazwa="imie"
@@ -100,7 +112,7 @@ export function WidokNowegoKonta() {
               wartosc={imie}
               onZmiana={ustawImie}
               {...walidacja.pole('imie')}
-              maksDlugosc={40}
+              parametryBledu={{ liczbaZnakow: String(MAKS_DLUGOSC_POLA_NOWEGO_KONTA.imie) }}
               autoComplete="off"
             />
             <PoleTekstowe
@@ -110,7 +122,7 @@ export function WidokNowegoKonta() {
               wartosc={nazwisko}
               onZmiana={ustawNazwisko}
               {...walidacja.pole('nazwisko')}
-              maksDlugosc={60}
+              parametryBledu={{ liczbaZnakow: String(MAKS_DLUGOSC_POLA_NOWEGO_KONTA.nazwisko) }}
               autoComplete="off"
             />
             <PoleTekstowe

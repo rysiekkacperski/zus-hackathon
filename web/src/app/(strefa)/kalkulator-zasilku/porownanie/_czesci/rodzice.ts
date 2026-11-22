@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { useKonto, useRodzina, useStanKontaOsoby } from '@/dane/magazyn/hooki';
 import { osobyRodziny } from '@/dane/magazyn/stan';
+import { kontoPrzykladowe } from '@/dane/konta-demo';
 import type {
   DaneWejscioweKalkulatora,
   FormaZatrudnienia,
@@ -23,10 +24,21 @@ export type NazwyRodzicow = Record<RodzicWRodzinie, NazwaRodzica>;
 const t = teksty.SheetCalcReturnToWork;
 const tz = teksty.ViewCalcMaternityResult.zapisScenariusza;
 
-function nazwa(imie: string | undefined, nazwisko: string | undefined, dopelniacz: string | undefined, rodzic: RodzicWRodzinie): NazwaRodzica {
+function nazwa(
+  imie: string | undefined,
+  nazwisko: string | undefined,
+  dopelniacz: string | undefined,
+  rodzic: RodzicWRodzinie,
+  pesel?: string,
+): NazwaRodzica {
   if (imie && nazwisko) {
     const mianownik = `${imie} ${nazwisko}`;
-    return { mianownik, dopelniacz: dopelniacz ?? mianownik, znana: true };
+    // Dopełniacz zapisany przy osobie, a gdy go brak albo równa się mianownikowi, z konta demonstracyjnego o tym samym PESEL
+    // i tym samym imieniu i nazwisku.
+    const demo = pesel ? kontoPrzykladowe(pesel) : undefined;
+    const zDemo = demo && demo.imie === imie && demo.nazwisko === nazwisko ? demo.imieINazwiskoDopelniacz : undefined;
+    const wlasny = dopelniacz && dopelniacz !== mianownik ? dopelniacz : undefined;
+    return { mianownik, dopelniacz: wlasny ?? zDemo ?? mianownik, znana: true };
   }
   return rodzic === 'matka'
     ? { mianownik: tz.matka, dopelniacz: t.matki, znana: false }
@@ -54,11 +66,17 @@ export function useNazwyRodzicow(): NazwyRodzicow {
     const drugi = rodzina.daneRodziny.drugiRodzic;
     return {
       matka: kontoMatki
-        ? nazwa(kontoMatki.imie, kontoMatki.nazwisko, kontoMatki.imieINazwiskoDopelniacz, 'matka')
+        ? nazwa(kontoMatki.imie, kontoMatki.nazwisko, kontoMatki.imieINazwiskoDopelniacz, 'matka', kontoMatki.pesel)
         : nazwa(undefined, undefined, undefined, 'matka'),
       'drugi-rodzic': kontoDrugiego
-        ? nazwa(kontoDrugiego.imie, kontoDrugiego.nazwisko, kontoDrugiego.imieINazwiskoDopelniacz, 'drugi-rodzic')
-        : nazwa(drugi.imie, drugi.nazwisko, drugi.imieINazwiskoDopelniacz, 'drugi-rodzic'),
+        ? nazwa(kontoDrugiego.imie, kontoDrugiego.nazwisko, kontoDrugiego.imieINazwiskoDopelniacz, 'drugi-rodzic', kontoDrugiego.pesel)
+        : nazwa(
+            drugi.imie,
+            drugi.nazwisko,
+            drugi.imieINazwiskoDopelniacz,
+            'drugi-rodzic',
+            osoby?.peselDrugiegoRodzica,
+          ),
     };
   }, [konto, rodzina, osoby, stanMatki, stanDrugiego]);
 }

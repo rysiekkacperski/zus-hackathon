@@ -16,6 +16,9 @@ import type {
   WniosekZam,
   ZnacznikCzasu,
 } from '@/domena/typy';
+import { teksty } from '@/teksty';
+
+const tekst = teksty.ViewDemoSettings.scenariusze.pozycje;
 
 const PESEL_ANNY: Pesel = '93041231085';
 const CZAS_DECYZJI: ZnacznikCzasu = '2026-11-21T10:15:00';
@@ -105,8 +108,8 @@ function rodzinaAnny(wniosek: WniosekZam): StanRodziny {
 export const scenariuszeU02: readonly ScenariuszDemo[] = [
   {
     id: 'u02-anna-zgoda-udzielona-bez-profilu',
-    nazwa: 'Anna Nowak: zgoda udzielona, bez profilu rodziny',
-    opis: 'Konto z rolą Nowy użytkownik z udzieleniem zgody w wersji 1.0 z 21.11.2026, godz. 10:15. Logowanie otwiera profil na start.',
+    nazwa: tekst['u02-anna-zgoda-udzielona-bez-profilu'].nazwa,
+    opis: tekst['u02-anna-zgoda-udzielona-bez-profilu'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: { konto: kontoAnny(ctx, { decyzjeOZgodzie: [decyzja('udzielenie')] }) },
@@ -114,8 +117,8 @@ export const scenariuszeU02: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u02-anna-odmowa-zgody',
-    nazwa: 'Anna Nowak: odmowa zgody, ustawienia 24.11.2026',
-    opis: 'Konto z rolą Nowy użytkownik z odmową zgody z 21.11.2026. Data demonstracyjna 24.11.2026 pozwala udzielić zgody w ustawieniach.',
+    nazwa: tekst['u02-anna-odmowa-zgody'].nazwa,
+    opis: tekst['u02-anna-odmowa-zgody'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: { konto: kontoAnny(ctx, { decyzjeOZgodzie: [decyzja('odmowa')] }) },
@@ -124,8 +127,8 @@ export const scenariuszeU02: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u02-anna-rodzic-z-planem',
-    nazwa: 'Anna Nowak: Rodzic z profilem, terminem porodu 15.03.2027 i nieukończonym wnioskiem ZAM',
-    opis: 'Konto z rolą Rodzic ze zgodą z 21.11.2026, przewidywanym terminem porodu 15.03.2027, planem rodziny i nieukończonym wnioskiem o zasiłek macierzyński. Data demonstracyjna 24.11.2026.',
+    nazwa: tekst['u02-anna-rodzic-z-planem'].nazwa,
+    opis: tekst['u02-anna-rodzic-z-planem'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: {
@@ -137,8 +140,8 @@ export const scenariuszeU02: readonly ScenariuszDemo[] = [
   },
   {
     id: 'u02-anna-rodzic-z-wyslanym-zam',
-    nazwa: 'Anna Nowak: Rodzic z wnioskiem ZAM wysłanym do ZUS',
-    opis: 'Konto z rolą Rodzic ze zgodą z 21.11.2026 i wnioskiem o zasiłek macierzyński wysłanym do ZUS 21.11.2026. Data demonstracyjna 24.11.2026.',
+    nazwa: tekst['u02-anna-rodzic-z-wyslanym-zam'].nazwa,
+    opis: tekst['u02-anna-rodzic-z-wyslanym-zam'].opis,
     pesel: PESEL_ANNY,
     zastosuj: (ctx) => ({
       konto: {
