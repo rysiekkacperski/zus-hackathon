@@ -4,19 +4,16 @@
 // wzory Plan-rodziny, P06-04 … P06-13). Nagłówek ma akcję „Zgłoś narodziny” do potwierdzenia daty porodu. Pulpit
 // pokazuje kolejno: okno nowego dziecka, Twoją ścieżkę z etapami obok trzech najbliższych terminów i karty
 // Sytuacje szczególne oraz zmiany w planie. Dane, z których powstał plan, pokazuje Profil rodziny.
-// Obok „Zgłoś narodziny” Rodzic bez dołączonego drugiego rodzica ma akcję „Dodaj drugiego rodzica”, która tworzy
-// zaproszenie i pokazuje jego link w arkuszu SheetInviteSecondParent (3.3.3.1.1).
+// Obok „Zgłoś narodziny” Rodzic bez dołączonego drugiego rodzica ma akcję „Dodaj drugiego rodzica”, która prowadzi
+// do zakładki Drugi rodzic w Profilu rodziny z zaproszeniem i pełnomocnictwem (3.3.3.1.1).
 // Sprawy etapów z blokiem strażnika ubezpieczenia chorobowego pokazuje strona etapu ViewFamilyPlanStage.
 // Właściciel: u12.
-import { ArkuszZaproszenia } from '@/app/(strefa)/profil-rodziny/_czesci/arkusz-zaproszenia';
 import { useKontekstRodziny, useStanKonta } from '@/dane/magazyn/hooki';
 import { wyznaczBiezacyEtap } from '@/domena/plan/etap';
-import type { KodKomunikatu } from '@/domena/typy';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
-import { useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Odnosnik } from '@/komponenty/odnosnik';
-import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
+import { PrzyciskLink } from '@/komponenty/przycisk';
 import { sciezkaWidoku } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { SzkieletWidoku } from '@/komponenty/szkielet-widoku';
@@ -24,11 +21,7 @@ import { Stos, UkladDwuKolumnowy } from '@/komponenty/uklad';
 import { teksty } from '@/teksty';
 import { KartaSciezki, KartaSytuacjiSzczegolnych, KartaTerminow, KartaZmian } from './_czesci/karty-planu';
 import { useOcenaStraznika } from './_czesci/ocena-straznika';
-import {
-  czyDodanieDrugiegoRodzicaDostepne,
-  zaprosDrugiegoRodzica,
-  type LinkZaproszenia,
-} from './_czesci/zaproszenie-drugiego-rodzica';
+import { adresDodaniaDrugiegoRodzica, czyDodanieDrugiegoRodzicaDostepne } from './_czesci/zaproszenie-drugiego-rodzica';
 import { slotyNadPlanem } from './_sloty';
 import { czyZgloszenieNarodzinDostepne } from './_sloty/akcja-zglos-narodziny';
 
@@ -38,19 +31,6 @@ export function WidokPlanuRodziny() {
   const kontekst = useKontekstRodziny();
   const ocena = useOcenaStraznika(kontekst);
   const odczytZusTrwa = useStanKonta()?.stanOdczytuZus?.stan === 'trwa';
-  // Arkusz w stanie chwilowym: po powrocie na pulpit (Cache Components) nie otwiera się ponownie.
-  const [zaproszenie, ustawZaproszenie] = useStanChwilowy<LinkZaproszenia | null>(null);
-  const [bladZaproszenia, ustawBladZaproszenia] = useStanChwilowy<KodKomunikatu | null>(null);
-
-  function zaprosDrugiego() {
-    const wynik = zaprosDrugiegoRodzica();
-    if (!wynik.ok) {
-      ustawBladZaproszenia(wynik.kod);
-      return;
-    }
-    ustawBladZaproszenia(null);
-    ustawZaproszenie(wynik.wartosc);
-  }
 
   // Plan czeka na koniec odczytu Danych z konta ZUS, z których wynikają statusy i terminy spraw.
   if (odczytZusTrwa) return <SzkieletWidoku />;
@@ -87,22 +67,15 @@ export function WidokPlanuRodziny() {
                 </PrzyciskLink>
               ) : null}
               {dodajDrugiego ? (
-                <Przycisk wariant="drugorzedny" ikona="dodaj-osobe" onClick={zaprosDrugiego}>
+                <PrzyciskLink wariant="drugorzedny" ikona="dodaj-osobe" href={adresDodaniaDrugiegoRodzica}>
                   {t.dodajDrugiegoRodzica}
-                </Przycisk>
+                </PrzyciskLink>
               ) : null}
             </>
           ) : undefined
         }
       />
-      <ArkuszZaproszenia
-        otwarte={zaproszenie !== null}
-        onZamknij={() => ustawZaproszenie(null)}
-        link={zaproszenie?.link}
-        wazneDo={zaproszenie?.wazneDo}
-      />
       <Stos odstep={7.5}>
-        {bladZaproszenia ? <Komunikat kod={bladZaproszenia} /> : null}
         {stanZgody !== 'udzielona' ? (
           <Komunikat
             kod="0004"
