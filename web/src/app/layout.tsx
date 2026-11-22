@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { preload } from "react-dom";
+import { SynchronizacjaKatalogu } from "@/komponenty/rama/synchronizacja-katalogu";
 import { teksty } from "@/teksty";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Pliki kroju Open Sans z public/fonty/, zadeklarowane w globals.css jako jedna rodzina z unicode-range.
+// Interfejs po polsku korzysta z obu podzbiorów, więc przeglądarka wczytuje oba z wyprzedzeniem.
+const plikiFontow = [
+  "/fonty/open-sans-latin-wght-normal.woff2",
+  "/fonty/open-sans-latin-ext-wght-normal.woff2",
+] as const;
 
 export const metadata: Metadata = {
   title: teksty.wspolne.nazwaAplikacji,
@@ -19,12 +17,16 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  for (const plik of plikiFontow) {
+    preload(plik, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  }
+
   return (
-    <html
-      lang="pl"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="pl">
+      <body className="min-h-dvh bg-surface-page font-sans text-ink">
+        <SynchronizacjaKatalogu />
+        {children}
+      </body>
     </html>
   );
 }

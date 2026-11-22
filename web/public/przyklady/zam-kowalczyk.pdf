@@ -1,0 +1,113 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [8 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [128 /aogonek /cacute /eogonek /lslash /nacute /oacute /sacute /zacute /zdotaccent /Aogonek /Cacute /Eogonek /Lslash /Nacute /Oacute /Sacute /Zacute /Zdotaccent /quotedblbase /quotedblright] >>
+endobj
+4 0 obj
+<< /Length 595 >>
+stream
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
+/CMapName /PPM-Polski def
+/CMapType 2 def
+1 begincodespacerange <00> <FF> endcodespacerange
+1 beginbfrange <20> <7E> <0020> endbfrange
+20 beginbfchar
+<80> <0105>
+<81> <0107>
+<82> <0119>
+<83> <0142>
+<84> <0144>
+<85> <00F3>
+<86> <015B>
+<87> <017A>
+<88> <017C>
+<89> <0104>
+<8A> <0106>
+<8B> <0118>
+<8C> <0141>
+<8D> <0143>
+<8E> <00D3>
+<8F> <015A>
+<90> <0179>
+<91> <017B>
+<92> <201E>
+<93> <201D>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding 3 0 R /ToUnicode 4 0 R >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding 3 0 R /ToUnicode 4 0 R >>
+endobj
+7 0 obj
+<< /Length 1719 >>
+stream
+BT /F2 15 Tf 50 792 Td (Wniosek o zasi\203ek macierzy\204ski ZAM) Tj ET
+BT /F1 9.5 Tf 50 772 Td (Wniosek o zasi\203ek macierzy\204ski, w tym o zasi\203ek za okres urlopu rodzicielskiego i ojcowskiego.) Tj ET
+BT /F1 9.5 Tf 50 759 Td (Dokument przyk\203adowy przygotowany do test\205w odczytu.) Tj ET
+BT /F2 11 Tf 50 738 Td (Dane ubezpieczonej osoby) Tj ET
+0.6 0.6 0.6 RG 0.5 w 50 733 m 545 733 l S
+BT /F1 9.5 Tf 50 719 Td (Imi\202) Tj ET
+BT /F2 9.5 Tf 270 719 Td (Agnieszka) Tj ET
+BT /F1 9.5 Tf 50 703 Td (Nazwisko) Tj ET
+BT /F2 9.5 Tf 270 703 Td (Kowalczyk) Tj ET
+BT /F1 9.5 Tf 50 687 Td (Numer PESEL) Tj ET
+BT /F2 9.5 Tf 270 687 Td (94051243149) Tj ET
+BT /F2 11 Tf 50 661 Td (Wniosek) Tj ET
+0.6 0.6 0.6 RG 0.5 w 50 656 m 545 656 l S
+BT /F1 9.5 Tf 50 642 Td (Wnioskuj\202 o) Tj ET
+BT /F2 9.5 Tf 270 642 Td (zasi\203ek macierzy\204ski) Tj ET
+BT /F1 9.5 Tf 50 626 Td (Sk\203adam wniosek jako) Tj ET
+BT /F2 9.5 Tf 270 626 Td (matka dziecka) Tj ET
+BT /F1 9.5 Tf 50 610 Td (Data porodu) Tj ET
+BT /F2 9.5 Tf 270 610 Td (02.09.2026) Tj ET
+BT /F1 9.5 Tf 50 594 Td (Liczba dzieci urodzonych przy jednym) Tj ET
+BT /F1 9.5 Tf 50 582 Td (porodzie) Tj ET
+BT /F2 9.5 Tf 270 594 Td (1) Tj ET
+BT /F2 11 Tf 50 556 Td (Okresy zasi\203ku) Tj ET
+0.6 0.6 0.6 RG 0.5 w 50 551 m 545 551 l S
+BT /F1 9.5 Tf 50 537 Td (Urlop macierzy\204ski) Tj ET
+BT /F2 9.5 Tf 270 537 Td (od 02.09.2026 do 19.01.2027) Tj ET
+BT /F1 9.5 Tf 50 501 Td (Data i podpis: 03.09.2026, Agnieszka Kowalczyk) Tj ET
+BT /F1 7.5 Tf 50 40 Td (Dokument przyk\203adowy aplikacji \222Przewodnik przysz\203ej mamy\223. Osoby, numery PESEL, p\203atnicy i kwoty s\200 zmy\206lone.) Tj ET
+BT /F1 7.5 Tf 50 29 Td (Identyfikator dokumentu przyk\203adowego: PPM-zam-kowalczyk.pdf) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Title (Wniosek o zasi\203ek macierzy\204ski ZAM) /Subject (PPM-zam-kowalczyk.pdf) /Keywords (PPM-zam-kowalczyk.pdf) /Producer (Przewodnik przyszlej mamy, generator dokumentow przykladowych) >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000393 00000 n 
+0000001039 00000 n 
+0000001142 00000 n 
+0000001250 00000 n 
+0000003021 00000 n 
+0000003157 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R /Info 9 0 R >>
+startxref
+3369
+%%EOF
