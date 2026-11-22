@@ -119,7 +119,7 @@ cp .env.example .env.local   # DEEPSEEK_API_KEY włącza asystenta i odczyt doku
 pnpm dev                     # http://localhost:3000
 ```
 
-Wymagania, zmienne, testy i wdrożenie opisuje [web/README.md](web/README.md). CI w [.github/workflows/ci.yml](.github/workflows/ci.yml) uruchamia lint, typecheck, testy i build.
+Wymagania, zmienne, testy i wdrożenie opisuje [web/README.md](web/README.md).
 
 ## Struktura repozytorium
 
