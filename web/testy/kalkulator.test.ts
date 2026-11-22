@@ -2,8 +2,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { domyslneParametry, wyliczScenariusz } from '@/domena/kalkulatory';
-import { porownajWarianty } from '@/domena/kalkulatory/wariant';
-import { DZIS, daneKalkulatora, katalogStartowy, podstawa, wartosc } from './pomocnicze';
+import { etykietyStawekZasilku, porownajWarianty } from '@/domena/kalkulatory/wariant';
+import { teksty } from '@/teksty';
+import { DZIS, daneKalkulatora, katalogStartowy, katalogZWartosciami, podstawa, wartosc } from './pomocnicze';
 
 const katalog = katalogStartowy();
 const podstawy = { matka: podstawa(600000), 'drugi-rodzic': podstawa(600000) };
@@ -61,4 +62,21 @@ test('przyjęcie dziecka na wychowanie: uprawnienia po powrocie bez przerw na ka
   const wynik = wyliczScenariusz(d, podstawy, domyslneParametry(d, katalog), katalog, DZIS);
   assert.ok(!wynik.uprawnieniaPoPowrocie.includes('K20'));
   assert.ok(wynik.uprawnieniaPoPowrocie.includes('K21'));
+});
+
+test('etykiety stawek wariantów zasiłku pochodzą z katalogu i zmieniają się po zmianie w panelu Administratora', () => {
+  const t = teksty.ViewCalcMaternityVariant;
+  const startowe = etykietyStawekZasilku(katalog, DZIS);
+  assert.deepEqual(startowe, { s815: '81,5%', s100: '100%', s70: '70%' });
+  assert.equal(t.nazwaWariantu('100-70', startowe), '100% i 70%');
+  const zmieniony = katalogZWartosciami({
+    'zasilek-macierzynski-wariant-81-5': { stawka: 82 },
+    'zasilek-macierzynski-wariant-100-70': { rodzicielski: 65 },
+  });
+  const st = etykietyStawekZasilku(zmieniony, DZIS);
+  assert.deepEqual(st, { s815: '82%', s100: '100%', s70: '65%' });
+  assert.equal(t.nazwaWariantu('81-5', st), '82%');
+  assert.equal(t.nazwaWariantu('100-70', st), '100% i 65%');
+  assert.match(t.poTerminieOpis({ termin: '30.11.2026', s815: st.s815 }), /wariant 82% minął/);
+  assert.equal(teksty.SheetCalcReturnToWork.wariant81Wybrany(st), 'Wariant 82% (wybrany)');
 });

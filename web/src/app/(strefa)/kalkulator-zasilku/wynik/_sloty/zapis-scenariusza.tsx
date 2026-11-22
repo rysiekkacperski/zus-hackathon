@@ -14,7 +14,7 @@ import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
-import { useCzyGosc, useKatalog, useKonto, useRodzina, useWlascicielDanych } from '@/dane/magazyn/hooki';
+import { useCzyGosc, useDzis, useKatalog, useKonto, useRodzina, useWlascicielDanych } from '@/dane/magazyn/hooki';
 import {
   przeniesDoWnioskuOUrlop,
   przeniesDoZam,
@@ -27,6 +27,8 @@ import {
 } from '@/dane/magazyn/operacje/kalkulacje-scenariusze';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { liczbaDniWlacznie } from '@/domena/daty';
+import { dataZdarzenia } from '@/domena/kalkulatory/scenariusz';
+import { etykietyStawekZasilku, type EtykietyStawek } from '@/domena/kalkulatory/wariant';
 import type { IdPozycji, KodKomunikatu, Okres, ScenariuszKalkulatora, WybranyWariant } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import type { PropsSlotu } from './typy';
@@ -43,14 +45,14 @@ function zakresOkresow(o: Okres[] | undefined): Okres | undefined {
   return { od: o[0].od, do: o[o.length - 1].do };
 }
 
-function opisWariantu(w: WybranyWariant): string {
+function opisWariantu(w: WybranyWariant, st: EtykietyStawek): string {
   switch (w.sprawa) {
     case 'K07':
     case 'K08':
-      return t.opisK07K08({ wariant: t.warianty[w.wariant], macierzynski: okres(w.okresMacierzynski), rodzicielski: okres(zakresOkresow(w.okresyRodzicielskie)) });
+      return t.opisK07K08({ wariant: t.warianty(w.wariant, st), macierzynski: okres(w.okresMacierzynski), rodzicielski: okres(zakresOkresow(w.okresyRodzicielskie)) });
     case 'K31':
     case 'K32':
-      return t.opisK31K32({ wariant: t.warianty[w.wariant], macierzynski: okres(w.okresMacierzynski), rodzicielski: okres(zakresOkresow(w.okresyRodzicielskie)) });
+      return t.opisK31K32({ wariant: t.warianty(w.wariant, st), macierzynski: okres(w.okresMacierzynski), rodzicielski: okres(zakresOkresow(w.okresyRodzicielskie)) });
     case 'K09': {
       const dni = w.okresyOjcowskiego.reduce((s, o) => s + liczbaDniWlacznie(o), 0);
       return t.opisK09({
@@ -83,6 +85,8 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
   const gosc = useCzyGosc();
   const wlasciciel = useWlascicielDanych();
   const katalog = useKatalog();
+  const dzis = useDzis();
+  const st = etykietyStawekZasilku(katalog, dataZdarzenia(props.daneWejsciowe) ?? dzis);
   const nazwy = useNazwyRodzicow(props.daneWejsciowe.zdarzenie.wartosc === 'przyjecie');
   const [zapisany, ustawZapisany] = useState<Zapisany | null>(null);
   const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
@@ -182,11 +186,11 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
                   ? t.zapisanyRodzina({
                       data: formatujDate(zapisany.scenariusz.zapisano),
                       kto: konto ? `${konto.imie} ${konto.nazwisko}` : '',
-                      wariant: t.warianty[props.parametry.wariant],
+                      wariant: t.warianty(props.parametry.wariant, st),
                     })
                   : gosc
-                    ? t.zapisanyGosc({ data: formatujDate(zapisany.scenariusz.zapisano), wariant: t.warianty[props.parametry.wariant] })
-                    : t.zapisanyKonto({ data: formatujDate(zapisany.scenariusz.zapisano), wariant: t.warianty[props.parametry.wariant] })}
+                    ? t.zapisanyGosc({ data: formatujDate(zapisany.scenariusz.zapisano), wariant: t.warianty(props.parametry.wariant, st) })
+                    : t.zapisanyKonto({ data: formatujDate(zapisany.scenariusz.zapisano), wariant: t.warianty(props.parametry.wariant, st) })}
               </p>
               {warianty.length > 0 ? (
                 <>
@@ -197,7 +201,7 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
                         <Link href={`/sprawy/${w.sprawa}`} className="text-body-strong">
                           {tytulSprawy(w.sprawa)}
                         </Link>
-                        <p className="m-0 text-small text-ink-muted">{opisWariantu(w)}</p>
+                        <p className="m-0 text-small text-ink-muted">{opisWariantu(w, st)}</p>
                       </li>
                     ))}
                   </ul>

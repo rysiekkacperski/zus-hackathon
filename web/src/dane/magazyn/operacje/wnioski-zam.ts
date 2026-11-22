@@ -2,7 +2,7 @@
 // Szkic wniosku żyje w Wnioskach rodziny (stan szkic) z ostatnim wyświetlonym ekranem. Status sprawy zmienia
 // wyłącznie operacja Planu rodzica ustawStatusSprawy. Wniosek wysyła REST API symulowanego ZUS (POST /api/v1/zus/wnioski),
 // a magazyn zapisuje wniosek w stanie wysłanym z numerem potwierdzenia i datą złożenia z odpowiedzi.
-import { wyslijWniosekDoZus } from '@/dane/api/klient';
+import { wyslijWniosekDoZusZNumeracja } from '@/dane/magazyn/operacje/numeracja-wnioskow-zus';
 import { opcjeSymulowanegoZus } from '@/dane/api/symulowany-zus';
 import { usunPlik } from '@/dane/magazyn/pliki';
 import { losowyCiag } from '@/dane/magazyn/losowanie';
@@ -195,19 +195,20 @@ function zapiszPoTerminieWariantu(
 /**
  * Wysłanie wniosku do ZUS przez REST API symulowanego ZUS z numerem potwierdzenia z odpowiedzi. Ponowne sprawdzenie
  * terminu 21 dni (R12) przed wysłaniem i w API zmienia szkic i zwraca 0038 bez wysyłki; niedostępny ZUS (symulacja
- * wysylkaDoZusNiedostepna albo błąd sieci) daje 0044 z zachowanym szkicem, a kontrole API 0043 i 0149 zostawiają szkic.
+ * wysylkaDoZusNiedostepna albo błąd sieci) daje 0044 z zachowanym szkicem, a kontrole API (0043, 0149) i błędy pól
+ * struktury (na przykład 0040 i 0041 dla rachunku) zostawiają szkic i wracają z kodem, polami i parametrami z odpowiedzi.
  */
 export async function wyslijZam(id: IdWniosku, ctx: KontekstOperacji): Promise<WynikOperacji<{ potwierdzenie: string }>> {
   const k = kontekstZalogowanego();
   if (k === null) return { ok: false, kod: '0003' };
   const wniosek = znajdzWniosekZam(k.rodzina, id, k.konto.pesel);
   if (wniosek === null || wniosek.stan !== 'szkic') return { ok: false, kod: '0003' };
-  const wejscie = { wniosek, daneCiazy: k.rodzina.daneCiazy, plan: k.rodzina.plan };
+  const wejscie = { wniosek, daneCiazy: k.rodzina.daneCiazy, plan: k.rodzina.plan, katalog: odczytajKatalog() };
 
   if (czyMinalTerminWariantu(wejscie, ctx.dzis)) return zapiszPoTerminieWariantu(id, wejscie, ctx);
 
   const [odpowiedz] = await Promise.all([
-    wyslijWniosekDoZus(
+    wyslijWniosekDoZusZNumeracja(
       { wniosek, daneCiazy: k.rodzina.daneCiazy, plan: k.rodzina.plan, teraz: ctx.teraz },
       opcjeSymulowanegoZus(),
     ),
@@ -216,9 +217,9 @@ export async function wyslijZam(id: IdWniosku, ctx: KontekstOperacji): Promise<W
 
   if (!odpowiedz.ok) {
     if (odpowiedz.kod === '0038') return zapiszPoTerminieWariantu(id, wejscie, ctx);
-    const kod = odpowiedz.kod === '0043' || odpowiedz.kod === '0149' ? odpowiedz.kod : '0044';
+    // Kod z odpowiedzi API (kontrola, pole struktury, 0044 po awarii), a klient daje 0044 po błędzie sieci.
     const zapis = zapiszKrokZam(id, {}, 'ViewZamSummary', ctx);
-    return zapis.ok ? { ok: false, kod } : zapis;
+    return zapis.ok ? odpowiedz : zapis;
   }
   const { potwierdzenie, dataZlozenia } = odpowiedz.wartosc;
 

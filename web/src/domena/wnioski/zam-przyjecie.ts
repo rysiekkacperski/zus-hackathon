@@ -58,10 +58,16 @@ export const WPISY_PRZYJECIA = {
   rodzicielski: ID_WYMIAROW.urlopRodzicielski,
 } as const;
 
+// Wartości domyślne z historyjki 3.9.8.1.1, gdy katalog nie zawiera wpisu albo wywołanie nie przekazuje katalogu.
 const WYMIAR_WUM_TYGODNI: Record<LiczbaDzieci, number> = { 1: 20, 2: 31, 3: 33, 4: 35, 5: 37 };
 const NAJKROTSZY_WUM_TYGODNI = 9;
 const TERMIN_WARIANTU_DNI = 21;
 const TYGODNIE_DRUGIEGO_RODZICA = 9;
+
+/** Termin wniosku w wariancie 81,5% w dniach od przyjęcia dziecka z Katalogu świadczeń w dniu przyjęcia. */
+function dniTerminuWariantu(katalog: Katalog | null, dataPrzyjecia: DataISO): number {
+  return zKatalogu(katalog, ID_WYMIAROW.terminWnioskuWariant815, dataPrzyjecia, 'dni', TERMIN_WARIANTU_DNI);
+}
 
 function liczbaDoKlucza(liczba: number): LiczbaDzieci {
   if (liczba >= 5) return 5;
@@ -117,8 +123,8 @@ function tygodnieWum(liczba: number, katalog: Katalog | null, dzien: DataISO): n
 }
 
 /** Zakres daty początku urlopu na warunkach urlopu macierzyńskiego: od dnia przyjęcia do 21. dnia po nim. */
-export function zakresPoczatkuWum(dataPrzyjecia: DataISO): Okres {
-  return { od: dataPrzyjecia, do: dodajDni(dataPrzyjecia, TERMIN_WARIANTU_DNI) };
+export function zakresPoczatkuWum(dataPrzyjecia: DataISO, katalog: Katalog | null = null): Okres {
+  return { od: dataPrzyjecia, do: dodajDni(dataPrzyjecia, dniTerminuWariantu(katalog, dataPrzyjecia)) };
 }
 
 /**
@@ -212,7 +218,7 @@ export function parametryRodzicielskiegoPoPrzyjeciu(
   const najwczesniej = opcje.dzis ? maxData(poczatekBezposrednio, dodajDni(opcje.dzis, 1)) : poczatekBezposrednio;
   return {
     wymiar,
-    maksWnioskodawcy: wymiar - TYGODNIE_DRUGIEGO_RODZICA,
+    maksWnioskodawcy: wymiar - zKatalogu(katalog, ID_WYMIAROW.nieprzenoszalnaCzescUrlopuRodzicielskiego, p.dataPrzyjecia, 'tygodnie', TYGODNIE_DRUGIEGO_RODZICA),
     poczatekBezposrednio,
     zakresPoczatku: { od: najwczesniej, do: koniecCzesci },
     koniecCzesciNajpozniej: koniecCzesci,
@@ -243,8 +249,8 @@ export interface WariantPoPrzyjeciu {
 }
 
 /** Termin 21 dni od przyjęcia dziecka na wybór wariantu 81,5% (0165 po terminie). */
-export function wariantPoPrzyjeciu(dataPrzyjecia: DataISO, dzis: DataISO): WariantPoPrzyjeciu {
-  const termin = dodajDni(dataPrzyjecia, TERMIN_WARIANTU_DNI);
+export function wariantPoPrzyjeciu(dataPrzyjecia: DataISO, dzis: DataISO, katalog: Katalog | null = null): WariantPoPrzyjeciu {
+  const termin = dodajDni(dataPrzyjecia, dniTerminuWariantu(katalog, dataPrzyjecia));
   const dostepny = porownajDaty(dzis, termin) <= 0;
   return {
     termin,

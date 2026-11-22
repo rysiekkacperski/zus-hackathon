@@ -16,7 +16,7 @@ import type {
   WniosekZas53,
   WynikOperacji,
 } from '@/domena/typy';
-import { wyslijWniosekDoZus } from '@/dane/api/klient';
+import { wyslijWniosekDoZusZNumeracja } from '@/dane/magazyn/operacje/numeracja-wnioskow-zus';
 import { opcjeSymulowanegoZus } from '@/dane/api/symulowany-zus';
 import { losowyCiag } from '@/dane/magazyn/losowanie';
 import { ustawStatusSprawy } from '@/dane/magazyn/operacje/plan';
@@ -171,7 +171,8 @@ export async function dolaczPlikZas53(
 
 /**
  * Wysłanie wniosku do ZUS przez REST API symulowanego ZUS (0043 bez oświadczenia, 0149 bez wymaganego pliku, 0044 przy
- * niedostępnym kanale albo błędzie sieci, szkic zachowany). Numer potwierdzenia i datę złożenia nadaje API.
+ * niedostępnym kanale albo błędzie sieci, szkic zachowany, błąd pola z kodem z odpowiedzi). Numer potwierdzenia
+ * i datę złożenia nadaje API.
  */
 export async function wyslijZas53(id: IdWniosku, ctx: KontekstOperacji): Promise<WynikOperacji<{ potwierdzenie: string }>> {
   const k = kontekstZalogowanego();
@@ -182,8 +183,9 @@ export async function wyslijZas53(id: IdWniosku, ctx: KontekstOperacji): Promise
   // Kanał wniosków eZUS: prototyp wysyła wyłącznie w trybie demonstracyjnym; poza nim kanał jest niedostępny.
   if (!czyTrybDemonstracyjny()) return { ok: false, kod: '0044' };
 
-  const odpowiedz = await wyslijWniosekDoZus({ wniosek: obecny, teraz: ctx.teraz }, opcjeSymulowanegoZus());
-  if (!odpowiedz.ok) return { ok: false, kod: odpowiedz.kod === '0043' || odpowiedz.kod === '0149' ? odpowiedz.kod : '0044' };
+  const odpowiedz = await wyslijWniosekDoZusZNumeracja({ wniosek: obecny, teraz: ctx.teraz }, opcjeSymulowanegoZus());
+  // Kod, pola i parametry z odpowiedzi API; klient daje 0044 po błędzie sieci albo odpowiedzi bez kodu.
+  if (!odpowiedz.ok) return odpowiedz;
   const { potwierdzenie, dataZlozenia } = odpowiedz.wartosc;
 
   const pliki = obecny.zalaczniki.flatMap((z) => (z.plik ? [z.plik.idPliku] : []));
@@ -201,7 +203,7 @@ export async function wyslijZas53(id: IdWniosku, ctx: KontekstOperacji): Promise
     zmienStanZus(k.pesel, (s) => ({
       ...s,
       wnioskiZPrzewodnika: [
-        ...s.wnioskiZPrzewodnika.filter((w) => w.idWnioskuPrzewodnika !== id),
+        ...s.wnioskiZPrzewodnika.filter((w) => w.idWnioskuPrzewodnika !== id && w.idWniosku !== potwierdzenie),
         {
           idWniosku: potwierdzenie,
           rodzaj: 'zasilek-chorobowy',

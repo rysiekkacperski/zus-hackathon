@@ -11,12 +11,6 @@ import type {
   WniosekOUrlop,
 } from '@/domena/typy';
 import {
-  DNI_OJCOWSKIEGO,
-  DNI_TERMINU_81_5,
-  MAKS_CZESCI_RODZICIELSKIEGO,
-  MIN_DNI_CZESCI_OJCOWSKIEGO,
-  MIN_TYGODNI_NA_WARUNKACH,
-  WYMIAR_MACIERZYNSKIEGO_TYGODNI,
   granicaRodzicielskiego,
   granicaWiekuPrzyjecia,
   koniecPoDniach,
@@ -28,6 +22,7 @@ import {
   stawkaZasilku,
   wykorzystanieRodzicielskiego,
   wymiarRodzicielskiego,
+  wymiaryDanych,
   wyliczOkresyUrlopu,
   zakresPrzedPorodem,
   type DaneKreatora,
@@ -154,7 +149,7 @@ export function ocenFormularz(
   switch (podrodzaj) {
     case 'czesc-przed-porodem': {
       if (!dane.przewidywanyTerminPorodu) break;
-      const zakres = zakresPrzedPorodem(dane.przewidywanyTerminPorodu);
+      const zakres = zakresPrzedPorodem(dane.przewidywanyTerminPorodu, wymiaryDanych(dane));
       wynik.zakresDaty = zakres;
       const d = walidujDateUrlopu(odp.dataPoczatku, zakres);
       if ('kod' in d) bledy.dataPoczatku = d.kod;
@@ -166,7 +161,7 @@ export function ocenFormularz(
     }
     case 'macierzynski-z-rodzicielskim': {
       wynik.okresMacierzynskiego = okresUrlopuMacierzynskiego(dane);
-      const stawka = stawkaZasilku({ zakres: odp.zakres, dzis, dataPorodu: dane.dataPorodu });
+      const stawka = stawkaZasilku({ zakres: odp.zakres, dzis, dataPorodu: dane.dataPorodu, wymiary: dane.wymiary });
       if (stawka.termin !== undefined && stawka.zostaloDni !== undefined) wynik.termin815 = { termin: stawka.termin, zostaloDni: stawka.zostaloDni };
       wynik.informacjaZakresu = stawka.kod;
       if (odp.zakres === null) bledy.zakres = '0006';
@@ -187,12 +182,12 @@ export function ocenFormularz(
       const poprzedni = koniecUrlopuPrzedRodzicielskim(dane);
       const urodzenie = dane.przyjecie?.dataUrodzeniaDziecka ?? dane.dziecko?.dataUrodzenia ?? dane.dataPorodu;
       if (poprzedni && urodzenie) {
-        let granica = granicaRodzicielskiego(urodzenie);
-        if (dane.przyjecie) granica = minData(granica, granicaWiekuPrzyjecia(dane.przyjecie));
+        let granica = granicaRodzicielskiego(urodzenie, wymiaryDanych(dane));
+        if (dane.przyjecie) granica = minData(granica, granicaWiekuPrzyjecia(dane.przyjecie, wymiaryDanych(dane)));
         wynik.zakresDaty = { od: dodajDni(poprzedni, 1), do: granica };
       }
       wynik.zakresTygodni = { min: 1, max: Math.max(1, wyk.pozostalo) };
-      if (wyk.numerCzesci > MAKS_CZESCI_RODZICIELSKIEGO) bledy.numerCzesci = '0096';
+      if (wyk.numerCzesci > wymiaryDanych(dane).maksCzesciRodzicielskiego) bledy.numerCzesci = '0096';
       const d = walidujDateUrlopu(odp.dataPoczatku, wynik.zakresDaty ?? null);
       if ('kod' in d) bledy.dataPoczatku = d.kod;
       const t = wLiczbie(odp.tygodnie, 1, wyk.pozostalo);
@@ -216,14 +211,20 @@ export function ocenFormularz(
       const urodzenie = dane.przyjecie?.dataUrodzeniaDziecka ?? dane.dataPorodu;
       if (!urodzenie) break;
       if (odp.wczesniejszyOjcowski === null) bledy.ojcowskiWczesniej = '0006';
-      const minDni = odp.wczesniejszyOjcowski === '7-dni' ? 7 : MIN_DNI_CZESCI_OJCOWSKIEGO;
-      const maxDni = odp.wczesniejszyOjcowski === '7-dni' ? 7 : DNI_OJCOWSKIEGO;
+      const wymiary = wymiaryDanych(dane);
+      // Po wcześniejszej części 7 dni zostaje reszta wymiaru urlopu ojcowskiego.
+      const reszta = wymiary.dniOjcowskiego - wymiary.minDniCzesciOjcowskiego;
+      const minDni = odp.wczesniejszyOjcowski === '7-dni' ? reszta : wymiary.minDniCzesciOjcowskiego;
+      const maxDni = odp.wczesniejszyOjcowski === '7-dni' ? reszta : wymiary.dniOjcowskiego;
       wynik.zakresDni = { min: minDni, max: maxDni };
       let najwczesniej = dane.przyjecie ? dane.przyjecie.dataPrzyjecia : urodzenie;
       if (dane.dataPoczatkuZatrudnienia && porownajDaty(dane.dataPoczatkuZatrudnienia, najwczesniej) > 0) najwczesniej = dane.dataPoczatkuZatrudnienia;
-      let granicaKonca = dodajDni(dodajMiesiace(urodzenie, 12), -1);
+      let granicaKonca = dodajDni(dodajMiesiace(urodzenie, wymiary.miesiaceOjcowskiego), -1);
       if (dane.przyjecie?.dataUprawomocnienia) {
-        granicaKonca = minData(dodajDni(dodajMiesiace(dane.przyjecie.dataUprawomocnienia, 12), -1), granicaWiekuPrzyjecia(dane.przyjecie));
+        granicaKonca = minData(
+          dodajDni(dodajMiesiace(dane.przyjecie.dataUprawomocnienia, wymiary.miesiaceOjcowskiego), -1),
+          granicaWiekuPrzyjecia(dane.przyjecie, wymiary),
+        );
       }
       const n = wLiczbie(odp.dni, minDni, maxDni);
       if (n === null) bledy.dni = '0202';
@@ -261,8 +262,9 @@ export function ocenFormularz(
     case 'na-warunkach-macierzynskiego': {
       const p = dane.przyjecie;
       if (!p) break;
-      wynik.zakresDaty = { od: p.dataPrzyjecia, do: dodajDni(p.dataPrzyjecia, DNI_TERMINU_81_5) };
-      const stawka = stawkaZasilku({ zakres: odp.zakres, dzis, przyjecie: p });
+      const wymiary = wymiaryDanych(dane);
+      wynik.zakresDaty = { od: p.dataPrzyjecia, do: dodajDni(p.dataPrzyjecia, wymiary.dniTerminu815) };
+      const stawka = stawkaZasilku({ zakres: odp.zakres, dzis, przyjecie: p, wymiary });
       if (stawka.termin !== undefined && stawka.zostaloDni !== undefined) wynik.termin815 = { termin: stawka.termin, zostaloDni: stawka.zostaloDni };
       wynik.informacjaZakresu = stawka.kod;
       wynik.wariant = stawka.stawka ?? undefined;
@@ -272,15 +274,15 @@ export function ocenFormularz(
       const ostrz = ostrzezenieTerminu({ podrodzaj, dzis, dataPrzyjecia: p.dataPrzyjecia });
       if (ostrz) ostrzezenia.dataPoczatku = ostrz.kod;
       if ('data' in d && odp.zakres !== null) {
-        const wymiar = WYMIAR_MACIERZYNSKIEGO_TYGODNI[p.liczbaPrzyjetychDzieci];
-        const granica = granicaWiekuPrzyjecia(p);
-        const koniec = maxData(minData(koniecPoTygodniach(d.data, wymiar), granica), koniecPoTygodniach(d.data, MIN_TYGODNI_NA_WARUNKACH));
+        const wymiar = wymiary.naWarunkach[p.liczbaPrzyjetychDzieci];
+        const granica = granicaWiekuPrzyjecia(p, wymiary);
+        const koniec = maxData(minData(koniecPoTygodniach(d.data, wymiar), granica), koniecPoTygodniach(d.data, wymiary.minTygodniNaWarunkach));
         const okresy: OkresWniosku[] = [{
           rodzajUrlopu: 'na-warunkach-macierzynskiego', od: d.data, do: koniec, tygodnie: wymiar,
           stawka: stawkaOkresu('na-warunkach-macierzynskiego', wynik.wariant), rodzic: dane.rodzic,
         }];
         if (odp.zakres === 'z-calym-rodzicielskim') {
-          const { naRodzica } = wymiarRodzicielskiego(p.liczbaPrzyjetychDzieci, dane.zaZyciem);
+          const { naRodzica } = wymiarRodzicielskiego(p.liczbaPrzyjetychDzieci, dane.zaZyciem, wymiary);
           const od = dodajDni(koniec, 1);
           okresy.push({ rodzajUrlopu: 'rodzicielski', od, do: koniecPoTygodniach(od, naRodzica), tygodnie: naRodzica, stawka: stawkaOkresu('rodzicielski', wynik.wariant), rodzic: dane.rodzic });
         }

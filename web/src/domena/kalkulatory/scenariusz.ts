@@ -763,10 +763,11 @@ export function wyliczScenariusz(
 
   const uprawnienia = new Set<IdPozycji>();
   for (const rodzic of ['matka', 'drugi-rodzic'] as const) {
-    if (!u.prawo[rodzic]) continue;
+    // Po stracie wszystkich dzieci uprawnienia po powrocie K20–K23 nie dotyczą rodziny, tak jak w planie rodziny po stracie.
+    if (!u.prawo[rodzic] || u.strataBezDzieci) continue;
     for (const id of uprawnieniaPoPowrocie(rodzic, u.formy[rodzic].forma, u.formy[rodzic].dobrowolne)) {
-      // Przerwy na karmienie (K20) przysługują pracownicy karmiącej piersią, więc pomijamy je po stracie dziecka i przy przyjęciu dziecka na wychowanie.
-      if (!(id === 'K20' && (u.strataBezDzieci || u.zdarzenie === 'przyjecie'))) uprawnienia.add(id);
+      // Przerwy na karmienie (K20) przysługują pracownicy karmiącej piersią, więc pomijamy je przy przyjęciu dziecka na wychowanie.
+      if (!(id === 'K20' && u.zdarzenie === 'przyjecie')) uprawnienia.add(id);
     }
   }
 

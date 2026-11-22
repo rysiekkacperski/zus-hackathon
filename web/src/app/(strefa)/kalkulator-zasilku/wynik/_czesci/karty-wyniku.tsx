@@ -3,6 +3,8 @@
 // Karty ViewCalcMaternityResult (u15): dane do wyliczenia, okresy urlopów i wypłaty, harmonogram wypłat.
 import type { ReactNode } from 'react';
 import { formatujDate } from '@/domena/daty';
+import { etykietyStawekZasilku } from '@/domena/kalkulatory/wariant';
+import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
 import type {
   DaneWejscioweKalkulatora,
   OkresScenariusza,
@@ -132,6 +134,13 @@ export function sumaPola(
 
 type KolumnaOkresu = 'rodzaj' | 'od' | 'do' | 'dni' | 'stawka' | 'miesiecznie' | 'zaOkres';
 
+/** Stawka wyrównania zasiłku za urlop macierzyński z katalogu w dniu początku pierwszego okresu. */
+function useStawkaWyrownania(wynik: WynikScenariusza): string {
+  const katalog = useKatalog();
+  const dzis = useDzis();
+  return etykietyStawekZasilku(katalog, wynik.okresy[0]?.od ?? dzis).s100;
+}
+
 export function TabelaOkresow({
   wynik,
   rodzic,
@@ -146,6 +155,7 @@ export function TabelaOkresow({
   const okresy = wynik.okresy.filter((o) => o.rodzic === rodzic);
   const podwyzszenie = sumaPola(wynik, rodzic, 'podwyzszenie');
   const wyrownanie = sumaPola(wynik, rodzic, 'wyrownanie');
+  const s100 = useStawkaWyrownania(wynik);
   const wiersze: ({ id: string } & Partial<Record<KolumnaOkresu, ReactNode>>)[] = okresy.map((o, i) => ({
     id: `${o.rodzaj}-${o.od}-${i}`,
     rodzaj: etykietaOkresu(o),
@@ -159,7 +169,7 @@ export function TabelaOkresow({
   if (podwyzszenie > 0)
     wiersze.push({ id: 'podwyzszenie', rodzaj: t.podwyzszenie, od: t.brak, do: t.brak, dni: t.brak, stawka: t.brak, miesiecznie: t.brak, zaOkres: formatujKwote(podwyzszenie) });
   if (wyrownanie > 0)
-    wiersze.push({ id: 'wyrownanie', rodzaj: t.wyrownanie, od: t.brak, do: t.brak, dni: t.brak, stawka: t.brak, miesiecznie: t.brak, zaOkres: formatujKwote(wyrownanie) });
+    wiersze.push({ id: 'wyrownanie', rodzaj: t.wyrownanie({ s100 }), od: t.brak, do: t.brak, dni: t.brak, stawka: t.brak, miesiecznie: t.brak, zaOkres: formatujKwote(wyrownanie) });
   const k = t.kolumny;
   return (
     <Tabela<KolumnaOkresu>
@@ -204,6 +214,7 @@ export function KartaHarmonogramu({
   const maPodwyzszenie = wynik.harmonogram.some((h) => h.podwyzszenie > 0);
   const wyrownanieMatki = sumaPola(wynik, 'matka', 'wyrownanie');
   const wyrownanieDrugiego = sumaPola(wynik, 'drugi-rodzic', 'wyrownanie');
+  const s100 = useStawkaWyrownania(wynik);
   const pokaz = (g: number) => (g > 0 ? formatujKwote(g) : t.brak);
   const wiersze: ({ id: string } & Partial<Record<'miesiac' | 'matka' | 'drugi' | 'razem', ReactNode>>)[] = miesiace.map((m) => {
     const a = kwota(m, 'matka');
@@ -213,7 +224,7 @@ export function KartaHarmonogramu({
   if (wyrownanieMatki + wyrownanieDrugiego > 0)
     wiersze.push({
       id: 'wyrownanie',
-      miesiac: t.wyrownanieWiersz,
+      miesiac: t.wyrownanieWiersz({ s100 }),
       matka: pokaz(wyrownanieMatki),
       drugi: pokaz(wyrownanieDrugiego),
       razem: pokaz(wyrownanieMatki + wyrownanieDrugiego),

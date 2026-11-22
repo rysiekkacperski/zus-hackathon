@@ -4,6 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { dodajDni, formatujDate, porownajDaty } from '@/domena/daty';
 import { domyslneParametry, podstawaWDniuZasilku } from '@/domena/kalkulatory';
+import { etykietyStawekZasilku } from '@/domena/kalkulatory/wariant';
+import { formatujProcent } from '@/domena/kwoty';
+import { useKatalog } from '@/dane/magazyn/hooki';
 import { walidujDateWZakresie, walidujLiczbeCalkowita } from '@/domena/walidacje';
 import type {
   DaneWejscioweKalkulatora,
@@ -476,6 +479,7 @@ function KartaPoStracie({
               tygodnie: okres.dni % 7 === 0 ? t.tygodnie({ liczba: okres.dni / 7 }) : `${okres.dni} dni`,
               od: formatujDate(okres.od),
               do: formatujDate(okres.do),
+              s100: formatujProcent(okres.stawka),
             })}
           </p>
         ) : null}
@@ -526,16 +530,18 @@ function KartaWariantu({
 }) {
   const termin = terminWariantu81(dane);
   const zdarzenie = dane.zdarzenie.wartosc;
+  // Stawki w etykietach z katalogu w dniu zdarzenia, żeby zmiana w panelu Administratora zmieniała opisy wariantów.
+  const st = etykietyStawekZasilku(useKatalog(), dataZdarzenia(dane) ?? dzis);
   const suma = (w: '81-5' | '100-70') =>
     w === parametry.wariant ? sumaBiezaca : sumaDrugiego;
   const opcja = (w: '81-5' | '100-70') => {
     const s = suma(w);
     return {
       wartosc: w,
-      etykieta: t.warianty[w].tytul,
+      etykieta: t.warianty[w].tytul(st),
       opis: (
         <span className="flex flex-col">
-          <span>{t.warianty[w].opis}</span>
+          <span>{zdarzenie === 'przyjecie' ? t.opisyWariantowPrzyjecie[w](st) : t.warianty[w].opis(st)}</span>
           {s !== null && s > 0 ? <span>{t.razemWariant({ kwota: formatujKwote(s) })}</span> : null}
         </span>
       ),
@@ -547,10 +553,10 @@ function KartaWariantu({
     termin === null
       ? null
       : zdarzenie === 'przewidywany-porod'
-        ? t.terminWariantuPrzewidywany({ data: formatujDate(termin) })
+        ? t.terminWariantuPrzewidywany({ data: formatujDate(termin), s815: st.s815 })
         : zdarzenie === 'przyjecie'
-          ? t.terminWariantuPrzyjecie({ data: formatujDate(termin) })
-          : t.terminWariantuPorod({ data: formatujDate(termin) });
+          ? t.terminWariantuPrzyjecie({ data: formatujDate(termin), s815: st.s815 })
+          : t.terminWariantuPorod({ data: formatujDate(termin), s815: st.s815 });
   const poTerminie = termin !== null && porownajDaty(dzis, termin) > 0 && zdarzenie !== 'przewidywany-porod';
   return (
     <Karta tytul={t.kartaWariantu} bezLinii>

@@ -10,7 +10,7 @@
 // składa wniosek najpóźniej przed datą planowanego zakończenia korzystania z zasiłku. Wzór ZAS-23 (zus.pl,
 // wzory formularzy, zasiłek macierzyński): wniosek o skrócenie lub wstrzymanie okresu wypłaty zasiłku macierzyńskiego.
 import { dodajDni, porownajDaty } from '@/domena/daty';
-import type { DataISO, KodKomunikatu, Okres } from '@/domena/typy';
+import type { DataISO, KodKomunikatu, Okres, WniosekOUrlop } from '@/domena/typy';
 import { najwczesniejszyPowrot, walidujDatePowrotu, type UrlopMacierzynski } from '@/domena/wnioski/rezygnacja';
 
 export type PoleRezygnacjiZZasilku = 'data' | 'ojciec' | 'oswiadczenie';
@@ -41,6 +41,14 @@ export function walidujDateRezygnacjiZZasilku(
   if ('kod' in wynik) return wynik;
   if (porownajDaty(wynik.data, dzis) <= 0) return { kod: '0336' };
   return wynik;
+}
+
+/**
+ * Imię i nazwisko ojca dziecka do oświadczenia zapisanej rezygnacji: imię wpisane przez matkę w formularzu i zapisane
+ * we wniosku, a dla wniosku zapisanego bez tego pola imię ojca dziecka z profilu rodziny.
+ */
+export function ojciecZRezygnacji(wniosek: Pick<WniosekOUrlop, 'rezygnacja'>, ojciecZProfilu: string): string {
+  return wniosek.rezygnacja?.ojciec?.trim() || ojciecZProfilu;
 }
 
 export interface FormularzRezygnacjiZZasilku {

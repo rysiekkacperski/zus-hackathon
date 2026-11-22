@@ -13,12 +13,16 @@
 // - Bez usługi (błąd sieci, brak trasy, błąd serwera) kopia lokalna działa dalej jak katalog startowy z edycjami
 //   tej przeglądarki, a kolejka czeka na kolejną próbę. Zmianę odrzuconą przez usługę (brak roli, błędne dane)
 //   przeglądarka zdejmuje z kolejki i zgłasza stan „odrzucona”.
+// - Zmiana w kolejce niesie potwierdzenie roli z chwili zapisu w panelu, więc wysyłka po wylogowaniu Administratora
+//   albo w sesji innego konta potwierdza rolę autora zmiany.
+// - Edycje zapisane w przeglądarce przed synchronizacją z usługą (stan bez pola kolejki) przeglądarka zamienia
+//   przy pierwszym pobraniu na zmiany w kolejce i wysyła je do usługi, zanim przyjmie edycje z usługi.
 import { useSyncExternalStore } from 'react';
 import { PESEL_ADMINISTRATORA_ZUS } from '@/dane/konta-demo';
 import { czyPrzegladarka, type RodzajZapisu } from '@/dane/magazyn/rdzen';
 import { odczytajGlobalne, odczytajSesje, odczytajZalogowanego, wykonajOperacje, zmienGlobalne } from '@/dane/magazyn/stan';
-import { czyEdycjeKatalogu, zastosujZmiane } from '@/domena/katalog/zmiany';
-import type { EdycjeKatalogu, OdpowiedzKatalogu, ZmianaKatalogu } from '@/domena/typy';
+import { czyEdycjeKatalogu, zastosujZmiane, zmianyOdtwarzajaceEdycje } from '@/domena/katalog/zmiany';
+import type { EdycjeKatalogu, OdpowiedzKatalogu, ZmianaKatalogu, ZmianaKataloguWKolejce } from '@/domena/typy';
 
 const ADRES_USLUGI = '/api/katalog';
 const NAGLOWEK_SESJI_DEMO = 'X-Sesja-Demo';
@@ -59,9 +63,19 @@ export function useStanKataloguSerwera(): StanKataloguSerwera {
 
 // --- Zapis zmiany w przeglądarce -------------------------------------------------------------------
 
-function kolejka(): ZmianaKatalogu[] {
+function kolejka(): ZmianaKataloguWKolejce[] {
   return odczytajGlobalne().zmianyKataloguDoWyslania ?? [];
 }
+
+/** Potwierdzenie roli dla nagłówka X-Sesja-Demo z sesji zalogowanego Administratora; undefined dla innej sesji. */
+function sesjaAdministratora(): string | undefined {
+  const sesja = odczytajSesje();
+  const administrator = odczytajZalogowanego()?.stanKonta.konto.rola === 'administrator';
+  return sesja !== null && administrator ? `${sesja.idSesji}:${sesja.pesel}` : undefined;
+}
+
+/** Potwierdzenie roli dla edycji zapisanych przed synchronizacją; zapisywał je Administrator w panelu tej przeglądarki. */
+const SESJA_EDYCJI_SPRZED_SYNCHRONIZACJI = `edycje-lokalne:${PESEL_ADMINISTRATORA_ZUS}`;
 
 /**
  * Zapisuje zmianę katalogu w kopii lokalnej i dopisuje ją do kolejki wysyłki w jednej transakcji magazynu.
@@ -72,7 +86,7 @@ export function zapiszZmianeKatalogu(zmiana: ZmianaKatalogu, rodzaj: RodzajZapis
     (g) => ({
       ...g,
       edycjeKatalogu: zastosujZmiane(g.edycjeKatalogu, zmiana),
-      zmianyKataloguDoWyslania: [...(g.zmianyKataloguDoWyslania ?? []), zmiana],
+      zmianyKataloguDoWyslania: [...(g.zmianyKataloguDoWyslania ?? []), { ...zmiana, sesjaDemo: sesjaAdministratora() }],
     }),
     rodzaj,
   ).edycjeKatalogu;
@@ -85,8 +99,9 @@ function przyjmijEdycjeSerwera(edycjeSerwera: EdycjeKatalogu, wyslane: number): 
     const reszta = (g.zmianyKataloguDoWyslania ?? []).slice(wyslane);
     const edycje = reszta.reduce<EdycjeKatalogu>(zastosujZmiane, edycjeSerwera);
     const bezZmian =
+      g.zmianyKataloguDoWyslania !== undefined &&
       JSON.stringify(edycje) === JSON.stringify(g.edycjeKatalogu) &&
-      reszta.length === (g.zmianyKataloguDoWyslania ?? []).length;
+      reszta.length === g.zmianyKataloguDoWyslania.length;
     if (bezZmian) return;
     zmienGlobalne((s) => ({ ...s, edycjeKatalogu: edycje, zmianyKataloguDoWyslania: reszta }), 'systemowe');
   });
@@ -101,28 +116,29 @@ function zdejmijPierwszaZmiane(): void {
 // --- Wysyłka i pobieranie --------------------------------------------------------------------------
 
 /**
- * Potwierdzenie roli Administrator dla usługi w trybie demonstracyjnym: sesja zalogowanego Administratora.
- * Przywrócenie katalogu startowego z ustawień demo potwierdza konto Administrator ZUS, bo ustawienia demo
- * działają bez logowania.
+ * Potwierdzenie roli Administrator dla usługi w trybie demonstracyjnym: sesja Administratora z chwili zapisu zmiany,
+ * a dla zmiany bez niej sesja zalogowanego Administratora. Przywrócenie katalogu startowego z ustawień demo potwierdza
+ * konto Administrator ZUS, bo ustawienia demo działają bez logowania.
  */
-function naglowkiZapisu(zmiana: ZmianaKatalogu): Record<string, string> {
+function naglowkiZapisu(zmiana: ZmianaKataloguWKolejce): Record<string, string> {
   const naglowki: Record<string, string> = { 'Content-Type': 'application/json' };
-  const sesja = odczytajSesje();
-  const administrator = odczytajZalogowanego()?.stanKonta.konto.rola === 'administrator';
-  if (sesja !== null && administrator) naglowki[NAGLOWEK_SESJI_DEMO] = `${sesja.idSesji}:${sesja.pesel}`;
+  const sesja = zmiana.sesjaDemo ?? sesjaAdministratora();
+  if (sesja !== undefined) naglowki[NAGLOWEK_SESJI_DEMO] = sesja;
   else if (zmiana.rodzaj === 'przywrocenie') naglowki[NAGLOWEK_SESJI_DEMO] = `ustawienia-demo:${PESEL_ADMINISTRATORA_ZUS}`;
   return naglowki;
 }
 
 type WynikWysylki = { rodzaj: 'przyjeta'; odpowiedz: OdpowiedzKatalogu } | { rodzaj: 'odrzucona' } | { rodzaj: 'niedostepna' };
 
-async function wyslijZmiane(zmiana: ZmianaKatalogu): Promise<WynikWysylki> {
+async function wyslijZmiane(wKolejce: ZmianaKataloguWKolejce): Promise<WynikWysylki> {
+  const zmiana: Partial<ZmianaKataloguWKolejce> = { ...wKolejce };
+  delete zmiana.sesjaDemo;
   let odpowiedz: Response;
   try {
     odpowiedz = await fetch(ADRES_USLUGI, {
       method: 'POST',
-      headers: naglowkiZapisu(zmiana),
-      body: JSON.stringify({ zmiana }),
+      headers: naglowkiZapisu(wKolejce),
+      body: JSON.stringify({ zmiana: zmiana as ZmianaKatalogu }),
       cache: 'no-store',
     });
   } catch {
@@ -216,8 +232,29 @@ export function pobierzKatalogZSerwera(powod: PowodPobraniaKatalogu = 'okresowe'
   return pobieranieWToku;
 }
 
+/**
+ * Zamienia edycje zapisane w przeglądarce przed synchronizacją z usługą (stan bez pola kolejki) na zmiany w kolejce.
+ * Daje true, gdy kolejka dostała zmiany do wysłania.
+ */
+function przeniesEdycjeSprzedSynchronizacji(): boolean {
+  const g = odczytajGlobalne();
+  if (g.zmianyKataloguDoWyslania !== undefined) return false;
+  const zmiany = zmianyOdtwarzajaceEdycje(g.edycjeKatalogu);
+  if (zmiany.length === 0) return false;
+  const wynik = wykonajOperacje(() => {
+    zmienGlobalne(
+      (s) => ({
+        ...s,
+        zmianyKataloguDoWyslania: zmiany.map((z) => ({ ...z, sesjaDemo: SESJA_EDYCJI_SPRZED_SYNCHRONIZACJI })),
+      }),
+      'systemowe',
+    );
+  });
+  return wynik.ok;
+}
+
 async function pobierz(): Promise<void> {
-  if (kolejka().length > 0) {
+  if (przeniesEdycjeSprzedSynchronizacji() || kolejka().length > 0) {
     zaplanujWysylkeKatalogu();
     return;
   }

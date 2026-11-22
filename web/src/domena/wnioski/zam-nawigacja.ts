@@ -1,6 +1,7 @@
 // Nawigacja kreatora ZAM (kontrakt, sekcja 7.2). Właściciel: u27 (Kreator wniosku ZAM do ZUS).
 // Po porodzie kreator ma 5 ekranów, przed porodem 6 (ekran 2: początek zasiłku). Ekrany dzielą się na części
-// (liczbaCzesciEkranuZam), a numeracja „Krok X z N” liczy każdą część jako krok.
+// (liczbaCzesciEkranuZam), a numeracja „Krok X z N” liczy każdą część jako krok. Ścieżkę i liczbę kroków
+// kreator ustala od pierwszego kroku (useKrokiKreatoraZam), więc mianownik N pozostaje stały.
 import type { IdWidoku, WniosekZam } from '@/domena/typy';
 
 /** Ekrany kreatora ZAM w kolejności (po porodzie). */

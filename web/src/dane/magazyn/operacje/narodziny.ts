@@ -15,6 +15,7 @@ import {
   type FormularzDatyPorodu,
 } from '@/domena/rodzina/narodziny';
 import { parsujDate } from '@/domena/daty';
+import { progiUzupelniajacego } from '@/domena/kalkulatory/okresy';
 import type {
   CzlonekRodzinyZus,
   DaneCiazyIDziecka,
@@ -211,6 +212,7 @@ export function zapiszDaneDziecka(dane: FormularzDanychDziecka, ctx: KontekstOpe
       zaswiadczenieZaZyciem: dane.zaswiadczenieZaZyciem,
       wymiarUzupelniajacegoUrlopu: wyznaczUzupelniajacyUrlop(
         forma, chorobowe, liczby.tydzien, liczby.masa, liczby.dni, liczby.pobyt,
+        progiUzupelniajacego(odczytajKatalog(), dataPorodu),
       ),
       wymiarUrlopuRodzicielskiegoTygodni: wyznaczWymiarUrlopuRodzicielskiego(
         liczbaDzieci, dane.zaswiadczenieZaZyciem, dataPorodu, odczytajKatalog(),

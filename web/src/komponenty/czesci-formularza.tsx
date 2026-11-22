@@ -7,9 +7,10 @@
 // Next.js synchronizuje pushState z useSearchParams bez żądania do serwera. Po zmianie części strona
 // przewija się na górę, a fokus trafia na nagłówek części albo na h1 strony. Nieprawidłowy parametr daje część 1.
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Przycisk } from '@/komponenty/przycisk';
 import type { WalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
+import { zakresProbyWyslania } from '@/komponenty/zakres-czesci-formularza';
 import { teksty } from '@/teksty';
 
 const KLUCZ_STANU_HISTORII = 'czesciFormularza';
@@ -29,10 +30,12 @@ export interface OpcjeCzesciFormularza<P extends string = string> {
   idNaglowka?: string | ((czesc: number) => string | undefined);
   /**
    * Pola każdej części (indeks 0 to część 1). Razem z `walidacja` metoda `dalej` sprawdza pola bieżącej części,
-   * a na ostatniej części cały formularz, i przy błędzie w innej części przechodzi do tej części.
+   * a na ostatniej części cały formularz, i przy błędzie w innej części przechodzi do tej części. Po próbie
+   * wysłania z błędem błędy pokazują pola części odwiedzonych i części z pierwszym błędem, a pola pozostałych
+   * części pokazują błąd po opuszczeniu pola albo po „Dalej” w swojej części.
    */
   podzial?: readonly (readonly NoInfer<P>[])[];
-  walidacja?: Pick<WalidacjaNaBiezaco<P, string>, 'sprobujWyslac' | 'pierwszePoleZBledem'>;
+  walidacja?: Pick<WalidacjaNaBiezaco<P, string>, 'sprobujWyslac' | 'pierwszePoleZBledem' | 'bledyAktualne'>;
 }
 
 export interface CzesciFormularza {
@@ -94,6 +97,12 @@ export function useCzesciFormularza<P extends string = string>({
   const czesc = odczytajCzesc(parametry.get(parametr), liczba);
   const poprzedniaWidoczna = useRef(czesc);
   const fokusPoZmianie = useRef(true);
+  // Pola części, które rodzic już widział; lista części może zależeć od wartości, więc zapis trzyma nazwy pól.
+  const [odwiedzone, ustawOdwiedzone] = useState<readonly P[]>([]);
+  const polaBiezacej = podzial?.[czesc - 1] ?? [];
+  if (polaBiezacej.some((pole) => !odwiedzone.includes(pole))) {
+    ustawOdwiedzone([...new Set([...odwiedzone, ...polaBiezacej])]);
+  }
 
   useEffect(() => {
     if (poprzedniaWidoczna.current === czesc) return;
@@ -124,12 +133,6 @@ export function useCzesciFormularza<P extends string = string>({
     );
   }
 
-  function czescPola(pole: P): number | null {
-    if (!podzial) return null;
-    const indeks = podzial.findIndex((pola) => pola.includes(pole));
-    return indeks < 0 ? null : indeks + 1;
-  }
-
   function dalej(akcjaKroku: () => void) {
     if (czesc < liczba) {
       const pola = podzial?.[czesc - 1];
@@ -137,11 +140,18 @@ export function useCzesciFormularza<P extends string = string>({
       przejdzDo(czesc + 1);
       return;
     }
-    if (walidacja && podzial && !walidacja.sprobujWyslac()) {
-      const pole = walidacja.pierwszePoleZBledem();
-      const docelowa = pole === null ? null : czescPola(pole);
-      if (docelowa !== null && docelowa !== czesc) przejdzDo(docelowa, { bezFokusu: true });
-      return;
+    if (walidacja && podzial) {
+      const zakres = zakresProbyWyslania(
+        podzial,
+        [...odwiedzone, ...polaBiezacej],
+        walidacja.pierwszePoleZBledem(),
+        walidacja.bledyAktualne,
+      );
+      if (!walidacja.sprobujWyslac(zakres.pola)) {
+        const docelowa = zakres.czescZBledem;
+        if (docelowa !== null && docelowa !== czesc) przejdzDo(docelowa, { bezFokusu: true });
+        return;
+      }
     }
     akcjaKroku();
   }

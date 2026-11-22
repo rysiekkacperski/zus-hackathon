@@ -99,14 +99,14 @@ export function FormularzOkresuPrzyjecia({ dane, przyjecie }: { dane: DaneWniosk
   const [f, ustawF] = useState<FormularzPrzyjecia>(() => formularzPoczatkowy(wniosek, przyjecie.dataPrzyjecia));
   const [bladZapisu, ustawBladZapisu] = useState<KodKomunikatu | null>(null);
 
-  const zakresWum = zakresPoczatkuWum(przyjecie.dataPrzyjecia);
+  const zakresWum = zakresPoczatkuWum(przyjecie.dataPrzyjecia, katalog);
   /** Data początku urlopu na warunkach urlopu macierzyńskiego: puste pole oznacza dzień przyjęcia (0010, 0042). */
   const poczatekZPola = (tekst: string) =>
     tekst.trim() === '' ? { data: przyjecie.dataPrzyjecia } : walidujDateWZakresie(tekst, zakresWum, { format: '0010', zaWczesnie: '0042', zaPozno: '0042' });
   const wynikPoczatku = poczatekZPola(f.poczatekWum);
   const poczatekWum = rodzaj === 'na-warunkach-macierzynskiego' && 'data' in wynikPoczatku ? wynikPoczatku.data : przyjecie.dataPrzyjecia;
   const wum = okresWum(przyjecie, katalog, poczatekWum);
-  const wariant = wariantPoPrzyjeciu(przyjecie.dataPrzyjecia, dzis);
+  const wariant = wariantPoPrzyjeciu(przyjecie.dataPrzyjecia, dzis, katalog);
   const parametry = parametryRodzicielskiegoPoPrzyjeciu(przyjecie, k.zaZyciem, katalog, { poczatekWum, dzis });
   const daneZapisu = { przyjecie: { forma: przyjecie.forma, dataPrzyjecia: przyjecie.dataPrzyjecia } };
   const wyrownanie = parametry !== null && czyWyrownaniePoPrzyjeciu(parametry, parametry.poczatekBezposrednio);

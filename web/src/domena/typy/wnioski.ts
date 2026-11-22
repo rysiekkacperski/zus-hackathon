@@ -72,7 +72,8 @@ export interface WniosekOUrlop extends WniosekBazowy {
   laczenie?: { wymiarPracy: number; okres: Okres; dniLaczenia: number; dniWydluzenia: number; ostatniDzienUrlopu: DataISO };
   daneRodzica?: DaneOsobyWniosku; daneDziecka?: DaneOsobyWniosku;
   emailPracodawcy?: string; dataPoczatkuOchrony?: DataISO; dataKoncaOchrony?: DataISO; dataPrzygotowania?: DataISO;
-  rezygnacja?: { dataPowrotu: DataISO; zOrzeczeniem: boolean };
+  /** Rezygnacja matki; ojciec to imię i nazwisko ojca dziecka wpisane w oświadczeniu rezygnacji z części zasiłku. */
+  rezygnacja?: { dataPowrotu: DataISO; zOrzeczeniem: boolean; ojciec?: string };
   /** Urlop wychowawczy i obniżenie wymiaru czasu pracy (3.9.6.1.5); okres w miesiącach i dniach, miesiąc = 30 dni. */
   wychowawczy?: { okres: Okres; rodzaj: 'do-6-lat' | 'niepelnosprawnosc'; miesiace: number; dni: number; numerCzesci: number;
     pozostaloMiesiace: number; pozostaloDni: number; okresDrugiegoRodzica?: Okres; przyczyna36?: string;

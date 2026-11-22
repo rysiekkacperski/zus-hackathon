@@ -22,6 +22,7 @@ import {
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { opisZasilkuZaUrlop } from '@/app/(strefa)/wnioski/urlop/_czesci/zasilek-za-urlop';
 import { DokumentDoDruku, drukujDokument } from '@/komponenty/dokument-do-druku';
+import { formatujRozmiarPliku } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
@@ -54,11 +55,6 @@ type ZakladkaUrlopu = keyof typeof t.zakladki;
 const ZAKLADKI: readonly ZakladkaUrlopu[] = ['rodzaj', 'okres', 'osoby', 'oswiadczenia', 'zalaczniki', 'adresat'];
 
 const ID_PODPOWIEDZI_PLIKOW = 'urlop-pliki-podpowiedz';
-
-function rozmiar(bajty: number): string {
-  if (bajty >= 1048576) return t.rozmiarMb({ mb: (bajty / 1048576).toFixed(1).replace('.', ',') });
-  return t.rozmiarKb({ kb: String(Math.max(1, Math.round(bajty / 1024))) });
-}
 
 export function WidokPodsumowaniaWnioskuOUrlop() {
   const stan = useKreatorUrlopu();
@@ -281,7 +277,7 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
                           <>
                             <span className="min-w-0 text-body-strong first-letter:uppercase">{nazwa}</span>
                             <div className="flex flex-wrap items-center gap-4">
-                              <span className="min-w-0 break-words">{t.plikDolaczony({ nazwa: z.plik.nazwa, rozmiar: rozmiar(z.plik.rozmiar) })}</span>
+                              <span className="min-w-0 break-words">{t.plikDolaczony({ nazwa: z.plik.nazwa, rozmiar: formatujRozmiarPliku(z.plik.rozmiar) })}</span>
                               <Przycisk
                                 type="button"
                                 wariant="tlo"

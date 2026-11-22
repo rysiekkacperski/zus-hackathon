@@ -12,10 +12,10 @@ import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { useNawigacjaZLadowaniem, useStanChwilowy } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
+import { formatujRozmiarPliku } from '@/komponenty/format';
 import { BladPola, idBledu, klasyRamkiPolaWpisu, polaczOpisy } from '@/komponenty/pole';
 import { trasy } from '@/komponenty/rama/trasy';
 import { Stos, UkladDwuKolumnowy } from '@/komponenty/uklad';
-import { formatujLiczbe } from '@/domena/kwoty';
 import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsciu';
 import { wgrajDokument, type TrybWgraniaDokumentu } from '@/dane/magazyn/operacje/przykladowe-sprawy';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
@@ -26,10 +26,6 @@ import { KartaDokumentowPrzykladowych } from '../_czesci/dokumenty-przykladowe';
 
 const t = teksty.ViewSampleCaseUpload;
 const ID_PLIKU = 'plik';
-
-function rozmiarMb(bajty: number): string {
-  return t.kartaPliku.rozmiarMb({ liczba: formatujLiczbe(bajty / 1048576, 1) });
-}
 
 export function WidokWgraniaDokumentu() {
   const parametry = useSearchParams();
@@ -100,7 +96,7 @@ export function WidokWgraniaDokumentu() {
     : trwa
       ? t.kartaPliku.trwaOdczyt({ nazwa: plik.name })
       : bladStrony
-        ? t.kartaPliku.nieOdczytany({ nazwa: plik.name, rozmiar: rozmiarMb(plik.size) })
+        ? t.kartaPliku.nieOdczytany({ nazwa: plik.name, rozmiar: formatujRozmiarPliku(plik.size) })
         : t.kartaPliku.wybranyPlik({ nazwa: plik.name });
 
   const tresc = (

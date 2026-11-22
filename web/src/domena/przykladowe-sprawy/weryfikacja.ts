@@ -65,13 +65,8 @@ export type {
 
 // --- Stałe z wymagań epiku (wartości domyślne, gdy katalog nie zawiera wpisu) -------------------
 
+// Okres ciąży liczymy regułą położniczą 280 dni przed porodem, której przepisy nie ustalają, więc katalog jej nie zawiera.
 const DNI_CIAZY = 280;
-const PRZERWA_LACZENIA_DNI = 30;
-const ZASILEK_PO_USTANIU_DNI_OD_USTANIA = 14;
-const ZASILEK_PO_USTANIU_MIN_DNI = 30;
-const DNI_PRZED_TERMINEM = 42;
-const MIESIACE_SPLATY_ZADLUZENIA = 6;
-const MIESIACE_PODSTAWY = 12;
 
 const DOMYSLNE = {
   pomniejszenieProcent: 13.71,
@@ -82,6 +77,12 @@ const DOMYSLNE = {
   wyczekiwanieObowiazkowe: 30,
   wyczekiwanieDobrowolne: 90,
   liczbaUbezpieczonych: 20,
+  przerwaLaczenia: 30,
+  zasilekPoUstaniuDni: 14,
+  zasilekPoUstaniuMinDni: 30,
+  tygodniePrzedTerminem: 6,
+  miesiaceSplatyZadluzenia: 6,
+  miesiacePodstawy: 12,
 } as const;
 
 const T = teksty.ViewSampleCaseVerification.reguly;
@@ -113,6 +114,11 @@ export interface WartosciSlownikowSprawy {
   wyczekiwanieObowiazkowe: WartoscZeSlownika;
   wyczekiwanieDobrowolne: WartoscZeSlownika;
   liczbaUbezpieczonych: WartoscZeSlownika;
+  przerwaLaczenia: WartoscZeSlownika;
+  zasilekPoUstaniuDni: WartoscZeSlownika;
+  zasilekPoUstaniuMinDni: WartoscZeSlownika;
+  miesiaceSplatyZadluzenia: WartoscZeSlownika;
+  miesiacePodstawy: WartoscZeSlownika;
 }
 
 export function wartosciSlownikow(k: Katalog, dzien: DataISO): WartosciSlownikowSprawy {
@@ -125,6 +131,11 @@ export function wartosciSlownikow(k: Katalog, dzien: DataISO): WartosciSlownikow
     wyczekiwanieObowiazkowe: zeSlownika(k, ID_WYMIAROW.okresWyczekiwania, 'obowiazkowe', dzien, DOMYSLNE.wyczekiwanieObowiazkowe),
     wyczekiwanieDobrowolne: zeSlownika(k, ID_WYMIAROW.okresWyczekiwania, 'dobrowolne', dzien, DOMYSLNE.wyczekiwanieDobrowolne),
     liczbaUbezpieczonych: zeSlownika(k, ID_WYMIAROW.liczbaUbezpieczonychPlatnika, 'osoby', dzien, DOMYSLNE.liczbaUbezpieczonych),
+    przerwaLaczenia: zeSlownika(k, ID_WYMIAROW.okresWyczekiwania, 'przerwa', dzien, DOMYSLNE.przerwaLaczenia),
+    zasilekPoUstaniuDni: zeSlownika(k, ID_WYMIAROW.zasilekPoUstaniu, 'dniOdUstania', dzien, DOMYSLNE.zasilekPoUstaniuDni),
+    zasilekPoUstaniuMinDni: zeSlownika(k, ID_WYMIAROW.zasilekPoUstaniu, 'nieprzerwanaNiezdolnosc', dzien, DOMYSLNE.zasilekPoUstaniuMinDni),
+    miesiaceSplatyZadluzenia: zeSlownika(k, ID_WYMIAROW.okresSplatyZadluzenia, 'miesiace', dzien, DOMYSLNE.miesiaceSplatyZadluzenia),
+    miesiacePodstawy: zeSlownika(k, ID_WYMIAROW.okresPodstawyWymiaruZasilku, 'miesiace', dzien, DOMYSLNE.miesiacePodstawy),
   };
 }
 
@@ -205,8 +216,11 @@ interface LancuchOkresow {
   pominiety?: { koniec: DataISO; przerwa: number };
 }
 
-/** Okresy połączone przy przerwie do 30 dni, rozpoczęte przed datą zdarzenia, policzone do dnia przed zdarzeniem. */
-function polaczoneOkresy(okresy: OkresOtwarty[], zdarzenie: DataISO): LancuchOkresow | null {
+/**
+ * Okresy połączone przy przerwie do `przerwaDni` dni (słownik wymiarów, okres wyczekiwania), rozpoczęte przed datą
+ * zdarzenia, policzone do dnia przed zdarzeniem.
+ */
+function polaczoneOkresy(okresy: OkresOtwarty[], zdarzenie: DataISO, przerwaDni: number): LancuchOkresow | null {
   const przed = okresy.filter((o) => porownajDaty(o.od, zdarzenie) < 0);
   if (przed.length === 0) return null;
   let lancuch: OkresOtwarty[] = [przed[0]];
@@ -215,7 +229,7 @@ function polaczoneOkresy(okresy: OkresOtwarty[], zdarzenie: DataISO): LancuchOkr
     const poprzedni = lancuch[lancuch.length - 1];
     const koniec = poprzedni.do;
     const przerwa = koniec === undefined ? 0 : roznicaDni(koniec, przed[i].od) - 1;
-    if (koniec !== undefined && przerwa > PRZERWA_LACZENIA_DNI) {
+    if (koniec !== undefined && przerwa > przerwaDni) {
       pominiety = { koniec, przerwa };
       lancuch = [przed[i]];
     } else {
@@ -337,11 +351,12 @@ function warunek3(s: StanWeryfikacji): Warunek {
   if (l === null) return warunek(3, 'niespelniony', T.w3.niespelniony({ data: formatujDate(s.zdarzenie.data) }));
   const pierwszy = l.okresy[0];
   const ostatni = l.okresy[l.okresy.length - 1];
+  const przerwa = String(s.slowniki.przerwaLaczenia.wartosc);
   const okres = okresSlownie(pierwszy.od, l.okresy.length === 1 ? (ostatni.do ?? null) : null);
   let tekst =
     l.okresy.length > 1
-      ? T.w3.polaczone({ liczba: String(l.okresy.length), dni: String(l.dni), od: formatujDate(pierwszy.od), doDnia: formatujDate(l.doDnia), przerwa: String(PRZERWA_LACZENIA_DNI) })
-      : T.w3.jeden({ okres, dni: String(l.dni), od: formatujDate(pierwszy.od), doDnia: formatujDate(l.doDnia), przerwa: String(PRZERWA_LACZENIA_DNI) });
+      ? T.w3.polaczone({ liczba: String(l.okresy.length), dni: String(l.dni), od: formatujDate(pierwszy.od), doDnia: formatujDate(l.doDnia), przerwa })
+      : T.w3.jeden({ okres, dni: String(l.dni), od: formatujDate(pierwszy.od), doDnia: formatujDate(l.doDnia), przerwa });
   if (l.pominiety !== undefined) {
     tekst = `${tekst} ${T.w3.pominiety({ koniec: formatujDate(l.pominiety.koniec), przerwa: String(l.pominiety.przerwa) })}`;
   }
@@ -410,11 +425,13 @@ function ocenUstanie(s: StanWeryfikacji): OcenaUstania | null {
     const trwa = liczbaDniWlacznie(niezdolnosc);
     const poUstaniu = roznicaDni(koniec, niezdolnosc.od);
     const wCzasie = porownajDaty(niezdolnosc.od, koniec) <= 0 && porownajDaty(niezdolnosc.do, koniec) > 0;
-    const krotkoPo = poUstaniu > 0 && poUstaniu <= ZASILEK_PO_USTANIU_DNI_OD_USTANIA && trwa >= ZASILEK_PO_USTANIU_MIN_DNI;
+    const limit = s.slowniki.zasilekPoUstaniuDni.wartosc;
+    const min = s.slowniki.zasilekPoUstaniuMinDni.wartosc;
+    const krotkoPo = poUstaniu > 0 && poUstaniu <= limit && trwa >= min;
     const bezPracy = d.pracaPoUstaniu.wartosc !== true;
     const wyczekiwanie = s.wyczekiwanie?.spelniony === true;
     zch = (wCzasie || krotkoPo) && bezPracy && wyczekiwanie;
-    const parametry = { dniPo: String(poUstaniu), trwa: String(trwa), ustanie: formatujDate(koniec), limit: String(ZASILEK_PO_USTANIU_DNI_OD_USTANIA), min: String(ZASILEK_PO_USTANIU_MIN_DNI) };
+    const parametry = { dniPo: String(poUstaniu), trwa: String(trwa), ustanie: formatujDate(koniec), limit: String(limit), min: String(min) };
     tekstZch = zch ? (wCzasie ? T.w6.zchWCzasie(parametry) : T.w6.zchPo(parametry)) : T.w6.zchNiespelniony(parametry);
   }
 
@@ -460,7 +477,7 @@ function warunek7(s: StanWeryfikacji): Warunek {
     prog: formatujKwote(prog.wartosc),
     odSlownika: formatujDate(prog.od),
     dzienZdarzenia: formatujDate(s.zdarzenie.data),
-    terminSplaty: formatujDate(dodajMiesiace(s.zdarzenie.data, MIESIACE_SPLATY_ZADLUZENIA)),
+    terminSplaty: formatujDate(dodajMiesiace(s.zdarzenie.data, s.slowniki.miesiaceSplatyZadluzenia.wartosc)),
   };
   return zadluzenie.kwota <= prog.wartosc ? warunek(7, 'spelniony', T.w7.spelniony(parametry)) : warunek(7, 'niespelniony', T.w7.niespelniony(parametry));
 }
@@ -493,7 +510,11 @@ function ustalPlatnika(s: StanWeryfikacji, poUstaniu: boolean): { platnik: Platn
 // --- Okres zasiłku za urlop macierzyński i komunikaty 0226, 0227 -------------------------------
 
 /** Początek okresu urlopu macierzyńskiego z wniosku po korekcie do 42 dni przed przewidywanym terminem porodu. */
-export function okresDoWyliczenia(d: DaneSprawy, dokumenty: readonly DokumentSprawy[] = []): OkresDoWyliczenia | undefined {
+export function okresDoWyliczenia(
+  d: DaneSprawy,
+  dokumenty: readonly DokumentSprawy[] = [],
+  katalog?: Katalog,
+): OkresDoWyliczenia | undefined {
   const okres = okresyZWniosku(d).find((o) => RODZAJE_MACIERZYNSKIE.includes(o.rodzajUrlopu));
   if (okres === undefined) return undefined;
   const termin = d.zdarzenie.przewidywanyTermin.wartosc;
@@ -502,7 +523,12 @@ export function okresDoWyliczenia(d: DaneSprawy, dokumenty: readonly DokumentSpr
   let od = okres.od;
   let skorygowany = false;
   if (termin !== null && porod !== null && porownajDaty(okres.od, porod) < 0) {
-    const najwczesniej = dodajDni(termin, -DNI_PRZED_TERMINEM);
+    // Część urlopu macierzyńskiego przed porodem ze słownika wymiarów obowiązująca w przewidywanym terminie porodu.
+    const tygodnie =
+      katalog === undefined
+        ? DOMYSLNE.tygodniePrzedTerminem
+        : zeSlownika(katalog, ID_WYMIAROW.czescUrlopuPrzedPorodem, 'tygodnie', termin, DOMYSLNE.tygodniePrzedTerminem).wartosc;
+    const najwczesniej = dodajDni(termin, -7 * tygodnie);
     if (porownajDaty(okres.od, najwczesniej) < 0) {
       od = najwczesniej;
       skorygowany = true;
@@ -543,6 +569,7 @@ export function weryfikujUbezpieczenieChorobowe(
     return { dataZdarzenia: { data: '', rodzaj: '' }, warunki: [], wyniki: [], porownanie: [], komunikaty: ['0109'], czas: '' };
   }
   const okresy = okresyPodlegania(dane);
+  const slowniki = wartosciSlownikow(katalog, zdarzenie.data);
   const s: StanWeryfikacji = {
     d: dane,
     zdarzenie,
@@ -552,8 +579,8 @@ export function weryfikujUbezpieczenieChorobowe(
     tytul: dane.tytul.rodzaj.wartosc,
     rodzajUbezpieczenia: dane.ubezpieczenieChorobowe.rodzaj.wartosc,
     swiadczenia: swiadczeniaZWniosku(dane),
-    slowniki: wartosciSlownikow(katalog, zdarzenie.data),
-    lancuch: polaczoneOkresy(okresy, zdarzenie.data),
+    slowniki,
+    lancuch: polaczoneOkresy(okresy, zdarzenie.data, slowniki.przerwaLaczenia.wartosc),
   };
   s.wyczekiwanie = ocenWyczekiwanie(s);
   const ocena = ocenUstanie(s);
@@ -624,7 +651,7 @@ export function weryfikujUbezpieczenieChorobowe(
 
   const komunikaty: KodKomunikatu[] = [];
   const parametryKomunikatow: RozszerzenieWeryfikacji['parametryKomunikatow'] = {};
-  const okres = okresDoWyliczenia(dane, dokumenty);
+  const okres = okresDoWyliczenia(dane, dokumenty, katalog);
   if (okres?.skorygowany) {
     komunikaty.push('0226');
     parametryKomunikatow['0226'] = {
@@ -770,11 +797,12 @@ export function ustalPodstaweZeSprawy(dane: DaneSprawy, katalog: Katalog): Podst
     zPoswiadczenia = true;
   }
 
-  // Okno 12 pełnych miesięcy przed miesiącem zdarzenia albo pełnych miesięcy ubezpieczenia.
+  // Okno pełnych miesięcy ze słownika wymiarów (12) przed miesiącem zdarzenia albo pełnych miesięcy ubezpieczenia.
+  const miesiacePodstawy = sl.miesiacePodstawy.wartosc;
   const okresy = okresyPodlegania(dane);
-  const lancuch = polaczoneOkresy(okresy, zdarzenie.data);
+  const lancuch = polaczoneOkresy(okresy, zdarzenie.data, sl.przerwaLaczenia.wartosc);
   const poczatek = lancuch?.okresy[0]?.od ?? dane.tytul.od.wartosc;
-  let pierwszyPelny = dodajMiesiaceDoMiesiaca(miesiacPrawa, -MIESIACE_PODSTAWY);
+  let pierwszyPelny = dodajMiesiaceDoMiesiaca(miesiacPrawa, -miesiacePodstawy);
   if (poczatek !== null && poczatek !== undefined) {
     const miesiacPoczatku = miesiacZDaty(poczatek);
     const pelny = pierwszyDzienMiesiaca(poczatek) === poczatek ? miesiacPoczatku : dodajMiesiaceDoMiesiaca(miesiacPoczatku, 1);
@@ -790,14 +818,14 @@ export function ustalPodstaweZeSprawy(dane: DaneSprawy, katalog: Katalog): Podst
     // Po pełnym miesiącu ubezpieczenia podstawa wymaga podstaw wymiaru składek z poświadczenia albo zrzutu, więc bez nich
     // podstawy nie ustalamy (0094) i użytkownik dodaje dokument z kwotami albo wpisuje podstawę.
     if (wOknie.length === 0) return { kod: '0094' };
-    if (pelneMiesiace < MIESIACE_PODSTAWY) {
+    if (pelneMiesiace < miesiacePodstawy) {
       // Najniższa podstawa wymiaru składek obowiązująca w każdym pełnym miesiącu ubezpieczenia.
       const najnizszaW = (m: MiesiacISO) => najnizszaWMiesiacu(katalog, m, najnizsza);
       const miesiacePelne = Array.from({ length: pelneMiesiace }, (_, i) => dodajMiesiaceDoMiesiaca(pierwszyPelny, i));
       const przecietna = zaokraglijDoGrosza(miesiacePelne.reduce((suma, m) => suma + najnizszaW(m), 0) / pelneMiesiace);
       const bazowaKrotko = pomniejsz(przecietna, procent);
       const nadwyzki = wOknie.reduce((suma, k) => suma + Math.max(0, k.kwota - najnizszaW(k.miesiac)), 0);
-      const dodatek = zaokraglijDoGrosza((nadwyzki * (100 - procent)) / 100 / MIESIACE_PODSTAWY);
+      const dodatek = zaokraglijDoGrosza((nadwyzki * (100 - procent)) / 100 / miesiacePodstawy);
       return wynik(bazowaKrotko + dodatek, P.jdgKrotko({ najnizsza: formatujKwote(przecietna), bazowa: formatujKwote(bazowaKrotko), dodatek: formatujKwote(dodatek) }));
     }
   }
@@ -966,7 +994,7 @@ export function wyliczWynikSprawy(
   const reguly: WynikScenariusza['zastosowaneReguly'] = [];
   const W = teksty.ViewSampleCaseVerification.wyliczenie;
 
-  const doMacierzynskiego = okresDoWyliczenia(dane, dokumenty);
+  const doMacierzynskiego = okresDoWyliczenia(dane, dokumenty, katalog);
   // Wyliczenie wywołujemy, gdy weryfikacja potwierdza prawo do zasiłku macierzyńskiego. Bez okresu urlopu
   // macierzyńskiego z wniosku matki okres podstawowy zaczyna się w dniu porodu i trwa tyle, ile urlop macierzyński
   // dla liczby dzieci z katalogu (ta sama funkcja wymiaru co kalkulator), bez urlopu rodzicielskiego.

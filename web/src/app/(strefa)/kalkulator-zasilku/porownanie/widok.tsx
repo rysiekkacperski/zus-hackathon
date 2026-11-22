@@ -17,10 +17,12 @@ import { Tabela } from '@/komponenty/tabela';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { Znaczek } from '@/komponenty/znaczek';
 import { formatujDate, formatujKwote } from '@/komponenty/format';
-import { useCzyGosc, useDzis, useKonto, useRodzina, useStanKonta, useWynikiKalkulacji } from '@/dane/magazyn/hooki';
+import { useCzyGosc, useDzis, useKatalog, useKonto, useRodzina, useStanKonta, useWynikiKalkulacji } from '@/dane/magazyn/hooki';
 import { zapiszScenariuszWPlanie } from '@/dane/magazyn/operacje/kalkulacje-scenariusze';
 import { osobyRodziny } from '@/dane/magazyn/stan';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
+import { dataZdarzenia } from '@/domena/kalkulatory/scenariusz';
+import { etykietyStawekZasilku } from '@/domena/kalkulatory/wariant';
 import type { KodKomunikatu, Pesel, RodzicWRodzinie, ScenariuszKalkulatora } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { NotatkaLogowania } from '../_czesci/notatka-logowania';
@@ -63,7 +65,7 @@ export function WidokPorownaniaScenariuszy() {
   const rodzina = useRodzina();
   const gosc = useCzyGosc();
   const wynikiGoscia = useWynikiKalkulacji();
-  const nazwy = useNazwyRodzicow();
+  const katalog = useKatalog();
   const zPlanem = rodzina !== null && (konto?.rola === 'rodzic' || konto?.rola === 'drugi-rodzic');
 
   const scenariusze = useMemo(
@@ -73,6 +75,11 @@ export function WidokPorownaniaScenariuszy() {
       ),
     [gosc, wynikiGoscia, zPlanem, rodzina, stanKonta],
   );
+  // Przy przyjęciu dziecka pierwszy rodzic to rodzic, który przyjął dziecko, a nie matka.
+  const nazwy = useNazwyRodzicow(scenariusze.some((s) => s.daneWejsciowe.zdarzenie.wartosc === 'przyjecie'));
+  // Stawki w nazwie wariantu z katalogu w dniu zdarzenia scenariusza.
+  const wariantScenariusza = (s: ScenariuszKalkulatora) =>
+    t.warianty(s.parametry.wariant, etykietyStawekZasilku(katalog, dataZdarzenia(s.daneWejsciowe) ?? dzis));
   const zAdresu = numeryZAdresu(adres.get('numery'));
   const [wybrane, ustawWybrane] = useState<string[]>(zAdresu);
   const [porownane, ustawPorownane] = useState<string[]>(walidujWyborScenariuszy(zAdresu.map(Number)) === null ? zAdresu : []);
@@ -135,7 +142,7 @@ export function WidokPorownaniaScenariuszy() {
     doTabeli.length === 0
       ? []
       : [
-          wiersz('wariant', t.wierszWariant, (s) => t.warianty[s.parametry.wariant]),
+          wiersz('wariant', t.wierszWariant, (s) => wariantScenariusza(s)),
           ...wierszeOkresow
             .filter((w) => doTabeli.some((s) => zakresUrlopu(s.wynik, w) !== null))
             .map((w) =>
@@ -208,10 +215,10 @@ export function WidokPorownaniaScenariuszy() {
                     etykieta: s.parametry.datyPowrotu.matka
                       ? t.opcjaZPowrotem({
                           numer: String(s.numer),
-                          wariant: t.warianty[s.parametry.wariant],
+                          wariant: wariantScenariusza(s),
                           data: formatujDate(s.parametry.datyPowrotu.matka),
                         })
-                      : t.opcja({ numer: String(s.numer), wariant: t.warianty[s.parametry.wariant] }),
+                      : t.opcja({ numer: String(s.numer), wariant: wariantScenariusza(s) }),
                     opis: [
                       gosc
                         ? t.opisOpcjiGosc({ data: formatujDate(s.zapisano) })

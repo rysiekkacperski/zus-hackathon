@@ -24,6 +24,7 @@ import { czyBladZapisu } from '@/dane/magazyn/rdzen';
 import {
   czySymulacja,
   czyTrybDemonstracyjny,
+  odczytajKatalog,
   odczytajZalogowanego,
   rodzinaKonta,
   wykonajOperacje,
@@ -47,7 +48,8 @@ function kontekstWysylki(id: IdWniosku): KontekstWysylki | null {
   const rodzina = rodzinaKonta(konto);
   const wniosek = znajdzWniosekOUrlop(rodzina, konto.pesel, id);
   if (rodzina === null || wniosek === null) return null;
-  return { rodzina, wniosek, pesel: konto.pesel, dane: zbierzDaneKreatora({ konto, rodzina, daneZus: zalogowany.stanKonta.kopiaDanychZus }) };
+  const dane = zbierzDaneKreatora({ konto, rodzina, daneZus: zalogowany.stanKonta.kopiaDanychZus, katalog: odczytajKatalog() });
+  return { rodzina, wniosek, pesel: konto.pesel, dane };
 }
 
 function zamienWniosek(idRodziny: string, nowy: WniosekOUrlop): void {

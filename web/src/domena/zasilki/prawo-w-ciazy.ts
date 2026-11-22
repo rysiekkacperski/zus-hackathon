@@ -248,9 +248,8 @@ export interface StawkiChorobowe {
 }
 
 /**
- * Stawka wynagrodzenia chorobowego za niezdolność do pracy poza ciążą: art. 92 § 1 pkt 1 Kodeksu pracy
- * (Dz.U. 2026 poz. 1245). To minimum ustawowe, a przepisy prawa pracy u pracodawcy mogą przewidywać wyższą stawkę.
- * Słownik kwot i progów nie ma wpisu tej stawki.
+ * Stawka wynagrodzenia chorobowego za niezdolność do pracy poza ciążą, gdy katalog nie zawiera wpisu: art. 92 § 1
+ * pkt 1 Kodeksu pracy (Dz.U. 2026 poz. 1245). Wartość obowiązującą czytamy ze słownika kwot i progów.
  */
 const STAWKA_WYNAGRODZENIA_BEZ_KODU_B = 80;
 
@@ -266,7 +265,8 @@ export function stawkiChorobowe(katalog: Katalog, dzien: DataISO): StawkiChorobo
     zasilekZKodemB: wartoscSlownika(katalog, WPISY_REGUL.zasilekChorobowyWCiazy, dzien, 'stawka', 100),
     zasilekBezKoduB: wartoscSlownika(katalog, ID_KWOT.zasilekChorobowyBezKoduB, dzien, 'stawka', 80),
     wynagrodzenieZKodemB: wartoscSlownika(katalog, WPISY_REGUL.wynagrodzenieWCiazy, dzien, 'stawka', 100),
-    wynagrodzenieBezKoduB: STAWKA_WYNAGRODZENIA_BEZ_KODU_B,
+    wynagrodzenieBezKoduB: wartoscSlownika(katalog, ID_KWOT.wynagrodzenieChoroboweBezKoduB, dzien, 'stawka', STAWKA_WYNAGRODZENIA_BEZ_KODU_B)
+      .wartosc,
   };
 }
 

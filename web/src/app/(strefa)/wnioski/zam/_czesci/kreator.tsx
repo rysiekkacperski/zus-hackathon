@@ -58,7 +58,7 @@ export function useWniosekZam(): { idWniosku: string | null; dane: DaneWnioskuZa
     const wniosek = znajdzWniosekZam(kontekst.rodzina, idWniosku, kontekst.konto.pesel);
     if (wniosek === null) return null;
     const rodzic = rodzicKontaWRodzinie(kontekst.konto, kontekst.rodzina);
-    const okresy = kontekstOkresowZam({ wniosek, daneCiazy: kontekst.rodzina.daneCiazy, plan: kontekst.rodzina.plan, rodzic, wnioski: kontekst.rodzina.wnioski });
+    const okresy = kontekstOkresowZam({ wniosek, daneCiazy: kontekst.rodzina.daneCiazy, plan: kontekst.rodzina.plan, rodzic, wnioski: kontekst.rodzina.wnioski, katalog: kontekst.katalog });
     return { wniosek, kontekst, okresy };
   }, [kontekst, idWniosku]);
   return { idWniosku, dane, kontekst };
@@ -76,10 +76,13 @@ export function adresEkranuZam(ekran: IdWidoku, idWniosku: string): string {
 /**
  * Ekran okresu ma dwie części dla urlopu macierzyńskiego z dostępnym wariantem 81,5% (okres z tabelą stawek,
  * potem wybór wariantu) i dla urlopu rodzicielskiego (tryb z datą początku, potem liczba tygodni).
+ * Przed wpisaniem dnia początku zasiłku (ścieżka przed porodem) ekran okresu liczy się jako dwie części, tak jak
+ * po wpisaniu tego dnia, żeby liczba kroków „Krok X z N” była stała od pierwszego kroku.
  */
 export function okresWDwochCzesciachZam(rodzaj: RodzajUrlopu, p: ParametryOkresuZam): boolean {
   if (rodzaj === 'rodzicielski') return true;
-  if (rodzaj !== 'macierzynski' || !p.okresMacierzynski || !p.wariantDostepny) return false;
+  if (rodzaj !== 'macierzynski' || !p.wariantDostepny) return false;
+  if (!p.okresMacierzynski) return true;
   const [mac, rodz] = okresyMacierzynskiego(p, 'caly-rodzicielski');
   return Boolean(mac && rodz);
 }
@@ -103,11 +106,15 @@ function warunkiCzesciZam(dane: DaneWnioskuZam, dzis: DataISO): WarunkiCzesciZam
   };
 }
 
-/** Kroki kreatora z liczbą części każdego ekranu dla wniosku; bez wniosku ekrany mają podział domyślny. */
+/**
+ * Kroki kreatora z liczbą części każdego ekranu dla wniosku; bez wniosku ekrany mają podział domyślny.
+ * Ścieżkę przed porodem wyznacza od pierwszego kroku brak potwierdzonej daty porodu (okresy.przedPorodem),
+ * tak samo jak przejście z ekranu rodzaju urlopu (ekranPoZam).
+ */
 export function useKrokiKreatoraZam(dane: DaneWnioskuZam | null, przedPorodem = false): KrokKreatoraZam[] {
   const dzis = useDzis();
   const wniosek = dane?.wniosek ?? null;
-  const przed = przedPorodem || wniosek?.przedPorodem !== undefined;
+  const przed = przedPorodem || dane?.okresy.przedPorodem === true || wniosek?.przedPorodem !== undefined;
   return krokiWnioskuZam(wniosek, przed, dane ? warunkiCzesciZam(dane, dzis) : undefined) as KrokKreatoraZam[];
 }
 
@@ -245,7 +252,7 @@ export function RamaKreatoraZam({
   children,
 }: RamaKreatoraZamProps) {
   const sprawa = wniosek?.idSprawy ?? idSprawy;
-  const przed = przedPorodem || wniosek?.przedPorodem !== undefined;
+  const przed = przedPorodem || czyWniosekZamPrzedPorodem(wniosek);
   const naglowek = przed ? teksty.ViewZamPrebirth.naglowek : teksty[ekran].naglowek;
   const krokiPostepu = kroki ?? (krokiWnioskuZam(wniosek, przed) as KrokKreatoraZam[]);
   return (
@@ -333,12 +340,22 @@ export function tekstStawki(stawka: number | undefined): string {
   return tk.stawka({ stawka: formatujProcent(stawka ?? 100) });
 }
 
-/** Nazwa rodzaju urlopu wniosku, z wariantem „z całym urlopem rodzicielskim”. */
+/** Wniosek na ścieżce przed porodem: ekran początku zasiłku zapisał dane wniosku przed porodem. */
+export function czyWniosekZamPrzedPorodem(wniosek: WniosekZam | null): boolean {
+  return wniosek?.przedPorodem !== undefined;
+}
+
+/**
+ * Nazwa rodzaju urlopu wniosku, z wariantem „z całym urlopem rodzicielskim”. Na ścieżce przed porodem nazwa
+ * urlopu macierzyńskiego kończy się „przed porodem”, tak samo jak nagłówek kreatora.
+ */
 export function nazwaRodzajuWniosku(wniosek: WniosekZam): string {
   if (!wniosek.rodzajUrlopu) return '';
-  if (wniosek.rodzajUrlopu === 'macierzynski' && wniosek.wariant === 'caly-rodzicielski' && wniosek.okresy.length > 1) {
-    return tk.macierzynskiZCalym;
+  const zCalym = wniosek.wariant === 'caly-rodzicielski' && wniosek.okresy.length > 1;
+  if (wniosek.rodzajUrlopu === 'macierzynski' && czyWniosekZamPrzedPorodem(wniosek)) {
+    return zCalym ? tk.macierzynskiPrzedPorodemZCalym : tk.macierzynskiPrzedPorodem;
   }
+  if (wniosek.rodzajUrlopu === 'macierzynski' && zCalym) return tk.macierzynskiZCalym;
   return tk.rodzajeUrlopu[wniosek.rodzajUrlopu];
 }
 
