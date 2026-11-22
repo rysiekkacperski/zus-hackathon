@@ -7,7 +7,9 @@ import { use, useMemo } from 'react';
 import { useKontekstRodziny } from '@/dane/magazyn/hooki';
 import type { DaneDrugiegoRodzicaZKonta, DaneZKontaZus } from '@/domena/typy';
 import { formatujDate } from '@/komponenty/format';
+import { ODNOSNIKI } from '@/dane/katalog/pozycje';
 import { Karta } from '@/komponenty/karta';
+import { KartaWiecejInformacji } from '@/komponenty/karta-wiecej-informacji';
 import { ListaKrokow } from '@/komponenty/kroki';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { Notatka } from '@/komponenty/notatka';
@@ -17,6 +19,7 @@ import { trasy } from '@/komponenty/rama/trasy';
 import { Stos } from '@/komponenty/uklad';
 import { teksty } from '@/teksty';
 import { PrzyciskZamknieciaKarty } from '../../kanal/[kanal]/_czesci/przycisk-zamkniecia-karty';
+import { WniosekZas23 } from './_czesci/wniosek-zas-23';
 
 function StronaWniosku({ grupa }: { grupa: (typeof teksty)['ViewEzus800Application' | 'ViewEzusActiveParentApplication'] }) {
   return (
@@ -106,6 +109,8 @@ export function WidokEzus({ params }: { params: PageProps<'/ezus/[[...sciezka]]'
       return <StronaWniosku grupa={teksty.ViewEzusActiveParentApplication} />;
     case 'ViewEzusApplicationDetails':
       return <SzczegolyWniosku idWniosku={trasa.parametry.idWniosku} />;
+    case 'ViewEzusZas23':
+      return <WniosekZas23 />;
     default: {
       const t = teksty.ViewEzusHome;
       return (
@@ -131,6 +136,34 @@ export function WidokEzus({ params }: { params: PageProps<'/ezus/[[...sciezka]]'
               </div>
             </Stos>
           </Karta>
+          <Karta tytul={t.kartaZasilki} bezLinii className="mt-7.5">
+            <ul className="m-0 flex list-none flex-col gap-4 p-0">
+              <li>
+                <Odnosnik href={trasy.ViewEzusZas23()} ikonaPo="w-prawo">
+                  {t.wniosekZas23}
+                </Odnosnik>
+              </li>
+            </ul>
+          </Karta>
+          {/* Konto ubezpieczonego: dane zgromadzone na koncie w ZUS i pytanie do ZUS (PUE/eZUS, ekrany przewodnika). */}
+          <Karta tytul={t.kartaKonta} bezLinii className="mt-7.5">
+            <p className="m-0 mb-4">{t.kontoWstep}</p>
+            <ul className="m-0 flex list-none flex-col gap-4 p-0">
+              {[
+                { href: trasy.ViewZusAccountData(), etykieta: t.daneKonta },
+                { href: trasy.ViewSickLeaveList(), etykieta: t.zaswiadczeniaEzla },
+                { href: trasy.ViewContributionBalance(), etykieta: t.stanRozliczen },
+                { href: trasy.ViewZusQuestion(), etykieta: t.pytanieDoZus },
+              ].map((o) => (
+                <li key={o.href}>
+                  <Odnosnik href={o.href} ikonaPo="w-prawo">
+                    {o.etykieta}
+                  </Odnosnik>
+                </li>
+              ))}
+            </ul>
+          </Karta>
+          <KartaWiecejInformacji odnosniki={[ODNOSNIKI.zus]} className="mt-7.5" />
         </>
       );
     }

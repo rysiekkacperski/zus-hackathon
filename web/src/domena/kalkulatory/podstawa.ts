@@ -9,8 +9,9 @@ import {
   miesiacZDaty,
   porownajDaty,
 } from '@/domena/daty';
+import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import { podzielKwote, procentZaokraglony } from '@/domena/kalkulatory/rachunek';
-import { parametr, kwotaParametru } from '@/domena/kalkulatory/slowniki';
+import { PARAMETRY, parametr, kwotaParametru } from '@/domena/kalkulatory/slowniki';
 import type {
   DataISO,
   DaneWejscioweKalkulatora,
@@ -137,11 +138,62 @@ export function wyliczPodstawe(w: WejsciePodstawy): PodstawaWymiaru | { kod: '00
   };
 }
 
-/** Minimalna podstawa pracownika na pełnym etacie: minimalne wynagrodzenie pomniejszone o 13,71% (obecnie 4147,10 zł). */
+/**
+ * Minimalna podstawa pracownika na pełnym etacie obowiązująca w dniu `dzien`: wartość ze słownika kwot i progów
+ * (wpis wyprowadzony z minimalnego wynagrodzenia, 4147,10 zł w 2026 roku), a bez wpisu minimalne wynagrodzenie
+ * pomniejszone o 13,71%. Podstawa prawna: art. 45 ust. 1 ustawy z dnia 25 czerwca 1999 r. o świadczeniach pieniężnych
+ * z ubezpieczenia społecznego w razie choroby i macierzyństwa w związku z art. 48 tej ustawy.
+ */
 export function minimalnaPodstawaPracownika(katalog: Katalog, dzien: DataISO): Grosze {
+  const wpis = wartoscObowiazujaca(katalog, PARAMETRY.minimalnaPodstawaPracownika.idWpisu, dzien, 'kwota');
+  if (wpis !== null && Number.isFinite(wpis.wartosc) && wpis.wartosc > 0) return Math.round(wpis.wartosc);
   const minimalne = kwotaParametru(katalog, 'minimalneWynagrodzenie', dzien);
   const procent = parametr(katalog, 'pomniejszenie', dzien).wartosc;
   return minimalne - procentZaokraglony(minimalne, procent);
+}
+
+/** Podstawa przed podniesieniem do minimalnej podstawy pracownika: średnia pomniejszona o składki albo kwota podstawy. */
+export function podstawaPrzedMinimum(p: PodstawaWymiaru): Grosze {
+  const srednia = p.skladniki?.find((s) => s.opis === 'srednia');
+  const pomniejszenie = p.skladniki?.find((s) => s.opis === 'pomniejszenie');
+  return srednia && pomniejszenie ? srednia.kwota - pomniejszenie.kwota : p.kwota;
+}
+
+/**
+ * Podstawa wymiaru w dniu zasiłku: pracownik na pełnym etacie ma co najmniej minimalną podstawę obowiązującą w tym dniu,
+ * także przy podstawie wpisanej przez rodzica albo z przykładowej sprawy. Jedna reguła dla zintegrowanego kalkulatora,
+ * kalkulatora wariantu i kalkulatora podziału urlopu (historyjki 3.10.4.1.4, 3.10.1, 3.10.2.1.2).
+ */
+export function podstawaWDniuZasilku(p: PodstawaWymiaru, katalog: Katalog, dzien: DataISO, pracownik = true): Grosze {
+  if (!pracownik || p.pelnyEtat !== true) return p.kwota;
+  return Math.max(podstawaPrzedMinimum(p), minimalnaPodstawaPracownika(katalog, dzien));
+}
+
+/** Część okresu zasiłku z podstawą wymiaru obowiązującą w tej części. */
+export interface CzescPodstawy { od: DataISO; do: DataISO; kwota: Grosze }
+
+/**
+ * Podstawa wymiaru za dni przed zmianą minimalnej podstawy i od dnia zmiany. Minimalne wynagrodzenie zmienia się
+ * od 1. dnia miesiąca, więc okres dzielimy na początku miesięcy, w których zmienia się podstawa (3.10.4.3.5).
+ */
+export function podstawyWOkresie(p: PodstawaWymiaru, katalog: Katalog, okres: { od: DataISO; do: DataISO }, pracownik = true): CzescPodstawy[] {
+  const wynik: CzescPodstawy[] = [];
+  let od = okres.od;
+  let kwota = podstawaWDniuZasilku(p, katalog, od, pracownik);
+  if (!pracownik || p.pelnyEtat !== true) return [{ od, do: okres.do, kwota }];
+  let m = dodajMiesiaceDoMiesiaca(miesiacZDaty(okres.od), 1);
+  while (porownajDaty(dataZMiesiaca(m), okres.do) <= 0) {
+    const dzien = dataZMiesiaca(m);
+    const nowa = podstawaWDniuZasilku(p, katalog, dzien, pracownik);
+    if (nowa !== kwota) {
+      wynik.push({ od, do: dodajDni(dzien, -1), kwota });
+      od = dzien;
+      kwota = nowa;
+    }
+    m = dodajMiesiaceDoMiesiaca(m, 1);
+  }
+  wynik.push({ od, do: okres.do, kwota });
+  return wynik;
 }
 
 const RODZAJ_TYTULU: Record<'pracownik' | 'zleceniobiorca' | 'dzialalnosc', FormaZatrudnienia> = {

@@ -2,8 +2,8 @@
 // Właściciel: u05 (Przykładowe sprawy: lista, dokumenty i odczyt AI).
 // Reguły: sprawa ma najwyżej jeden dokument danego rodzaju (nowy zastępuje poprzedni, 0181), wartość
 // z dokumentu o wyższym pierwszeństwie wygrywa, korekta użytkownika ma pierwszeństwo przed dokumentami,
-// dalszy okres niezdolności z ZAS-12 dopisujemy do sprawy, a świadczenia ze zrzutu uzupełniają puste pola
-// rozstrzygnięcia (0225). Odczyt oznaczamy 0107, a dane zastąpione 0255.
+// dalszy okres niezdolności z ZAS-12 dopisujemy do sprawy, a świadczenia przyznane i odmówione ze zrzutu uzupełniają
+// puste pola rozstrzygnięcia (0225). Odczyt oznaczamy 0107, a dane zastąpione 0255.
 import type {
   DaneSprawy,
   DokumentSprawy,
@@ -18,6 +18,7 @@ import type {
   WynikOdczytuDokumentu,
   ZrodloWartosciSprawy,
 } from '@/domena/typy';
+import type { SwiadczenieOdmowione } from './rozszerzenia-typow';
 
 /** Ścieżki wszystkich wartości Danych sprawy; odczyt zapisuje wyłącznie te dane. */
 export const SCIEZKI_DANYCH_SPRAWY = [
@@ -32,7 +33,7 @@ export const SCIEZKI_DANYCH_SPRAWY = [
   'zdarzenie.liczbaMartwych', 'zdarzenie.niezdolnosc', 'zdarzenie.dalszeOkresy',
   'dziecko.tydzienCiazy', 'dziecko.masaG', 'dziecko.pobyt', 'dziecko.zaZyciem',
   'wniosek.swiadczenia', 'wniosek.okresy', 'wniosek.oswiadczeniePelnyWymiar', 'wniosek.dataZlozenia', 'wniosek.okresMatki',
-  'kwotyMiesieczne', 'poprzedniZasilek', 'zadluzenieJdg', 'swiadczeniaPrzyznane',
+  'kwotyMiesieczne', 'poprzedniZasilek', 'zadluzenieJdg', 'swiadczeniaPrzyznane', 'swiadczeniaOdmowione',
 ] as const;
 
 export type SciezkaDanychSprawy = (typeof SCIEZKI_DANYCH_SPRAWY)[number];
@@ -41,7 +42,7 @@ export type SciezkaDanychSprawy = (typeof SCIEZKI_DANYCH_SPRAWY)[number];
 export const SCIEZKI_ZLOZONE: ReadonlySet<string> = new Set([
   'ubezpieczenieChorobowe.okresy', 'zdarzenie.niezdolnosc', 'zdarzenie.dalszeOkresy', 'dziecko.pobyt',
   'wniosek.swiadczenia', 'wniosek.okresy', 'wniosek.okresMatki', 'kwotyMiesieczne', 'poprzedniZasilek',
-  'zadluzenieJdg', 'swiadczeniaPrzyznane',
+  'zadluzenieJdg', 'swiadczeniaPrzyznane', 'swiadczeniaOdmowione',
 ]);
 
 export const SCIEZKI_DANYCH_OSOBOWYCH: ReadonlySet<string> = new Set(['ubezpieczony.imie', 'ubezpieczony.nazwisko', 'ubezpieczony.pesel']);
@@ -90,6 +91,7 @@ export function pusteDaneSprawy(): DaneSprawy {
     poprzedniZasilek: pusta(),
     zadluzenieJdg: pusta(),
     swiadczeniaPrzyznane: pusta(),
+    swiadczeniaOdmowione: pusta(),
   };
 }
 
@@ -182,9 +184,17 @@ function uzupelnijRozstrzygniecie(
   rozstrzygniecie: RozstrzygniecieSprawy[],
   przyznane: { rodzaj: string; od: string; do: string; kwota: number }[],
   zrodlo: ZrodloWartosciSprawy,
+  odmowione: SwiadczenieOdmowione[] = [],
 ): { lista: RozstrzygniecieSprawy[]; zmieniono: boolean } {
   let zmieniono = false;
   const lista = rozstrzygniecie.map((r) => ({ ...r }));
+  // Odmowa ze zrzutu daje wpis „nie przysługuje”, gdy rozstrzygnięcie nie ma jeszcze wpisu tego świadczenia.
+  for (const o of odmowione) {
+    const swiadczenie = swiadczenieZeZrzutu(o.rodzaj);
+    if (swiadczenie === null || lista.some((r) => r.swiadczenie === swiadczenie)) continue;
+    lista.push({ swiadczenie, prawo: 'nie-przysluguje', zrodlo });
+    zmieniono = true;
+  }
   for (const p of przyznane) {
     const swiadczenie = swiadczenieZeZrzutu(p.rodzaj);
     if (swiadczenie === null) continue;
@@ -228,6 +238,7 @@ export function scalOdczytZKomunikatami(
   let odczytano = false;
   let zastapiono = false;
   let przyznane: { rodzaj: string; od: string; do: string; kwota: number }[] = [];
+  let odmowione: SwiadczenieOdmowione[] = [];
 
   for (const odczyt of wynik.wartosci) {
     let sciezka = odczyt.pole;
@@ -242,6 +253,9 @@ export function scalOdczytZKomunikatami(
     }
     if (sciezka === 'swiadczeniaPrzyznane' && Array.isArray(wartosc)) {
       przyznane = wartosc as typeof przyznane;
+    }
+    if (sciezka === 'swiadczeniaOdmowione' && Array.isArray(wartosc)) {
+      odmowione = wartosc as SwiadczenieOdmowione[];
     }
     const obecna = wartoscPola(dane, sciezka);
     const pierwszenstwoObecnej = czyPusta(obecna) ? 99 : pierwszenstwoZrodla(obecna.zrodlo, dokumenty);
@@ -263,8 +277,8 @@ export function scalOdczytZKomunikatami(
   }
 
   let rozstrzygniecie = sprawa.rozstrzygniecie;
-  if (przyznane.length > 0) {
-    const uzupelnione = uzupelnijRozstrzygniecie(rozstrzygniecie, przyznane, zrodlo);
+  if (przyznane.length > 0 || odmowione.length > 0) {
+    const uzupelnione = uzupelnijRozstrzygniecie(rozstrzygniecie, przyznane, zrodlo, odmowione);
     rozstrzygniecie = uzupelnione.lista;
     if (uzupelnione.zmieniono) komunikaty.push('0225');
   }

@@ -43,6 +43,8 @@ function Pasek({ kolor, procent, etykieta, kwota }: { kolor: 'jasny' | 'ciemny';
 export function ZestawienieWariantow({ s, dataPowrotu }: { s: SzczegolyPorownania; dataPowrotu: string }) {
   const [m81, r81] = s.wariant81.okresy;
   const [m100, r70] = s.wariant100i70.okresy;
+  // Stawki z odpowiedzi silnika, czyli z katalogu w dniu zdarzenia.
+  const st = { s815: formatujProcent(m81.stawka), s100: formatujProcent(m100.stawka), s70: formatujProcent(r70.stawka) };
   const pelny = s.tygodnieRodzicielskiego === s.tygodnieRodzicielskiegoMaks;
   const zero = s.tygodnieRodzicielskiego === 0;
   const tylko100 = !s.wariant81Dostepny;
@@ -80,7 +82,7 @@ export function ZestawienieWariantow({ s, dataPowrotu }: { s: SzczegolyPorownani
   if (zero && !tylko100) {
     wiersze.push({
       id: 'wyrownanie',
-      okres: <Opis tytul={t.wyrownanieWiersz} opis={t.wyrownanieWierszOpis} />,
+      okres: <Opis tytul={t.wyrownanieWiersz(st)} opis={t.wyrownanieWierszOpis} />,
       m81: t.brakWartosci,
       s81: formatujKwote(s.wariant81.wyrownanie),
       m100: t.brakWartosci,
@@ -107,26 +109,26 @@ export function ZestawienieWariantow({ s, dataPowrotu }: { s: SzczegolyPorownani
           <div className="mb-6 flex flex-wrap gap-6">
             <span className="inline-flex items-center gap-2 text-body">
               <span aria-hidden="true" className="inline-block size-4 rounded-xs bg-brand-chart" />
-              {t.wariant81}
+              {t.wariant81(st)}
             </span>
             <span className="inline-flex items-center gap-2 text-body">
               <span aria-hidden="true" className="inline-block size-4 rounded-xs bg-brand" />
-              {t.wariant100}
+              {t.wariant100(st)}
             </span>
           </div>
           <div className="flex flex-col gap-6">
             <div>
               <p className="m-0 mb-2 text-body-strong">{t.wykresMacierzynski({ tygodnie: t.tygodnie(s.tygodnieMacierzynskiego) })}</p>
               <div className="flex flex-col gap-2 border-l border-ink py-1">
-                <Pasek kolor="jasny" procent={procent(m81.miesiecznie)} etykieta={t.stawka81} kwota={m81.miesiecznie} />
-                <Pasek kolor="ciemny" procent={procent(m100.miesiecznie)} etykieta={t.stawka100} kwota={m100.miesiecznie} />
+                <Pasek kolor="jasny" procent={procent(m81.miesiecznie)} etykieta={t.stawka81(st)} kwota={m81.miesiecznie} />
+                <Pasek kolor="ciemny" procent={procent(m100.miesiecznie)} etykieta={t.stawka100(st)} kwota={m100.miesiecznie} />
               </div>
             </div>
             <div>
               <p className="m-0 mb-2 text-body-strong">{t.wykresRodzicielski({ tygodnie: t.tygodnie(s.tygodnieRodzicielskiego) })}</p>
               <div className="flex flex-col gap-2 border-l border-ink py-1">
-                <Pasek kolor="jasny" procent={procent(r81.miesiecznie)} etykieta={t.stawka81} kwota={r81.miesiecznie} />
-                <Pasek kolor="ciemny" procent={procent(r70.miesiecznie)} etykieta={t.stawka70} kwota={r70.miesiecznie} />
+                <Pasek kolor="jasny" procent={procent(r81.miesiecznie)} etykieta={t.stawka81(st)} kwota={r81.miesiecznie} />
+                <Pasek kolor="ciemny" procent={procent(r70.miesiecznie)} etykieta={t.stawka70(st)} kwota={r70.miesiecznie} />
               </div>
             </div>
           </div>
@@ -153,10 +155,10 @@ export function ZestawienieWariantow({ s, dataPowrotu }: { s: SzczegolyPorownani
           etykietaPrzewijania={t.przewijanieTabeli}
           kolumny={[
             { klucz: 'okres', naglowek: t.kolumnaOkres, tytulowa: true },
-            { klucz: 'm81', naglowek: t.kolumna81Miesiecznie, liczbowa: true },
-            { klucz: 's81', naglowek: t.kolumna81Suma, liczbowa: true },
-            { klucz: 'm100', naglowek: t.kolumna100Miesiecznie, liczbowa: true },
-            { klucz: 's100', naglowek: t.kolumna100Suma, liczbowa: true },
+            { klucz: 'm81', naglowek: t.kolumna81Miesiecznie(st), liczbowa: true },
+            { klucz: 's81', naglowek: t.kolumna81Suma(st), liczbowa: true },
+            { klucz: 'm100', naglowek: t.kolumna100Miesiecznie(st), liczbowa: true },
+            { klucz: 's100', naglowek: t.kolumna100Suma(st), liczbowa: true },
           ]}
           wiersze={wiersze}
           suma={sumaWiersz}

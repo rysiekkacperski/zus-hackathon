@@ -13,7 +13,9 @@ import {
   drugiMaPrawo,
   koniecCzesci,
   koniecMacierzynskiego,
+  kontekstPodzialu,
   liczbaCalkowita,
+  limityUrlopow,
   najwczesniejszePrzejecie,
   okresPrzejecia,
   ostatniDzienOjcowskiego,
@@ -44,10 +46,11 @@ import { Tabela } from '@/komponenty/tabela';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
 import { dodajDni, liczbaDniWlacznie, parsujDate } from '@/domena/daty';
-import { ustalPrawoDoZasilku, wyliczScenariusz } from '@/domena/kalkulatory';
+import { ustalPrawoDoZasilku } from '@/domena/kalkulatory';
 import type { DataISO, FormaZatrudnienia, KodKomunikatu, ParametryScenariusza, RodzicWRodzinie } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA } from '../../_czesci/arkusz';
+import { useScenariuszApi } from '../../_czesci/wyliczenie-api';
 import type { PropsArkuszaWyniku } from './typy';
 
 const t = teksty.SheetCalcParentalParts;
@@ -63,12 +66,21 @@ function formularzZParametrow(p: ParametryScenariusza, k: KontekstPodzialu): For
     od: data(c.od),
     tygodnie: String(c.tygodnie),
   }));
-  if (czesci.length === 0 && k.prawoMatki) {
+  if (czesci.length === 0 && k.domyslneCzesci !== undefined && k.domyslneCzesci.length > 0) {
+    // Wartości startowe z układu domyślnego silnika, takie same jak części w wyniku.
+    czesci = k.domyslneCzesci.map((c) => ({ rodzic: c.rodzic, od: data(c.od), tygodnie: String(c.tygodnie) }));
+  } else if (czesci.length === 0 && k.prawoMatki) {
+    // Wartości startowe: matka bez nieprzenoszalnej części drugiego rodzica, drugi rodzic jego nieprzenoszalna część.
+    const nieprzenoszalne = k.nieprzenoszalne ?? limityUrlopow(undefined, null).nieprzenoszalne;
     const odMatki = dodajDni(k.koniecMacierzynskiego, 1);
-    const tygodnieMatki = k.wymiar - 9;
+    const tygodnieMatki = k.wymiar - nieprzenoszalne;
     czesci = [{ rodzic: 'matka', od: data(odMatki), tygodnie: String(tygodnieMatki) }];
     if (k.prawoDrugiego) {
-      czesci.push({ rodzic: 'drugi-rodzic', od: data(dodajDni(koniecCzesci(odMatki, tygodnieMatki), 1)), tygodnie: '9' });
+      czesci.push({
+        rodzic: 'drugi-rodzic',
+        od: data(dodajDni(koniecCzesci(odMatki, tygodnieMatki), 1)),
+        tygodnie: String(nieprzenoszalne),
+      });
     }
   }
   const startOjcowskiego = p.drugiRodzicPoPorodzie?.dataUbezpieczenia ?? k.dataPorodu;
@@ -102,29 +114,38 @@ export function ArkuszPodzialuUrlopow(props: PropsArkuszaWyniku) {
   return <TrescArkuszaPodzialu {...props} />;
 }
 
-function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik, onZmianaParametrow, onZamknij }: PropsArkuszaWyniku) {
-  const nazwy = useNazwyRodzicow();
+function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawyApi, wynik, onZmianaParametrow, onZamknij }: PropsArkuszaWyniku) {
+  const nazwy = useNazwyRodzicow(d.zdarzenie.wartosc === 'przyjecie');
   const katalog = useKatalog();
   const dzis = useDzis();
 
   const kontekst = useMemo<KontekstPodzialu | null>(() => {
+    // Wymiar, ostatni dzień urlopu rodzicielskiego, okres urlopu ojcowskiego i części domyślne z układu silnika,
+    // ten sam co w wyniku, także po przyjęciu dziecka (38 i 62 tygodnie, wiek graniczny, uprawomocnienie).
+    const zSilnika = kontekstPodzialu(d, p, katalog);
+    if (zSilnika !== null) return zSilnika;
     const dataPorodu = dataZdarzenia(d);
-    const koniec = koniecMacierzynskiego(d, p, wynik);
-    const ostatniRodzicielski = ostatniDzienRodzicielskiego(d);
-    const ostatniOjcowski = ostatniDzienOjcowskiego(d);
+    const koniec = koniecMacierzynskiego(d, p, wynik, katalog);
+    const ostatniRodzicielski = ostatniDzienRodzicielskiego(d, katalog);
+    const ostatniOjcowski = ostatniDzienOjcowskiego(d, katalog);
     if (!dataPorodu || !koniec || !ostatniRodzicielski || !ostatniOjcowski) return null;
+    // Limity urlopu rodzicielskiego ze słownika wymiarów i okresów obowiązujące w dniu porodu albo przyjęcia.
+    const limity = limityUrlopow(katalog, dataPorodu);
     return {
       dataPorodu,
       koniecMacierzynskiego: koniec,
       ostatniDzienRodzicielskiego: ostatniRodzicielski,
       ostatniDzienOjcowskiego: ostatniOjcowski,
-      wymiar: wymiarRodzicielskiego(d),
+      wymiar: wymiarRodzicielskiego(d, katalog),
+      nieprzenoszalne: limity.nieprzenoszalne,
+      maksCzesci: limity.maksCzesci,
+      czescMatki: limity.czescMatki,
       prawoMatki: ustalPrawoDoZasilku(d, 'matka').przysluguje,
       prawoDrugiego: ustalPrawoDoZasilku(d, 'drugi-rodzic').przysluguje,
       jestDrugiRodzic: d.formaDrugiegoRodzica.wartosc.forma !== 'brak-drugiego-rodzica',
     };
     // wynik zmienia się po każdym przeliczeniu gospodarza
-  }, [d, p, wynik]);
+  }, [d, p, wynik, katalog]);
 
   const [f, ustawF] = useState<FormularzPodzialu | null>(() => (kontekst ? formularzZParametrow(p, kontekst) : null));
   const [bladDodania, ustawBladDodania] = useState<KodKomunikatu | null>(null);
@@ -135,10 +156,17 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
   });
   const blad = (klucz: string) => walidacja.blad(klucz);
 
-  const podglad = useMemo(() => {
+  // Podgląd okresu przejętego urlopu liczy serwer (POST /api/v1/kalkulator/zasilek-macierzynski) z opóźnieniem po wpisaniu;
+  // do odpowiedzi tabela pokazuje okres z formularza.
+  const parametryPodgladu = useMemo(() => {
     if (!kontekst || !f || Object.keys(walidujPodzial(f, kontekst)).length > 0) return null;
-    return wyliczScenariusz(d, podstawy, parametryZPodzialu(p, f, kontekst), katalog, dzis);
-  }, [kontekst, f, d, podstawy, p, katalog, dzis]);
+    return parametryZPodzialu(p, f, kontekst);
+  }, [kontekst, f, p]);
+  const wyliczeniePodgladu = useScenariuszApi(
+    parametryPodgladu ? { dane: d, podstawy: podstawyApi, parametry: parametryPodgladu, dzis } : null,
+    { opoznienieMs: 300 },
+  );
+  const podglad = parametryPodgladu && wyliczeniePodgladu.aktualne ? (wyliczeniePodgladu.wartosc?.wynik ?? null) : null;
 
   if (!kontekst || !f) {
     return (
@@ -161,8 +189,10 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
     formularz.czesci
       .map((c) => ({ rodzic: c.rodzic, od: parsujDate(c.od) ?? '', tygodnie: liczbaCalkowita(c.tygodnie) ?? 0 }))
       .filter((c): c is { rodzic: RodzicWRodzinie; od: string; tygodnie: number } => c.rodzic !== ''),
-    k.wymiar,
+    // Przy kilkorgu przyjętych dzieciach arkusz przyjmuje części do wymiaru sprzed zmiany wymiaru (walidujPodzial).
+    k.wymiarPrzedZmiana ?? k.wymiar,
     { matka: k.prawoMatki, 'drugi-rodzic': prawoDrugiego },
+    k.nieprzenoszalne,
   );
   const najwczesniejCzesci = dodajDni(k.koniecMacierzynskiego, 1);
   const dataUbezpieczenia = parsujDate(formularz.dataUbezpieczenia);
@@ -176,7 +206,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
     if (formularz.sytuacja === '') return null;
     const do_ = formatujDate(k.koniecMacierzynskiego);
     if (formularz.sytuacja === 'zatrudnienie-matki') return t.zakresZatrudnienia({ do_ });
-    const minimum = najwczesniejszePrzejecie(formularz.sytuacja, k.dataPorodu, k.prawoMatki);
+    const minimum = najwczesniejszePrzejecie(formularz.sytuacja, k.dataPorodu, k.prawoMatki, k.czescMatki);
     if (minimum.kod === '0097') return t.zakresRezygnacji({ od: formatujDate(minimum.data), do_ });
     if (minimum.kod === '0169') return t.zakresPo8Tygodniach({ od: formatujDate(minimum.data), do_ });
     return t.zakresOdDniaPo({ do_ });
@@ -185,7 +215,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
   const bladCzesci = bladDodania ?? blad('czesci');
 
   const dodajCzesc = () => {
-    if (formularz.czesci.length >= MAKS_CZESCI_RODZICIELSKIEGO) {
+    if (formularz.czesci.length >= (k.maksCzesci ?? MAKS_CZESCI_RODZICIELSKIEGO)) {
       ustawBladDodania('0096');
       return;
     }
@@ -204,7 +234,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
   };
 
   const parametryBledu = (kod: string | null): Record<string, string> | undefined => {
-    if (kod === '0095') return { liczbaTygodni: String(k.wymiar) };
+    if (kod === '0095') return { liczbaTygodni: String(k.wymiarPrzedZmiana ?? k.wymiar) };
     if (kod === '0247') return { data: formatujDate(ostatniDzienPodjeciaUbezpieczenia(k.dataPorodu)) };
     return undefined;
   };
@@ -214,17 +244,18 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
     ...(k.jestDrugiRodzic ? [{ wartosc: 'drugi-rodzic' as const, etykieta: t.opcjaDrugiRodzic({ kto: drugi.mianownik }) }] : []),
   ];
   const dniCzesciOjcowskiego = dniOjcowskiego(formularz.wymiarOjcowskiego, formularz.liczbaCzesciOjcowskiego);
+  const limitRodzica = String(tygodnie.limitRodzica);
   const opisCzesci = !k.prawoMatki
-    ? t.czesciOpisMatkaBezPrawa({ najpozniej: formatujDate(k.ostatniDzienRodzicielskiego), kto: drugi.mianownik, limit: String(k.wymiar - 9) })
+    ? t.czesciOpisMatkaBezPrawa({ najpozniej: formatujDate(k.ostatniDzienRodzicielskiego), kto: drugi.mianownik, limit: limitRodzica })
     : !k.prawoDrugiego && dataUbezpieczenia
       ? t.czesciOpisZUbezpieczeniem({
           od: formatujDate(najwczesniejCzesci),
           kogo: drugi.dopelniacz,
           odDrugiego: formatujDate(dataUbezpieczenia),
           najpozniej: formatujDate(k.ostatniDzienRodzicielskiego),
-          limit: String(k.wymiar - 9),
+          limit: limitRodzica,
         })
-      : t.czesciOpis({ od: formatujDate(najwczesniejCzesci), najpozniej: formatujDate(k.ostatniDzienRodzicielskiego), limit: String(k.wymiar - 9) });
+      : t.czesciOpis({ od: formatujDate(najwczesniejCzesci), najpozniej: formatujDate(k.ostatniDzienRodzicielskiego), limit: limitRodzica });
 
   return (
     <Arkusz
@@ -425,7 +456,7 @@ function TrescArkuszaPodzialu({ daneWejsciowe: d, parametry: p, podstawy, wynik,
           <p className="m-0 text-body">{t.bezDrugiegoRodzica}</p>
         )}
 
-        {prawoDrugiego ? (
+        {prawoDrugiego && !k.przyjecie ? (
           <section aria-labelledby={`${ID}-przejecie-tytul`} className="flex flex-col gap-4">
             <h3 id={`${ID}-przejecie-tytul`} className="m-0 text-tile-title text-ink">
               {t.przejecieTytul}

@@ -18,6 +18,9 @@ import {
 import { ID_KWOT } from '@/dane/katalog/slownik-kwot';
 import { ID_WYMIAROW } from '@/dane/katalog/slownik-wymiarow';
 import { formatujKwote, zaokraglijDoGrosza } from '@/domena/kwoty';
+import { harmonogramZPodstaw, sumyHarmonogramu } from '@/domena/kalkulatory/harmonogram';
+import { progiUzupelniajacego, wymiarMacierzynskiego, wymiarRodzicielskiego } from '@/domena/kalkulatory/okresy';
+import { parametr } from '@/domena/kalkulatory/slowniki';
 import { stawkaDzienna } from '@/domena/kalkulatory/rachunek';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import type {
@@ -67,13 +70,8 @@ const PRZERWA_LACZENIA_DNI = 30;
 const ZASILEK_PO_USTANIU_DNI_OD_USTANIA = 14;
 const ZASILEK_PO_USTANIU_MIN_DNI = 30;
 const DNI_PRZED_TERMINEM = 42;
-const TERMIN_WNIOSKU_81_5_DNI = 21;
 const MIESIACE_SPLATY_ZADLUZENIA = 6;
 const MIESIACE_PODSTAWY = 12;
-const TYGODNIE_URLOPU_MACIERZYNSKIEGO: Record<LiczbaDzieci, number> = { 1: 20, 2: 31, 3: 33, 4: 35, 5: 37 };
-const TYGODNIE_RODZICIELSKIEGO_MATKI_81_5 = { jedno: 32, wiecej: 34, zaZyciemJedno: 56, zaZyciemWiecej: 58 };
-const TYGODNIE_PO_MARTWYM_URODZENIU = 8;
-const DNI_OJCOWSKIEGO = 14;
 
 const DOMYSLNE = {
   pomniejszenieProcent: 13.71,
@@ -297,7 +295,8 @@ interface StanWeryfikacji {
   wyczekiwanie?: { n: number; od: DataISO; uplyw: DataISO | null; prawoOd: DataISO | null; spelniony: boolean };
 }
 
-function niezdolnoscCiagla(d: DaneSprawy): Okres | null {
+/** Niezdolność do pracy od pierwszego dnia z dalszymi okresami, które ją bezpośrednio kontynuują (ZAS-12). */
+export function niezdolnoscCiagla(d: DaneSprawy): Okres | null {
   const pierwszy = d.zdarzenie.niezdolnosc.wartosc;
   if (pierwszy === null) return null;
   let koniec = pierwszy.do;
@@ -655,6 +654,31 @@ export function weryfikujUbezpieczenieChorobowe(
   };
 }
 
+/** Odpowiedź na pytanie, czy osoba ma ubezpieczenie chorobowe w dniu zdarzenia, z rodzajem i okresem podlegania. */
+export interface UstalenieUbezpieczenia {
+  stan: 'podlega' | 'po-ustaniu' | 'przed-poczatkiem' | 'brak';
+  rodzaj: 'obowiazkowe' | 'dobrowolne' | null;
+  od: DataISO | null;
+  do: DataISO | null;
+}
+
+/** Ustalenie podlegania ubezpieczeniu chorobowemu w dniu zdarzenia (warunki 2 i 5 weryfikacji). */
+export function ustalUbezpieczenie(d: DaneSprawy, dzienZdarzenia: DataISO): UstalenieUbezpieczenia {
+  const rodzaj = d.ubezpieczenieChorobowe.rodzaj.wartosc;
+  const okresy = okresyPodlegania(d);
+  const tytul = d.tytul.rodzaj.wartosc;
+  if (rodzaj === null || rodzaj === 'brak' || okresy.length === 0 || tytul === null || tytul === 'brak-tytulu') {
+    return { stan: 'brak', rodzaj: null, od: null, do: null };
+  }
+  const zawierajacy = okresy.find(
+    (o) => porownajDaty(o.od, dzienZdarzenia) <= 0 && (o.do === undefined || porownajDaty(dzienZdarzenia, o.do) <= 0),
+  );
+  if (zawierajacy !== undefined) return { stan: 'podlega', rodzaj, od: zawierajacy.od, do: zawierajacy.do ?? null };
+  const koniec = koniecOkresow(okresy);
+  const stan = koniec !== null && porownajDaty(dzienZdarzenia, koniec) > 0 ? 'po-ustaniu' : 'przed-poczatkiem';
+  return { stan, rodzaj, od: okresy[0].od, do: koniec };
+}
+
 /** Czy wynik weryfikacji potwierdza prawo do zasiłku macierzyńskiego (akcja Sprawdź wyliczenia). */
 export function czyZasilekMacierzynskiPrzysluguje(w: WynikWeryfikacjiSprawy | undefined): boolean {
   return w?.wyniki.some((r) => r.swiadczenie === 'zasilek-macierzynski' && r.prawo === 'przysluguje') ?? false;
@@ -762,7 +786,10 @@ export function ustalPodstaweZeSprawy(dane: DaneSprawy, katalog: Katalog): Podst
   if (tytul === 'dzialalnosc' && zPoswiadczenia) {
     const najnizsza = sl.najnizszaPodstawaJdg.wartosc;
     const bazowa = pomniejsz(najnizsza, procent);
-    if (pelneMiesiace === 0 || wOknie.length === 0) return wynik(bazowa, P.jdgPrzedPelnymMiesiacem({ najnizsza: formatujKwote(najnizsza) }));
+    if (pelneMiesiace === 0) return wynik(bazowa, P.jdgPrzedPelnymMiesiacem({ najnizsza: formatujKwote(najnizsza) }));
+    // Po pełnym miesiącu ubezpieczenia podstawa wymaga podstaw wymiaru składek z poświadczenia albo zrzutu, więc bez nich
+    // podstawy nie ustalamy (0094) i użytkownik dodaje dokument z kwotami albo wpisuje podstawę.
+    if (wOknie.length === 0) return { kod: '0094' };
     if (pelneMiesiace < MIESIACE_PODSTAWY) {
       // Najniższa podstawa wymiaru składek obowiązująca w każdym pełnym miesiącu ubezpieczenia.
       const najnizszaW = (m: MiesiacISO) => najnizszaWMiesiacu(katalog, m, najnizsza);
@@ -884,11 +911,17 @@ export function daneWejscioweZeSprawy(dane: DaneSprawy): DaneWejscioweKalkulator
 
 // --- Wyliczenie okresów i wypłat sprawy (Okres zasiłku ze sprawy, Wyliczenie wypłat) ----------
 
-function czy81i5(d: DaneSprawy): boolean {
+// Wymiary urlopów i terminy czytamy ze słownika wymiarów i okresów tymi samymi funkcjami co zintegrowany kalkulator
+// (domena/kalkulatory/okresy.ts), więc zmiana w panelu katalogu działa w kalkulatorze i w przykładowych sprawach.
+function terminWniosku815(k: Katalog, dzien: DataISO): number {
+  return parametr(k, 'terminWariantu815', dzien).wartosc;
+}
+
+function czy81i5(d: DaneSprawy, k: Katalog): boolean {
   const porod = dataPorodu(d);
   const zlozono = d.wniosek.dataZlozenia.wartosc;
   if (d.wniosek.oswiadczeniePelnyWymiar.wartosc !== true || porod === null || zlozono === null) return false;
-  return porownajDaty(zlozono, dodajDni(porod, TERMIN_WNIOSKU_81_5_DNI)) <= 0;
+  return porownajDaty(zlozono, dodajDni(porod, terminWniosku815(k, porod))) <= 0;
 }
 
 function okresScenariusza(
@@ -915,13 +948,18 @@ export function wyliczWynikSprawy(
   dokumenty: readonly DokumentSprawy[] = [],
 ): WynikScenariusza {
   const zdarzenie = ustalZdarzenie(dane);
-  const sl = wartosciSlownikow(katalog, dataPorodowa(dane) ?? zdarzenie?.data ?? katalog.dataUruchomienia);
+  const dzienSlownikow = dataPorodowa(dane) ?? zdarzenie?.data ?? katalog.dataUruchomienia;
+  const sl = wartosciSlownikow(katalog, dzienSlownikow);
   const ojciec = czyOjciec(dane);
   const rodzic: OkresScenariusza['rodzic'] = ojciec ? 'drugi-rodzic' : 'matka';
   const minimum = sl.swiadczenieRodzicielskie.wartosc;
-  const wariant815 = czy81i5(dane);
+  const wariant815 = czy81i5(dane, katalog);
   const liczba = (dane.zdarzenie.liczbaDzieci.wartosc ?? 1) as LiczbaDzieci;
   const zaZyciem = dane.dziecko.zaZyciem.wartosc !== null;
+  const tygodnieMacierzynskiego = (n: number) => wymiarMacierzynskiego(n, katalog, dzienSlownikow);
+  // Urlop rodzicielski matki: łączny wymiar pomniejszony o 9 tygodni drugiego rodzica (32, 34, 56 albo 58 tygodni).
+  const tygodnieRodzicielskiegoMatki =
+    wymiarRodzicielskiego(liczba, zaZyciem, katalog, dzienSlownikow) - parametr(katalog, 'nieprzenoszalna', dzienSlownikow).wartosc;
   const porod = dataPorodu(dane);
   const okresyWniosku = okresyZWniosku(dane);
   const okresy: OkresScenariusza[] = [];
@@ -929,21 +967,28 @@ export function wyliczWynikSprawy(
   const W = teksty.ViewSampleCaseVerification.wyliczenie;
 
   const doMacierzynskiego = okresDoWyliczenia(dane, dokumenty);
+  // Wyliczenie wywołujemy, gdy weryfikacja potwierdza prawo do zasiłku macierzyńskiego. Bez okresu urlopu
+  // macierzyńskiego z wniosku matki okres podstawowy zaczyna się w dniu porodu i trwa tyle, ile urlop macierzyński
+  // dla liczby dzieci z katalogu (ta sama funkcja wymiaru co kalkulator), bez urlopu rodzicielskiego.
+  const odPorodu = doMacierzynskiego === undefined && !ojciec ? porod : null;
+  const poczatekMacierzynskiego = doMacierzynskiego?.od ?? odPorodu;
   let koniecMacierzynskiego: DataISO | null = null;
-  if (doMacierzynskiego !== undefined) {
-    let dni = TYGODNIE_URLOPU_MACIERZYNSKIEGO[liczba] * 7;
-    let od = doMacierzynskiego.od;
+  if (poczatekMacierzynskiego !== null) {
+    let dni = tygodnieMacierzynskiego(liczba) * 7;
+    let od = poczatekMacierzynskiego;
     if (dane.zdarzenie.rodzaj.wartosc === 'martwe-urodzenie' && porod !== null) {
       const zywe = Math.max(0, liczba - (dane.zdarzenie.liczbaMartwych.wartosc ?? liczba));
-      dni = zywe > 0 ? TYGODNIE_URLOPU_MACIERZYNSKIEGO[zywe as LiczbaDzieci] * 7 : TYGODNIE_PO_MARTWYM_URODZENIU * 7;
+      dni = zywe > 0 ? tygodnieMacierzynskiego(zywe) * 7 : parametr(katalog, 'urlopPoStracieTygodnie', porod).wartosc * 7;
       od = porod;
       reguly.push({ opis: W.martweUrodzenie({ dni: String(dni) }) });
     } else if (ojciec) {
       const matki = dane.wniosek.okresMatki.wartosc;
       if (matki !== null) dni -= liczbaDniWlacznie(matki);
       reguly.push({ opis: W.ojciec({ dni: String(dni) }) });
+    } else if (odPorodu !== null) {
+      reguly.push({ opis: W.macierzynskiOdPorodu({ od: formatujDate(odPorodu), tygodnie: String(tygodnieMacierzynskiego(liczba)), dni: String(dni) }) });
     } else {
-      reguly.push({ opis: W.macierzynski({ tygodnie: String(TYGODNIE_URLOPU_MACIERZYNSKIEGO[liczba]), dni: String(dni) }) });
+      reguly.push({ opis: W.macierzynski({ tygodnie: String(tygodnieMacierzynskiego(liczba)), dni: String(dni) }) });
     }
     if (dni > 0) {
       const o = okresScenariusza(ojciec ? 'przejety-macierzynski' : 'macierzynski', od, dni, wariant815 ? 81.5 : 100, podstawa.kwota, minimum, rodzic);
@@ -957,7 +1002,8 @@ export function wyliczWynikSprawy(
   if (pobyt !== null && pobyt.dni > 0 && koniecMacierzynskiego !== null) {
     const tydzien = dane.dziecko.tydzienCiazy.wartosc ?? 40;
     const masa = dane.dziecko.masaG.wartosc ?? 3000;
-    const limit = tydzien <= 27 || masa <= 1000 ? 15 : 8;
+    const progi = progiUzupelniajacego(katalog, dzienSlownikow);
+    const limit = tydzien < progi.tydzienCiazy || masa <= progi.masaG ? progi.tygodnieA : progi.tygodniePozostale;
     const tygodnie = Math.min(limit, Math.ceil(pobyt.dni / 7));
     okresy.push(okresScenariusza('uzupelniajacy', dodajDni(koniecMacierzynskiego, 1), tygodnie * 7, 100, podstawa.kwota, minimum, rodzic));
     reguly.push({ opis: W.uzupelniajacy({ dni: String(pobyt.dni), tygodnie: String(tygodnie) }) });
@@ -965,29 +1011,35 @@ export function wyliczWynikSprawy(
 
   for (const o of okresyWniosku) {
     if (o.rodzajUrlopu === 'rodzicielski' && !ojciec) {
-      const tyg = wariant815
-        ? zaZyciem
-          ? liczba > 1 ? TYGODNIE_RODZICIELSKIEGO_MATKI_81_5.zaZyciemWiecej : TYGODNIE_RODZICIELSKIEGO_MATKI_81_5.zaZyciemJedno
-          : liczba > 1 ? TYGODNIE_RODZICIELSKIEGO_MATKI_81_5.wiecej : TYGODNIE_RODZICIELSKIEGO_MATKI_81_5.jedno
-        : null;
+      const tyg = wariant815 ? tygodnieRodzicielskiegoMatki : null;
       const zWniosku = liczbaDniWlacznie(o);
-      const maks = (zaZyciem ? (liczba > 1 ? 58 : 56) : liczba > 1 ? 34 : 32) * 7;
+      const maks = tygodnieRodzicielskiegoMatki * 7;
       const dni = tyg === null ? Math.min(zWniosku, maks) : tyg * 7;
       okresy.push(okresScenariusza('rodzicielski', o.od, dni, wariant815 ? 81.5 : 70, podstawa.kwota, minimum, rodzic));
       reguly.push({ opis: W.rodzicielski({ tygodnie: String(Math.round(dni / 7)) }) });
     } else if (o.rodzajUrlopu === 'ojcowski') {
-      okresy.push(okresScenariusza('ojcowski', o.od, Math.min(DNI_OJCOWSKIEGO, liczbaDniWlacznie(o)), 100, podstawa.kwota, null, rodzic));
+      okresy.push(okresScenariusza('ojcowski', o.od, Math.min(parametr(katalog, 'ojcowskiDni', dzienSlownikow).wartosc, liczbaDniWlacznie(o)), 100, podstawa.kwota, null, rodzic));
     } else if (o.rodzajUrlopu === 'na-warunkach-macierzynskiego') {
       okresy.push(okresScenariusza('na-warunkach-macierzynskiego', o.od, liczbaDniWlacznie(o), 100, podstawa.kwota, minimum, rodzic));
     }
   }
-  if (wariant815) reguly.push({ opis: W.wariant815({ dni: String(TERMIN_WNIOSKU_81_5_DNI) }) });
+  if (wariant815) reguly.push({ opis: W.wariant815({ dni: String(terminWniosku815(katalog, porod ?? dzienSlownikow)) }) });
 
-  const suma = okresy.reduce((a, o) => a + o.zaOkres, 0);
-  const sumy: WynikScenariusza['sumy'] = { razem: suma, [rodzic]: suma };
+  // Harmonogram i sumy liczy ta sama funkcja co zintegrowany kalkulator: wypłaty w miesiącach z podwyższeniem
+  // do kwoty świadczenia rodzicielskiego (urlop ojcowski bez podwyższenia).
+  const harmonogram = harmonogramZPodstaw(
+    okresy.map((o) => ({ ...o, podstawa: podstawa.kwota })),
+    katalog,
+    dzienSlownikow,
+  );
+  const sumy: WynikScenariusza['sumy'] = sumyHarmonogramu(harmonogram);
+  const podwyzszenie = harmonogram.reduce((suma, p) => suma + p.podwyzszenie, 0);
+  if (podwyzszenie > 0) {
+    reguly.push({ opis: W.podwyzszenie({ kwota: formatujKwote(minimum), podwyzszenie: formatujKwote(podwyzszenie) }) });
+  }
   return {
     okresy,
-    harmonogram: [],
+    harmonogram,
     sumy,
     datyPowrotu: {},
     tygodniePrzepadajace: 0,

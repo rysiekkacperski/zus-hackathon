@@ -22,7 +22,7 @@ export const POLA_DOKUMENTU: Readonly<Record<RodzajDokumentuSprawy, readonly Sci
   poswiadczenie: [...OSOBA, 'tytul.rodzaj', 'tytul.od', 'tytul.dataUstania', 'ubezpieczenieChorobowe.rodzaj', 'ubezpieczenieChorobowe.okresy',
     'kwotyMiesieczne', 'zadluzenieJdg'],
   'zrzut-zus': [...OSOBA, 'tytul.rodzaj', 'tytul.od', 'tytul.dataUstania', 'ubezpieczenieChorobowe.rodzaj', 'ubezpieczenieChorobowe.okresy',
-    'swiadczeniaPrzyznane'],
+    'swiadczeniaPrzyznane', 'swiadczeniaOdmowione'],
   'e-zla': [...OSOBA, 'zdarzenie.rodzaj', 'zdarzenie.niezdolnosc'],
   'zaswiadczenie-o-terminie-porodu': [...OSOBA, 'zdarzenie.przewidywanyTermin', 'zdarzenie.liczbaDzieci'],
   'zaswiadczenie-szpitala': [...OSOBA, 'dziecko.tydzienCiazy', 'dziecko.masaG', 'dziecko.pobyt'],

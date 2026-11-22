@@ -107,6 +107,10 @@ export interface ParametryWidokow {
   ViewCatalogList: { zakladka?: 'pozycje' | 'kwoty' | 'wymiary' | 'reguly' | 'dokumenty' };
   ViewCatalogValueEdit: { idWpisu: string };
   ViewCatalogItemAdd: BezParametrow;
+  ViewCatalogItemEdit: { idPozycji: string };
+  ViewCatalogEntryAdd: Zapytanie<'slownik'>;
+  ViewCatalogDocumentEdit: { idDokumentu: string };
+  ViewCatalogDocumentAdd: Zapytanie<'grupa'>;
   ViewCatalogSupportOrganizations:
     | { tryb?: 'lista' }
     | { tryb: 'nowa' }
@@ -115,6 +119,7 @@ export interface ParametryWidokow {
   ViewEzus800Application: BezParametrow;
   ViewEzusActiveParentApplication: BezParametrow;
   ViewEzusApplicationDetails: { idWniosku: string };
+  ViewEzusZas23: Zapytanie<'czesc'>;
   ViewZusEVisit: BezParametrow;
   ViewSimulatedChannel: { kanal: KanalSymulowany };
 }

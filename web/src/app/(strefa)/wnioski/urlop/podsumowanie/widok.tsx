@@ -20,6 +20,7 @@ import {
   wyslijWniosekDoPracodawcy,
 } from '@/dane/magazyn/operacje/wnioski-urlop-wysylka';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
+import { opisZasilkuZaUrlop } from '@/app/(strefa)/wnioski/urlop/_czesci/zasilek-za-urlop';
 import { DokumentDoDruku, drukujDokument } from '@/komponenty/dokument-do-druku';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
@@ -124,6 +125,12 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
     adresCzesciFormularzaUrlopu(idW, czescSekcjiUrlopu(podrodzaj, podrodzaj === 'laczenie-z-praca' ? 'laczenie' : 'oswiadczenie'));
   const hrefWstecz = ekranU34 ?? adresCzesciFormularzaUrlopu(idW, czesciFormularzaUrlopu(podrodzaj).length);
   const nazwaPliku = nazwaPlikuWniosku(podrodzaj);
+  const opisZasilku = opisZasilkuZaUrlop({
+    podrodzaj,
+    daneRodziny: kontekst.rodzina.daneRodziny,
+    rodzic: dane.rodzic,
+    pracodawca: dane.pracodawca,
+  });
 
   function pokazKomunikat(nowy: { kod: KodKomunikatu; ponow?: boolean }) {
     setKomunikat(nowy);
@@ -355,6 +362,11 @@ export function WidokPodsumowaniaWnioskuOUrlop() {
           {ochronaDzis ? (
             <Karta tytul={t.ochronaTytul} bezLinii>
               <p className="m-0">{t.ochronaDzis({ data: formatujDate(ochronaDzis) })}</p>
+            </Karta>
+          ) : null}
+          {opisZasilku ? (
+            <Karta tytul={t.zasilekTytul} bezLinii>
+              <p className="m-0">{opisZasilku}</p>
             </Karta>
           ) : null}
           <Karta tytul={t.poWyslaniuTytul} bezLinii>

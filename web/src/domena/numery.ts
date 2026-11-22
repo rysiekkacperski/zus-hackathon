@@ -2,7 +2,7 @@
 import { czesciDaty, czesciZnacznika } from '@/domena/daty';
 import type { DataISO, ZnacznikCzasu } from '@/domena/typy';
 
-export type PrefiksPotwierdzenia = 'ZAM-DEMO' | 'ZAS53-DEMO' | 'URLOP-DEMO' | 'USC-DEMO' | 'Z15-DEMO';
+export type PrefiksPotwierdzenia = 'ZAM-DEMO' | 'ZAS53-DEMO' | 'URLOP-DEMO' | 'USC-DEMO' | 'Z15-DEMO' | 'ZAS23-DEMO';
 
 function dwieCyfry(n: number): string {
   return String(n).padStart(2, '0');

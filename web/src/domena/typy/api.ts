@@ -1,7 +1,7 @@
 // Żądania i odpowiedzi API serwera (kontrakt, sekcje 10.2 i 5.15).
 // Elementy systemu: Asystent AI, Odczyt danych ZUS.
 import type { AkcjaKanaluAsystenta, IntencjaAsystenta, PropozycjaDzialania } from '@/domena/typy/asystent';
-import type { Etap } from '@/domena/typy/katalog';
+import type { EdycjeKatalogu, Etap, Katalog } from '@/domena/typy/katalog';
 import type { Rola } from '@/domena/typy/konto';
 import type { RodzicSprawy, StatusSprawy } from '@/domena/typy/plan';
 import type { PowiazanieZastepcze, RodzajDokumentuSprawy, SprawaPrzykladowa } from '@/domena/typy/przykladowe-sprawy';
@@ -37,3 +37,5 @@ export interface WynikOdczytuDokumentu { status: 'odczytany' | 'nierozpoznany' |
 export interface BladAsystenta { kod: '0071' | '0006' }                  // 503 bez klucza, przy błędzie modelu albo po 20 s; 400 przy złym żądaniu
 export type BladOdczytuDokumentu = { kod: '0103' | '0104' } | { status: 'niedostepny' }; // 400 albo 503 (0108)
 export interface OdpowiedzZestawowSpraw { sprawy: SprawaPrzykladowa[] }  // GET /api/przykladowe-sprawy/zestawy
+// GET, POST i PUT /api/katalog: edycje Administratora, trwałość zapisu na dysku serwera i opcjonalnie katalog złożony.
+export interface OdpowiedzKatalogu { edycje: EdycjeKatalogu; trwaly: boolean; katalog?: Katalog }

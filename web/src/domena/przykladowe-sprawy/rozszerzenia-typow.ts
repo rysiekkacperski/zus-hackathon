@@ -8,6 +8,13 @@ export type SwiadczenieSprawy = RozstrzygniecieSprawy['swiadczenie'];
 
 export type RodzajZdarzeniaSprawy = 'porod' | 'przewidywany-termin' | 'niezdolnosc' | 'okres-ojca';
 
+/** Świadczenie, którego prawa ZUS odmówił, ze zrzutu z systemu ZUS: rodzaj (kod albo nazwa), dzień i przyczyna odmowy. */
+export interface SwiadczenieOdmowione {
+  rodzaj: string;
+  od?: DataISO;
+  przyczyna?: string;
+}
+
 /** Szczegóły wyniku świadczenia, których nie zawiera typ wspólny. */
 export interface SzczegolWynikuSwiadczenia {
   swiadczenie: SwiadczenieSprawy;
@@ -41,6 +48,8 @@ declare module '@/domena/typy/przykladowe-sprawy' {
   interface DaneSprawy {
     /** Wymiar etatu przy niepełnym etacie jako ułamek licznik/mianownik, na przykład 1/2. */
     wymiarEtatu?: WartoscSprawy<string>;
+    /** Świadczenia, których prawa ZUS odmówił, odczytane ze zrzutu z systemu ZUS. */
+    swiadczeniaOdmowione?: WartoscSprawy<SwiadczenieOdmowione[]>;
   }
 }
 

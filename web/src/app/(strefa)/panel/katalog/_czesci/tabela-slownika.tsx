@@ -10,6 +10,7 @@ import { formatujDate } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
+import { PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
 import { Tabela } from '@/komponenty/tabela';
 import { teksty } from '@/teksty';
@@ -98,6 +99,11 @@ export function TabelaSlownika({ rodzaj, wpisy, katalog, dzis }: TabelaSlownikaP
       <Notatka className="mt-6">
         <p>{ts.notatka}</p>
       </Notatka>
+      <div className="mt-6">
+        <PrzyciskLink href={trasy.ViewCatalogEntryAdd({ slownik: rodzaj })} wariant="drugorzedny" ikona="plus">
+          {t.edycja.dodajWpis}
+        </PrzyciskLink>
+      </div>
     </Karta>
   );
 }

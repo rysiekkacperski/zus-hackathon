@@ -4,7 +4,9 @@
 import { formatujDate, formatujDateICzas } from '@/domena/daty';
 import { tytulSprawy } from '@/domena/katalog/odczyt';
 import { formatujRachunek } from '@/domena/walidacje';
+import { ODNOSNIKI } from '@/dane/katalog/pozycje';
 import { Karta } from '@/komponenty/karta';
+import { KartaWiecejInformacji } from '@/komponenty/karta-wiecej-informacji';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { PrzyciskLink } from '@/komponenty/przycisk';
@@ -71,15 +73,18 @@ function Potwierdzenie({ dane }: { dane: DaneWnioskuZam }) {
   );
 
   const boczna = (
-    <Karta tytul={t.coDalej.tytul} bezLinii>
-      {wniosek.numerRachunku ? (
-        <>
-          <p className="m-0">{t.coDalej.wyplata}</p>
-          <p className="m-0 mb-4 text-body-strong">{formatujRachunek(wniosek.numerRachunku)}</p>
-        </>
-      ) : null}
-      <p className="m-0">{t.coDalej.numer}</p>
-    </Karta>
+    <>
+      <Karta tytul={t.coDalej.tytul} bezLinii>
+        {wniosek.numerRachunku ? (
+          <>
+            <p className="m-0">{t.coDalej.wyplata}</p>
+            <p className="m-0 mb-4 text-body-strong">{formatujRachunek(wniosek.numerRachunku)}</p>
+          </>
+        ) : null}
+        <p className="m-0">{t.coDalej.numer}</p>
+      </Karta>
+      <KartaWiecejInformacji odnosniki={[ODNOSNIKI.zus, ODNOSNIKI.mrpips]} />
+    </>
   );
 
   return (

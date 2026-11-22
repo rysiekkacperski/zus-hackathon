@@ -3,6 +3,7 @@
 import type { Ref } from 'react';
 import { Ikona } from '@/komponenty/ikona';
 import { BladPola, Pole, klasyRamkiPolaWpisu } from '@/komponenty/pole';
+import { formatujLiczbe } from '@/komponenty/format';
 import { Przycisk } from '@/komponenty/przycisk';
 import type { KodKomunikatu } from '@/domena/typy';
 import { teksty } from '@/teksty';
@@ -21,10 +22,11 @@ function opisTypu(typ: string, nazwa: string): string {
   return 'JPG';
 }
 
+/** Rozmiar pliku w bajtach, kilobajtach (zaokrąglony do całości) albo megabajtach (z jednym miejscem po przecinku). */
 function opisRozmiaru(rozmiar: number): string {
-  const mb = Math.max(0.1, Math.round((rozmiar / 1048576) * 10) / 10);
-  const liczba = Number.isInteger(mb) ? String(mb) : mb.toFixed(1).replace('.', ',');
-  return t.rozmiarMb({ liczba });
+  if (rozmiar < 1024) return t.rozmiarB({ liczba: String(Math.max(0, Math.round(rozmiar))) });
+  if (rozmiar < 1048576) return t.rozmiarKb({ liczba: formatujLiczbe(Math.round(rozmiar / 1024)) });
+  return t.rozmiarMb({ liczba: formatujLiczbe(Math.round((rozmiar / 1048576) * 10) / 10) });
 }
 
 export interface PoleZaswiadczeniaProps {

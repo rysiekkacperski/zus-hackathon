@@ -258,6 +258,9 @@ function KartyWyliczen({ wyliczenia, dzien, ptp }: { wyliczenia: WyliczeniaEzla;
             ]}
           />
           <Postep wartosc={okres.wykorzystane} maks={okres.limit ?? 270} etykieta={t.postepOkresu} />
+          {(okres.poDzis ?? 0) > 0 ? (
+            <p className="m-0 text-body">{t.poDzis({ liczba: String(okres.poDzis), data: formatujDate(dzien) })}</p>
+          ) : null}
           <ListaDefinicji
             pozycje={[
               { etykieta: t.poczatekOkresu, wartosc: okres.poczatek ? formatujDate(okres.poczatek) : '-' },

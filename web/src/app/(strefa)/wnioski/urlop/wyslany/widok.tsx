@@ -5,7 +5,9 @@ import { formatujDate } from '@/domena/daty';
 import { formatujProcent } from '@/domena/kwoty';
 import type { ReactNode } from 'react';
 import { komunikatWyslania, terminOdmowyLaczenia } from '@/domena/wnioski/wysylka-do-pracodawcy';
+import { ODNOSNIKI } from '@/dane/katalog/pozycje';
 import { Karta } from '@/komponenty/karta';
+import { KartaWiecejInformacji } from '@/komponenty/karta-wiecej-informacji';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { PrzyciskLink } from '@/komponenty/przycisk';
@@ -13,6 +15,7 @@ import { trasy } from '@/komponenty/rama/trasy';
 import { StanPusty } from '@/komponenty/stan-pusty';
 import { teksty } from '@/teksty';
 import { DaneNaTle, useKreatorUrlopu } from '../_czesci/kreator';
+import { opisZasilkuZaUrlop } from '../_czesci/zasilek-za-urlop';
 import { pozycjeOkresuWychowawczego, pozycjeOswiadczenWychowawczego } from '../_czesci/pozycje-wychowawczego';
 
 const t = teksty.ViewLeaveRequestSent;
@@ -31,6 +34,12 @@ export function WidokWyslanegoWnioskuOUrlop() {
     );
   }
   const kod = komunikatWyslania(wniosek);
+  const opisZasilku = opisZasilkuZaUrlop({
+    podrodzaj: wniosek.podrodzaj ?? 'macierzynski-z-rodzicielskim',
+    daneRodziny: stan.kontekst.rodzina.daneRodziny,
+    rodzic: dane.rodzic,
+    pracodawca: dane.pracodawca,
+  });
   const data = formatujDate(wniosek.dataZlozenia);
   const ochrona = wniosek.dataPoczatkuOchrony ? formatujDate(wniosek.dataPoczatkuOchrony) : data;
   const komunikat =
@@ -115,12 +124,14 @@ export function WidokWyslanegoWnioskuOUrlop() {
                   ? t.coDalejLaczenie({ data: formatujDate(terminOdmowyLaczenia(wniosek.dataZlozenia)) })
                   : t.coDalej}
               </p>
+              {opisZasilku ? <p className="m-0 mt-4">{opisZasilku}</p> : null}
             </Karta>
             {kod === '0199' ? (
               <Karta tytul={t.dlaczegoPozniejTytul} bezLinii>
                 <p className="m-0">{wniosek.wychowawczy ? t.dlaczegoPozniejWychowawczy : t.dlaczegoPozniej}</p>
               </Karta>
             ) : null}
+            <KartaWiecejInformacji odnosniki={[ODNOSNIKI.zus, ODNOSNIKI.mrpips, ODNOSNIKI.pip]} />
           </aside>
         </div>
       </div>

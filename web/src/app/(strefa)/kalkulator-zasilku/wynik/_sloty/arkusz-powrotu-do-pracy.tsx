@@ -6,8 +6,12 @@
 import { useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import {
+  czesciWyniku,
+  dataZdarzenia,
   koniecCzesci,
   koniecMacierzynskiego,
+  kontekstPodzialu,
+  limityUrlopow,
   walidujDatePowrotu,
   wymiarRodzicielskiego,
   zakresPowrotu,
@@ -22,10 +26,10 @@ import { PoleDaty } from '@/komponenty/pole-tekstowe';
 import { Przycisk } from '@/komponenty/przycisk';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
-import { wyliczScenariusz } from '@/domena/kalkulatory';
 import type { CzescUrlopuRodzicielskiego, ParametryScenariusza, RodzicWRodzinie } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA } from '../../_czesci/arkusz';
+import { useScenariuszApi } from '../../_czesci/wyliczenie-api';
 import type { PropsArkuszaWyniku } from './typy';
 
 const t = teksty.SheetCalcReturnToWork;
@@ -46,17 +50,29 @@ export function ArkuszPowrotuDoPracy(props: PropsArkuszaWyniku) {
   return <TrescArkuszaPowrotu {...props} />;
 }
 
-function TrescArkuszaPowrotu({ daneWejsciowe: d, parametry: p, podstawy, wynik, onZmianaParametrow, onZamknij }: PropsArkuszaWyniku) {
-  const nazwy = useNazwyRodzicow();
+function TrescArkuszaPowrotu({ daneWejsciowe: d, parametry: p, podstawyApi, wynik, onZmianaParametrow, onZamknij }: PropsArkuszaWyniku) {
+  const nazwy = useNazwyRodzicow(d.zdarzenie.wartosc === 'przyjecie');
   const katalog = useKatalog();
   const dzis = useDzis();
   const adres = useSearchParams();
   const rodzic: RodzicWRodzinie = adres.get('rodzic') === 'drugi-rodzic' ? 'drugi-rodzic' : 'matka';
   const drugi: RodzicWRodzinie = rodzic === 'matka' ? 'drugi-rodzic' : 'matka';
-  const wymiar = wymiarRodzicielskiego(d);
+  // Wymiar z układu silnika, także 38 albo 62 tygodnie po przyjęciu dziecka.
+  const wymiar = kontekstPodzialu(d, p, katalog)?.wymiar ?? wymiarRodzicielskiego(d, katalog);
+  // Części, które liczy wynik (zapisane albo domyślne silnika), więc zmiana daty powrotu jednego rodzica zostawia
+  // części drugiego rodzica także przed zapisaniem podziału urlopów.
+  const czesciWyn = useMemo(() => czesciWyniku(d, p, katalog), [d, p, katalog]);
   const zakres = useMemo(
-    () => zakresPowrotu(p.czesciRodzicielskiego, rodzic, wymiar, wynik, koniecMacierzynskiego(d, p, wynik)),
-    [p, rodzic, wymiar, wynik, d],
+    () =>
+      zakresPowrotu(
+        czesciWyn,
+        rodzic,
+        wymiar,
+        wynik,
+        koniecMacierzynskiego(d, p, wynik, katalog),
+        limityUrlopow(katalog, dataZdarzenia(d)).nieprzenoszalne,
+      ),
+    [p, rodzic, wymiar, wynik, d, katalog, czesciWyn],
   );
   const obecnaData = wynik.datyPowrotu[rodzic] ?? p.datyPowrotu[rodzic];
   const [tekst, ustawTekst] = useState(obecnaData ? formatujDate(obecnaData) : '');
@@ -75,21 +91,23 @@ function TrescArkuszaPowrotu({ daneWejsciowe: d, parametry: p, podstawy, wynik, 
   const { zmiana, nowe } = useMemo(() => {
     const ocenaPola = zakres && tekst.trim() !== '' ? walidujDatePowrotu(tekst, zakres) : null;
     if (!zakres || !ocenaPola || !('data' in ocenaPola)) return { zmiana: null, nowe: null };
-    const wynikZmiany = zmienPowrot(p.czesciRodzicielskiego, rodzic, ocenaPola.data, zakres);
+    const wynikZmiany = zmienPowrot(czesciWyn, rodzic, ocenaPola.data, zakres);
     const parametry: ParametryScenariusza = {
       ...p,
       czesciRodzicielskiego: wynikZmiany.czesci,
       datyPowrotu: { ...p.datyPowrotu, [rodzic]: wynikZmiany.dataPowrotu },
     };
     return { zmiana: wynikZmiany, nowe: parametry };
-  }, [zakres, tekst, p, rodzic]);
+  }, [zakres, tekst, p, rodzic, czesciWyn]);
 
-  const sumy = useMemo(() => {
-    if (!nowe) return null;
-    const w81 = wyliczScenariusz(d, podstawy, { ...nowe, wariant: '81-5' }, katalog, dzis);
-    const w100 = wyliczScenariusz(d, podstawy, { ...nowe, wariant: '100-70' }, katalog, dzis);
-    return { '81-5': w81.sumy[rodzic] ?? 0, '100-70': w100.sumy[rodzic] ?? 0 };
-  }, [nowe, d, podstawy, katalog, dzis, rodzic]);
+  // Sumy obu wariantów po zmianie daty powrotu liczy serwer (POST /api/v1/kalkulator/zasilek-macierzynski) z opóźnieniem
+  // po wpisaniu daty; do odpowiedzi arkusz pokazuje sumy bez porównania.
+  const w81 = useScenariuszApi(nowe ? { dane: d, podstawy: podstawyApi, parametry: { ...nowe, wariant: '81-5' }, dzis } : null, { opoznienieMs: 300 });
+  const w100 = useScenariuszApi(nowe ? { dane: d, podstawy: podstawyApi, parametry: { ...nowe, wariant: '100-70' }, dzis } : null, { opoznienieMs: 300 });
+  const sumy =
+    nowe && w81.aktualne && w100.aktualne && w81.wartosc && w100.wartosc
+      ? { '81-5': w81.wartosc.wynik.sumy[rodzic] ?? 0, '100-70': w100.wartosc.wynik.sumy[rodzic] ?? 0 }
+      : null;
 
   const pokaz0246 =
     zmiana !== null &&
@@ -108,7 +126,7 @@ function TrescArkuszaPowrotu({ daneWejsciowe: d, parametry: p, podstawy, wynik, 
 
   const kto = nazwy[rodzic];
   const ktoDrugi = nazwy[drugi];
-  const czesciDrugiego = p.czesciRodzicielskiego.filter((c) => c.rodzic === drugi);
+  const czesciDrugiego = czesciWyn.filter((c) => c.rodzic === drugi);
   const czesciRodzica = zmiana ? zmiana.czesci.filter((c) => c.rodzic === rodzic) : [];
   const dataPowrotuDrugiego = wynik.datyPowrotu[drugi];
 

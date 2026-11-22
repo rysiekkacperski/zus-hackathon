@@ -40,7 +40,8 @@ export type TrybWgraniaDokumentu = 'nowa' | 'dodaj';
 /** Wynik udanego wgrania: komunikaty dla ekranu ViewSampleCaseData (0107, 0255, 0181, 0225). */
 export interface WynikWgrania { komunikaty: KodKomunikatu[] }
 
-const LIMIT_ODCZYTU_MS = 30_000;
+// Serwer kończy odczyt modelem po 30 s i odpowiada wtedy wynikiem dokumentu przykładowego albo 503, więc klient czeka dłużej.
+const LIMIT_ODCZYTU_MS = 35_000;
 const CZAS_PRZECHOWANIA_PLIKU_MINUTY = 24 * 60;
 
 let zestawyZus: SprawaPrzykladowa[] = [];

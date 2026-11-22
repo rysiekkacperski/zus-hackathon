@@ -17,7 +17,7 @@ export function nazwaKanalu(kanal: KanalZewnetrzny): string {
 
 function instytucjaZasilkuMacierzynskiego(dokumenty: DokumentyIAdresat): WartoscKafelka {
   const p = t.instytucjaPlatnika;
-  if (dokumenty.typ === 'platnik-nieustalony') {
+  if (dokumenty.typ === 'platnik-nieustalony' || dokumenty.typ === 'warianty-platnika') {
     return { etykieta: t.instytucja, wartosc: p.nieustalony, podpis: p.nieustalonyPodpis };
   }
   if (dokumenty.typ === 'lista' && dokumenty.platnik === 'platnik-skladek') {
@@ -90,6 +90,18 @@ export function kafelkiKanalu(w: {
       }
       return [{ etykieta: t.instytucjaIKanal, wartosc: w.pozycja.instytucjaIKanal }];
   }
+}
+
+/**
+ * Zdanie akapitu Najważniejsze informacje z instytucją i kanałem z kafelków kanału, czyli właściwymi dla formy
+ * zatrudnienia rodzica sprawy.
+ */
+export function zdanieKanalu(kafelki: readonly WartoscKafelka[]): string | null {
+  const instytucja = kafelki.find((k) => k.etykieta === t.instytucja)?.wartosc;
+  const kanal = kafelki.find((k) => k.etykieta === t.kanal)?.wartosc;
+  if (instytucja !== undefined && kanal !== undefined) return t.zdanieInstytucjiIKanalu({ instytucja, kanal });
+  const lacznie = kafelki.find((k) => k.etykieta === t.instytucjaIKanal)?.wartosc;
+  return lacznie !== undefined ? t.zdanieInstytucjiIKanaluLacznie({ wartosc: lacznie }) : null;
 }
 
 /** Notatka pod akcjami karty Najważniejsze informacje. */

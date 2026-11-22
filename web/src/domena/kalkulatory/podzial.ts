@@ -3,7 +3,7 @@
 // Reguły R1–R12 z analizy epiku 3.10.2: wymiar, limit na rodzica, prawo drugiego rodzica, wartości startowe,
 // tygodnie przepadające, stawki i szacunkowe wypłaty.
 import { dodajDni, dodajLata, dodajMiesiace } from '@/domena/daty';
-import { minimalnaPodstawaPracownika } from '@/domena/kalkulatory/podstawa';
+import { podstawaWDniuZasilku } from '@/domena/kalkulatory/podstawa';
 import {
   kwotaSwiadczeniaRodzicielskiego,
   stawkiZasilku,
@@ -81,9 +81,9 @@ export function stawkaDzienna(podstawa: Grosze, stawka: Procent): Grosze {
   return Math.round((Math.round(podstawa / 30) * Math.round(stawka * 10)) / 1000);
 }
 
-/** Podstawa w dniu: pracownik na pełnym etacie ma co najmniej minimalną podstawę obowiązującą w tym dniu. */
+/** Podstawa w dniu: pracownik na pełnym etacie ma co najmniej minimalną podstawę obowiązującą w tym dniu (podstawa.ts). */
 function podstawaWDniu(p: PodstawaWymiaru, dzien: DataISO, k: Katalog): Grosze {
-  return p.pelnyEtat === true ? Math.max(p.kwota, minimalnaPodstawaPracownika(k, dzien)) : p.kwota;
+  return podstawaWDniuZasilku(p, k, dzien);
 }
 
 /** Części okresu [od, od + dni − 1] z podstawą obowiązującą w każdej części (zmiana minimalnej podstawy od 1. dnia miesiąca). */
@@ -148,7 +148,9 @@ export function wyliczPodzial(w: WejsciePodzialu): WynikPodzialu {
   const poczatekMatki = dodajDni(w.dzien, tygodnieUrlopuMacierzynskiego(w.liczbaDzieci, w.katalog, w.dzien) * 7);
   const poczatekDrugiego = dodajDni(poczatekMatki, M * 7);
   const pierwszeUrodziny = dodajLata(w.dzien, 1);
-  const ponadPrzedUrodzinami = poczatekDrugiego < pierwszeUrodziny;
+  // Stawka 81,5% za tygodnie drugiego rodzica ponad 9, gdy co najmniej jeden dzień urlopu rodzicielskiego ze stawką 81,5%,
+  // matki albo drugiego rodzica, przypada przed pierwszymi urodzinami dziecka (3.10.2.1.2, ta sama reguła w scenariusz.ts).
+  const ponadPrzedUrodzinami = (M > 0 && poczatekMatki < pierwszeUrodziny) || poczatekDrugiego < pierwszeUrodziny;
   const stawkaPonad = w.wariantMatki === '81-5' && ponadPrzedUrodzinami ? stawki.s815 : stawki.s70;
   const wiersze: WierszWyplatyPodzialu[] = [];
   const wynik: WynikPodzialu = {

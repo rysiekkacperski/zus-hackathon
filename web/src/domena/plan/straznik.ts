@@ -103,7 +103,10 @@ function czyDzienWolny(dzien: DataISO): boolean {
 
 /**
  * Termin opłacenia składek za miesiąc: 20. dzień następnego miesiąca, a gdy przypada w sobotę albo w dniu
- * ustawowo wolnym od pracy, najbliższy następny dzień roboczy (historyjka 3.6.1.3.2).
+ * ustawowo wolnym od pracy, najbliższy następny dzień roboczy (historyjka 3.6.1.3.2). Podstawa: art. 47 ust. 1
+ * pkt 4 ustawy o systemie ubezpieczeń społecznych w związku z jej art. 31 i art. 12 § 5 Ordynacji podatkowej.
+ * Dni ustawowo wolne od pracy według ustawy o dniach wolnych od pracy, z Wigilią od 2025 r. (Dz.U. 2024 poz. 1965).
+ * Tę samą funkcję czyta kalendarz terminów (domena/terminy/wylicz-terminy.ts).
  */
 export function terminOplaceniaSkladek(miesiac: MiesiacISO): DataISO {
   let termin: DataISO = `${dodajMiesiaceDoMiesiaca(miesiac, 1)}-20`;

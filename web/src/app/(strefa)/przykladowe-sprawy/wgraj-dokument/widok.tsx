@@ -1,6 +1,7 @@
 'use client';
 
 // ViewSampleCaseUpload (3.4.3.1.2): wybór pliku od razu rozpoczyna wgranie i odczyt danych (wzory P13-03, P13-04, P13-05).
+// Karta dokumentów przykładowych wgrywa plik z public/przyklady bez zapisywania go na komputerze.
 // Format i wielkość pliku sprawdza pole (0103, 0104), a rozpoznanie i odczyt kończą się komunikatem strony (0105, 0106, 0108).
 import { useSearchParams } from 'next/navigation';
 import { useRef, useState, type ChangeEvent } from 'react';
@@ -19,7 +20,9 @@ import { ustawKomunikatPoPrzejsciu } from '@/dane/magazyn/komunikaty-po-przejsci
 import { wgrajDokument, type TrybWgraniaDokumentu } from '@/dane/magazyn/operacje/przykladowe-sprawy';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import type { KodKomunikatu } from '@/domena/typy';
+import { adresDokumentuPrzykladowego, type DokumentPrzykladowy } from '@/dane/przykladowe-sprawy/dokumenty-przykladowe';
 import { teksty } from '@/teksty';
+import { KartaDokumentowPrzykladowych } from '../_czesci/dokumenty-przykladowe';
 
 const t = teksty.ViewSampleCaseUpload;
 const ID_PLIKU = 'plik';
@@ -37,10 +40,36 @@ export function WidokWgraniaDokumentu() {
   const { zajety: trwa, ustawZajety: setTrwa, przejdz } = useNawigacjaZLadowaniem();
   const [bladPola, setBladPola] = useState<KodKomunikatu | null>(null);
   const [bladStrony, setBladStrony] = useState<KodKomunikatu | null>(null);
+  const [wgrywanyPrzykladowy, setWgrywanyPrzykladowy] = useState<string | null>(null);
 
   async function wybierzPlik(e: ChangeEvent<HTMLInputElement>) {
     const wybrany = e.target.files?.[0] ?? null;
     if (wybrany === null || trwa) return;
+    await wgraj(wybrany);
+  }
+
+  // Dokument przykładowy pobieramy z folderu public/przyklady i wgrywamy jak plik wybrany z komputera.
+  async function wgrajPrzykladowy(dokument: DokumentPrzykladowy) {
+    if (trwa) return;
+    setWgrywanyPrzykladowy(dokument.plik);
+    setTrwa(true);
+    let wybrany: File;
+    try {
+      const odpowiedz = await fetch(adresDokumentuPrzykladowego(dokument.plik));
+      if (!odpowiedz.ok) throw new Error(String(odpowiedz.status));
+      wybrany = new File([await odpowiedz.blob()], dokument.plik, { type: dokument.typ });
+    } catch {
+      setTrwa(false);
+      setWgrywanyPrzykladowy(null);
+      setBladStrony('0108');
+      return;
+    }
+    setTrwa(false);
+    if (!(await wgraj(wybrany))) setWgrywanyPrzykladowy(null);
+  }
+
+  /** Wgranie i odczyt pliku; true, gdy odczyt się udał i trwa przejście do danych sprawy. */
+  async function wgraj(wybrany: File): Promise<boolean> {
     setPlik(wybrany);
     setBladPola(null);
     setBladStrony(null);
@@ -51,7 +80,7 @@ export function WidokWgraniaDokumentu() {
       if (pole.current) pole.current.value = '';
       // Odczyt trwa na ekranie do pokazania danych sprawy.
       przejdz(trasy.ViewSampleCaseData());
-      return;
+      return true;
     }
     setTrwa(false);
     if (wynik.bledyPol?.plik) {
@@ -61,6 +90,7 @@ export function WidokWgraniaDokumentu() {
       setBladStrony(wynik.kod);
     }
     if (pole.current) pole.current.value = '';
+    return false;
   }
 
   const idStanu = `${ID_PLIKU}-stan`;
@@ -110,6 +140,7 @@ export function WidokWgraniaDokumentu() {
         </div>
         <Notatka className="mt-6">{t.kartaPliku.notatka}</Notatka>
       </Karta>
+      <KartaDokumentowPrzykladowych onWgraj={wgrajPrzykladowy} wgrywany={wgrywanyPrzykladowy} zablokowane={trwa} tryb={tryb} />
     </Stos>
   );
 

@@ -3,13 +3,14 @@
 // Kolejność: zdarzenie i prawo rodziców, urlop macierzyński albo na warunkach urlopu macierzyńskiego (z przejęciem),
 // uzupełniający urlop macierzyński, urlop ojcowski, części urlopu rodzicielskiego (domyślne, daty powrotu, łączenie z pracą),
 // stawki wariantu, kwoty, harmonogram z podwyższeniem i wyrównaniem, daty powrotu, tygodnie i uprawnienia.
-import { dodajDni, dodajLata, formatujDate, maxData, minData, miesiacZDaty, porownajDaty, roznicaDni } from '@/domena/daty';
+import { dodajDni, dodajLata, dodajMiesiace, formatujDate, maxData, minData, miesiacZDaty, porownajDaty, roznicaDni } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
 import { harmonogramZPodstaw, sumyHarmonogramu, type OkresZPodstawa, type WyrownanieDoStu } from '@/domena/kalkulatory/harmonogram';
 import {
   czyZgonPoOsmiuTygodniach,
   liczbaDzieciWZakresie,
   okresZasilkuPoStracie,
+  progiUzupelniajacego,
   ukladPrzyjecia,
   uzupelniajacyUrlop,
   wydluzeniePrzyLaczeniu,
@@ -20,6 +21,7 @@ import {
 import { koniecCzesci, uprawnieniaPoPowrocie, zastosujDatePowrotu } from '@/domena/kalkulatory/powrot';
 import { prawoZFormy, ustalPrawoDoZasilku } from '@/domena/kalkulatory/prawo';
 import { kwotaMiesieczna, kwotaZaDni, stawkaDzienna, stawkaDziennaLaczenia } from '@/domena/kalkulatory/rachunek';
+import { podstawaPrzedMinimum, podstawyWOkresie } from '@/domena/kalkulatory/podstawa';
 import { RejestrRegul } from '@/domena/kalkulatory/slowniki';
 import type {
   CzescUrlopuRodzicielskiego,
@@ -30,6 +32,7 @@ import type {
   IdPozycji,
   Katalog,
   KodKomunikatu,
+  LaczenieZPraca,
   OkresScenariusza,
   ParametryScenariusza,
   PodstawaWymiaru,
@@ -73,11 +76,50 @@ export interface UkladScenariusza {
   koniecWykorzystania: DataISO;
   /** Ostatni dzień urlopu ojcowskiego. */
   koniecOjcowskiego: DataISO;
-  przyjecie?: { wiek: number; ostatniDzienPrzedWiekiem: DataISO; poWiekuGranicznym: boolean; przysposobienie: boolean };
+  przyjecie?: {
+    wiek: number;
+    ostatniDzienPrzedWiekiem: DataISO;
+    poWiekuGranicznym: boolean;
+    przysposobienie: boolean;
+    liczbaWliczonych: number;
+    liczbaWszystkich: number;
+    zmianaWymiaru?: { data: DataISO; wiek: number; wymiar: number; wymiarPrzed: number };
+  };
   uzupelniajacy?: { rodzic: RodzicWRodzinie; od: DataISO; do: DataISO };
+  /** Od 37. tygodnia ciąży pobyt dziecka w szpitalu poza oknem od 5. do 28. dnia życia albo krótszy niż 2 dni. */
+  uzupelniajacyPozaOknem?: boolean;
+  /** Pierwszy dzień, od którego drugi rodzic może zacząć urlop ojcowski. */
+  poczatekOjcowskiego: DataISO;
   ojcowski: { od: DataISO; do: DataISO }[];
   domyslneCzesci: CzescUrlopuRodzicielskiego[];
+  /** Najwięcej części urlopu rodzicielskiego (5). */
+  maksCzesci: number;
   brakDanych?: KodKomunikatu;
+}
+
+/** Najwcześniejszy pierwszy dzień części urlopu rodzicielskiego rodzica, tak jak w układzie domyślnym. */
+export function najwczesniejszaCzesc(u: UkladScenariusza, rodzic: RodzicWRodzinie): DataISO {
+  if (rodzic === 'matka' || u.prawo.matka) {
+    return rodzic === 'drugi-rodzic' && u.drugiRodzicOd !== undefined ? maxData(u.drugiRodzicOd, u.poczatekRodzicielskiego) : u.poczatekRodzicielskiego;
+  }
+  // Rodzic bez matki z prawem do zasiłku zaczyna urlop rodzicielski po urlopie ojcowskim albo od dnia zdarzenia.
+  return u.drugiRodzicOd ?? (u.zdarzenie === 'przyjecie' ? u.poczatekRodzicielskiego : u.dataZdarzenia);
+}
+
+/** Urlop ojcowski: 14 dni jednorazowo albo w 2 częściach po 7 dni, przycięty do 7 dni, gdy 14 dni wykracza poza okres. */
+function okresyOjcowskiego(p: ParametryScenariusza, min: DataISO, koniec: DataISO, dniOjcowskiego: number): { od: DataISO; do: DataISO }[] {
+  const wynik: { od: DataISO; do: DataISO }[] = [];
+  if (p.ojcowski.wymiar === 'brak') return wynik;
+  const czesci = p.ojcowski.czesci.filter((c) => c !== '').length > 0 ? p.ojcowski.czesci.filter((c) => c !== '') : [min];
+  if (p.ojcowski.wymiar === '7-dni') {
+    wynik.push({ od: czesci[0], do: dodajDni(czesci[0], 6) });
+  } else if (czesci.length >= 2) {
+    for (const c of czesci.slice(0, 2)) wynik.push({ od: c, do: dodajDni(c, dniOjcowskiego / 2 - 1) });
+  } else {
+    const pelny = dodajDni(czesci[0], dniOjcowskiego - 1);
+    wynik.push({ od: czesci[0], do: porownajDaty(pelny, koniec) <= 0 ? pelny : dodajDni(czesci[0], dniOjcowskiego / 2 - 1) });
+  }
+  return wynik;
 }
 
 function pustyWynik(komunikaty: Komunikat[] = []): WynikScenariusza {
@@ -156,12 +198,15 @@ export function ukladScenariusza(
   const koniecWykorzystania = `${Number(data.slice(0, 4)) + r.wez('wykorzystanieRodzicielskiego')}-12-31`;
   const koniecOjcowskiego = dodajDni(dodajLata(data, 1), -1);
 
+  const maksCzesci = r.wez('liczbaCzesci');
+
   if (zdarzenie === 'przyjecie') {
     const pr = d.przyjecie!.wartosc;
     const u = ukladPrzyjecia({
       forma: pr.forma,
       dataPrzyjecia: pr.dataPrzyjecia,
       dataUrodzeniaDziecka: pr.dataUrodzeniaDziecka,
+      ...(pr.datyUrodzeniaDzieci !== undefined ? { datyUrodzeniaDzieci: pr.datyUrodzeniaDzieci } : {}),
       odroczenie: pr.odroczenie,
       liczbaDzieci: liczbaWszystkich,
       zaZyciem,
@@ -172,9 +217,17 @@ export function ukladScenariusza(
     if (u.rodzaj !== 'uklad') return { brakDanych: u.kod };
     const poczatekRodzicielskiego = dodajDni(u.naWarunkach.do, 1);
     const L = u.wymiarRodzicielskiego;
+    const przysposobienie = pr.forma === 'przysposobienie';
+    // Urlop ojcowski przy przysposobieniu: w ciągu 12 miesięcy od dnia uprawomocnienia postanowienia o przysposobieniu
+    // i najpóźniej w dniu przed ukończeniem przez dziecko 14 lat (art. 182^3 § 1 pkt 2 Kodeksu pracy). Bez daty
+    // uprawomocnienia kalkulator liczy 12 miesięcy od dnia przyjęcia dziecka.
+    const koniecOjcowskiegoPrzyjecia = minData(
+      dodajDni(dodajMiesiace(pr.dataUprawomocnienia ?? pr.dataPrzyjecia, r.wez('ojcowskiMiesiace')), -1),
+      dodajDni(dodajLata(u.dataUrodzeniaNajmlodszego, r.wez('wiekPrzysposobienie')), -1),
+    );
     const ojcowski =
-      pr.forma === 'przysposobienie' && prawoDrugiego
-        ? [{ od: p.ojcowski.czesci[0] ?? pr.dataPrzyjecia, do: dodajDni(p.ojcowski.czesci[0] ?? pr.dataPrzyjecia, r.wez('ojcowskiDni') - 1) }]
+      przysposobienie && prawoDrugiego
+        ? okresyOjcowskiego(p, pr.dataPrzyjecia, koniecOjcowskiegoPrzyjecia, r.wez('ojcowskiDni'))
         : [];
     const domyslneCzesci: CzescUrlopuRodzicielskiego[] = [];
     if (prawoMatki) {
@@ -190,18 +243,28 @@ export function ukladScenariusza(
       dataZdarzenia: data,
       prawo: { matka: prawoMatki, 'drugi-rodzic': prawoDrugiego },
       formy,
-      liczbaDzieci: liczbaWszystkich,
+      liczbaDzieci: u.liczbaWliczonych,
       strataBezDzieci: false,
-      wymiarMacierzynskiego: wymiarNaWarunkach(liczbaWszystkich, katalog, data, r),
+      wymiarMacierzynskiego: wymiarNaWarunkach(u.liczbaWliczonych, katalog, data, r),
       wymiarRodzicielskiego: L,
       nieprzenoszalna,
       macierzynski: u.naWarunkach,
       poczatekRodzicielskiego,
-      koniecWykorzystania: u.poWiekuGranicznym ? '9999-12-31' : u.ostatniDzienPrzedWiekiem,
-      koniecOjcowskiego,
-      przyjecie: { wiek: u.wiek, ostatniDzienPrzedWiekiem: u.ostatniDzienPrzedWiekiem, poWiekuGranicznym: u.poWiekuGranicznym, przysposobienie: pr.forma === 'przysposobienie' },
+      koniecWykorzystania: u.koniecRodzicielskiego,
+      koniecOjcowskiego: koniecOjcowskiegoPrzyjecia,
+      przyjecie: {
+        wiek: u.wiek,
+        ostatniDzienPrzedWiekiem: u.ostatniDzienPrzedWiekiem,
+        poWiekuGranicznym: u.poWiekuGranicznym,
+        przysposobienie,
+        liczbaWliczonych: u.liczbaWliczonych,
+        liczbaWszystkich: u.liczbaWszystkich,
+        ...(u.zmianaWymiaru !== undefined ? { zmianaWymiaru: u.zmianaWymiaru } : {}),
+      },
+      poczatekOjcowskiego: pr.dataPrzyjecia,
       ojcowski,
       domyslneCzesci,
+      maksCzesci,
     };
   }
 
@@ -220,9 +283,15 @@ export function ukladScenariusza(
   const macierzynski = { od, do: koniecMac };
 
   let uzupelniajacy: UkladScenariusza['uzupelniajacy'];
+  let uzupelniajacyPozaOknem = false;
   if (zdarzenie === 'porod' && d.wczesniactwo !== undefined && !strataBezDzieci) {
     const w = d.wczesniactwo.wartosc;
-    const tygodnie = uzupelniajacyUrlop(w.tydzienCiazy, w.masaG, w.dniPobytu).tygodnie;
+    const wynikU = uzupelniajacyUrlop(w.tydzienCiazy, w.masaG, w.dniPobytu, {
+      ...(w.pierwszyDzienPobytu !== undefined ? { pierwszyDzienPobytu: w.pierwszyDzienPobytu } : {}),
+      progi: progiUzupelniajacego(katalog, data),
+    });
+    if (wynikU.pozaOknemPobytu) uzupelniajacyPozaOknem = true;
+    const tygodnie = wynikU.tygodnie;
     const kandydat = p.rodzicUzupelniajacego;
     const rodzic: RodzicWRodzinie | null =
       kandydat === 'drugi-rodzic' && prawoDrugiegoWDniu ? 'drugi-rodzic' : prawoMatki ? 'matka' : prawoDrugiegoWDniu ? 'drugi-rodzic' : null;
@@ -234,20 +303,8 @@ export function ukladScenariusza(
   }
   const poczatekRodzicielskiego = dodajDni(uzupelniajacy?.do ?? koniecMac, 1);
 
-  const ojcowski: { od: DataISO; do: DataISO }[] = [];
-  if (prawoDrugiego && !strataBezDzieci && p.ojcowski.wymiar !== 'brak') {
-    const dniOjcowskiego = r.wez('ojcowskiDni');
-    const min = drugiRodzicOd ?? data;
-    const czesci = p.ojcowski.czesci.length > 0 ? p.ojcowski.czesci : [min];
-    if (p.ojcowski.wymiar === '7-dni') {
-      ojcowski.push({ od: czesci[0], do: dodajDni(czesci[0], 6) });
-    } else if (czesci.length >= 2) {
-      for (const c of czesci.slice(0, 2)) ojcowski.push({ od: c, do: dodajDni(c, dniOjcowskiego / 2 - 1) });
-    } else {
-      const pelny = dodajDni(czesci[0], dniOjcowskiego - 1);
-      ojcowski.push({ od: czesci[0], do: porownajDaty(pelny, koniecOjcowskiego) <= 0 ? pelny : dodajDni(czesci[0], dniOjcowskiego / 2 - 1) });
-    }
-  }
+  const ojcowski =
+    prawoDrugiego && !strataBezDzieci ? okresyOjcowskiego(p, drugiRodzicOd ?? data, koniecOjcowskiego, r.wez('ojcowskiDni')) : [];
 
   const domyslneCzesci: CzescUrlopuRodzicielskiego[] = [];
   if (!strataBezDzieci) {
@@ -279,8 +336,11 @@ export function ukladScenariusza(
     koniecWykorzystania,
     koniecOjcowskiego,
     ...(uzupelniajacy !== undefined ? { uzupelniajacy } : {}),
+    ...(uzupelniajacyPozaOknem ? { uzupelniajacyPozaOknem } : {}),
+    poczatekOjcowskiego: drugiRodzicOd ?? data,
     ojcowski,
     domyslneCzesci,
+    maksCzesci,
   };
 }
 
@@ -288,6 +348,11 @@ export function ukladScenariusza(
 export function maksTygodniRodzica(u: UkladScenariusza, czesci: CzescUrlopuRodzicielskiego[], rodzic: RodzicWRodzinie): number {
   const drugiego = czesci.filter((c) => c.rodzic !== rodzic).reduce((s, c) => s + c.tygodnie, 0);
   return Math.max(0, Math.min(u.wymiarRodzicielskiego - u.nieprzenoszalna, u.wymiarRodzicielskiego - drugiego));
+}
+
+/** Wszystkie łączenia urlopu rodzicielskiego z pracą scenariusza: `laczenie` i `laczeniaDodatkowe`. */
+export function laczeniaScenariusza(p: Pick<ParametryScenariusza, 'laczenie' | 'laczeniaDodatkowe'>): LaczenieZPraca[] {
+  return [...(p.laczenie !== undefined ? [p.laczenie] : []), ...(p.laczeniaDodatkowe ?? [])];
 }
 
 /** Dzień po ostatnim dniu urlopu rodzica przed urlopem rodzicielskim (macierzyński, uzupełniający, na warunkach, ojcowski). */
@@ -299,8 +364,12 @@ export function poczatekBezCzesci(u: UkladScenariusza, rodzic: RodzicWRodzinie):
 
 /** Części urlopu rodzicielskiego scenariusza: z parametrów albo domyślne, po zmianach dat powrotu. */
 export function czesciScenariusza(u: UkladScenariusza, p: ParametryScenariusza): { czesci: CzescUrlopuRodzicielskiego[]; komunikaty: Komunikat[] } {
-  let czesci = (p.czesciRodzicielskiego.length > 0 ? p.czesciRodzicielskiego : u.domyslneCzesci).filter((c) => u.prawo[c.rodzic] && c.tygodnie > 0);
   const komunikaty: Komunikat[] = [];
+  let czesci = normalizujCzesci(
+    (p.czesciRodzicielskiego.length > 0 ? p.czesciRodzicielskiego : u.domyslneCzesci).filter((c) => u.prawo[c.rodzic] && c.tygodnie > 0),
+    u.maksCzesci,
+    komunikaty,
+  );
   for (const rodzic of ['matka', 'drugi-rodzic'] as const) {
     const data = p.datyPowrotu[rodzic];
     if (data === undefined || !u.prawo[rodzic]) continue;
@@ -309,6 +378,69 @@ export function czesciScenariusza(u: UkladScenariusza, p: ParametryScenariusza):
     if (zmiana.komunikat) komunikaty.push(zmiana.komunikat);
   }
   return { czesci, komunikaty };
+}
+
+/**
+ * Części w kolejności dat, bez nakładania się części tego samego rodzica i najwyżej `maksCzesci` części (0096).
+ * Część rodzica zaczynająca się w trakcie jego wcześniejszej części zaczyna się w dniu po jej końcu, więc żaden dzień
+ * urlopu nie jest liczony dwa razy. Części obojga rodziców mogą trwać jednocześnie.
+ */
+export function normalizujCzesci(
+  czesci: CzescUrlopuRodzicielskiego[],
+  maksCzesci: number,
+  komunikaty: Komunikat[] = [],
+): CzescUrlopuRodzicielskiego[] {
+  const posortowane = czesci.map((c, i) => ({ c, i })).sort((a, b) => porownajDaty(a.c.od, b.c.od) || a.i - b.i).map(({ c }) => c);
+  const koniecRodzica: Partial<Record<RodzicWRodzinie, DataISO>> = {};
+  const wynik = posortowane.map((c) => {
+    const poprzedni = koniecRodzica[c.rodzic];
+    const od = poprzedni !== undefined && porownajDaty(c.od, poprzedni) <= 0 ? dodajDni(poprzedni, 1) : c.od;
+    const czesc = od === c.od ? c : { ...c, od };
+    koniecRodzica[c.rodzic] = koniecCzesci(czesc);
+    return czesc;
+  });
+  const uporzadkowane = wynik.sort((a, b) => porownajDaty(a.od, b.od));
+  if (uporzadkowane.length > maksCzesci) {
+    komunikaty.push({ kod: '0096' });
+    return uporzadkowane.slice(0, maksCzesci);
+  }
+  return uporzadkowane;
+}
+
+type CzescZIndeksem = CzescUrlopuRodzicielskiego & { indeks: number };
+
+/** Części skrócone do pełnych tygodni kończących się najpóźniej w dniu `granica`, bez części bez tygodni. */
+function przytnijCzesciDoGranicy(czesci: CzescZIndeksem[], granica: DataISO): { czesci: CzescZIndeksem[]; obciete: boolean } {
+  let obciete = false;
+  const wynik = czesci
+    .map((c) => {
+      const maks = Math.floor((roznicaDni(c.od, granica) + 1) / 7);
+      if (maks < c.tygodnie) obciete = true;
+      return { ...c, tygodnie: Math.max(0, Math.min(c.tygodnie, maks)) };
+    })
+    .filter((c) => c.tygodnie > 0);
+  return { czesci: wynik, obciete };
+}
+
+/**
+ * Przy kilkorgu przyjętych dzieciach od urodzin, po których wieku granicznego nie ukończyło już tylko jedno wliczone
+ * dziecko, obowiązuje wymiar dla jednego dziecka (41 albo 65 tygodni), a urlop obojga rodziców wykorzystany przed tym
+ * dniem wlicza się do tego wymiaru. Dni urlopu od tego dnia przysługują w kolejności dat do wyczerpania wymiaru,
+ * a część kończy się po ostatnim pełnym tygodniu (historyjka 3.10.4.2.5, KA-08 i KA-10).
+ */
+function przyciecieDoWymiaru(czesci: CzescZIndeksem[], zmiana: { data: DataISO; wymiar: number }): CzescZIndeksem[] {
+  const dzienPrzed = dodajDni(zmiana.data, -1);
+  const dniPrzed = (c: CzescZIndeksem) =>
+    porownajDaty(c.od, zmiana.data) >= 0 ? 0 : roznicaDni(c.od, minData(koniecCzesci(c), dzienPrzed)) + 1;
+  let pozostalo = Math.max(0, 7 * zmiana.wymiar - czesci.reduce((suma, c) => suma + dniPrzed(c), 0));
+  const tygodnie = new Map<number, number>();
+  for (const c of [...czesci].sort((a, b) => porownajDaty(a.od, b.od))) {
+    const przed = dniPrzed(c);
+    const wziete = Math.min(7 * c.tygodnie - przed, pozostalo);
+    pozostalo -= wziete;
+    tygodnie.set(c.indeks, Math.min(c.tygodnie, Math.floor((przed + wziete) / 7)));
+  }
+  return czesci.map((c) => ({ ...c, tygodnie: tygodnie.get(c.indeks) ?? c.tygodnie })).filter((c) => c.tygodnie > 0);
 }
 
 function podzielOdcinek(o: Odcinek, granica: DataISO): [Odcinek | null, Odcinek | null] {
@@ -392,34 +524,77 @@ export function wyliczScenariusz(
   komunikaty.push(...kPowrotu);
   let czesci = czesciPoPowrocie.map((c, i) => ({ ...c, indeks: i }));
 
-  // Przy przyjęciu urlop rodzicielski w pełnym wymiarze kończy się najpóźniej dzień przed wiekiem granicznym.
-  if (u.przyjecie !== undefined && !u.przyjecie.poWiekuGranicznym) {
-    let obciete = false;
-    czesci = czesci
-      .map((c) => {
-        const maks = Math.floor((roznicaDni(c.od, u.przyjecie!.ostatniDzienPrzedWiekiem) + 1) / 7);
-        if (maks < c.tygodnie) obciete = true;
-        return { ...c, tygodnie: Math.max(0, Math.min(c.tygodnie, maks)) };
-      })
-      .filter((c) => c.tygodnie > 0);
-    if (obciete) komunikaty.push({ kod: '0172', parametry: { wiek: String(u.przyjecie.wiek) } });
-  }
-
-  // Łączenie z pracą: wydłużenie po końcu części i przesunięcie późniejszych części obojga rodziców.
-  const laczenie = p.laczenie;
-  let wydluzenie: { indeks: number; od: DataISO; do: DataISO; wymiarPracy: number; tygodnie: number } | null = null;
-  if (laczenie !== undefined) {
-    const czesc = czesci.find((c) => c.indeks === laczenie.indeksCzesci);
-    if (czesc !== undefined && u.formy[czesc.rodzic].forma === 'umowa-o-prace' && laczenie.wymiarPracy > 0) {
-      r.wez('laczenieWymiarPracy');
-      const t = Math.min(laczenie.tygodnie, czesc.tygodnie);
-      const dni = wydluzeniePrzyLaczeniu(t * 7, laczenie.wymiarPracy);
-      const koniec = koniecCzesci(czesc);
-      czesci = czesci.map((c) => (c !== czesc && porownajDaty(c.od, koniec) > 0 ? { ...c, od: dodajDni(c.od, dni) } : c));
-      wydluzenie = { indeks: czesc.indeks, od: dodajDni(koniec, 1), do: dodajDni(koniec, dni), wymiarPracy: laczenie.wymiarPracy, tygodnie: t };
+  // Przy przyjęciu każda część urlopu rodzicielskiego obojga rodziców kończy się najpóźniej w dniu przed ukończeniem wieku
+  // granicznego przez najmłodsze wliczone dziecko (0172), a w wymiarze 38 albo 62 tygodni w ostatnim dniu okresu tego
+  // wymiaru (0290). Dzieci po wieku granicznym są poza wymiarem (0263), a od urodzin, po których przed wiekiem granicznym
+  // jest już tylko jedno dziecko, wymiar wynosi 41 albo 65 tygodni (0296). Historyjka 3.10.4.2.5.
+  // Urlop wykorzystany przed urodzinami, od których obowiązuje wymiar dla jednego dziecka, wlicza się do tego wymiaru
+  // (przyciecieDoWymiaru, KA-10). Po łączeniu z pracą części i wydłużenia przesunięte poza granicę skracamy ponownie.
+  let obcieteDoGranicy = false;
+  if (u.przyjecie !== undefined) {
+    const przyciete = przytnijCzesciDoGranicy(czesci, u.koniecWykorzystania);
+    czesci = przyciete.czesci;
+    obcieteDoGranicy = przyciete.obciete;
+    if (u.przyjecie.liczbaWliczonych < u.przyjecie.liczbaWszystkich) {
+      komunikaty.push({ kod: '0263', parametry: { liczbaDzieci: String(u.przyjecie.liczbaWliczonych), wiek: String(u.przyjecie.wiek) } });
+    }
+    const zmiana = u.przyjecie.zmianaWymiaru;
+    if (zmiana !== undefined) {
+      czesci = przyciecieDoWymiaru(czesci, zmiana);
+      komunikaty.push({ kod: '0296', parametry: { data: formatujDate(zmiana.data), wiek: String(zmiana.wiek), liczbaTygodni: String(zmiana.wymiar) } });
     }
   }
 
+  // Łączenie z pracą w dowolnych częściach obojga rodziców, od wybranego tygodnia części: wydłużenie urlopu po końcu
+  // części i przesunięcie późniejszych części obojga rodziców. Łączny urlop rodzicielski z wydłużeniem najwyżej 82 albo
+  // 86 tygodni, z zaświadczeniem „Za życiem” 130 albo 134 tygodnie (słownik wymiarów i okresów, historyjka 3.10.4.4.1).
+  const laczeniaCzesci = new Map<number, { tygodnie: number; wymiarPracy: number; odTygodnia: number }>();
+  const maksWymiarPracy = r.wez('laczenieWymiarPracy');
+  for (const l of laczeniaScenariusza(p)) {
+    const czesc = czesci.find((c) => c.indeks === l.indeksCzesci);
+    if (czesc === undefined || u.formy[czesc.rodzic].forma !== 'umowa-o-prace' || l.wymiarPracy <= 0) continue;
+    if (laczeniaCzesci.has(czesc.indeks)) continue;
+    const odTygodnia = Math.max(0, Math.min(czesc.tygodnie - 1, Math.trunc(l.odTygodnia ?? 0)));
+    const tygodnie = Math.min(l.tygodnie, czesc.tygodnie - odTygodnia);
+    if (tygodnie <= 0) continue;
+    laczeniaCzesci.set(czesc.indeks, { tygodnie, wymiarPracy: Math.min(l.wymiarPracy, maksWymiarPracy), odTygodnia });
+  }
+  const wydluzenia = new Map<number, { od: DataISO; do: DataISO; wymiarPracy: number; tygodnie: number; odTygodnia: number }>();
+  if (laczeniaCzesci.size > 0) {
+    const zz = d.zaZyciem.wartosc;
+    const kluczLimitu = u.liczbaDzieci > 1 ? (zz ? 'laczenieZaZyciemWiecej' : 'laczenieWiecej') : zz ? 'laczenieZaZyciem1' : 'laczenie1';
+    const limitDni = 7 * r.wez(kluczLimitu);
+    let dniUrlopu = czesci.reduce((suma, c) => suma + 7 * c.tygodnie, 0);
+    const kolejnosc = [...laczeniaCzesci.keys()].sort((a, b) =>
+      porownajDaty(czesci.find((c) => c.indeks === a)!.od, czesci.find((c) => c.indeks === b)!.od),
+    );
+    for (const indeks of kolejnosc) {
+      const czesc = czesci.find((c) => c.indeks === indeks)!;
+      const l = laczeniaCzesci.get(indeks)!;
+      const dni = Math.max(0, Math.min(wydluzeniePrzyLaczeniu(l.tygodnie * 7, l.wymiarPracy), limitDni - dniUrlopu));
+      dniUrlopu += dni;
+      const koniec = koniecCzesci(czesc);
+      czesci = czesci.map((c) => (c.indeks !== indeks && porownajDaty(c.od, koniec) > 0 ? { ...c, od: dodajDni(c.od, dni) } : c));
+      wydluzenia.set(indeks, { od: dodajDni(koniec, 1), do: dodajDni(koniec, dni), ...l });
+    }
+  }
+  if (u.przyjecie !== undefined) {
+    const granica = u.koniecWykorzystania;
+    const poLaczeniu = przytnijCzesciDoGranicy(czesci, granica);
+    czesci = poLaczeniu.czesci;
+    if (poLaczeniu.obciete) obcieteDoGranicy = true;
+    for (const [indeks, w] of wydluzenia) {
+      if (porownajDaty(w.do, granica) <= 0) continue;
+      wydluzenia.set(indeks, { ...w, do: granica });
+      obcieteDoGranicy = true;
+    }
+    if (u.przyjecie.poWiekuGranicznym) {
+      r.wez('rodzicielskiPoWieku');
+      komunikaty.push({ kod: '0290', parametry: { wymiar: String(u.wymiarRodzicielskiego), data: formatujDate(granica) } });
+    } else if (obcieteDoGranicy) {
+      komunikaty.push({ kod: '0172', parametry: { wiek: String(u.przyjecie.wiek) } });
+    }
+  }
   // Stawki części: drugi rodzic w wariancie 81,5% za pierwsze 9 tygodni 70%, ponad nie 81,5%.
   const posortowane = [...czesci].sort((a, b) => porownajDaty(a.od, b.od));
   const limit70 = u.nieprzenoszalna * 7;
@@ -465,12 +640,17 @@ export function wyliczScenariusz(
     } else {
       kawalki = [{ ...bazowy, stawka: s70() }];
     }
-    if (wydluzenie !== null && wydluzenie.indeks === c.indeks) {
-      const granica = dodajDni(c.od, 7 * wydluzenie.tygodnie);
+    const wydluzenie = wydluzenia.get(c.indeks);
+    if (wydluzenie !== undefined) {
+      const poczatekLaczenia = dodajDni(c.od, 7 * wydluzenie.odTygodnia);
+      const granica = dodajDni(poczatekLaczenia, 7 * wydluzenie.tygodnie);
       const mnoznik = (100 - wydluzenie.wymiarPracy) / 100;
       const wynik: Odcinek[] = [];
       for (const k of kawalki) {
-        const [przed, po] = podzielOdcinek(k, granica);
+        const [przedLaczeniem, odLaczenia] = podzielOdcinek(k, poczatekLaczenia);
+        if (przedLaczeniem) wynik.push(przedLaczeniem);
+        if (!odLaczenia) continue;
+        const [przed, po] = podzielOdcinek(odLaczenia, granica);
         if (przed) {
           wynik.push({
             ...przed,
@@ -492,9 +672,13 @@ export function wyliczScenariusz(
   }
 
   // Zgon dziecka po upływie 8 tygodni życia: urlop w trakcie kończy się 7. dnia po dniu zgonu, kolejnych urlopów brak.
+  // Przy zgonie przed upływem 8 tygodni życia okres trwa 8 tygodni od porodu, nie krócej niż do 7. dnia po dniu zgonu,
+  // i ustala go już układ scenariusza (art. 180 § 4 i § 5 Kodeksu pracy, okresZasilkuPoStracie).
   let koncowe = odcinki;
   const strata = zdarzenie === 'porod' ? d.strata?.wartosc : undefined;
-  if (u.strataBezDzieci && strata?.dataZgonu !== undefined) {
+  const zgonPoOsmiuTygodniach =
+    strata?.rodzaj === 'zgon-dziecka' && strata.dataZgonu !== undefined && czyZgonPoOsmiuTygodniach(data, strata.dataZgonu, katalog);
+  if (u.strataBezDzieci && strata?.dataZgonu !== undefined && zgonPoOsmiuTygodniach) {
     const koniec = dodajDni(strata.dataZgonu, r.wez('urlopPoStracieDni'));
     koncowe = odcinki
       .filter((o) => porownajDaty(o.od, koniec) <= 0)
@@ -505,35 +689,52 @@ export function wyliczScenariusz(
     r.wez('urlopPoStracieDni');
   }
 
-  const podstawaRodzica = (rodzic: RodzicWRodzinie): Grosze => podstawy[rodzic]?.kwota ?? 0;
-  const okresy: (OkresZPodstawa & { pozaSumami?: boolean })[] = koncowe
-    .sort((a, b) => (a.rodzic === b.rodzic ? porownajDaty(a.od, b.od) : a.rodzic === 'matka' ? -1 : 1))
-    .map((o) => {
-      const dni = roznicaDni(o.od, o.do) + 1;
-      const podstawa = podstawaRodzica(o.rodzic);
-      const stawka = Math.round(o.stawka * 100) / 100;
+  // Podstawa wymiaru w każdym dniu okresu: pracownik na pełnym etacie ma co najmniej minimalną podstawę obowiązującą w tym
+  // dniu, a okres z różnymi podstawami liczymy w częściach przed dniem zmiany i od dnia zmiany (3.10.4.1.4, 3.10.4.3.5).
+  // Wiersz okresu zbiera części: dni i kwota za okres to sumy części, kwota miesięczna z podstawy pierwszego dnia okresu.
+  let minimumUzyte = false;
+  const czesciOdcinka = (o: Odcinek): (OkresZPodstawa & { pozaSumami?: boolean })[] => {
+    const podstawa = podstawy[o.rodzic];
+    const pracownik = u.formy[o.rodzic].forma === 'umowa-o-prace';
+    const zakresy = podstawa === undefined ? [{ od: o.od, do: o.do, kwota: 0 }] : podstawyWOkresie(podstawa, katalog, o, pracownik);
+    const stawka = Math.round(o.stawka * 100) / 100;
+    return zakresy.map((z) => {
+      if (podstawa !== undefined && pracownik && podstawa.pelnyEtat === true && z.kwota > podstawaPrzedMinimum(podstawa)) minimumUzyte = true;
+      const dni = roznicaDni(z.od, z.do) + 1;
       const dzienna = o.laczenie
-        ? stawkaDziennaLaczenia(podstawa, o.laczenie.stawkaOkresu, o.laczenie.wymiarPracy)
-        : stawkaDzienna(podstawa, stawka);
+        ? stawkaDziennaLaczenia(z.kwota, o.laczenie.stawkaOkresu, o.laczenie.wymiarPracy)
+        : stawkaDzienna(z.kwota, stawka);
       return {
         rodzic: o.rodzic,
         rodzaj: o.rodzaj,
-        od: o.od,
-        do: o.do,
+        od: z.od,
+        do: z.do,
         dni,
         stawka,
-        miesiecznie: kwotaMiesieczna(podstawa, stawka),
+        miesiecznie: kwotaMiesieczna(z.kwota, stawka),
         zaOkres: dzienna * dni,
-        podstawa,
+        podstawa: z.kwota,
         dzienna,
         ...(o.pozaSumami ? { pozaSumami: true } : {}),
       };
     });
+  };
+  const kawalkiOkresow = koncowe
+    .sort((a, b) => (a.rodzic === b.rodzic ? porownajDaty(a.od, b.od) : a.rodzic === 'matka' ? -1 : 1))
+    .map(czesciOdcinka);
+  const kawalkiPodstaw = kawalkiOkresow.flat();
+  const okresy = kawalkiOkresow.map((k) => ({
+    ...k[0],
+    do: k[k.length - 1].do,
+    dni: k.reduce((suma, c) => suma + c.dni, 0),
+    zaOkres: k.reduce((suma, c) => suma + c.zaOkres, 0),
+  }));
+  if (minimumUzyte) r.wez('minimalnaPodstawaPracownika');
 
   // Wyrównanie zasiłku za urlop macierzyński do 100%, w miesiącu po końcu urlopu macierzyńskiego matki.
   const wyrownania: WyrownanieDoStu[] = [];
   if (wyrownanie) {
-    const macMatki = okresy.filter(
+    const macMatki = kawalkiPodstaw.filter(
       (o) => o.rodzic === 'matka' && (o.rodzaj === 'macierzynski' || o.rodzaj === 'na-warunkach-macierzynskiego'),
     );
     const roznica = macMatki.reduce((s, o) => s + kwotaZaDni(o.podstawa, s100(), o.dni) - o.zaOkres, 0);
@@ -544,7 +745,7 @@ export function wyliczScenariusz(
   }
 
   r.wez('swiadczenieRodzicielskie');
-  const h = harmonogramZPodstaw(okresy.filter((o) => !o.pozaSumami), katalog, data, wyrownania);
+  const h = harmonogramZPodstaw(kawalkiPodstaw.filter((o) => !o.pozaSumami), katalog, data, wyrownania);
   const sumy = sumyHarmonogramu(h);
 
   // Daty powrotu do pracy: dzień po ostatnim dniu ostatniego urlopu rodzica z zasiłkiem.
@@ -564,7 +765,8 @@ export function wyliczScenariusz(
   for (const rodzic of ['matka', 'drugi-rodzic'] as const) {
     if (!u.prawo[rodzic]) continue;
     for (const id of uprawnieniaPoPowrocie(rodzic, u.formy[rodzic].forma, u.formy[rodzic].dobrowolne)) {
-      if (!(id === 'K20' && u.strataBezDzieci)) uprawnienia.add(id);
+      // Przerwy na karmienie (K20) przysługują pracownicy karmiącej piersią, więc pomijamy je po stracie dziecka i przy przyjęciu dziecka na wychowanie.
+      if (!(id === 'K20' && (u.strataBezDzieci || u.zdarzenie === 'przyjecie'))) uprawnienia.add(id);
     }
   }
 

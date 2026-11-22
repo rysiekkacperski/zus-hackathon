@@ -6,7 +6,7 @@
 import { dodajLata, dodajMiesiace, porownajDaty } from '@/domena/daty';
 import { ustalPrawoDoZasilku } from '@/domena/kalkulatory/prawo';
 import { parametr } from '@/domena/kalkulatory/slowniki';
-import { uzupelniajacyUrlop, wiekGranicznyPrzyjecia } from '@/domena/kalkulatory/okresy';
+import { progiUzupelniajacego, uzupelniajacyUrlop, wiekGranicznyPrzyjecia } from '@/domena/kalkulatory/okresy';
 import type { BledyPol, DataISO, DaneWejscioweKalkulatora, Katalog, KodKomunikatu, ParametryScenariusza } from '@/domena/typy';
 
 export type PoleDanychWejsciowych =
@@ -20,11 +20,15 @@ export type PoleDanychWejsciowych =
   | 'tydzienCiazy'
   | 'masaUrodzeniowa'
   | 'dniPobytu'
+  | 'pierwszyDzienPobytu'
   | 'rodzajStraty'
   | 'dataZgonu'
   | 'liczbaDzieciStraty'
   | 'formaMatki'
   | 'formaDrugiegoRodzica';
+
+/** Najpóźniejszy dzień życia dziecka, który rodzic podaje jako pierwszy dzień pobytu w szpitalu (koniec 8. tygodnia). */
+export const MAKS_DZIEN_POCZATKU_POBYTU = 56;
 
 /** Parametry komunikatów pól, które mają zmienną część: 0091 (wiek), 0164 (liczba dni), 0168 (liczba dzieci). */
 export function parametryBleduPola(
@@ -40,7 +44,8 @@ export function parametryBleduPola(
   }
   if (kod === '0164' && d.wczesniactwo !== undefined) {
     const w = d.wczesniactwo.wartosc;
-    return { liczbaDni: String(uzupelniajacyUrlop(w.tydzienCiazy, w.masaG, 0).maksDniPobytu) };
+    const progi = progiUzupelniajacego(katalog, d.dataPorodu?.wartosc);
+    return { liczbaDni: String(uzupelniajacyUrlop(w.tydzienCiazy, w.masaG, 0, { progi }).maksDniPobytu) };
   }
   if (kod === '0168' && pole === 'liczbaDzieciStraty') return { liczbaDzieci: String(d.liczbaDzieci.wartosc) };
   return undefined;
@@ -71,9 +76,12 @@ export function walidujDaneWejsciowe(d: DaneWejscioweKalkulatora, dzis: DataISO,
       if (!p.dataUrodzeniaDziecka) b.dataUrodzeniaDziecka = '0163';
       else if (p.dataPrzyjecia && porownajDaty(p.dataUrodzeniaDziecka, p.dataPrzyjecia) > 0) b.dataUrodzeniaDziecka = '0090';
       else if (p.dataPrzyjecia && p.forma !== 'rodzina-zastepcza-zawodowa' && katalog !== undefined) {
+        // 0091, gdy w dniu przyjęcia każde przyjęte dziecko ukończyło wiek graniczny (3.10.4.2.5).
         const wiek = wiekGranicznyPrzyjecia(p.forma, p.odroczenie, katalog, p.dataPrzyjecia);
-        if (wiek !== null && porownajDaty(p.dataPrzyjecia, dodajLata(p.dataUrodzeniaDziecka, wiek)) >= 0) b.dataUrodzeniaDziecka = '0091';
+        const daty = p.datyUrodzeniaDzieci !== undefined && p.datyUrodzeniaDzieci.length > 0 ? p.datyUrodzeniaDzieci : [p.dataUrodzeniaDziecka];
+        if (wiek !== null && daty.every((u) => porownajDaty(p.dataPrzyjecia, dodajLata(u, wiek)) >= 0)) b.dataUrodzeniaDziecka = '0091';
       }
+
     }
   }
 
@@ -87,8 +95,12 @@ export function walidujDaneWejsciowe(d: DaneWejscioweKalkulatora, dzis: DataISO,
     if (!tydzienOk) b.tydzienCiazy = '0021';
     if (!masaOk) b.masaUrodzeniowa = '0022';
     if (tydzienOk && masaOk) {
-      const maks = uzupelniajacyUrlop(w.tydzienCiazy, w.masaG, 0).maksDniPobytu;
+      // Okno pobytu w szpitalu ze słownika wymiarów i okresów obowiązujące w dniu porodu.
+      const progi = progiUzupelniajacego(katalog, d.dataPorodu?.wartosc);
+      const maks = uzupelniajacyUrlop(w.tydzienCiazy, w.masaG, 0, { progi }).maksDniPobytu;
       if (!Number.isInteger(w.dniPobytu) || w.dniPobytu < 0 || w.dniPobytu > maks) b.dniPobytu = '0164';
+      const p = w.pierwszyDzienPobytu;
+      if (p !== undefined && (!Number.isInteger(p) || p < 1 || p > MAKS_DZIEN_POCZATKU_POBYTU)) b.pierwszyDzienPobytu = '0202';
     } else if (!Number.isInteger(w.dniPobytu) || w.dniPobytu < 0) {
       b.dniPobytu = '0164';
     }

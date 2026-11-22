@@ -52,7 +52,9 @@ export function walidujCzesciRodzicielskiego(
 ): { czesci: Record<number, Partial<Record<'rodzic' | 'od' | 'tygodnie', BladPola>>>; lista?: BladPola } {
   const wynik: Record<number, Partial<Record<'rodzic' | 'od' | 'tygodnie', BladPola>>> = {};
   const maksCzesci = parametr(katalog, 'liczbaCzesci', u.dataZdarzenia).wartosc;
-  const L = u.wymiarRodzicielskiego;
+  // Przy kilkorgu przyjętych dzieciach części przyjmujemy do wymiaru sprzed urodzin, od których obowiązuje wymiar dla
+  // jednego dziecka; silnik skraca je według tego wymiaru (scenariusz.ts, przyciecieDoWymiaru).
+  const L = u.przyjecie?.zmianaWymiaru?.wymiarPrzed ?? u.wymiarRodzicielskiego;
   const sumy = { matka: 0, 'drugi-rodzic': 0 };
   czesci.forEach((c, i) => {
     const b: Partial<Record<'rodzic' | 'od' | 'tygodnie', BladPola>> = {};

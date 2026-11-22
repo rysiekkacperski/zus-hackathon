@@ -2,7 +2,9 @@
 
 // ViewZ15Sent: potwierdzenie wysłania wniosku Z-15 do ZUS z numerem Z15-DEMO-RRRRMMDD-NNNN.
 import { formatujDate } from '@/domena/daty';
+import { ODNOSNIKI } from '@/dane/katalog/pozycje';
 import { Karta } from '@/komponenty/karta';
+import { KartaWiecejInformacji } from '@/komponenty/karta-wiecej-informacji';
 import { Komunikat } from '@/komponenty/komunikat';
 import { PrzyciskLink } from '@/komponenty/przycisk';
 import { trasy } from '@/komponenty/rama/trasy';
@@ -30,6 +32,7 @@ export function WidokWyslanegoZ15() {
           </div>
         </Stos>
       </Karta>
+      <KartaWiecejInformacji odnosniki={[ODNOSNIKI.zus]} className="mt-7.5 max-w-3xl" />
     </>
   );
 }

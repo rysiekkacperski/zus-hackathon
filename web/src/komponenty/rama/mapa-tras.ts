@@ -103,11 +103,16 @@ export const idWidokowZTrasa = [
   'ViewCatalogList',
   'ViewCatalogValueEdit',
   'ViewCatalogItemAdd',
+  'ViewCatalogItemEdit',
+  'ViewCatalogEntryAdd',
+  'ViewCatalogDocumentEdit',
+  'ViewCatalogDocumentAdd',
   'ViewCatalogSupportOrganizations',
   'ViewEzusHome',
   'ViewEzus800Application',
   'ViewEzusActiveParentApplication',
   'ViewEzusApplicationDetails',
+  'ViewEzusZas23',
   'ViewZusEVisit',
   'ViewSimulatedChannel',
 ] as const satisfies readonly IdWidoku[];
@@ -704,6 +709,28 @@ export const mapaTras: readonly WpisTrasy[] = [
     rodzic: { widok: 'ViewCatalogList' }, nastepnyZastepczy: { widok: 'ViewCatalogList' }, zapytanie: [], jednostka: 'u06',
   },
   {
+    widok: 'ViewCatalogItemEdit', wzorzec: '/panel/katalog/pozycje/[idPozycji]', folder: '(strefa)/panel/katalog/pozycje/[idPozycji]',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_A, pozycjaMenu: 'ViewCatalogList',
+    rodzic: { widok: 'ViewCatalogList' }, nastepnyZastepczy: { widok: 'ViewCatalogList' }, zapytanie: [], jednostka: 'u06',
+    przykladoweParametry: { idPozycji: 'K12' },
+  },
+  {
+    widok: 'ViewCatalogEntryAdd', wzorzec: '/panel/katalog/wartosci/nowa', folder: '(strefa)/panel/katalog/wartosci/nowa',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_A, pozycjaMenu: 'ViewCatalogList',
+    rodzic: { widok: 'ViewCatalogList' }, nastepnyZastepczy: { widok: 'ViewCatalogList' }, zapytanie: ['slownik'], jednostka: 'u06',
+  },
+  {
+    widok: 'ViewCatalogDocumentAdd', wzorzec: '/panel/katalog/dokumenty/nowy', folder: '(strefa)/panel/katalog/dokumenty/nowy',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_A, pozycjaMenu: 'ViewCatalogList',
+    rodzic: { widok: 'ViewCatalogList' }, nastepnyZastepczy: { widok: 'ViewCatalogList' }, zapytanie: ['grupa'], jednostka: 'u06',
+  },
+  {
+    widok: 'ViewCatalogDocumentEdit', wzorzec: '/panel/katalog/dokumenty/[idDokumentu]', folder: '(strefa)/panel/katalog/dokumenty/[idDokumentu]',
+    grupa: 'strefa', dostep: 'zalogowany', role: ROLE_A, pozycjaMenu: 'ViewCatalogList',
+    rodzic: { widok: 'ViewCatalogList' }, nastepnyZastepczy: { widok: 'ViewCatalogList' }, zapytanie: [], jednostka: 'u06',
+    przykladoweParametry: { idDokumentu: 'dokument-1' },
+  },
+  {
     widok: 'ViewCatalogSupportOrganizations', tryb: 'lista', wzorzec: '/panel/podmioty-wsparcia', folder: '(strefa)/panel/podmioty-wsparcia',
     grupa: 'strefa', dostep: 'zalogowany', role: ROLE_A, pozycjaMenu: 'ViewCatalogSupportOrganizations',
     nastepnyZastepczy: { widok: 'ViewCatalogSupportOrganizations', tryb: 'nowa' }, zapytanie: [], jednostka: 'u22',
@@ -743,6 +770,11 @@ export const mapaTras: readonly WpisTrasy[] = [
     grupa: 'symulacje', dostep: 'publiczny', role: BEZ_ROLI,
     rodzic: { widok: 'ViewEzusHome' }, nastepnyZastepczy: { widok: 'ViewEzusHome' }, zapytanie: [], jednostka: 'u17',
     przykladoweParametry: { idWniosku: 'wniosek-demo' },
+  },
+  {
+    widok: 'ViewEzusZas23', wzorzec: '/ezus/wniosek-zas-23', folder: '(symulacje)/ezus/[[...sciezka]]',
+    grupa: 'symulacje', dostep: 'publiczny', role: BEZ_ROLI,
+    rodzic: { widok: 'ViewEzusHome' }, nastepnyZastepczy: { widok: 'ViewEzusHome' }, zapytanie: ['czesc'], jednostka: 'u34',
   },
   {
     widok: 'ViewZusEVisit', wzorzec: '/kanal/e-wizyta', folder: '(symulacje)/kanal/[kanal]',

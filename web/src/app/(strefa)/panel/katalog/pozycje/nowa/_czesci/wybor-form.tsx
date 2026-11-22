@@ -17,9 +17,11 @@ export interface WyborFormProps {
   /** Wyjście fokusu poza grupę i zmiana zaznaczenia: walidacja po opuszczeniu (useWalidacjaNaBiezaco). */
   onOpuszczenie?: () => void;
   blad?: KodKomunikatu | null;
+  /** Podpowiedź pod legendą; domyślnie podpowiedź formularza nowej pozycji. */
+  podpowiedz?: string;
 }
 
-export function WyborForm({ wartosci, onZmiana, onOpuszczenie, blad }: WyborFormProps) {
+export function WyborForm({ wartosci, onZmiana, onOpuszczenie, blad, podpowiedz }: WyborFormProps) {
   const t = teksty.ViewCatalogItemAdd.warunek;
   const etykiety = teksty.ViewCatalogList.etykiety.formyZatrudnienia;
   const opisy = polaczOpisy(ID_PODPOWIEDZI, blad ? idBledu(ID_GRUPY) : null);
@@ -42,7 +44,7 @@ export function WyborForm({ wartosci, onZmiana, onOpuszczenie, blad }: WyborForm
     >
       <legend className="m-0 mb-1 p-0 text-body-strong">{t.formy}</legend>
       <p id={ID_PODPOWIEDZI} className="m-0 mb-3">
-        {t.podpowiedzForm}
+        {podpowiedz ?? t.podpowiedzForm}
       </p>
       <div className="flex flex-col gap-3">
         {FORMY_ZATRUDNIENIA.map((forma) => {

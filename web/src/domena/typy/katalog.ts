@@ -47,7 +47,13 @@ export interface PozycjaKatalogu {
   instytucjaIKanal: string; kanaly: Partial<Record<FormaZatrudnienia | 'kazda', KanalPozycji>>;
   regulaTerminu: RegulaTerminu; kosztSpoznienia: KosztSpoznieniaPozycji; instrukcja: InstrukcjaPozycji;
   dodano?: { przez: Pesel; czas: ZnacznikCzasu };
+  wylaczona?: boolean;                            // pozycja wyłączona przez Administratora: plan rodziny jej nie pokazuje
+  zmieniono?: { przez: Pesel; czas: ZnacznikCzasu; regulaTerminu: boolean };   // ostatnia zmiana pozycji w panelu
 }
+/** Pola pozycji katalogu, które Administrator zmienia w panelu (ViewCatalogItemEdit). */
+export interface ZmianyPolPozycji { tytul?: string; warunekOpis?: string; instytucjaIKanal?: string;
+  daneIDokumenty?: string[]; kroki?: string[]; regulaTerminu?: RegulaTerminu; wylaczona?: boolean }
+export interface ZmianaPozycjiKatalogu { id: IdPozycji; zmiany: ZmianyPolPozycji; przez: Pesel; czas: ZnacznikCzasu }
 export type RodzajSlownika = 'kwoty-i-progi' | 'wymiary-i-okresy';
 export type JednostkaWariantu = 'zl' | 'procent' | 'tygodnie' | 'dni' | 'miesiace' | 'lata' | 'osoby' | 'czesci' | 'g' | 'procent-etatu';
 export interface WariantWpisu { klucz: string; etykieta: string; jednostka: JednostkaWariantu; wyprowadzony?: { zWpisu: IdWpisuSlownika; zWariantu: string; mnoznik?: number; pomniejszenieProcent?: number } }
@@ -63,9 +69,25 @@ export interface WpisSlownikaDokumentow { id: string; grupa: 'zasilek-chorobowy'
   klucz: { formy: FormaZatrudnienia[] | 'kazda'; platnik?: 'platnik-uprawniony' | 'zus'; poUstaniu?: boolean; sytuacja?: string };
   dokumenty: string[]; adresat: string; termin: string; kolejnosc: number }
 export interface PodmiotWsparcia { id: string; nazwa: string; sytuacje: RodzajSytuacjiSzczegolnej[]; zakresPomocy: string;
-  telefon?: string; email?: string; adresStrony: string; krs?: string; charytatywny: true; kolejnosc: number }
+  telefon?: string; email?: string; adresStrony: string; krs?: string; charytatywny: true; kolejnosc: number;
+  /** Dzień sprawdzenia statusu organizacji pożytku publicznego w KRS (api-krs.ms.gov.pl, odpis aktualny). */
+  weryfikacjaKrs?: DataISO }
 export interface EdycjeKatalogu { wersja: number; noweWersje: { idWpisu: IdWpisuSlownika; wersja: WersjaWpisu }[];
-  nowePozycje: PozycjaKatalogu[]; podmioty: { dodane: PodmiotWsparcia[]; zmienione: PodmiotWsparcia[] } }
+  nowePozycje: PozycjaKatalogu[]; podmioty: { dodane: PodmiotWsparcia[]; zmienione: PodmiotWsparcia[] };
+  // Pola dodane po pierwszej wersji układu; zapis bez nich oznacza brak takich edycji.
+  zmienionePozycje?: ZmianaPozycjiKatalogu[];     // zmiany pól i wyłączenia pozycji, w kolejności zapisu
+  dokumenty?: { dodane: WpisSlownikaDokumentow[]; zmienione: WpisSlownikaDokumentow[] };
+  noweWpisy?: WpisSlownika[];                     // nowe wpisy słowników (parametry) dodane w panelu
+}
+/** Pojedyncza zmiana katalogu wysyłana do usługi REST /api/katalog i stosowana w przeglądarce tą samą funkcją. */
+export type ZmianaKatalogu =
+  | { rodzaj: 'nowa-wersja'; idWpisu: IdWpisuSlownika; wersja: WersjaWpisu }
+  | { rodzaj: 'nowa-pozycja'; pozycja: PozycjaKatalogu }
+  | { rodzaj: 'zmiana-pozycji'; zmiana: ZmianaPozycjiKatalogu }
+  | { rodzaj: 'podmiot'; podmiot: PodmiotWsparcia; nowy: boolean }
+  | { rodzaj: 'dokument'; dokument: WpisSlownikaDokumentow; nowy: boolean }
+  | { rodzaj: 'nowy-wpis'; wpis: WpisSlownika }
+  | { rodzaj: 'przywrocenie' };
 export interface Katalog {                        // seed złożony z edycjami Administratora
   wersja: number; pozycje: PozycjaKatalogu[]; slowniki: WpisSlownika[];
   reguly: RegulaSwiadczenia[]; dokumenty: WpisSlownikaDokumentow[]; podmiotyWsparcia: PodmiotWsparcia[];

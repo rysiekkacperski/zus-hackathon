@@ -2,7 +2,8 @@
 
 // ModalSampleCaseDocument (kontrakt, tabela 2.3): okno modalne na ViewSampleCaseData. Właściciel: u05.
 // Podgląd pliku wgranego przez konto albo gościa (do 24 godzin od wgrania) albo pliku sprawy zespołu; po usunięciu pliku 0113
-// i akcja ponownego wgrania (wzory P13-07, P13-08).
+// i akcja ponownego wgrania (wzory P13-07, P13-08). Plik sprawy wzorcowej, który ma dokument przykładowy w public/przyklady,
+// pokazujemy w podglądzie.
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { Komunikat } from '@/komponenty/komunikat';
 import { Notatka } from '@/komponenty/notatka';
@@ -12,6 +13,7 @@ import { StanPusty } from '@/komponenty/stan-pusty';
 import { Ikona } from '@/komponenty/ikona';
 import { dodajMinuty, formatujDateICzas } from '@/domena/daty';
 import { pobierzPlik } from '@/dane/magazyn/pliki';
+import { adresDokumentuPrzykladowego, czyDokumentPrzykladowy } from '@/dane/przykladowe-sprawy/dokumenty-przykladowe';
 import type { DokumentSprawy } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { nazwaDokumentu } from '../../_czesci/opisy';
@@ -52,6 +54,18 @@ function PodgladPliku({ idPliku }: { idPliku: string }) {
   return (
     <figure aria-label={t.podgladPliku} className="m-0 overflow-hidden rounded-sm border border-line bg-surface-sunken">
       <object data={adres.url} type={adres.typ} aria-label={t.podgladPliku} className="block h-[60vh] max-h-130 w-full">
+        <p className="m-4">{t.podgladPliku}</p>
+      </object>
+    </figure>
+  );
+}
+
+/** Podgląd dokumentu przykładowego zespołu z public/przyklady, z którego pochodzą dane sprawy wzorcowej. */
+function PodgladDokumentuPrzykladowego({ plik }: { plik: string }) {
+  const adres = adresDokumentuPrzykladowego(plik);
+  return (
+    <figure aria-label={t.podgladPliku} className="m-0 overflow-hidden rounded-sm border border-line bg-surface-sunken">
+      <object data={adres} type={plik.endsWith('.png') ? 'image/png' : 'application/pdf'} aria-label={t.podgladPliku} className="block h-[60vh] max-h-130 w-full">
         <p className="m-4">{t.podgladPliku}</p>
       </object>
     </figure>
@@ -113,6 +127,8 @@ export function OknoPodgladuDokumentu({ otwarte, onZamknij, dokument, konto, onW
             <Komunikat kod="0113" />
             <StanPusty ikona="plik-brak">{t.pustyPodglad}</StanPusty>
           </>
+        ) : dokument.plikZespolu && czyDokumentPrzykladowy(dokument.plikZespolu) ? (
+          <PodgladDokumentuPrzykladowego plik={dokument.plikZespolu} />
         ) : dokument.plikZespolu ? (
           <StanPusty ikona="dokument" przerywany>
             {t.podgladZespolu}

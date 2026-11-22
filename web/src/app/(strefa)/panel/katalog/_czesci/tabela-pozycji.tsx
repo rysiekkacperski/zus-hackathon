@@ -1,6 +1,7 @@
 'use client';
 
-// Sekcja Pozycje katalogu na ViewCatalogList: wyszukiwarka, filtr etapu ścieżki i tabela pozycji (wzory Katalog, P04-14).
+// Sekcja Pozycje katalogu na ViewCatalogList: wyszukiwarka, filtr etapu ścieżki i tabela pozycji (wzory Katalog, P04-14)
+// ze stanem pozycji w planach rodzin i odnośnikiem do zmiany pozycji (ViewCatalogItemEdit).
 import { useId, useMemo, useState } from 'react';
 import { kotwicaPozycji } from '@/dane/magazyn/operacje/katalog';
 import { ETAPY } from '@/domena/katalog/edycja';
@@ -14,7 +15,7 @@ import { trasy } from '@/komponenty/rama/trasy';
 import { Tabela } from '@/komponenty/tabela';
 import { teksty } from '@/teksty';
 
-type KolumnaPozycji = 'identyfikator' | 'sprawa' | 'rodzaj' | 'etap' | 'rodzic';
+type KolumnaPozycji = 'identyfikator' | 'sprawa' | 'rodzaj' | 'etap' | 'rodzic' | 'stan' | 'akcja';
 
 function pasuje(pozycja: PozycjaKatalogu, fraza: string, etap: Etap | ''): boolean {
   if (etap !== '' && pozycja.etap !== etap) return false;
@@ -72,6 +73,8 @@ export function TabelaPozycji({ pozycje }: { pozycje: PozycjaKatalogu[] }) {
           { klucz: 'rodzaj', naglowek: t.pozycje.kolumnaRodzaju },
           { klucz: 'etap', naglowek: t.pozycje.kolumnaEtapu },
           { klucz: 'rodzic', naglowek: t.pozycje.kolumnaRodzica },
+          { klucz: 'stan', naglowek: t.edycja.kolumnaStanu },
+          { klucz: 'akcja', naglowek: t.edycja.kolumnaAkcji, ukryjNaglowek: true },
         ]}
         wiersze={widoczne.map((p) => ({
           id: p.id,
@@ -84,6 +87,12 @@ export function TabelaPozycji({ pozycje }: { pozycje: PozycjaKatalogu[] }) {
           rodzaj: etykiety.rodzaje[p.rodzaj],
           etap: etykiety.etapy[p.etap],
           rodzic: etykiety.rodzice[p.rodzic],
+          stan: p.wylaczona ? <strong className="font-semibold">{t.edycja.wylaczona}</strong> : t.edycja.aktywna,
+          akcja: (
+            <Odnosnik href={trasy.ViewCatalogItemEdit({ idPozycji: p.id })} aria-label={t.edycja.zmienPozycje({ id: p.id })}>
+              {t.zmien}
+            </Odnosnik>
+          ),
         }))}
       />
       <Notatka className="mt-6">

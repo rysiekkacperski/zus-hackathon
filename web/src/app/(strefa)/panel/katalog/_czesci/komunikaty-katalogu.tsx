@@ -16,6 +16,7 @@ function etykietaOdnosnika(komunikat: KomunikatDoPokazania, katalog: Katalog): s
   const t = teksty.ViewCatalogList.zobaczZmiane;
   if (komunikat.kod === '0082') return t.pozycja({ id: zmiana });
   if (komunikat.kod !== '0051') return null;
+  if (katalog.pozycje.some((p) => p.id === zmiana)) return t.pozycja({ id: zmiana });
   const wpis = katalog.slowniki.find((w) => w.id === zmiana);
   return wpis ? t[rodzajWpisu(wpis)] : t.mieszany;
 }

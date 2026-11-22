@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { useDzis, useKatalog, useParametry } from '@/dane/magazyn/hooki';
 import { dataZeZnacznika } from '@/domena/daty';
-import type { DataISO, Grosze, StanRozliczenSkladek, TytulUbezpieczenia } from '@/domena/typy';
+import type { DataISO, Grosze, Katalog, StanRozliczenSkladek, TytulUbezpieczenia } from '@/domena/typy';
 import {
   dniPowstaniaPrawaZPodstawa,
   komunikatyStanu,
@@ -37,7 +37,21 @@ export interface StanRozliczenKonta {
   karty: KartaStanu[];
   prog: Grosze;
   minimalne: Grosze;
+  /** Progi zadłużenia z katalogu dla roku dnia powstania prawa każdej karty, bez powtórzeń, rosnąco według roku. */
+  progi: { rok: number; prog: Grosze; minimalne: Grosze }[];
   maChorobowe: boolean;
+}
+
+/** Progi zadłużenia obowiązujące w dniach powstania prawa kart, a bez dni powstania prawa w dniu `dzis`. */
+function progiKart(katalog: Katalog, karty: readonly KartaStanu[], dzis: DataISO): StanRozliczenKonta['progi'] {
+  const dni = karty.map((k) => k.dzienPrawa?.dzien ?? dzis).sort();
+  const progi: StanRozliczenKonta['progi'] = [];
+  for (const d of dni.length > 0 ? dni : [dzis]) {
+    const { prog, minimalne } = progZadluzenia(katalog, d);
+    if (progi.some((p) => p.prog === prog && p.minimalne === minimalne)) continue;
+    progi.push({ rok: Number(d.slice(0, 4)), prog, minimalne });
+  }
+  return progi;
 }
 
 export function useStanRozliczenKonta(): StanRozliczenKonta | null {
@@ -62,6 +76,7 @@ export function useStanRozliczenKonta(): StanRozliczenKonta | null {
       karty: [],
       prog,
       minimalne,
+      progi: progiKart(katalog, [], dzis),
       maChorobowe,
     };
     if (!kopia || !dzialalnosc) return wynik;
@@ -103,6 +118,6 @@ export function useStanRozliczenKonta(): StanRozliczenKonta | null {
         komunikaty: komunikatyStanu(stanOdczytu, dzienOdczytu, prog, okresSplaty, dzis, maChorobowe),
       });
     }
-    return { ...wynik, dzienOdczytu, stanNaDzienOdczytu: stanOdczytu, karty };
+    return { ...wynik, dzienOdczytu, stanNaDzienOdczytu: stanOdczytu, karty, progi: progiKart(katalog, karty, dzis) };
   }, [dane, katalog, parametry, dzis]);
 }

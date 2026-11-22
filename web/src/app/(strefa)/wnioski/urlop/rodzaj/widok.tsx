@@ -20,8 +20,10 @@ import {
   zapiszKrokWnioskuOUrlop,
 } from '@/dane/magazyn/operacje/wnioski-urlop';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
+import { ODNOSNIKI } from '@/dane/katalog/pozycje';
 import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
+import { KartaWiecejInformacji } from '@/komponenty/karta-wiecej-informacji';
 import { Komunikat } from '@/komponenty/komunikat';
 import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { Notatka } from '@/komponenty/notatka';
@@ -144,6 +146,7 @@ export function WidokRodzajuWnioskuOUrlop() {
           </p>
         </Karta>
       ) : null}
+      <KartaWiecejInformacji odnosniki={[ODNOSNIKI.mrpips, ODNOSNIKI.pip, ODNOSNIKI.zus]} />
     </>
   );
 

@@ -19,10 +19,13 @@ import type {
 } from '@/domena/typy';
 import { terminWnioskuOjca, poczatekOchronyOjca } from '@/domena/wnioski/rezygnacja';
 import { losowyCiag } from '@/dane/magazyn/losowanie';
+import { nastepnyNumerPotwierdzenia } from '@/dane/magazyn/operacje/konto';
 import { utworzPowiadomienie } from '@/dane/magazyn/operacje/powiadomienia';
 import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
 import { rozpocznijLubWznowZam } from '@/dane/magazyn/operacje/wnioski-zam';
 import {
+  czySymulacja,
+  czyTrybDemonstracyjny,
   odczytajStanKonta,
   odczytajZalogowanego,
   osobyRodziny,
@@ -162,6 +165,72 @@ export function rozpocznijZamZa14Tygodni(
   const zapis = zapiszKrok(start.wartosc.idWniosku, zmiana, 'ViewZamPeriod', ctx);
   if (!zapis.ok) return zapis;
   return { ok: true, wartosc: zapis.wartosc as WniosekZam };
+}
+
+/** Dane rezygnacji matki z dalszej części zasiłku macierzyńskiego przy umowie zlecenia i działalności. */
+export interface RezygnacjaZZasilku {
+  idSprawy: IdSprawy;
+  dataRezygnacji: DataISO;
+  koniecZasilku: DataISO;
+  zOrzeczeniem: boolean;
+  /** Imię i nazwisko ojca dziecka z oświadczenia, od kiedy przejmie zasiłek. */
+  ojciec: string;
+}
+
+/**
+ * Rezygnacja matki z dalszej części zasiłku macierzyńskiego zapisana we Wnioskach rodziny z okresem, który przejmie
+ * ojciec dziecka. Adresat ZUS: wniosek ZAS-23 wysłany w symulowanym eZUS z numerem ZAS23-DEMO (0337, awaria kanału
+ * 0044). Adresat płatnik składek: wniosek przygotowany do wydruku dla zleceniodawcy (0339). Wysłana rezygnacja
+ * podpowiada ojcu dziecka datę początku zasiłku we wniosku ZAM o przejęcie (proponujPrzejecie).
+ */
+export function zapiszRezygnacjeZZasilku(
+  dane: RezygnacjaZZasilku,
+  adresat: 'zus' | 'platnik-skladek',
+  ctx: KontekstOperacji,
+): WynikOperacji<WniosekOUrlop> {
+  const k = kontekstZalogowanego();
+  if (k === null) return { ok: false, kod: '0003' };
+  // Kanał wniosków eZUS: prototyp wysyła wyłącznie w trybie demonstracyjnym; poza nim kanał jest niedostępny.
+  if (adresat === 'zus' && (!czyTrybDemonstracyjny() || czySymulacja('wysylkaDoZusNiedostepna'))) return { ok: false, kod: '0044' };
+  const wniosek: WniosekOUrlop = {
+    ...nowyWniosek(k, 'rezygnacja-z-czesci-zasilku', dane.idSprawy, ctx),
+    stan: adresat === 'zus' ? 'wyslany' : 'przygotowany',
+    adresat,
+    ...(adresat === 'zus'
+      ? { dataZlozenia: ctx.dzis, potwierdzenie: nastepnyNumerPotwierdzenia('ZAS23-DEMO', ctx.dzis) }
+      : { dataPrzygotowania: ctx.dzis }),
+    okresy: [{ rodzajUrlopu: 'przejety-macierzynski', od: dane.dataRezygnacji, do: dane.koniecZasilku, rodzic: 'drugi-rodzic' }],
+    rezygnacja: { dataPowrotu: dane.dataRezygnacji, zOrzeczeniem: dane.zOrzeczeniem },
+    zalaczniki: [
+      {
+        id: 'oswiadczenie-ojca',
+        rodzaj: 'oswiadczenie-ojca-o-przejeciu-zasilku',
+        opis: teksty.ViewEzusZas23.oswiadczenieOjcaZalacznik({ imieINazwisko: dane.ojciec.trim() }),
+        wymagany: true,
+      },
+    ],
+    ostatniEkran: adresat === 'zus' ? 'ViewEzusZas23' : 'ViewMaternityResignation',
+  };
+  const wynik = wykonajOperacjeZWynikiem<WniosekOUrlop>(() => {
+    zmienStanRodziny(k.rodzina.idRodziny, (s) => ({
+      ...s,
+      // Nowa rezygnacja zastępuje szkic i wcześniej przygotowany wniosek konta o tym samym adresacie.
+      wnioski: [
+        ...s.wnioski.filter(
+          (w) =>
+            !(
+              w.rodzaj === 'rezygnacja-z-czesci-zasilku' &&
+              w.konto === k.pesel &&
+              (w.stan === 'szkic' || (w.stan === 'przygotowany' && w.adresat === adresat))
+            ),
+        ),
+        wniosek,
+      ],
+    }));
+    return { ok: true, wartosc: wniosek };
+  });
+  if (wynik.ok) przeliczRodzine(k.rodzina.idRodziny, ctx);
+  return wynik;
 }
 
 /**

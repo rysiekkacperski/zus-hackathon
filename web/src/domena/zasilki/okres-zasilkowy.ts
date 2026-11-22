@@ -24,6 +24,8 @@ export interface WynikOkresuZasilkowego {
   poczatek?: DataISO;
   /** Limit dni okresu zasiłkowego w ciąży. */
   limit?: number;
+  /** Dni wykorzystanej części przypadające po dniu `dzis` z opcji, objęte już wystawionymi zaświadczeniami. */
+  poDzis?: number;
 }
 
 /** Limity dni wynagrodzenia chorobowego w roku kalendarzowym. */
@@ -150,7 +152,7 @@ export function okresZasilkowyWCiazy(
   zaswiadczenia: readonly ZaswiadczenieEzla[],
   limit: number,
   przerwa: number,
-  opcje: { poczatekPrawa?: DataISO } = {},
+  opcje: { poczatekPrawa?: DataISO; dzis?: DataISO } = {},
 ): WynikOkresuZasilkowego {
   const pusty: WynikOkresuZasilkowego = { zaswiadczenia: [], wykorzystane: 0, pozostale: limit, dataWyczerpania: null, limit };
   const choroba = zaswiadczenia.filter((z) => z.rodzaj === 'choroba');
@@ -183,7 +185,9 @@ export function okresZasilkowyWCiazy(
   const pozostale = Math.max(0, limit - okres.length);
   const ostatniDzien = okres[okres.length - 1];
   const dataWyczerpania = okres.length >= limit ? okres[limit - 1] : dodajDni(ostatniDzien, pozostale);
-  return { zaswiadczenia: zaswiadczeniaOkresu, wykorzystane, pozostale, dataWyczerpania, poczatek: okres[0], limit };
+  const dzis = opcje.dzis;
+  const poDzis = dzis === undefined ? {} : { poDzis: okres.slice(0, limit).filter((d) => d > dzis).length };
+  return { zaswiadczenia: zaswiadczeniaOkresu, wykorzystane, pozostale, dataWyczerpania, poczatek: okres[0], limit, ...poDzis };
 }
 
 /** Limit dni wynagrodzenia chorobowego w roku: od roku po roku ukończenia 50 lat obowiązuje limit obniżony. */
@@ -342,7 +346,7 @@ export function wyliczeniaEzla(w: {
   const okres =
     wariant === 'bez-ubezpieczenia'
       ? null
-      : okresZasilkowyWCiazy(zaswiadczenia, limit, przerwa, w.poczatekPrawa ? { poczatekPrawa: w.poczatekPrawa } : {});
+      : okresZasilkowyWCiazy(zaswiadczenia, limit, przerwa, { dzis: w.dzis, ...(w.poczatekPrawa ? { poczatekPrawa: w.poczatekPrawa } : {}) });
   const dataUrodzenia = dataUrodzeniaZPesel(w.pesel) ?? '1990-01-01';
   const wynagrodzenie =
     wariant === 'wynagrodzenie'

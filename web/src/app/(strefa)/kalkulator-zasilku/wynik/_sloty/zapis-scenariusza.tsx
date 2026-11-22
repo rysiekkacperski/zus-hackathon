@@ -83,7 +83,7 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
   const gosc = useCzyGosc();
   const wlasciciel = useWlascicielDanych();
   const katalog = useKatalog();
-  const nazwy = useNazwyRodzicow();
+  const nazwy = useNazwyRodzicow(props.daneWejsciowe.zdarzenie.wartosc === 'przyjecie');
   const [zapisany, ustawZapisany] = useState<Zapisany | null>(null);
   const [blad, ustawBlad] = useState<KodKomunikatu | null>(null);
 
@@ -102,8 +102,10 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
     wynik: props.wynik,
   });
 
-  /** Zapis bieżącego scenariusza; zwraca numer albo null po błędzie. */
+  /** Zapis bieżącego scenariusza; zwraca numer albo null po błędzie i w trakcie przeliczania. */
   const zapisz = (): number | null => {
+    // W trakcie przeliczania wynik pochodzi z poprzednich danych, więc zapis czeka na odpowiedź dla bieżących danych.
+    if (props.przeliczanie) return null;
     const ctx = pobierzKontekstOperacji();
     const wynik = zapiszScenariusz(nowy(), ctx);
     if (!wynik.ok) {
@@ -209,7 +211,7 @@ export function SlotZapisScenariusza(props: PropsSlotu<'wynik'>) {
         ) : null}
         <p className="m-0 text-body">{zPlanem ? t.opis : gosc ? t.opisGosc : t.opisKonta}</p>
         <div className="flex flex-wrap gap-3">
-          <Przycisk wariant="glowny" type="button" ikona="zapisz" onClick={() => zapisz()}>
+          <Przycisk wariant="glowny" type="button" ikona="zapisz" onClick={() => zapisz()} zajety={props.przeliczanie === true}>
             {t.zapisz}
           </Przycisk>
           <PrzyciskLink wariant="drugorzedny" href="/kalkulator-zasilku/porownanie">

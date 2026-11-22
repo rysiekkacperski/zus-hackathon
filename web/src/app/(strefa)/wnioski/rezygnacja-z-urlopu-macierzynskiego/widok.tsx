@@ -5,7 +5,9 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { PrzyciskiCzesci, useCzesciFormularza } from '@/komponenty/czesci-formularza';
+import { ODNOSNIKI } from '@/dane/katalog/pozycje';
 import { Karta } from '@/komponenty/karta';
+import { KartaWiecejInformacji } from '@/komponenty/karta-wiecej-informacji';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
@@ -35,6 +37,7 @@ import { osobyRodziny } from '@/dane/magazyn/stan';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { rozpocznijRezygnacje, rozpocznijZamZa14Tygodni, zapiszKrok } from '@/dane/magazyn/operacje/rezygnacja';
 import { teksty } from '@/teksty';
+import { FormularzRezygnacjiZZasilku } from './_czesci/formularz-zasilku';
 import {
   etykietaFormy,
   imieINazwiskoDrugiego,
@@ -276,6 +279,12 @@ export function WidokRezygnacjiZUrlopu() {
   const bladOperacjiKomunikat = bladOperacji ? <Komunikat kod={bladOperacji} /> : null;
   const wniosekZam = otwarcie.wniosekZam;
   const platnik = daneRodziny.matka.platnikZasilku?.wartosc;
+  const rezygnacjeZZasilku = kontekst.rodzina.wnioski.filter(
+    (w): w is WniosekOUrlop => w.rodzaj === 'rezygnacja-z-czesci-zasilku' && w.konto === pesel,
+  );
+  const wyslanyZas23 = rezygnacjeZZasilku.filter((w) => w.adresat === 'zus' && w.stan === 'wyslany').at(-1) ?? null;
+  const przygotowanaDlaZleceniodawcy =
+    rezygnacjeZZasilku.filter((w) => w.adresat === 'platnik-skladek' && w.stan === 'przygotowany').at(-1) ?? null;
 
   if (zasilek) {
     const bocznaZasilku = (
@@ -308,6 +317,7 @@ export function WidokRezygnacjiZUrlopu() {
             />
           </Karta>
         ) : null}
+        <KartaWiecejInformacji odnosniki={[ODNOSNIKI.zus, ODNOSNIKI.mrpips]} />
       </>
     );
     const okres14 = okresZamZa14Tygodni(urlop.dataPorodu);
@@ -333,23 +343,50 @@ export function WidokRezygnacjiZUrlopu() {
                     </Przycisk>
                   </div>
                 </Karta>
-              ) : (
+              ) : otwarcie.wariant === 'rezygnacja-w-ezus' ? (
                 <Karta tytul={t.kartaRezygnacjiZasilku} bezLinii>
-                  <Komunikat
-                    kod={otwarcie.kod}
-                    akcje={
-                      otwarcie.wariant === 'rezygnacja-w-ezus' ? (
-                        <PrzyciskLink href={trasy.ViewEzusHome()} wariant="drugorzedny" nowaKarta>
+                  {/* Wniosek ZAS-23 z oświadczeniem ojca dziecka składa się w symulowanym eZUS (ViewEzusZas23). */}
+                  {wyslanyZas23 ? (
+                    <Komunikat
+                      kod="0337"
+                      parametry={{
+                        data: formatujDate(wyslanyZas23.dataZlozenia ?? dzis),
+                        dataRezygnacji: formatujDate(wyslanyZas23.okresy[0]?.od ?? dzis),
+                      }}
+                      akcje={
+                        <PrzyciskLink href={trasy.ViewEzusZas23()} wariant="drugorzedny" nowaKarta>
                           {t.przejdzDoEzus}
                         </PrzyciskLink>
-                      ) : (
-                        <PrzyciskLink href={trasy.ViewFamilyPlan()} wariant="drugorzedny">
-                          {t.przejdzDoPlanu}
+                      }
+                    />
+                  ) : (
+                    <Komunikat
+                      kod="0207"
+                      akcje={
+                        <PrzyciskLink href={trasy.ViewEzusZas23()} wariant="drugorzedny" nowaKarta>
+                          {t.przejdzDoEzus}
                         </PrzyciskLink>
-                      )
-                    }
-                  />
+                      }
+                    />
+                  )}
                 </Karta>
+              ) : (
+                <>
+                  <Komunikat kod="0261" />
+                  {/* Zleceniodawca, który wypłaca zasiłek, przyjmuje pisemny wniosek o rezygnację z oświadczeniem ojca dziecka. */}
+                  <FormularzRezygnacjiZZasilku
+                    adresat="platnik-skladek"
+                    idSprawy={wniosekZam?.idSprawy ?? idSprawy}
+                    urlop={urlop}
+                    zOrzeczeniem={otwarcie.zOrzeczeniem}
+                    dzis={dzis}
+                    matka={`${konto.imie} ${konto.nazwisko}`}
+                    ojciec={imieOjca ?? ''}
+                    nazwaPlatnika={daneRodziny.matka.platnikZasilku?.nazwaPlatnika}
+                    zapisana={przygotowanaDlaZleceniodawcy}
+                    onWroc={() => router.push(powrotHref)}
+                  />
+                </>
               )}
             </>
           }
@@ -435,6 +472,7 @@ export function WidokRezygnacjiZUrlopu() {
                 <Notatka ikona="info">{t.notatkaSzkicu}</Notatka>
               </Karta>
             ) : null}
+            <KartaWiecejInformacji odnosniki={[ODNOSNIKI.zus, ODNOSNIKI.mrpips, ODNOSNIKI.pip]} />
           </>
         }
       />

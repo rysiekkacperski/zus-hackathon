@@ -40,15 +40,19 @@ export function ustalPlatnikaSwiadczenia(w: WejsciePlatnika): PlatnikSwiadczenia
   const platnik = platnikZasilkuMatki(w);
   if (platnik === 'zus') return zus;
   if (platnik === 'platnik-skladek') {
-    const nazwa = w.nazwaPlatnika ?? w.tytul?.platnik.nazwa;
-    return { platnik: 'platnik-skladek', wyplaca: nazwa ?? teksty.ViewPregnancyBenefits.platnicy.platnikSkladek };
+    return { platnik: 'platnik-skladek', wyplaca: nazwaPlatnika(w) ?? teksty.ViewPregnancyBenefits.platnicy.platnikSkladek };
   }
   return null;
 }
 
+/** Nazwa płatnika składek z profilu albo z tytułu konta ZUS; pusta nazwa tytułu z profilu nie jest nazwą. */
+function nazwaPlatnika(w: WejsciePlatnika): string | undefined {
+  return [w.nazwaPlatnika, w.tytul?.platnik.nazwa].find((n): n is string => n !== undefined && n.trim() !== '');
+}
+
 /** Tekst „<płatnik> albo ZUS” dla płatnika nieustalonego. */
 export function opisPlatnikaNieustalonego(w: WejsciePlatnika): string {
-  const nazwa = w.nazwaPlatnika ?? w.tytul?.platnik.nazwa ?? teksty.ViewPregnancyBenefits.platnicy.platnikSkladek;
+  const nazwa = nazwaPlatnika(w) ?? teksty.ViewPregnancyBenefits.platnicy.platnikSkladek;
   return teksty.ViewPregnancyBenefits.platnicy.albo({ nazwa });
 }
 

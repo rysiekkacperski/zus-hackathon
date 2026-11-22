@@ -100,6 +100,27 @@ function zastosujStanSymulowany(dane: ZrodloweDaneKontaZus, symulowany: StanSymu
 }
 
 /**
+ * Nakłada stan symulowanego ZUS z przeglądarki na dane źródłowe konta odczytane z REST API symulowanego ZUS
+ * (GET /api/v1/zus/konto?postac=zrodlowe z nagłówkiem X-Pesel). Serwer zwraca dane startowe rejestru bez stanu symulacji, więc
+ * przeglądarka uzupełnia je tak samo jak zrodloweDaneKonta: konto spoza rejestru dostaje imię i nazwisko z argumentu
+ * `osoba` (bez niego z nadpisań stanu symulowanego), a potem nadpisania scenariuszy, dziecko z symulacji, wnioski
+ * z przewodnika, zaświadczenia o stanie rozliczeń i korespondencję. Wynik jest głęboką kopią.
+ */
+export function nalozStanSymulowany(
+  dane: ZrodloweDaneKontaZus,
+  symulowany: StanSymulowanegoZus | null,
+  osoba?: OsobaKontaZus,
+): ZrodloweDaneKontaZus {
+  const stan = symulowany?.pesel === dane.pesel ? symulowany : null;
+  const tozsamosc: OsobaKontaZus | null =
+    dane.imie === '' && dane.nazwisko === ''
+      ? osoba ?? { imie: stan?.nadpisania?.imie ?? '', nazwisko: stan?.nadpisania?.nazwisko ?? '' }
+      : null;
+  const zTozsamoscia = tozsamosc ? { ...dane, imie: tozsamosc.imie, nazwisko: tozsamosc.nazwisko } : dane;
+  return structuredClone(stan ? zastosujStanSymulowany(zTozsamoscia, stan) : zTozsamoscia);
+}
+
+/**
  * Zwraca dane źródłowe konta w symulowanym ZUS.
  *
  * - Konto Administrator ZUS nie ma danych konta ZUS, więc funkcja zwraca `null`.

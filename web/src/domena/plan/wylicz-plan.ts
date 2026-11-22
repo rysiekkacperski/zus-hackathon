@@ -7,6 +7,7 @@
 // terminu (kontrakt, sekcja 6.7). Po potwierdzeniu daty porodu żadna sprawa nie ma oznaczenia po porodzie.
 // Na końcu powstaje lista zmian, oznaczenie „nowa w planie” i bieżący etap.
 import { dataZeZnacznika } from '@/domena/daty';
+import { czyPozycjaWylaczona } from '@/domena/katalog/zloz';
 import { ETAPY, indeksEtapu, wyznaczBiezacyEtap } from '@/domena/plan/etap';
 import { krokiPlanu } from '@/domena/plan/kroki';
 import { czyStatusZachowywany } from '@/domena/plan/statusy';
@@ -96,7 +97,8 @@ export function wyliczPlan(w: WejsciePlanu): PlanRodziny {
       return bez;
     });
   }
-  pozycje = uporzadkuj(pozycje.filter((p) => ETAPY.includes(p.etap)));
+  // Pozycja wyłączona przez Administratora w panelu katalogu znika z planu razem ze swoimi sprawami.
+  pozycje = uporzadkuj(pozycje.filter((p) => ETAPY.includes(p.etap) && !czyPozycjaWylaczona(w.katalog, p.idPozycji)));
 
   const biezacyEtap = wyznaczBiezacyEtap(w.zgoda ? w.daneCiazy : null, w.dzis);
   const zDanymiZusMatki = w.daneZusMatki !== null;

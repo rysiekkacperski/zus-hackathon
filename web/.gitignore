@@ -38,6 +38,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# serwerowy magazyn edycji katalogu świadczeń (KATALOG_DANE_KATALOG, domyślnie web/.dane/)
+/.dane/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

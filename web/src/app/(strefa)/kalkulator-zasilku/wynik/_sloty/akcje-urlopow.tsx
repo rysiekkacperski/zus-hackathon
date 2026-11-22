@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   RODZICE,
+  czesciWyniku,
   okresyLaczenia,
   okresyPracyMiedzyUrlopami,
   uprawnieniaPoPowrocie,
@@ -21,6 +22,7 @@ import { formatujDate, formatujProcent } from '@/komponenty/format';
 import { Karta } from '@/komponenty/karta';
 import { Przycisk } from '@/komponenty/przycisk';
 import { useKatalog, useKonto, useRodzina } from '@/dane/magazyn/hooki';
+import { laczeniaScenariusza } from '@/domena/kalkulatory';
 import type { IdPozycji, RodzicWRodzinie } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { ArkuszLaczeniaZPraca } from './arkusz-laczenia-z-praca';
@@ -38,7 +40,7 @@ function czyUprawnienie(id: IdPozycji): id is Uprawnienie {
 export function SlotAkcjeUrlopow(props: PropsSlotu<'wynik'>) {
   const adres = useSearchParams();
   const arkusz = adres.get('arkusz');
-  const nazwy = useNazwyRodzicow();
+  const nazwy = useNazwyRodzicow(props.daneWejsciowe.zdarzenie.wartosc === 'przyjecie');
   const katalog = useKatalog();
   const konto = useKonto();
   const rodzina = useRodzina();
@@ -54,6 +56,13 @@ export function SlotAkcjeUrlopow(props: PropsSlotu<'wynik'>) {
   };
 
   const rodziceZPowrotem = RODZICE.filter((r) => wynik.datyPowrotu[r] !== undefined);
+  // Wymiar pracy każdego łączenia rodzica w kolejności części (łączenie może dotyczyć części obojga rodziców).
+  const czesciWyn = czesciWyniku(d, props.parametry, katalog);
+  const wymiaryLaczen = (r: RodzicWRodzinie) =>
+    laczeniaScenariusza(props.parametry)
+      .filter((l) => czesciWyn[l.indeksCzesci]?.rodzic === r)
+      .sort((a, b) => a.indeksCzesci - b.indeksCzesci)
+      .map((l) => l.wymiarPracy);
   // 3.10.4.2.3: gdy żadne dziecko nie pozostało przy życiu, kalkulator nie umieszcza urlopu rodzicielskiego ani ojcowskiego.
   const bezUrlopuRodzicielskiego = Boolean(d.strata && d.strata.wartosc.liczbaDzieci >= d.liczbaDzieci.wartosc);
 
@@ -79,11 +88,14 @@ export function SlotAkcjeUrlopow(props: PropsSlotu<'wynik'>) {
               const praca = okresyPracyMiedzyUrlopami(wynik, rodzic);
               const laczenie = okresyLaczenia(wynik, rodzic);
               const forma = formaRodzica(d, rodzic).wartosc;
-              const uprawnienia = uprawnieniaPoPowrocie(rodzic, forma.forma, forma.dobrowolne).filter(czyUprawnienie);
+              // Po stracie wszystkich dzieci i przy przyjęciu dziecka na wychowanie wynik pomija przerwy na karmienie K20, tak jak wyliczenie w domenie.
+              const uprawnienia = uprawnieniaPoPowrocie(rodzic, forma.forma, forma.dobrowolne)
+                .filter((id) => !(id === 'K20' && (bezUrlopuRodzicielskiego || d.zdarzenie.wartosc === 'przyjecie')))
+                .filter(czyUprawnienie);
               const opisPracy = praca.map((o) => t.okres({ od: formatujDate(o.od), do_: formatujDate(o.do) })).join(', ');
               return (
                 <section key={rodzic} aria-labelledby={`powrot-${rodzic}`} className="flex flex-col gap-3 border-t border-line-soft pt-4 first:border-t-0 first:pt-0">
-                  <h3 id={`powrot-${rodzic}`} className="m-0 text-tile-title text-ink">
+                  <h3 id={`powrot-${rodzic}`} className="m-0 text-tile-title text-ink first-letter:uppercase">
                     {kto}
                   </h3>
                   <div className="flex flex-wrap items-end justify-between gap-3">
@@ -107,12 +119,12 @@ export function SlotAkcjeUrlopow(props: PropsSlotu<'wynik'>) {
                         ? t.okresPracy({ okresy: opisPracy })
                         : t.okresyPracy({ okresy: opisPracy })}
                   </p>
-                  {laczenie.map((o) => (
+                  {laczenie.map((o, i) => (
                     <p key={o.od} className="m-0 text-body">
                       {t.laczenie({
                         od: formatujDate(o.od),
                         do_: formatujDate(o.do),
-                        wymiar: formatujProcent(props.parametry.laczenie?.wymiarPracy ?? 0),
+                        wymiar: formatujProcent(wymiaryLaczen(rodzic)[i] ?? props.parametry.laczenie?.wymiarPracy ?? 0),
                       })}
                     </p>
                   ))}

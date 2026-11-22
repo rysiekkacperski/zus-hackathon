@@ -136,10 +136,12 @@ export function TabelaOkresow({
   wynik,
   rodzic,
   etykieta,
+  przyjecie = false,
 }: {
   wynik: WynikScenariusza;
   rodzic: RodzicWRodzinie;
   etykieta: string;
+  przyjecie?: boolean;
 }) {
   const okresy = wynik.okresy.filter((o) => o.rodzic === rodzic);
   const podwyzszenie = sumaPola(wynik, rodzic, 'podwyzszenie');
@@ -177,7 +179,7 @@ export function TabelaOkresow({
       pustaTresc={t.brakOkresow}
       suma={
         okresy.length > 0
-          ? { rodzaj: rodzic === 'matka' ? t.sumaMatki : t.sumaDrugiego, zaOkres: formatujKwote(wynik.sumy[rodzic] ?? 0) }
+          ? { rodzaj: rodzic === 'matka' ? (przyjecie ? t.sumaRodzicaPrzyjmujacego : t.sumaMatki) : t.sumaDrugiego, zaOkres: formatujKwote(wynik.sumy[rodzic] ?? 0) }
           : undefined
       }
     />

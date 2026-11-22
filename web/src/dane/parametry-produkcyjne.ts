@@ -17,20 +17,23 @@ export interface AdresyProdukcyjne {
   kanaly: Record<KanalProdukcyjny, AdresProdukcyjny>;
 }
 
+// Adresy pochodzą ze zmiennych środowiskowych NEXT_PUBLIC_ADRES_* (web/.env.example), które Next.js wpisuje w kod
+// przeglądarki przy budowie aplikacji, więc wdrożenie ustawia je przed `pnpm build`. Każdą zmienną zapisujemy dosłownie,
+// bo Next.js podstawia wyłącznie pełną nazwę `process.env.NEXT_PUBLIC_…`. Brak zmiennej daje `null`.
 export const adresyProdukcyjne: AdresyProdukcyjne = {
   logowanie: {
-    mobywatel: null,
-    ezus: null,
-    mzus: null,
+    mobywatel: process.env.NEXT_PUBLIC_ADRES_LOGOWANIA_MOBYWATEL ?? null,
+    ezus: process.env.NEXT_PUBLIC_ADRES_LOGOWANIA_EZUS ?? null,
+    mzus: process.env.NEXT_PUBLIC_ADRES_LOGOWANIA_MZUS ?? null,
   },
   kanaly: {
-    ezus: null,
-    empatia: null,
-    mobywatel: null,
-    'gov-zgloszenie-urodzenia': null,
-    'gov-rejestr-stanu-cywilnego': null,
-    'pue-ezus': null,
-    'e-wizyta': null,
+    ezus: process.env.NEXT_PUBLIC_ADRES_KANALU_EZUS ?? null,
+    empatia: process.env.NEXT_PUBLIC_ADRES_KANALU_EMPATIA ?? null,
+    mobywatel: process.env.NEXT_PUBLIC_ADRES_KANALU_MOBYWATEL ?? null,
+    'gov-zgloszenie-urodzenia': process.env.NEXT_PUBLIC_ADRES_KANALU_GOV_ZGLOSZENIE_URODZENIA ?? null,
+    'gov-rejestr-stanu-cywilnego': process.env.NEXT_PUBLIC_ADRES_KANALU_GOV_REJESTR_STANU_CYWILNEGO ?? null,
+    'pue-ezus': process.env.NEXT_PUBLIC_ADRES_KANALU_PUE_EZUS ?? null,
+    'e-wizyta': process.env.NEXT_PUBLIC_ADRES_KANALU_E_WIZYTA ?? null,
   },
 };
 

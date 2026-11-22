@@ -17,6 +17,7 @@ import { sprawyZespolu, wybierzSpraweZespolu, zapamietajZestawyZus } from '@/dan
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import type { KodKomunikatu, OdpowiedzZestawowSpraw, SprawaPrzykladowa } from '@/domena/typy';
 import { teksty } from '@/teksty';
+import { PobierzDokumentyPrzykladowe } from './_czesci/dokumenty-przykladowe';
 import { formaZatrudnienia, listaDokumentow, prawoSprawy } from './_czesci/opisy';
 
 const t = teksty.ViewSampleCaseList;
@@ -113,9 +114,26 @@ export function WidokPrzykladowychSpraw() {
             </PrzyciskLink>
           </div>
         </Karta>
+        <Karta tytul={t.kartaDokumentow.tytul} bezLinii>
+          <div className="flex flex-wrap items-start justify-between gap-6">
+            <p className="m-0 min-w-0 flex-[1_1_30rem]">{t.kartaDokumentow.opis}</p>
+            <div className="flex flex-wrap items-start gap-4">
+              <PobierzDokumentyPrzykladowe etykieta={t.kartaDokumentow.pobierzWszystkie} opis={t.kartaDokumentow.archiwum} />
+              <PrzyciskLink href={`${trasy.ViewSampleCaseUpload({ trybWgrania: 'nowa' })}#dokumenty-przykladowe`} wariant="tlo">
+                {t.kartaDokumentow.wybierzZListy}
+              </PrzyciskLink>
+            </div>
+          </div>
+        </Karta>
         <Karta tytul={t.kartaListy.tytul} bezLinii>
           <p className="mt-0 mb-5">
-            {t.kartaListy.licznikZestawow} <strong>{liczbaZestawow}</strong>, {t.kartaListy.licznikWzorcowych}{' '}
+            {liczbaZestawow > 0 ? (
+              <>
+                {t.kartaListy.licznikZestawow} <strong>{liczbaZestawow}</strong>, {t.kartaListy.licznikWzorcowych}{' '}
+              </>
+            ) : (
+              <>{t.kartaListy.licznikWzorcowychSamych} </>
+            )}
             <strong>{liczbaWzorcowych}</strong>
           </p>
           <Tabela podpis={t.tabela.podpis} kolumny={kolumny} wiersze={wiersze} etykietaPrzewijania={t.tabela.etykietaPrzewijania} />

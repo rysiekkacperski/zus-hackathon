@@ -117,10 +117,32 @@ export const wpisySlownikaWymiarow: readonly WpisSlownika[] = [
       { klucz: 'tydzienCiazy', etykieta: 'Graniczny tydzień ciąży', jednostka: 'tygodnie' },
       { klucz: 'masaUrodzeniowa', etykieta: 'Graniczna masa urodzeniowa', jednostka: 'g' },
       { klucz: 'pozostale', etykieta: 'Najwyżej w pozostałych przypadkach', jednostka: 'tygodnie' },
+      // Art. 180^2 Kodeksu pracy (gov.pl, Ministerstwo Rodziny, Pracy i Polityki Społecznej, pytania i odpowiedzi
+      // o uzupełniającym urlopie macierzyńskim): poród przed ukończeniem 37. tygodnia ciąży daje 8 tygodni za pobyt
+      // do upływu 8. tygodnia po porodzie, a poród w terminie wymaga pobytu co najmniej 2 kolejnych dni, z pierwszym
+      // dniem między 5. a 28. dniem po porodzie, liczonego od 5. dnia do upływu 8. tygodnia po porodzie.
+      { klucz: 'tydzienPoroduWTerminie', etykieta: 'Tydzień ciąży, od którego poród jest porodem w terminie', jednostka: 'tygodnie' },
+      { klucz: 'poczatekPobytuOd', etykieta: 'Przy porodzie w terminie pierwszy dzień pobytu najwcześniej w dniu po porodzie', jednostka: 'dni' },
+      { klucz: 'poczatekPobytuDo', etykieta: 'Przy porodzie w terminie pierwszy dzień pobytu najpóźniej w dniu po porodzie', jednostka: 'dni' },
+      { klucz: 'najkrotszyPobyt', etykieta: 'Przy porodzie w terminie najkrótszy pobyt w kolejnych dniach', jednostka: 'dni' },
     ],
-    wersje: [{ od: OD_UZUPELNIAJACEGO_URLOPU, wartosci: { przedwczesnyPorod: 15, tydzienCiazy: 28, masaUrodzeniowa: 1000, pozostale: 8 } }],
+    wersje: [
+      {
+        od: OD_UZUPELNIAJACEGO_URLOPU,
+        wartosci: {
+          przedwczesnyPorod: 15,
+          tydzienCiazy: 28,
+          masaUrodzeniowa: 1000,
+          pozostale: 8,
+          tydzienPoroduWTerminie: 37,
+          poczatekPobytuOd: 5,
+          poczatekPobytuDo: 28,
+          najkrotszyPobyt: 2,
+        },
+      },
+    ],
     szablonOpisu:
-      'do {przedwczesnyPorod} tygodni przy porodzie przed ukończeniem {tydzienCiazy}. tygodnia ciąży albo masie urodzeniowej do {masaUrodzeniowa} g, do {pozostale} tygodni w pozostałych przypadkach, tydzień urlopu za każdy rozpoczęty tydzień pobytu dziecka w szpitalu',
+      'do {przedwczesnyPorod} tygodni przy porodzie przed ukończeniem {tydzienCiazy}. tygodnia ciąży albo masie urodzeniowej do {masaUrodzeniowa} g, do {pozostale} tygodni w pozostałych przypadkach, a przy porodzie od {tydzienPoroduWTerminie}. tygodnia ciąży przy pobycie co najmniej {najkrotszyPobyt} kolejnych dni rozpoczętym między {poczatekPobytuOd}. a {poczatekPobytuDo}. dniem po porodzie, tydzień urlopu za każdy rozpoczęty tydzień pobytu dziecka w szpitalu',
     edytowalny: true,
     kolejnosc: 5,
   },

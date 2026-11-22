@@ -90,6 +90,50 @@ export function czyKoniecUmowyTerminowej(rodzic: Pick<DaneRodzica, 'zmianaZatrud
   );
 }
 
+/**
+ * Umowa o pracę rodzica przedłużona do dnia porodu. Podstawa: art. 177 § 3 i § 3¹ Kodeksu pracy (Dz.U. 2026 poz. 1245):
+ * umowa na czas określony albo na okres próbny przekraczający miesiąc, która uległaby rozwiązaniu po upływie trzeciego
+ * miesiąca ciąży, ulega przedłużeniu do dnia porodu, z wyjątkiem umowy na zastępstwo. Gdy profil zawiera rodzaj umowy
+ * terminowej, datę ustania i przewidywany termin porodu, wynik liczymy regułą przedłużenia przy każdym odczycie, więc
+ * nadąża za zmianą terminu porodu. Bez tych danych decyduje wynik reguły zapisany przy odpowiedzi w sprawie K30.
+ */
+export function czyUmowaPrzedluzonaDoPorodu(
+  rodzic: Pick<DaneRodzica, 'zmianaZatrudnienia' | 'rodzajUmowy'>,
+  daneCiazy: Pick<DaneCiazyIDziecka, 'przewidywanyTerminPorodu'> | null,
+): boolean {
+  const zmiana = rodzic.zmianaZatrudnienia;
+  if (zmiana?.rodzaj.wartosc !== 'ustanie' || zmiana.forma?.wartosc !== 'umowa-o-prace') return false;
+  const ptp = daneCiazy?.przewidywanyTerminPorodu;
+  const rodzaj = rodzic.rodzajUmowy?.wartosc;
+  if (ptp !== undefined && zmiana.data !== undefined && zmiana.przyczyna !== undefined && czyRodzajUmowyTerminowej(rodzaj)) {
+    return ustalPrzedluzenieUmowy(ptp, zmiana.data.wartosc, zmiana.przyczyna.wartosc, rodzaj).przedluzonaDoPorodu;
+  }
+  return zmiana.umowaPrzedluzonaDoPorodu === true;
+}
+
+/**
+ * Koniec umowy o pracę z danych konta ZUS, przy którym rodzic sprawdza przedłużenie umowy do dnia porodu
+ * (art. 177 § 3 i § 3¹ Kodeksu pracy, Dz.U. 2026 poz. 1245): każdy tytuł pracownika ma datę końca, najpóźniejsza
+ * przypada od dziś, po upływie trzeciego miesiąca ciąży i przed przewidywanym terminem porodu, a profil rodziny nie
+ * zawiera ustania umowy. Rodzaj umowy zna wyłącznie rodzic, więc rodzic zgłasza koniec umowy w profilu i wybiera
+ * rodzaj umowy. Null, gdy sprawdzenie nie dotyczy rodziny.
+ */
+export function koniecUmowyDoSprawdzenia(
+  rodzic: Pick<DaneRodzica, 'zmianaZatrudnienia'>,
+  tytuly: readonly TytulUbezpieczenia[],
+  daneCiazy: Pick<DaneCiazyIDziecka, 'przewidywanyTerminPorodu' | 'dataPorodu'> | null,
+  dzis: DataISO,
+): DataISO | null {
+  if (rodzic.zmianaZatrudnienia?.rodzaj.wartosc === 'ustanie') return null;
+  const ptp = daneCiazy?.przewidywanyTerminPorodu;
+  if (ptp === undefined || daneCiazy?.dataPorodu !== undefined) return null;
+  const pracownik = tytuly.filter((t) => t.rodzaj === 'pracownik');
+  if (pracownik.length === 0 || pracownik.some((t) => t.do === undefined)) return null;
+  const koniec = pracownik.map((t) => t.do as DataISO).sort(porownajDaty).at(-1) as DataISO;
+  const wCiazy = porownajDaty(koniec, uplywTrzeciegoMiesiaca(ptp)) > 0 && porownajDaty(koniec, ptp) < 0;
+  return wCiazy && porownajDaty(koniec, dzis) >= 0 ? koniec : null;
+}
+
 // --- Ostrzeżenia K28 i K29 -----------------------------------------------------------------------
 
 const PRZYCZYNY_BEZ_OSTRZEZENIA: readonly PrzyczynaUstaniaUmowy[] = [

@@ -1,12 +1,14 @@
 // POST /api/odczyt-dokumentu (kontrakt, sekcja 10.2): multipart/form-data (plik, powiazania, rodzajOczekiwany?, tryb?)
-// → 200 WynikOdczytuDokumentu, 400 { kod: '0103' | '0104' }, 503 { status: 'niedostepny' } bez klucza dostawcy
-// z MODEL_DOSTAWCA (DEEPSEEK_API_KEY albo ANTHROPIC_API_KEY), po błędzie modelu albo po 30 s.
-// Właściciel: u05. Pole `tryb` = 'fikstura' zwraca wynik pliku demonstracyjnego z dane/przykladowe-sprawy/fikstury-odczytu.ts.
+// → 200 WynikOdczytuDokumentu, 400 { kod: '0103' | '0104' }, 503 { status: 'niedostepny' }.
+// Właściciel: u05. Pole `tryb` = 'fikstura' zwraca wynik dokumentu przykładowego z dane/przykladowe-sprawy/fikstury-odczytu.ts,
+// rozpoznanego po identyfikatorze w treści pliku albo po nazwie pliku (serwer/odczyt-dokumentow/fikstury.ts).
+// W trybie modelu plik czyta dostawca z MODEL_DOSTAWCA (DEEPSEEK_API_KEY albo ANTHROPIC_API_KEY). Bez klucza dostawcy,
+// po błędzie modelu albo po 30 s dokument przykładowy dostaje wynik z fikstury, a każdy inny plik odpowiedź 503.
 // Serwer zastępuje dane osobowe przed odpowiedzią i nie zapisuje pliku.
-import { fiksturaOdczytu } from '@/dane/przykladowe-sprawy/fikstury-odczytu';
 import { walidujPlik } from '@/domena/walidacje';
-import type { BladOdczytuDokumentu, WynikOdczytuDokumentu } from '@/domena/typy';
+import type { BladOdczytuDokumentu, PowiazanieZastepcze, WynikOdczytuDokumentu } from '@/domena/typy';
 import { czyModelDostepny } from '@/serwer/model';
+import { fiksturaDokumentu } from '@/serwer/odczyt-dokumentow/fikstury';
 import { odczytajDokumentModelem, type PlikDoOdczytu } from '@/serwer/odczyt-dokumentow/graf';
 import { odczytajPowiazania, zastapDaneOsobowe } from '@/serwer/odczyt-dokumentow/zastapienie';
 
@@ -15,6 +17,16 @@ const LIMIT_CZASU_MS = 30_000;
 function niedostepny(): Response {
   const blad: BladOdczytuDokumentu = { status: 'niedostepny' };
   return Response.json(blad, { status: 503 });
+}
+
+/** Odpowiedź z fikstury dokumentu przykładowego z danymi osobowymi zastąpionymi danymi losowymi; 503 bez fikstury. */
+function odpowiedzZFikstury(nazwa: string, bajty: Uint8Array, znanePowiazania: PowiazanieZastepcze[]): Response {
+  const fikstura = fiksturaDokumentu({ nazwa, bajty });
+  if (fikstura === null) return niedostepny();
+  if (fikstura.status !== 'odczytany') return Response.json(fikstura satisfies WynikOdczytuDokumentu);
+  const { wartosci, nowePowiazania } = zastapDaneOsobowe(fikstura.wartosci, znanePowiazania);
+  const wynik: WynikOdczytuDokumentu = { ...fikstura, wartosci, nowePowiazania };
+  return Response.json(wynik);
 }
 
 export async function POST(zadanie: Request): Promise<Response> {
@@ -42,27 +54,19 @@ export async function POST(zadanie: Request): Promise<Response> {
     powiazania = [];
   }
   const znanePowiazania = odczytajPowiazania(powiazania);
+  const bajty = new Uint8Array(await plik.arrayBuffer());
 
-  if (formularz.get('tryb') === 'fikstura') {
-    const fikstura = fiksturaOdczytu(plik.name);
-    if (fikstura === null) return niedostepny();
-    if (fikstura.status !== 'odczytany') return Response.json(fikstura satisfies WynikOdczytuDokumentu);
-    const { wartosci, nowePowiazania } = zastapDaneOsobowe(fikstura.wartosci, znanePowiazania);
-    const wynik: WynikOdczytuDokumentu = { ...fikstura, wartosci, nowePowiazania };
-    return Response.json(wynik);
-  }
+  if (formularz.get('tryb') === 'fikstura' || !czyModelDostepny()) return odpowiedzZFikstury(plik.name, bajty, znanePowiazania);
 
-  // Plik PDF albo obraz czyta dostawca z MODEL_DOSTAWCA; bez jego klucza odczyt jest niedostępny.
   // Limit 30 s obejmuje wgranie PDF do Files API DeepSeek, parsowanie dokumentu i oba wywołania modelu.
-  if (!czyModelDostepny()) return niedostepny();
   const dane: PlikDoOdczytu = {
-    dane: Buffer.from(await plik.arrayBuffer()).toString('base64'),
+    dane: Buffer.from(bajty).toString('base64'),
     typ: plik.type as PlikDoOdczytu['typ'],
   };
   try {
     const wynik = await odczytajDokumentModelem(dane, znanePowiazania, AbortSignal.timeout(LIMIT_CZASU_MS));
     return Response.json(wynik);
   } catch {
-    return niedostepny();
+    return odpowiedzZFikstury(plik.name, bajty, znanePowiazania);
   }
 }

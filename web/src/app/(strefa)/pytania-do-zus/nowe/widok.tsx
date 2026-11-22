@@ -77,7 +77,7 @@ export function WidokPytaniaDoZus() {
     zapiszStanSesji({ panelAsystenta: { ...stanSesji.panelAsystenta, otwarty: true } }, pobierzKontekstOperacji());
   };
 
-  const wyslij = (e: FormEvent<HTMLFormElement>) => {
+  const wyslij = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (wysylanie) return;
     if (!walidacja.sprobujWyslac()) {
@@ -85,7 +85,7 @@ export function WidokPytaniaDoZus() {
       return;
     }
     ustawWysylanie(true);
-    const wynik = wyslijPytanieDoZus({ ...(sprawa ? { idSprawy: sprawa.idSprawy } : {}), tresc }, pobierzKontekstOperacji());
+    const wynik = await wyslijPytanieDoZus({ ...(sprawa ? { idSprawy: sprawa.idSprawy } : {}), tresc }, pobierzKontekstOperacji());
     if (!wynik.ok) {
       ustawWysylanie(false);
       if (wynik.kod === '0129' || wynik.kod === '0130') {
@@ -101,7 +101,7 @@ export function WidokPytaniaDoZus() {
 
   const formularz = (
     <Karta tytul={t.kartaPytania} bezLinii>
-      <form noValidate onSubmit={wyslij}>
+      <form noValidate onSubmit={(e) => void wyslij(e)}>
         <Stos odstep={6}>
           <Pole
             id={ID_POLA}

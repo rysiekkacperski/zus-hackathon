@@ -8,7 +8,8 @@
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import { dodajDni, wiekWLatach } from '@/domena/daty';
 import type { WejsciePlanu } from '@/domena/przeliczenie';
-import { okresZasilkowyWCiazy } from '@/domena/zasilki/okres-zasilkowy';
+import { czyUmowaPrzedluzonaDoPorodu } from '@/domena/przewodnik/ryzyka';
+import { okresyZKatalogu, okresZasilkowyWCiazy } from '@/domena/zasilki/okres-zasilkowy';
 import type {
   DaneCiazyIDziecka,
   DataISO,
@@ -152,7 +153,8 @@ export function faktyRodziny(w: WejsciePlanu): FaktyRodziny {
           data: zmiana.data?.wartosc,
           przyczyna: zmiana.przyczyna?.wartosc,
           inneZatrudnienie: zmiana.inneZatrudnienie?.wartosc === true,
-          przedluzonaDoPorodu: zmiana.umowaPrzedluzonaDoPorodu === true,
+          // Reguła przedłużenia z art. 177 § 3 Kodeksu pracy liczona z rodzaju umowy i terminu porodu w profilu.
+          przedluzonaDoPorodu: czyUmowaPrzedluzonaDoPorodu(matka, daneCiazy),
         }
       : null;
   const ustanieUmowyOPrace = ustanie !== null && ustanie.forma === 'umowa-o-prace';
@@ -415,13 +417,12 @@ function okresZasilkowyPrzedTerminem(w: WejsciePlanu, f: FaktyRodziny): boolean 
   const poczatekCiazy = dodajDni(ptp, -280);
   const wCiazy = kopia.zaswiadczeniaEzla.filter((z) => z.rodzaj === 'choroba' && z.do >= poczatekCiazy);
   if (wCiazy.length === 0) return false;
-  const wynik = okresZasilkowyWCiazy(wCiazy, OKRES_ZASILKOWY_W_CIAZY_DNI, PRZERWA_OKRESU_ZASILKOWEGO_DNI);
+  // Okres zasiłkowy w ciąży i przerwa łącząca okresy niezdolności ze słownika wymiarów i okresów katalogu
+  // (art. 8 ust. 1 i art. 9 ust. 2 ustawy zasiłkowej, Dz.U. 2026 poz. 854), te same co w kroku okresu zasiłkowego.
+  const { limit, przerwa } = okresyZKatalogu(w.katalog, w.dzis);
+  const wynik = okresZasilkowyWCiazy(wCiazy, limit, przerwa);
   return wynik.dataWyczerpania !== null && wynik.dataWyczerpania < ptp;
 }
-
-/** Okres zasiłkowy, gdy niezdolność przypada w ciąży, i przerwa w jednym okresie zasiłkowym (słownik wymiarów). */
-const OKRES_ZASILKOWY_W_CIAZY_DNI = 270;
-const PRZERWA_OKRESU_ZASILKOWEGO_DNI = 60;
 
 /** Inny tytuł matki z ubezpieczeniem chorobowym w dniu przewidywanego terminu porodu (K29). */
 function innyTytulZChorobowymWDniuTerminu(w: WejsciePlanu, f: FaktyRodziny): boolean {

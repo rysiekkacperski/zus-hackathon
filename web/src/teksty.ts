@@ -1,5 +1,13 @@
 import type { IdWidoku } from '@/domena/typy';
 
+/** Nazwa daty kotwiczącej rodzaju męskiego. Pozostałe nazwy dat kotwiczących są rodzaju żeńskiego. */
+const NAZWA_PTP_ZAMIAST_PORODU = "przewidywany termin porodu";
+
+/** Imiesłów zgodny z rodzajem nazwy daty kotwiczącej, na przykład „powiększona” albo „powiększony”. */
+function zgodnyZKotwica(nazwa: string, rdzen: "powiększon" | "pomniejszon"): string {
+  return `${rdzen}${nazwa === NAZWA_PTP_ZAMIAST_PORODU ? "y" : "a"}`;
+}
+
 export const teksty = {
   wspolne: {
     nazwaAplikacji: "Przewodnik przyszłej mamy",
@@ -27,8 +35,18 @@ export const teksty = {
       SUCCESS: "Informacja:",
     },
     otwieraSieWNowejKarcie: "(otwiera się w nowej karcie)",
+    wiecejInformacji: {
+      tytul: "Więcej informacji",
+      wNowejKarcie: "Serwisy otworzą się w nowej karcie.",
+    },
     wroc: "Wróć",
     ladowanie: "Ładujemy dane przewodnika.",
+    // Wyliczenia przez REST API (komponenty/stan-wyliczenia.tsx)
+    wyliczenie: {
+      trwa: "Liczymy wynik.",
+      przeliczanie: "Przeliczamy wynik po zmianie danych.",
+      zmienDane: "Zmień dane",
+    },
     zl: "zł",
     stanNa: ({ data }: { data: string }) => `Stan na ${data}`,
     zDnia: ({ data }: { data: string }) => `z dnia ${data}`,
@@ -777,7 +795,7 @@ export const teksty = {
     }) =>
       `Pełnomocnictwo od ${imieINazwisko} obowiązuje od ${data}. Dane drugiego rodzica pobierzemy od tego dnia.`,
     // Rozstrzygnięcie uzupełnione ze zrzutu z systemu ZUS
-    "0225": "Rozstrzygnięcie sprawy uzupełniliśmy świadczeniami przyznanymi w zrzucie z systemu ZUS. Sprawdź je przed weryfikacją.",
+    "0225": "Rozstrzygnięcie sprawy uzupełniliśmy świadczeniami przyznanymi i odmówionymi w zrzucie z systemu ZUS. Sprawdź je przed weryfikacją.",
     // Początek zasiłku wcześniej niż 6 tygodni przed terminem porodu
     "0226": ({
       dataPoczatkuZWniosku,
@@ -1187,6 +1205,22 @@ export const teksty = {
       `Dni dodatkowego zasiłku opiekuńczego na nowo narodzone dziecko liczymy poza rocznym limitem zasiłku opiekuńczego, więc w tym roku nadal masz ${liczba} dni zasiłku opiekuńczego.`,
     // Pobyt matki w szpitalu bez daty wypisu
     "0334": "Dodatkowy zasiłek opiekuńczy przysługuje za dni pobytu mamy w szpitalu. Gdy mama wróci ze szpitala, poinformuj płatnika zasiłku o dniu wypisu.",
+    // Usługa wyliczeń przewodnika niedostępna
+    "0335": "Nie udało się wykonać wyliczenia. Spróbuj ponownie za chwilę.",
+    // Data rezygnacji z zasiłku macierzyńskiego nie później niż dziś
+    "0336": "Rezygnację składasz przed dniem, od którego rezygnujesz z zasiłku. Podaj datę późniejszą niż dzisiejsza.",
+    // Wniosek ZAS-23 wysłany
+    "0337": ({ data, dataRezygnacji }: { data: string; dataRezygnacji: string }) =>
+      `Wniosek ZAS-23 wysłaliśmy do ZUS ${data}. Dostarcz podpisane oświadczenie ojca dziecka do placówki ZUS osobiście albo pocztą przed ${dataRezygnacji}. Ojciec dziecka złoży wniosek o zasiłek macierzyński za okres od ${dataRezygnacji}.`,
+    // Wniosek ZAS-23 niedostępny
+    "0338": "Wniosek ZAS-23 składasz w eZUS, gdy zasiłek macierzyński wypłaca Ci ZUS na podstawie Twojego wniosku o zasiłek macierzyński. Sprawdź rezygnację w przewodniku.",
+    // Rezygnacja z części zasiłku dla zleceniodawcy przygotowana
+    "0339": ({ dataRezygnacji }: { dataRezygnacji: string }) =>
+      `Wniosek o rezygnację i oświadczenie ojca dziecka są gotowe do wydruku. Złóż je zleceniodawcy przed ${dataRezygnacji}.`,
+    // Puste pole tekstowe katalogu
+    "0340": "Uzupełnij to pole.",
+    // Nazwa wpisu słownika już istnieje
+    "0341": "W słowniku jest już wpis o tej nazwie.",
   },
   // Grupy powiadomień (właściciele: u18, u14, u29, u34)
   PowiadomieniaPrzypomnienia: {
@@ -3751,7 +3785,7 @@ export const teksty = {
       brakDuchZusUz: "Umowa zlecenia bez dobrowolnego ubezpieczenia chorobowego",
       profilDuchTak: "Dobrowolne ubezpieczenie chorobowe: tak",
       podwyzszenie: ({ procent }: { procent: string }) =>
-        `ZUS może zakwestionować gwałtowne podwyższenie podstawy wymiaru składek tuż przed porodem. Twoja ostatnia podstawa jest o ${procent} wyższa niż średnia z poprzednich 11 miesięcy.`,
+        `ZUS może zakwestionować gwałtowne podwyższenie podstawy wymiaru składek tuż przed porodem. Twoja ostatnia podstawa jest o ${procent} wyższa niż średnia z poprzednich 11 miesięcy. Gdy ZUS po przeprowadzeniu postępowania uzna, że podwyższenie służyło wyłącznie uzyskaniu wyższych zasiłków, może wydać decyzję ustalającą niższą podstawę wymiaru, a od niej policzy zasiłki.`,
       podstawy: {
         podpis: "Podstawa wymiaru składek przed porodem",
         przewijanie: "Tabela podstaw wymiaru składek",
@@ -3891,6 +3925,7 @@ export const teksty = {
       przyslugujePoOrzeczeniu: "Przysługuje po orzeczeniu lekarza orzecznika ZUS",
       zaleznyOdWarunku: "Zależy od warunku",
       nieDlaPracownicy: "Nie przysługuje: zasiłek przysługuje wyłącznie pracownicy",
+      macierzynskiPoUstaniu: "Nie przysługuje: po porodzie przysługuje zasiłek macierzyński",
       bezWyliczenia: "Reguła bez wyliczenia",
       nie: {
         "brak-ubezpieczenia": "Nie przysługuje: brak ubezpieczenia chorobowego",
@@ -3921,9 +3956,28 @@ export const teksty = {
       podstawy: ({ procent }: { procent: string }) => `${procent}% podstawy wymiaru`,
       wynagrodzenia: ({ procent }: { procent: string }) => `${procent}% wynagrodzenia`,
       zwzm: ({ procent }: { procent: string }) => `${procent}% podstawy wymiaru, bez podwyższenia do kwoty świadczenia rodzicielskiego`,
+      podstawyZKodemB: ({ zKodemB, bezKoduB }: { zKodemB: string; bezKoduB: string }) =>
+        `${zKodemB}% podstawy wymiaru z kodem B, ${bezKoduB}% bez kodu B`,
+      wynagrodzeniaZKodemB: ({ zKodemB, bezKoduB }: { zKodemB: string; bezKoduB: string }) =>
+        `${zKodemB}% wynagrodzenia, gdy zaświadczenie e-ZLA ma kod B oznaczający ciążę, i ${bezKoduB}% wynagrodzenia bez kodu B`,
     },
-    opisWynagrodzenia: ({ limit, nastepny, wyplaca }: { limit: string; nastepny: string; wyplaca: string }) =>
-      `Za pierwsze ${limit} dni niezdolności do pracy w roku kalendarzowym pracodawca wypłaca Ci wynagrodzenie chorobowe w wysokości 100% wynagrodzenia. Od ${nastepny}. dnia zasiłek chorobowy wypłaca ${wyplaca}.`,
+    opisWynagrodzenia: ({ limit, nastepny, wyplaca, stawka }: { limit: string; nastepny: string; wyplaca: string; stawka: string }) =>
+      `Za pierwsze ${limit} dni niezdolności do pracy w roku kalendarzowym pracodawca wypłaca Ci wynagrodzenie chorobowe w wysokości ${stawka}. Od ${nastepny}. dnia zasiłek chorobowy wypłaca ${wyplaca}.`,
+    odPierwszegoDnia: ({ wyplaca }: { wyplaca: string }) =>
+      `Zasiłek chorobowy przysługuje Ci od pierwszego dnia niezdolności do pracy i wypłaca go ${wyplaca}. Wynagrodzenie chorobowe od pracodawcy przysługuje wyłącznie pracownicy na umowie o pracę.`,
+    odPierwszegoDniaMatki: ({ wyplaca }: { wyplaca: string }) =>
+      `Zasiłek chorobowy przysługuje matce od pierwszego dnia niezdolności do pracy i wypłaca go ${wyplaca}. Wynagrodzenie chorobowe od pracodawcy przysługuje wyłącznie pracownicy na umowie o pracę.`,
+    stawkaZasilku:
+      "Zasiłek chorobowy wynosi 100% podstawy wymiaru, gdy zaświadczenie lekarskie e-ZLA ma kod B oznaczający niezdolność do pracy w ciąży, a bez kodu B 80% podstawy wymiaru.",
+    wyjatkiWyczekiwania: {
+      naglowek: "Zasiłek wcześniej niż po okresie wyczekiwania",
+      absolwent:
+        "Zasiłek przysługuje od pierwszego dnia ubezpieczenia chorobowego, gdy objęto Cię ubezpieczeniem chorobowym albo przystąpiłaś do niego w ciągu 90 dni od ukończenia szkoły, uzyskania dyplomu ukończenia studiów albo zakończenia kształcenia w szkole doktorskiej.",
+      przerwa:
+        "Do okresu wyczekiwania wliczają się poprzednie okresy ubezpieczenia chorobowego, gdy przerwa między nimi trwała najwyżej 30 dni albo wynikała z urlopu wychowawczego, urlopu bezpłatnego albo czynnej służby wojskowej żołnierza niezawodowego.",
+      zapytaj: "Gdy jeden z tych wyjątków Cię dotyczy, zapytaj ZUS o prawo do zasiłku.",
+      zadajPytanie: "Zadaj pytanie do ZUS",
+    },
     podzialNaglowek: ({ rok }: { rok: string }) => `Podział okresu zaświadczeń e-ZLA w ${rok} roku`,
     podzialPrzewijanie: "Tabela podziału okresu zaświadczeń e-ZLA",
     podzialKolumny: { okres: "Okres", swiadczenie: "Świadczenie", stawka: "Stawka", wyplaca: "Wypłaca" },
@@ -3936,6 +3990,11 @@ export const teksty = {
     ustanie: {
       naglowek: ({ data }: { data: string }) => `Ubezpieczenie ustaje ${data}`,
       opis: "Zatrudnienie kończy się przed przewidywanym terminem porodu. Sprawdź, czy w dniu porodu będziesz mieć ubezpieczenie chorobowe.",
+    },
+    koniecUmowyZKonta: {
+      naglowek: ({ data }: { data: string }) => `Według danych z konta ZUS umowa o pracę kończy się ${data}`,
+      opis: "Umowa na czas określony albo na okres próbny dłuższy niż miesiąc, która skończyłaby się po upływie trzeciego miesiąca ciąży, trwa do dnia porodu, z wyjątkiem umowy na zastępstwo. Zgłoś koniec umowy w profilu rodziny i wybierz rodzaj umowy w sprawie szczególnej ochrony, a ustalimy, czy umowa trwa do porodu i jakie świadczenia Ci przysługują.",
+      zglos: "Zgłoś koniec umowy",
     },
     koniecZasilku: {
       doKoncaNiezdolnosci: ({ data }: { data: string }) =>
@@ -3950,6 +4009,8 @@ export const teksty = {
     stawkaRehabilitacyjnegoDo: ({ data }: { data: string }) =>
       `Stawka 100% podstawy wymiaru obowiązuje do ${data}, dnia poprzedzającego dzień porodu.`,
     okresZasilkowy: {
+      poDzis: ({ liczba, data }: { liczba: string; data: string }) =>
+        `Wykorzystana część obejmuje ${liczba} dni po ${data}, na które lekarz już wystawił zaświadczenie e-ZLA.`,
       opis: ({ limit }: { limit: string }) =>
         `Gdy niezdolność do pracy przypada w ciąży, zasiłek chorobowy przysługuje najdłużej przez ${limit} dni. Do okresu zasiłkowego wliczają się zaświadczenia lekarskie e-ZLA o Twojej niezdolności do pracy, a zaświadczenia na opiekę się nie wliczają.`,
       regula: "Zasiłek chorobowy przysługuje najdłużej przez okres zasiłkowy 182 dni, a gdy niezdolność do pracy przypada w ciąży, 270 dni. Okres zasiłkowy policzymy, gdy w danych z konta ZUS pojawią się zaświadczenia lekarskie e-ZLA.",
@@ -3967,6 +4028,10 @@ export const teksty = {
       bezZmian: "Według profilu rodziny zatrudnienie nie zmieniło się w ciąży.",
       jesliUstanie: "Jeśli umowa ustanie z jednej z tych przyczyn, przygotujesz:",
       nieDotyczyDokumentow: "Dokumentów nie przygotowujesz, bo zasiłek przysługuje wyłącznie pracownicy.",
+      naruszenie:
+        "Umowa o pracę ustała z naruszeniem przepisów prawa stwierdzonym prawomocnym orzeczeniem sądu. Zasiłek w wysokości zasiłku macierzyńskiego przysługuje do dnia porodu wyłącznie przy upadłości, likwidacji albo śmierci pracodawcy. Po porodzie przysługuje zasiłek macierzyński po ustaniu ubezpieczenia, który wypłaca ZUS.",
+      przedluzenie:
+        "Umowa o pracę na czas określony albo na okres próbny dłuższy niż miesiąc trwa do dnia porodu, więc do porodu masz ubezpieczenie chorobowe i zasiłek chorobowy przy niezdolności do pracy. Po porodzie przysługuje zasiłek macierzyński, który wypłaca ZUS.",
     },
     akcje: {
       K03: "Zgłoś się do dobrowolnego ubezpieczenia chorobowego",
@@ -3974,6 +4039,7 @@ export const teksty = {
       K25: "Sprawdź świadczenie rehabilitacyjne",
       K26: "Sprawdź zasiłek po utracie pracy w ciąży",
       K29: "Sprawdź ubezpieczenie chorobowe w dniu porodu",
+      K08: "Sprawdź zasiłek macierzyński po porodzie",
       stanRozliczen: "Sprawdź stan rozliczeń składek",
     },
     platnicy: {
@@ -4012,6 +4078,9 @@ export const teksty = {
       bezZadluzenia: ({ data }: { data: string }) => `Bez zadłużenia na ${data}`,
       zadluzenieNa: ({ kwota, data }: { kwota: string; data: string }) => `Zadłużenie ${kwota} na ${data}`,
       potwierdzenieSkladek: "Potwierdzenie opłacenia składek",
+      przedluzenie: "Przedłużenie umowy o pracę",
+      przedluzonaDo: ({ data }: { data: string }) => `Do dnia porodu ${data}`,
+      przedluzonaDoPorodu: "Do dnia porodu",
     },
     wpisy: {
       wyczekiwanieObowiazkowe: "Okres wyczekiwania na zasiłek chorobowy, ubezpieczenie obowiązkowe",
@@ -4027,6 +4096,8 @@ export const teksty = {
       zwzm: "Zasiłek w wysokości zasiłku macierzyńskiego",
       minimalnaPodstawa: "Minimalna podstawa wymiaru zasiłku pracownika na pełnym etacie",
       macierzynski: "Zasiłek macierzyński, wariant 81,5%",
+      zasilekBezKoduB: "Zasiłek chorobowy z zaświadczeniem lekarskim bez kodu B",
+      wynagrodzenieWCiazy: "Wynagrodzenie chorobowe w ciąży i poza ciążą",
     },
     jednostki: {
       dni: ({ liczba }: { liczba: string }) => `${liczba} dni`,
@@ -4036,6 +4107,8 @@ export const teksty = {
       procentPodstawy: ({ procent }: { procent: string }) => `${procent}% podstawy`,
       trzyStawki: ({ a, b, c }: { a: string; b: string; c: string }) =>
         `${a}% przez pierwsze 3 miesiące, ${b}% za pozostały okres, ${c}% w ciąży`,
+      stawkiWynagrodzenia: ({ zKodemB, bezKoduB }: { zKodemB: string; bezKoduB: string }) =>
+        `${zKodemB}% wynagrodzenia z kodem B, ${bezKoduB}% wynagrodzenia bez kodu B`,
     },
     warunki: {
       zasilekChorobowy: [
@@ -4052,6 +4125,41 @@ export const teksty = {
         "Brak zapewnienia innego zatrudnienia.",
       ],
       zadluzenie: ({ prog }: { prog: string }) => `Zadłużenie z tytułu składek w dniu powstania prawa nie przekracza ${prog}.`,
+    },
+    ryzyka: {
+      tytul: "Ryzyka dla zasiłków w ciąży",
+      wstep: "Te sytuacje mogą obniżyć zasiłek chorobowy i zasiłek macierzyński albo odebrać prawo do nich. Sprawdź, czy któraś z nich dotyczy Twojej rodziny.",
+      wykryto: "Dotyczy Twojej rodziny",
+      zobaczSprawe: "Zobacz sprawę w planie",
+      pozor: {
+        tytul: "Umowa albo działalność zawarta dla pozoru",
+        opis:
+          "Umowa zawarta albo działalność gospodarcza podjęta w ciąży wyłącznie po to, by objąć się ubezpieczeniem chorobowym i uzyskać zasiłki, jest zawarta dla pozoru. ZUS po przeprowadzeniu postępowania może wtedy wydać decyzję o niepodleganiu ubezpieczeniom społecznym, a osobie, która nie podlega ubezpieczeniu chorobowemu, zasiłki nie przysługują.",
+      },
+      podwyzszenie: {
+        tytul: "Podwyższenie podstawy wymiaru składek w ciąży",
+        opis:
+          "Podstawa wymiaru składek podwyższona w ciąży wyłącznie po to, by uzyskać wyższe zasiłki, może zostać zakwestionowana. ZUS po przeprowadzeniu postępowania może wtedy wydać decyzję ustalającą niższą podstawę wymiaru, a od niej policzy zasiłek chorobowy i zasiłek macierzyński.",
+      },
+      dzienPorodu: {
+        tytul: "Ubezpieczenie chorobowe w dniu porodu",
+        opis:
+          "Zasiłek macierzyński przysługuje, gdy w dniu porodu matka podlega ubezpieczeniu chorobowemu. Przy umowie zlecenia i jednoosobowej działalności gospodarczej to ubezpieczenie jest dobrowolne, więc wymaga zgłoszenia i opłacania składek. Rozwiązanie umowy o pracę, zakończenie umowy zlecenia albo zakończenie działalności przed porodem kończy ubezpieczenie chorobowe.",
+        wyjatki:
+          "Zasiłek macierzyński po ustaniu ubezpieczenia przysługuje pracownicy, której umowa ustała w ciąży z powodu upadłości, likwidacji albo śmierci pracodawcy albo z naruszeniem przepisów prawa stwierdzonym prawomocnym orzeczeniem sądu, oraz pracownicy, której umowę na czas określony przedłużono do dnia porodu.",
+      },
+      ochrona: {
+        tytul: "Szczególna ochrona zatrudnienia z Kodeksu pracy",
+        umowaOPrace:
+          "Pracownicę na umowie o pracę chroni Kodeks pracy. W ciąży pracodawca może wypowiedzieć albo rozwiązać umowę wyłącznie przy upadłości albo likwidacji pracodawcy albo bez wypowiedzenia z winy pracownicy za zgodą reprezentującej ją zakładowej organizacji związkowej. Umowa na czas określony albo na okres próbny dłuższy niż miesiąc, która skończyłaby się po upływie trzeciego miesiąca ciąży, trwa do dnia porodu, z wyjątkiem umowy na zastępstwo.",
+        bezUmowyOPrace:
+          "Szczególna ochrona z Kodeksu pracy, czyli zakaz wypowiedzenia i rozwiązania umowy w ciąży oraz przedłużenie umowy terminowej do dnia porodu, obejmuje wyłącznie pracownice na umowie o pracę. Przy umowie zlecenia i jednoosobowej działalności gospodarczej zachowaj dobrowolne ubezpieczenie chorobowe do dnia porodu, bo od niego zależy zasiłek macierzyński.",
+        drugiRodzic:
+          "Drugiego rodzica na umowie o pracę chroni zakaz wypowiedzenia i rozwiązania umowy od dnia złożenia wniosku o urlop ojcowski albo rodzicielski do dnia zakończenia tego urlopu. Przy wniosku złożonym wcześniej, niż wymaga Kodeks pracy, zakaz obowiązuje od 7 dni przed urlopem ojcowskim i od 21 dni przed urlopem rodzicielskim.",
+        drugiRodzicBezUmowyOPrace:
+          "Zakaz wypowiedzenia i rozwiązania umowy przy urlopie ojcowskim i rodzicielskim obejmuje wyłącznie rodzica na umowie o pracę. Drugi rodzic na umowie zlecenia albo w jednoosobowej działalności gospodarczej pobiera zasiłek macierzyński za okres odpowiadający tym urlopom, gdy podlega dobrowolnemu ubezpieczeniu chorobowemu.",
+        zobaczOchrone: "Zobacz szczególną ochronę pracownika",
+      },
     },
     // koniec ViewPregnancyBenefits
   },
@@ -4164,6 +4272,7 @@ export const teksty = {
       opis: "Prawo do świadczenia sprawdzamy w danych z konta ZUS i profilu rodziny. Szczegóły, warunki i dokumenty znajdziesz w Świadczeniach w ciąży.",
       od: ({ data }: { data: string }) => `Od ${data}`,
       otworz: "Zobacz świadczenia w ciąży",
+      ochronaTytul: "Szczególna ochrona zatrudnienia",
       // koniec sekcjaPrawoWCiazy
     },
     sekcjaZaswiadczeniaEzla: {
@@ -4197,6 +4306,13 @@ export const teksty = {
     },
     sekcjaOstrzezeniaRyzyk: {
       zobaczSzczegoly: "Zobacz szczegóły ryzyka",
+      podwyzszenie: ({ procent }: { procent: string }) =>
+        `Ostatnia podstawa wymiaru składek jest o ${procent} wyższa niż średnia z poprzednich miesięcy. Gdy podstawę podwyższono w ciąży wyłącznie po to, by uzyskać wyższe zasiłki, ZUS po przeprowadzeniu postępowania może wydać decyzję ustalającą niższą podstawę wymiaru, a od niej policzy zasiłek macierzyński.`,
+      podwyzszenieTytul: "Podwyższenie podstawy wymiaru składek",
+      srednia: "Średnia podstawa z poprzednich miesięcy",
+      ostatnia: "Ostatnia podstawa",
+      wzrost: "Wzrost",
+      zobaczRyzyka: "Zobacz ryzyka dla zasiłków w ciąży",
       // koniec sekcjaOstrzezeniaRyzyk
     },
     sekcjaOchronaK30: {
@@ -4686,6 +4802,11 @@ export const teksty = {
       jdg: "Prowadzisz jednoosobową działalność gospodarczą.",
       "brak-tytulu": "Nie masz tytułu do ubezpieczenia.",
     },
+    // Zdanie akapitu Najważniejsze informacje z instytucją i kanałem dla formy zatrudnienia rodzica sprawy.
+    zdanieInstytucjiIKanalu: ({ instytucja, kanal }: { instytucja: string; kanal: string }) =>
+      `Instytucja: ${instytucja}. Kanał: ${kanal}.`,
+    zdanieInstytucjiIKanaluLacznie: ({ wartosc }: { wartosc: string }) =>
+      `Instytucja i kanał: ${wartosc}${wartosc.endsWith(".") ? "" : "."}`,
     termin: "Termin",
     bezTerminu: "Bez terminu",
     sprawaBezTerminu: "Sprawa nie ma terminu w kalendarzu",
@@ -4834,6 +4955,13 @@ export const teksty = {
     platnikWProfilu: ({ platnik }: { platnik: string }) => `Płatnik zasiłku w Twoim profilu: ${platnik}.`,
     odpowiedzOPlatnika: "Odpowiedz na pytanie o płatnika",
     brakDokumentowWSlowniku: "Listę dokumentów pokażemy tutaj, gdy będzie gotowa.",
+    wariantyPlatnikaWstep:
+      "Dokumenty i adresat zależą od płatnika zasiłku rodzica, którego dotyczy sprawa. Płatnik składek, który według stanu na 30 listopada poprzedniego roku zgłaszał do ubezpieczenia chorobowego więcej niż 20 osób, sam wypłaca zasiłek. W pozostałych przypadkach zasiłek wypłaca ZUS. Odpowiedź o płatniku zapisuje w profilu rodzic, którego dotyczy sprawa.",
+    wariantPlatnika: {
+      "platnik-skladek": "Gdy zasiłek wypłaca płatnik składek",
+      zus: "Gdy zasiłek wypłaca ZUS",
+    },
+    adresatWariantu: ({ adresat }: { adresat: string }) => `Adresat wniosku: ${adresat}`,
     serwisyWNowejKarcie: "Serwisy otworzą się w nowej karcie.",
     // Nazwy kanałów w mianowniku i dopełniaczu
     nazwyKanalow: {
@@ -4983,14 +5111,16 @@ export const teksty = {
         `ostatni dzień 10. tygodnia ciąży ${data}, czyli przewidywany termin porodu ${ptp} pomniejszony o 211 dni`,
       ptp: ({ data }: { data: string }) => `przewidywany termin porodu ${data}`,
       ptpMinus1: ({ data }: { data: string }) => `dzień poprzedzający przewidywany termin porodu ${data}`,
-      plusDni: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) => `${nazwa} ${data} powiększona o ${liczba} dni`,
+      plusDni: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) =>
+        `${nazwa} ${data} ${zgodnyZKotwica(nazwa, "powiększon")} o ${liczba} dni`,
       plusMiesiace: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) =>
-        `${nazwa} ${data} powiększona o ${liczba} miesięcy`,
-      plus12MinusDni: ({ nazwa, data }: { nazwa: string; data: string }) => `${nazwa} ${data} powiększona o 12 miesięcy i pomniejszona o 14 dni`,
+        `${nazwa} ${data} ${zgodnyZKotwica(nazwa, "powiększon")} o ${liczba} miesięcy`,
+      plus12MinusDni: ({ nazwa, data }: { nazwa: string; data: string }) =>
+        `${nazwa} ${data} ${zgodnyZKotwica(nazwa, "powiększon")} o 12 miesięcy i ${zgodnyZKotwica(nazwa, "pomniejszon")} o 14 dni`,
       plus12MinusDniUmowa: ({ nazwa, data }: { nazwa: string; data: string }) =>
-        `${nazwa} ${data} powiększona o 12 miesięcy i pomniejszona o 21 dni, czyli ostatni dzień złożenia pracodawcy wniosku o urlop ojcowski`,
+        `${nazwa} ${data} ${zgodnyZKotwica(nazwa, "powiększon")} o 12 miesięcy i ${zgodnyZKotwica(nazwa, "pomniejszon")} o 21 dni, czyli ostatni dzień złożenia pracodawcy wniosku o urlop ojcowski`,
       plusTygodnie: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) =>
-        `${nazwa} ${data} powiększona o ${liczba} tygodni urlopu macierzyńskiego`,
+        `${nazwa} ${data} ${zgodnyZKotwica(nazwa, "powiększon")} o ${liczba} tygodni urlopu macierzyńskiego`,
       k11KoniecOkresu: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) =>
         `ostatni dzień okresu zasiłku za ${liczba} tygodni urlopu macierzyńskiego od dnia ${nazwa} ${data}`,
       k11Umowa: ({ nazwa, data, liczba }: { nazwa: string; data: string; liczba: string }) =>
@@ -5015,10 +5145,11 @@ export const teksty = {
         `data uprawomocnienia się orzeczenia ${data} powiększona o 12 miesięcy i pomniejszona o 13 dni, nie później niż ${limit}`,
       k09PrzysposobienieUmowa: ({ data, limit }: { data: string; limit: string }) =>
         `data uprawomocnienia się orzeczenia ${data} powiększona o 12 miesięcy i pomniejszona o 20 dni, nie później niż ${limit}, czyli ostatni dzień złożenia pracodawcy wniosku o urlop ojcowski`,
-      oplacenieSkladek: ({ miesiac }: { miesiac: string }) => `20. dzień miesiąca następującego po miesiącu ${miesiac}`,
+      oplacenieSkladek: ({ miesiac }: { miesiac: string }) =>
+        `20. dzień miesiąca następującego po miesiącu ${miesiac}, a gdy przypada w sobotę, niedzielę albo w dniu ustawowo wolnym od pracy, najbliższy następny dzień roboczy`,
       nazwy: {
         dataPorodu: "data porodu",
-        ptpZamiastPorodu: "przewidywany termin porodu",
+        ptpZamiastPorodu: NAZWA_PTP_ZAMIAST_PORODU,
         dataPrzyjecia: "data przyjęcia dziecka",
         dataUprawomocnienia: "data uprawomocnienia się orzeczenia",
         kotwica: "data kotwicząca",
@@ -5146,6 +5277,8 @@ export const teksty = {
     dniZ: ({ liczba, limit }: { liczba: number; limit: number }) => `${liczba} dni z ${limit}`,
     dni: ({ liczba }: { liczba: number }) => `${liczba} dni`,
     postepOkresu: "Wykorzystana część okresu zasiłkowego w ciąży",
+    poDzis: ({ liczba, data }: { liczba: string; data: string }) =>
+      `Wykorzystana część obejmuje ${liczba} dni po ${data}, na które lekarz już wystawił zaświadczenie e-ZLA.`,
     poczatekOkresu: "Początek okresu zasiłkowego",
     zaswiadczeniaWOkresie: "Zaświadczenia w okresie",
     przewidywanyTermin: "Przewidywany termin porodu",
@@ -5231,6 +5364,7 @@ export const teksty = {
     wplywTytul: "Jak zadłużenie wpływa na zasiłek",
     wplywProg: ({ prog, minimalne }: { prog: string; minimalne: string }) =>
       `${prog}, czyli 1% minimalnego wynagrodzenia ${minimalne}`,
+    progZadluzeniaWRoku: ({ rok }: { rok: string }) => `Próg zadłużenia w ${rok} roku`,
     wplywPonadProgEtykieta: "Zadłużenie powyżej progu",
     wplywPonadProg:
       "Zasiłek nie przysługuje do spłaty całego zadłużenia. Spłata w ciągu 6 miesięcy od dnia powstania prawa daje zasiłek za cały okres.",
@@ -5398,6 +5532,9 @@ export const teksty = {
     pusta: {
       tytul: "Dane z konta ZUS",
       opis: "Tu zobaczysz dane z Twojego konta ZUS: tytuły ubezpieczenia, podstawy składek, członków rodziny zgłoszonych do ubezpieczenia zdrowotnego, zasiłki, zaświadczenia lekarskie e-ZLA i stan rozliczeń składek.",
+      wlasneDane:
+        "Gdy ZUS nie pokazuje danych Twojego konta, wpisz w profilu rodziny formę zatrudnienia, ubezpieczenie chorobowe, płatnika zasiłku, zmianę zatrudnienia w ciąży i termin porodu. Przewodnik ułoży plan na podstawie Twoich odpowiedzi.",
+      wpiszDane: "Wpisz dane w profilu rodziny",
     },
     wrocDoInstrukcji: "Wróć do instrukcji sprawy",
     wrocDoPlanu: "Wróć do planu rodziny",
@@ -5545,6 +5682,11 @@ export const teksty = {
     napisz: ({ adres }: { adres: string }) => `Napisz: ${adres}`,
     otworzStrone: ({ adres }: { adres: string }) => `Otwórz stronę: ${adres}`,
     wrocDoSprawy: "Wróć do sprawy",
+    charytatywne:
+      "Na liście są organizacje ze statusem organizacji pożytku publicznego w Krajowym Rejestrze Sądowym, które pomagają rodzinom w sytuacjach szczególnych.",
+    statusOpp: ({ krs }: { krs: string }) => `Organizacja pożytku publicznego, KRS ${krs}.`,
+    statusOppZWeryfikacja: ({ krs, data }: { krs: string; data: string }) =>
+      `Organizacja pożytku publicznego, KRS ${krs}. Status w Krajowym Rejestrze Sądowym sprawdzony ${data}.`,
     // koniec ViewSupportOrganizations
   },
   ViewCalcMaternityInput: {
@@ -5652,6 +5794,12 @@ export const teksty = {
     dataPrzyjeciaPodpowiedz: ({ data }: { data: string }) => `W formacie DD.MM.RRRR, najpóźniej ${data}.`,
     dataUrodzeniaDziecka: "Data urodzenia dziecka",
     dataUrodzeniaDzieckaPodpowiedz: "W formacie DD.MM.RRRR, najpóźniej w dniu przyjęcia.",
+    dataUprawomocnienia: "Data uprawomocnienia postanowienia o przysposobieniu",
+    dataUprawomocnieniaPodpowiedz:
+      "Nieobowiązkowo, w formacie DD.MM.RRRR. Od tego dnia liczymy 12 miesięcy na urlop ojcowski, najpóźniej do ukończenia przez dziecko 14 lat. Bez daty liczymy 12 miesięcy od dnia przyjęcia.",
+    dataUrodzeniaKolejnego: ({ numer }: { numer: string }) => `Data urodzenia ${numer}. przyjętego dziecka`,
+    dataUrodzeniaKolejnegoPodpowiedz:
+      "W formacie DD.MM.RRRR, najpóźniej w dniu przyjęcia. Wiek graniczny sprawdzamy dla każdego dziecka. Bez daty przyjmujemy datę urodzenia pierwszego dziecka.",
     odroczenieLegenda: "Czy dziecko ma odroczony obowiązek szkolny?",
     odroczeniePodpowiedz: "Przy odroczeniu urlop przysługuje do ukończenia przez dziecko 10 lat.",
     kartaWczesniactwa: "Wcześniactwo i pobyt dziecka w szpitalu",
@@ -5671,6 +5819,9 @@ export const teksty = {
       c: "Przy urodzeniu od 37. tygodnia ciąży: od 0 do 52 dni od 5. dnia do końca 8. tygodnia po porodzie.",
       brak: "Podaj tydzień ciąży i masę urodzeniową, a pokażemy zakres dni.",
     },
+    pierwszyDzienPobytu: "Dzień życia dziecka, w którym zaczął się pobyt w szpitalu",
+    pierwszyDzienPobytuPodpowiedz:
+      "Od 1 do 56, dzień porodu to 1. dzień życia. Uzupełniający urlop przysługuje przy pobycie co najmniej 2 kolejnych dni rozpoczętym między 5. a 28. dniem życia.",
     kartaStraty: "Strata dziecka",
     strataOpis: "Jeśli dziecko urodziło się martwe albo zmarło, zaznacz to pole. Policzymy okres zasiłku dla tej sytuacji.",
     strataPole: "Doszło do straty dziecka",
@@ -5825,6 +5976,7 @@ export const teksty = {
       brakOkresu: "bez okresu w scenariuszu",
       zobaczPlan: "Zobacz plan rodziny",
       matka: "matka",
+      rodzicPrzyjmujacy: "rodzic, który przyjął dziecko",
       drugiRodzic: "drugi rodzic",
       warianty: { "81-5": "81,5%", "100-70": "100% i 70%" },
       // Tryb gościa: scenariusze w tej karcie przeglądarki, plan rodziny i wnioski po zalogowaniu.
@@ -5956,6 +6108,7 @@ export const teksty = {
     podwyzszenie: "Podwyższenie do kwoty świadczenia rodzicielskiego",
     wyrownanie: "Wyrównanie zasiłku za urlop macierzyński do 100%, jednorazowo, na wniosek",
     sumaMatki: "Suma matki",
+    sumaRodzicaPrzyjmujacego: "Suma rodzica, który przyjął dziecko",
     sumaDrugiego: "Suma drugiego rodzica",
     brakOkresow: "Brak okresów urlopów z zasiłkiem.",
     przewijanieOkresow: ({ rodzic }: { rodzic: string }) => `Okresy urlopów: ${rodzic}`,
@@ -5971,6 +6124,8 @@ export const teksty = {
       przepadajace: string;
     }) =>
       `Urlop rodzicielski obojga rodziców: ${razem}. Matka: ${matka}, drugi rodzic: ${drugi}. Tygodnie przepadające: ${przepadajace}.`,
+    podsumowanieTygodniPrzyjecie: ({ razem, matka, drugi, przepadajace }: { razem: string; matka: string; drugi: string; przepadajace: string }) =>
+      `Urlop rodzicielski obojga rodziców: ${razem}. Rodzic, który przyjął dziecko: ${matka}, drugi rodzic: ${drugi}. Tygodnie przepadające: ${przepadajace}.`,
     bezUzupelniajacego:
       "Uzupełniający urlop macierzyński nie przysługuje, bo w danych nie ma wcześniactwa ani pobytu dziecka w szpitalu.",
     zUzupelniajacym: ({ data }: { data: string }) =>
@@ -6125,10 +6280,10 @@ export const teksty = {
     terminWyboruDopisek: ({ dni }: { dni: string }) => `, czyli 21. dnia po porodzie. Zostało ${dni}.`,
     informacjaWyrownanie: ({ kwota }: { kwota: string }) =>
       `Gdy nie wykorzystasz żadnego dnia urlopu rodzicielskiego, w wariancie 81,5% otrzymasz wyrównanie zasiłku za urlop macierzyński do 100% podstawy w kwocie ${kwota}. Dlatego obie sumy są równe.`,
-    wariant81: "Wariant 81,5%",
+    wariant81: ({ s815 }: { s815: string }) => `Wariant ${s815}`,
     wariant81Opis: "Równe wypłaty przez cały urlop.",
     wariant81OpisZero: "Równe wypłaty i wyrównanie po urlopie macierzyńskim.",
-    wariant100: "Wariant 100% i 70%",
+    wariant100: ({ s100, s70 }: { s100: string; s70: string }) => `Wariant ${s100} i ${s70}`,
     wariant100Opis: "Więcej w urlopie macierzyńskim, mniej w rodzicielskim.",
     miesiecznieprzez: ({ tygodnie }: { tygodnie: string }) => `Miesięcznie przez ${tygodnie}`,
     miesiecznieMacierzynski: ({ tygodnie }: { tygodnie: string }) => `Miesięcznie przez ${tygodnie} urlopu macierzyńskiego`,
@@ -6136,14 +6291,14 @@ export const teksty = {
     podwyzszenie: ({ procent, kwota }: { procent: string; kwota: string }) =>
       `${procent} podstawy to ${kwota}, więc podwyższamy wypłatę do kwoty świadczenia rodzicielskiego.`,
     sumaZa: ({ tygodnie }: { tygodnie: string }) => `Suma za ${tygodnie}`,
-    wyrownanieTytul: "Wyrównanie do 100% za urlop macierzyński",
+    wyrownanieTytul: ({ s100 }: { s100: string }) => `Wyrównanie do ${s100} za urlop macierzyński`,
     jednorazowo: "Jednorazowo, na wniosek",
     urlopRodzicielski: "Urlop rodzicielski",
     nieKorzystasz: "Nie korzystasz, 0 tygodni",
-    wybierz81: "Wybierz wariant 81,5%",
-    wybierz100: "Wybierz wariant 100% i 70%",
-    zmienNa81: "Zmień na wariant 81,5%",
-    zmienNa100: "Zmień na wariant 100% i 70%",
+    wybierz81: ({ s815 }: { s815: string }) => `Wybierz wariant ${s815}`,
+    wybierz100: ({ s100, s70 }: { s100: string; s70: string }) => `Wybierz wariant ${s100} i ${s70}`,
+    zmienNa81: ({ s815 }: { s815: string }) => `Zmień na wariant ${s815}`,
+    zmienNa100: ({ s100, s70 }: { s100: string; s70: string }) => `Zmień na wariant ${s100} i ${s70}`,
     twojWybor: "Twój wybór",
     wybranyWariant: "Wybrany wariant",
     roznicaPelny: ({ kwota }: { kwota: string }) =>
@@ -6154,24 +6309,24 @@ export const teksty = {
     wykresPodpis: "Miesięczna wypłata w każdym okresie",
     wykresMacierzynski: ({ tygodnie }: { tygodnie: string }) => `Urlop macierzyński: ${tygodnie}`,
     wykresRodzicielski: ({ tygodnie }: { tygodnie: string }) => `Urlop rodzicielski: ${tygodnie}`,
-    stawka81: "81,5%: ",
-    stawka100: "100%: ",
-    stawka70: "70%: ",
+    stawka81: ({ s815 }: { s815: string }) => `${s815}: `,
+    stawka100: ({ s100 }: { s100: string }) => `${s100}: `,
+    stawka70: ({ s70 }: { s70: string }) => `${s70}: `,
     zestawienie: "Zestawienie wypłat po okresach",
     zestawieniePowrot: ({ data }: { data: string }) => `Zestawienie wypłat po okresach przy powrocie do pracy ${data}`,
     zestawienieZero: ({ data }: { data: string }) => `Zestawienie wypłat przy powrocie do pracy ${data}`,
     kolumnaOkres: "Okres",
-    kolumna81Miesiecznie: "Wariant 81,5% / miesięcznie",
-    kolumna81Suma: "Wariant 81,5% / suma",
-    kolumna100Miesiecznie: "Wariant 100% i 70% / miesięcznie",
-    kolumna100Suma: "Wariant 100% i 70% / suma",
+    kolumna81Miesiecznie: ({ s815 }: { s815: string }) => `Wariant ${s815} / miesięcznie`,
+    kolumna81Suma: ({ s815 }: { s815: string }) => `Wariant ${s815} / suma`,
+    kolumna100Miesiecznie: ({ s100, s70 }: { s100: string; s70: string }) => `Wariant ${s100} i ${s70} / miesięcznie`,
+    kolumna100Suma: ({ s100, s70 }: { s100: string; s70: string }) => `Wariant ${s100} i ${s70} / suma`,
     kolumnaStawka: "Stawka",
     kolumnaMiesiecznie: "Miesięcznie",
     kolumnaSuma: "Suma",
     urlopMacierzynski: "Urlop macierzyński",
     razem: "Razem",
     okresDni: ({ okres, dni }: { okres: string; dni: string }) => `${okres}, ${dni}`,
-    wyrownanieWiersz: "Wyrównanie do 100%",
+    wyrownanieWiersz: ({ s100 }: { s100: string }) => `Wyrównanie do ${s100}`,
     wyrownanieWierszOpis: "Za urlop macierzyński, jednorazowo",
     brakWartosci: "-",
     notatkaSuma: ({ kwota }: { kwota: string }) =>
@@ -6318,9 +6473,9 @@ export const teksty = {
   ViewSampleCaseList: {
     tytulStrony: "Przykładowe sprawy ZUS",
     naglowek: "Przykładowe sprawy ZUS",
-    wstep: "Sprawdź, jak przewodnik ustala prawo do zasiłku i jego wysokość na dokumentach, z których korzysta ZUS. Wybierz sprawę przygotowaną przez zespół albo wgraj dokument z zestawu przykładowych spraw ZUS.",
+    wstep: "Sprawdź, jak przewodnik ustala prawo do zasiłku i jego wysokość na dokumentach, z których korzysta ZUS. Wybierz sprawę przygotowaną przez zespół albo wgraj dokument sprawy, na przykład dokument przykładowy zespołu.",
     kartaWgrania: {
-      tytul: "Wgraj dokument z zestawu ZUS",
+      tytul: "Wgraj dokument sprawy",
       opis: "Wniosek ZAM, zaświadczenie Z-3, Z-3a, Z-3b albo ZAS-12, poświadczenie ubezpieczenia chorobowego, zrzut z systemu ZUS albo zaświadczenie lekarskie. Plik PDF, JPG albo PNG, najwyżej 10 MB. Dane odczytamy z pomocą sztucznej inteligencji, a imię, nazwisko i numer PESEL zastąpimy danymi losowymi.",
       przycisk: "Wgraj dokument",
     },
@@ -6328,6 +6483,7 @@ export const teksty = {
       tytul: "Sprawy przygotowane przez zespół",
       licznikZestawow: "Sprawy z zestawów ZUS:",
       licznikWzorcowych: "sprawy wzorcowe:",
+      licznikWzorcowychSamych: "Sprawy wzorcowe:",
       notatka: "Sprawy z zestawów ZUS mają dane osobowe zastąpione danymi losowymi, a daty, okresy i kwoty takie jak w zestawie. Sprawy wzorcowe mają dane wymyślone przez zespół do testów reguł.",
     },
     tabela: {
@@ -6365,12 +6521,19 @@ export const teksty = {
     },
     notatkaJednaSprawaGosc:
       "Prowadzisz jedną przykładową sprawę naraz. Wybór sprawy albo wgranie dokumentu zaczyna nową sprawę i usuwa dane poprzedniej. Dane sprawy zostają w tej karcie przeglądarki do jej zamknięcia. Gdy zalogujesz się w tej karcie, przeniesiemy sprawę do Twojego konta.",
+    kartaDokumentow: {
+      tytul: "Dokumenty przykładowe do testu odczytu",
+      opis: "Pobierz zmyślone dokumenty siedmiu spraw: wnioski ZAM, zaświadczenia Z-3, Z-3a i ZAS-12, poświadczenie ubezpieczenia, wydruki e-ZLA i zrzuty z systemu ZUS. Wgraj je jak własne pliki albo wybierz je z listy na ekranie wgrywania.",
+      pobierzWszystkie: "Pobierz dokumenty przykładowe",
+      archiwum: "Archiwum ZIP z 19 plikami PDF i PNG",
+      wybierzZListy: "Wgraj dokument przykładowy",
+    },
     // koniec ViewSampleCaseList
   },
   ViewSampleCaseUpload: {
     tytulStrony: "Wgraj dokument sprawy",
     naglowek: "Wgraj dokument sprawy",
-    wstep: "Dokument z zestawu przykładowych spraw ZUS zaczyna nową przykładową sprawę.",
+    wstep: "Wgrany dokument zaczyna nową przykładową sprawę. Wgraj własny plik albo dokument przykładowy z listy poniżej.",
     wstepDodaj: "Dokument dodamy do bieżącej przykładowej sprawy. Dokument tego samego rodzaju zastąpi poprzedni.",
     kartaPliku: {
       tytul: "Wybierz plik",
@@ -6412,6 +6575,62 @@ export const teksty = {
         "Zaświadczenie „Za życiem”",
       ],
     },
+    dokumentyPrzykladowe: {
+      tytul: "Dokumenty przykładowe",
+      opis: "Zespół przygotował zmyślone dokumenty siedmiu spraw. Wybierz dokument, a wgramy go i odczytamy tak samo jak plik z Twojego komputera. Pierwszy dokument zaczyna nową sprawę, a kolejne dokumenty tej samej sprawy dodasz na ekranie danych sprawy przyciskiem Dodaj dokument przykładowy.",
+      opisDodaj: "Wybierz kolejny dokument tej samej sprawy, a dodamy go do bieżącej sprawy i odczytamy tak samo jak plik z Twojego komputera.",
+      pobierzWszystkie: "Pobierz dokumenty przykładowe",
+      archiwum: "Archiwum ZIP z 19 plikami PDF i PNG",
+      pobierz: "Pobierz",
+      pobierzDokument: ({ nazwa }: { nazwa: string }) => `Pobierz plik ${nazwa}`,
+      wgraj: "Wgraj",
+      wgrajDokument: ({ nazwa }: { nazwa: string }) => `Wgraj plik ${nazwa}`,
+      podpisListy: ({ zestaw }: { zestaw: string }) => `Dokumenty: ${zestaw}`,
+      rodzaje: {
+        zam: "Wniosek ZAM",
+        z3: "Zaświadczenie Z-3",
+        z3a: "Zaświadczenie Z-3a",
+        poswiadczenie: "Poświadczenie ubezpieczenia chorobowego",
+        zrzut: "Zrzut z systemu ZUS, obraz PNG",
+        ezla: "Wydruk zaświadczenia lekarskiego e-ZLA",
+        zas12: "Zaświadczenie ZAS-12",
+        umowa: "Umowa najmu",
+      },
+      zestawy: {
+        kowalczyk: {
+          tytul: "Agnieszka Kowalczyk, pracownica",
+          opis: "Zasiłek macierzyński za 20 tygodni od porodu i zrzut z systemu ZUS z przyznanym zasiłkiem.",
+        },
+        sadowska: {
+          tytul: "Oliwia Sadowska, zleceniobiorczyni",
+          opis: "Wniosek o zasiłek 81,5% podstawy za urlop macierzyński i rodzicielski.",
+        },
+        pawlak: {
+          tytul: "Marta Pawlak, działalność gospodarcza",
+          opis: "Dobrowolne ubezpieczenie chorobowe, podstawy wymiaru składek z poświadczenia i zrzut z przyznanym zasiłkiem.",
+        },
+        zajac: {
+          tytul: "Monika Zając, pracownica po likwidacji pracodawcy",
+          opis: "Zasiłek w wysokości zasiłku macierzyńskiego do porodu i zasiłek macierzyński od porodu.",
+        },
+        krawczyk: {
+          tytul: "Julia Krawczyk, działalność gospodarcza",
+          opis: "Działalność bez dobrowolnego ubezpieczenia chorobowego i zrzut z systemu ZUS z odmową zasiłku macierzyńskiego.",
+        },
+        mazur: {
+          tytul: "Karolina Mazur, zleceniobiorczyni w ciąży",
+          opis: "Zasiłek chorobowy 100% podstawy przy kodzie B z zaświadczenia lekarskiego i zrzut z przyznanym zasiłkiem.",
+        },
+        gorska: {
+          tytul: "Zuzanna Górska, zleceniobiorczyni od 2 miesięcy",
+          opis: "Niezdolność do pracy w ciąży w okresie wyczekiwania 90 dni i dalszy okres niezdolności z ZAS-12.",
+        },
+        inne: {
+          tytul: "Dokument spoza zestawu sprawy",
+          opis: "Umowa najmu do sprawdzenia rozpoznania rodzaju dokumentu.",
+        },
+      },
+    },
     // koniec ViewSampleCaseUpload
   },
   ViewSampleCaseData: {
@@ -6433,6 +6652,7 @@ export const teksty = {
       podglad: "Podgląd",
       podgladDokumentu: ({ nazwa }: { nazwa: string }) => `Podgląd: ${nazwa}`,
       dodaj: "Dodaj dokument",
+      dodajPrzykladowy: "Dodaj dokument przykładowy",
       dodajPodpowiedz: "PDF, JPG albo PNG, najwyżej 10 MB. Dokument tego samego rodzaju zastąpi poprzedni.",
       trwaOdczyt: ({ nazwa }: { nazwa: string }) => `Odczytujemy dane z pliku ${nazwa}. Odczyt trwa najdłużej 30 sekund.`,
       nazwaCzesci: "Dokumenty sprawy",
@@ -6545,11 +6765,16 @@ export const teksty = {
       popKoniec: "Data końca zasiłku",
     },
     przyznane: {
-      tytul: "Świadczenia przyznane przez ZUS",
-      podpis: "Świadczenia przyznane przez ZUS w zrzucie z systemu",
-      etykietaPrzewijania: "Tabela świadczeń przyznanych przez ZUS, przewijana poziomo",
+      tytul: "Świadczenia przyznane i odmówione przez ZUS",
+      podpis: "Świadczenia przyznane i odmówione przez ZUS w zrzucie z systemu",
+      etykietaPrzewijania: "Tabela świadczeń przyznanych i odmówionych przez ZUS, przewijana poziomo",
       swiadczenie: "Świadczenie",
+      decyzja: "Decyzja ZUS",
+      przyznano: "Przyznano",
+      odmowa: "Odmowa",
+      odmowaZPrzyczyna: ({ przyczyna }: { przyczyna: string }) => `Odmowa: ${przyczyna}`,
       okres: "Okres",
+      odDnia: ({ od }: { od: string }) => `od ${od}`,
       kwota: "Miesięczna kwota",
       zrodlo: "Źródło",
     },
@@ -6879,6 +7104,8 @@ export const teksty = {
     wyliczenie: {
       macierzynski: ({ tygodnie, dni }: { tygodnie: string; dni: string }) =>
         `Okres liczymy od dnia początku z wniosku. Urlop macierzyński wynosi ${tygodnie} tygodni, czyli ${dni} dni.`,
+      macierzynskiOdPorodu: ({ od, tygodnie, dni }: { od: string; tygodnie: string; dni: string }) =>
+        `Sprawa nie zawiera okresu urlopu z wniosku, więc okres podstawowy zasiłku liczymy od dnia porodu ${od} w wymiarze urlopu macierzyńskiego ${tygodnie} tygodni, czyli ${dni} dni.`,
       martweUrodzenie: ({ dni }: { dni: string }) => `Po urodzeniu martwego dziecka okres zasiłku za urlop macierzyński wynosi ${dni} dni od dnia porodu.`,
       ojciec: ({ dni }: { dni: string }) =>
         `Okres zasiłku ojca to wymiar urlopu macierzyńskiego pomniejszony o okres wykorzystany przez matkę, czyli ${dni} dni.`,
@@ -6887,7 +7114,66 @@ export const teksty = {
       rodzicielski: ({ tygodnie }: { tygodnie: string }) => `Okres zasiłku za urlop rodzicielski matki wynosi ${tygodnie} tygodni.`,
       wariant815: ({ dni }: { dni: string }) =>
         `Wniosek z oświadczeniem o pełnym wymiarze urlopów złożony najpóźniej ${dni} dni po porodzie daje stawkę 81,5% za cały okres.`,
+      podwyzszenie: ({ kwota, podwyzszenie }: { kwota: string; podwyzszenie: string }) =>
+        `Zasiłek za miesiąc niższy niż kwota świadczenia rodzicielskiego ${kwota} podwyższamy do tej kwoty, więc suma wypłat zawiera podwyższenie ${podwyzszenie}.`,
+      zwzm: ({ dni, procent }: { dni: string; procent: string }) =>
+        `Zasiłek w wysokości zasiłku macierzyńskiego przysługuje od dnia po ustaniu zatrudnienia do dnia przed porodem, czyli ${dni} dni, i wynosi ${procent}% podstawy.`,
+      chorobowyOkres: ({ od, do: koniec, dni }: { od: string; do: string; dni: string }) =>
+        `Zasiłek chorobowy liczymy za każdy dzień niezdolności do pracy od ${od} do ${koniec}, czyli za ${dni} dni.`,
+      chorobowyStawka100: ({ procent }: { procent: string }) =>
+        `Kod B z zaświadczenia lekarskiego oznacza niezdolność do pracy w okresie ciąży, więc zasiłek chorobowy wynosi ${procent}% podstawy za cały okres niezdolności.`,
+      chorobowyStawka80: ({ procent }: { procent: string }) => `Zasiłek chorobowy wynosi ${procent}% podstawy, także za okres pobytu w szpitalu.`,
+      chorobowyWyczekiwanie: ({ prawoOd }: { prawoOd: string }) =>
+        `Prawo do zasiłku chorobowego powstaje ${prawoOd}, po upływie okresu wyczekiwania, więc zasiłek liczymy od tego dnia.`,
+      wynagrodzenieChorobowe: ({ limit, dni }: { limit: string; dni: string }) =>
+        `Za pierwsze ${limit} dni niezdolności do pracy w roku kalendarzowym pracownik dostaje od pracodawcy wynagrodzenie za czas choroby, a zasiłek chorobowy od kolejnego dnia. Wyliczenie przyjmuje, że niezdolność ze sprawy jest pierwszą w tym roku kalendarzowym, więc wynagrodzenie obejmuje ${dni} dni.`,
+      chorobowyLimit: ({ dni }: { dni: string }) => `Zasiłek chorobowy przysługuje najdłużej przez ${dni} dni niezdolności do pracy.`,
     },
+    wyliczeniaSprawy: {
+      tytulPorownania: ({ id }: { id: string }) => `Porównanie wyliczeń z rozstrzygnięciem sprawy ${id}`,
+      tytulPorownaniaBezId: "Porównanie wyliczeń z rozstrzygnięciem sprawy",
+      podpisPorownania: "Porównanie wyliczenia świadczeń z rozstrzygnięciem sprawy",
+      przewijaniePorownania: "Tabela porównania z rozstrzygnięciem, przewiń w poziomie",
+      kolumnyPorownania: { swiadczenie: "Świadczenie", pole: "Dana", wyliczenie: "Wyliczenie", rozstrzygniecie: "Rozstrzygnięcie sprawy", porownanie: "Porównanie" },
+      pola: { prawo: "Prawo do świadczenia", poczatek: "Początek okresu", koniec: "Koniec okresu", kwota: "Miesięczna kwota" },
+      prawo: { przysluguje: "Przysługuje", "nie-przysluguje": "Nie przysługuje" },
+      zgodne: "Zgodne",
+      rozne: "Różne",
+      zgodneRoznica: ({ roznica }: { roznica: string }) => `Zgodne, różnica ${roznica}`,
+      rozneRoznica: ({ roznica }: { roznica: string }) => `Różne, różnica ${roznica}`,
+      brakWRozstrzygnieciu: "Brak w rozstrzygnięciu",
+      brakWartosci: "-",
+      notaTolerancji: ({ tolerancja }: { tolerancja: string }) =>
+        `Daty początku i końca są zgodne, gdy są równe. Kwoty są zgodne, gdy różnią się najwyżej o ${tolerancja}.`,
+      okresyTytul: "Okresy, stawki i wypłaty według danych sprawy",
+      podpisOkresow: "Okresy świadczeń, stawki i wypłaty wyliczone z danych sprawy",
+      przewijanieOkresow: "Tabela okresów świadczeń, przewiń w poziomie",
+      kolumnyOkresow: { okres: "Świadczenie albo urlop", od: "Od", do: "Do", dni: "Dni", stawka: "Stawka", miesiecznie: "Miesięcznie", suma: "Za okres" },
+      podstawa: ({ kwota, opis }: { kwota: string; opis: string }) => `Podstawa wymiaru ${kwota}. ${opis}`,
+      sumaSwiadczenia: ({ swiadczenie, kwota }: { swiadczenie: string; kwota: string }) => `${swiadczenie}: razem ${kwota}.`,
+      poza: "Kwota od pracodawcy poza zasiłkiem",
+      rodzajeOkresow: {
+        zwzm: "Zasiłek w wysokości zasiłku macierzyńskiego",
+        "zasilek-chorobowy": "Zasiłek chorobowy",
+        "wynagrodzenie-chorobowe": "Wynagrodzenie za czas choroby od pracodawcy",
+      },
+      brakOkresow: "Według weryfikacji żadne świadczenie z wniosku nie przysługuje, więc porównujemy wyłącznie prawo do świadczeń.",
+      brakOkresuWDanych:
+        "Dane sprawy nie zawierają okresu, za który liczymy świadczenie, na przykład okresu urlopu z wniosku. Uzupełnij go w danych sprawy, a pokażemy okresy, stawki i wypłaty.",
+    },
+    ubezpieczenie: {
+      tytul: "Czy osoba ma ubezpieczenie chorobowe?",
+      tak: ({ rodzaj, okres, zdarzenie }: { rodzaj: string; okres: string; zdarzenie: string }) =>
+        `Tak. Osoba ma ${rodzaj} ubezpieczenie chorobowe ${okres} i podlega mu w dniu zdarzenia: ${zdarzenie}.`,
+      poUstaniu: ({ rodzaj, okres, zdarzenie }: { rodzaj: string; okres: string; zdarzenie: string }) =>
+        `Osoba miała ${rodzaj} ubezpieczenie chorobowe ${okres}. W dniu zdarzenia (${zdarzenie}) ubezpieczenie już ustało, więc prawo do zasiłku zależy od przepisów o świadczeniach po ustaniu ubezpieczenia.`,
+      przedPoczatkiem: ({ rodzaj, okres, zdarzenie }: { rodzaj: string; okres: string; zdarzenie: string }) =>
+        `Osoba ma ${rodzaj} ubezpieczenie chorobowe ${okres}, które zaczęło się po dniu zdarzenia (${zdarzenie}).`,
+      brak: ({ zdarzenie }: { zdarzenie: string }) =>
+        `Nie. Osoba nie podlega ubezpieczeniu chorobowemu w dniu zdarzenia (${zdarzenie}), więc zasiłki z ubezpieczenia chorobowego jej nie przysługują.`,
+      rodzaje: { obowiazkowe: "obowiązkowe", dobrowolne: "dobrowolne" },
+    },
+    sprawdzWyliczeniaTutaj: "Wyliczenia pokazujemy poniżej, pod wynikiem weryfikacji.",
     notaNiezaleznoscGosc: "Weryfikacja korzysta wyłącznie z danych tej sprawy.",
     // koniec ViewSampleCaseVerification
   },
@@ -7045,6 +7331,8 @@ export const teksty = {
       opis: "Zasiłek wypłaca ZUS, więc dołącz zaświadczenie. Wyślemy je razem z wnioskiem. Po wysłaniu usuniemy plik z przewodnika i zachowamy tylko jego nazwę.",
       dolaczonyPlik: "Dołączony plik",
       opisPliku: ({ typ, rozmiar }: { typ: string; rozmiar: string }) => `${typ}, ${rozmiar}`,
+      rozmiarB: ({ liczba }: { liczba: string }) => `${liczba} B`,
+      rozmiarKb: ({ liczba }: { liczba: string }) => `${liczba} KB`,
       rozmiarMb: ({ liczba }: { liczba: string }) => `${liczba} MB`,
       usunPlik: "Usuń plik",
       usunPlikEtykieta: ({ nazwa }: { nazwa: string }) => `Usuń plik ${nazwa}`,
@@ -7403,6 +7691,8 @@ export const teksty = {
     dataUrodzenia: "Data urodzenia",
     miejsceUrodzenia: "Miejscowość urodzenia",
     przewidywanyTermin: "Przewidywany termin porodu",
+    przekazPocztowy: "Przekaz pocztowy na adres zamieszkania z konta ZUS",
+    rachunekNiepodany: "Bez numeru rachunku",
     potwierdzone: "Potwierdzone",
     niepotwierdzone: "Niepotwierdzone",
     trafiDo: "Wniosek trafi do",
@@ -8245,6 +8535,17 @@ export const teksty = {
       zalaczniki: "Załączniki",
       adresat: "Adresat",
     },
+    zasilekTytul: "Zasiłek za okres urlopu",
+    zasilek: {
+      platnikSkladekZNazwa: ({ pracodawca }: { pracodawca: string }) =>
+        `Zasiłek macierzyński za okres urlopu wypłaci Ci pracodawca ${pracodawca}, bo według stanu na 30 listopada poprzedniego roku zgłaszał do ubezpieczenia chorobowego więcej niż 20 osób.`,
+      platnikSkladek:
+        "Zasiłek macierzyński za okres urlopu wypłaci Ci pracodawca, bo według stanu na 30 listopada poprzedniego roku zgłaszał do ubezpieczenia chorobowego więcej niż 20 osób.",
+      zus: "Zasiłek macierzyński za okres urlopu wypłaci Ci ZUS. Pracodawca przekaże do ZUS zaświadczenie płatnika składek Z-3.",
+      nieustalony:
+        "Zasiłek macierzyński za okres urlopu wypłaci Ci pracodawca, gdy według stanu na 30 listopada poprzedniego roku zgłaszał do ubezpieczenia chorobowego więcej niż 20 osób. W pozostałych przypadkach zasiłek wypłaci ZUS, a pracodawca przekaże do ZUS zaświadczenie płatnika składek Z-3.",
+      rezygnacja: "Pozostałą część zasiłku macierzyńskiego otrzyma ojciec dziecka na swój wniosek.",
+    },
     // koniec ViewLeaveRequestSummary
   },
   ViewLeaveRequestSent: {
@@ -8272,7 +8573,7 @@ export const teksty = {
     twojeWnioski: "Twoje wnioski",
     planRodziny: "Przejdź do planu rodziny",
     coDalejTytul: "Co dalej",
-    coDalej: "Pracodawca potwierdzi otrzymanie wniosku na Twój adres e-mail. Zasiłek za okres urlopu wypłaci pracodawca albo ZUS na podstawie zaświadczenia od pracodawcy.",
+    coDalej: "Pracodawca potwierdzi otrzymanie wniosku na Twój adres e-mail.",
     coDalejLaczenie: ({ data }: { data: string }) => `Pracodawca może odmówić łączenia urlopu z pracą do ${data}. Jeśli nie odmówi, łączysz urlop z pracą od wskazanej daty.`,
     dlaczegoPozniejTytul: "Dlaczego ochrona zaczyna się później",
     dlaczegoPozniej: "Szczególna ochrona zaczyna się na 14 dni przed urlopem macierzyńskim i urlopem na warunkach urlopu macierzyńskiego, na 21 dni przed urlopem rodzicielskim i uzupełniającym oraz na 7 dni przed urlopem ojcowskim. Gdy wysyłasz wniosek wcześniej, ochrona zaczyna się w tym dniu.",
@@ -8778,7 +9079,142 @@ export const teksty = {
       },
       procentEtatu: ({ wartosc }: { wartosc: string }) => `${wartosc} etatu`,
     },
+    // Edycja pozycji, słownika dokumentów, nowe wpisy słowników i wspólny katalog (panel/katalog, u06)
+    edycja: {
+      kolumnaStanu: "Stan",
+      aktywna: "W planach rodzin",
+      wylaczona: "Wyłączona",
+      zmienPozycje: ({ id }: { id: string }) => `Zmień pozycję ${id}`,
+      dodajWpis: "Dodaj wartość",
+      dodajDokument: "Dodaj wpis słownika",
+      zmienDokument: ({ nazwa }: { nazwa: string }) => `Zmień wpis: ${nazwa}`,
+      kolumnaAkcji: "Akcje",
+      dodanaWPanelu: "Dodana w panelu",
+    },
+    wspolnyKatalog: {
+      wspolny: "Zmiany katalogu zapisujemy we wspólnym katalogu. Wszyscy użytkownicy przewodnika widzą je przy najbliższym otwarciu.",
+      wspolnyWPamieci: "Zmiany katalogu zapisujemy we wspólnym katalogu w pamięci serwera. Po ponownym uruchomieniu serwera wrócą wartości startowe.",
+      lokalny: "Usługa wspólnego katalogu jest teraz niedostępna. Zmiany obowiązują w tej przeglądarce, a do wspólnego katalogu wyślemy je, gdy usługa wróci.",
+      odrzucona: "Wspólny katalog odrzucił ostatnią zmianę. Zmiana obowiązuje w tej przeglądarce do najbliższego pobrania wspólnego katalogu.",
+    },
     // koniec ViewCatalogList
+  },
+  ViewCatalogItemEdit: {
+    tytulStrony: "Zmiana pozycji katalogu",
+    naglowek: ({ id }: { id: string }) => `Zmiana pozycji ${id}`,
+    wstep: "Zmiany obowiązują od zapisu. Plany rodzin i kalendarze terminów uwzględnią je przy najbliższym wyliczeniu.",
+    powrot: "Katalog świadczeń",
+    brakPozycji: "Katalog nie zawiera tej pozycji. Wróć do listy pozycji katalogu.",
+    sprawa: {
+      naglowek: "Sprawa i warunek",
+      tytul: "Tytuł sprawy",
+      podpowiedzTytulu: "Tytuł zrozumiały bez znajomości nazwy świadczenia, do 120 znaków, inny niż tytuły pozostałych pozycji.",
+      warunek: "Opis warunku",
+      podpowiedzWarunku: "Opis warunku, który rodzic widzi przy sprawie, do 500 znaków. Warunek wyliczenia planu pozostaje bez zmian.",
+    },
+    kanal: {
+      naglowek: "Instytucja, kanał i dokumenty",
+      instytucja: "Instytucja i kanał",
+      podpowiedzInstytucji: "Gdzie i jak rodzic załatwia sprawę, do 500 znaków.",
+      dokumenty: "Dane i dokumenty",
+      podpowiedzDokumentow: "Jeden dokument w wierszu, najwyżej 20 wierszy po 500 znaków.",
+      kroki: "Kroki instrukcji",
+      podpowiedzKrokow: "Jeden krok w wierszu, najwyżej 20 wierszy po 500 znaków.",
+    },
+    termin: {
+      naglowek: "Termin sprawy",
+      obecny: ({ opis }: { opis: string }) => `Obowiązująca reguła terminu: ${opis}.`,
+      regula: "Reguła terminu",
+      podpowiedzReguly: "Zostaw obowiązującą regułę albo ustaw termin od daty kotwiczącej.",
+      opcjaObecna: "Obowiązująca reguła terminu",
+    },
+    opisReguly: {
+      brak: "bez terminu",
+      kotwice: {
+        "koniec-10-tygodnia": "ostatni dzień 10. tygodnia ciąży",
+        "przewidywany-termin-porodu": "przewidywany termin porodu",
+        "data-porodu": "data porodu",
+        "data-przyjecia": "data przyjęcia dziecka na wychowanie",
+        "data-uprawomocnienia": "data uprawomocnienia się orzeczenia",
+        "data-urodzenia-dziecka": "data urodzenia dziecka",
+      },
+      przesuniecie: ({ kotwica, liczba, jednostka }: { kotwica: string; liczba: string; jednostka: string }) =>
+        `${kotwica} ${liczba} ${jednostka}`,
+      wDniu: ({ kotwica }: { kotwica: string }) => `w dniu: ${kotwica}`,
+      jednostki: { dni: "dni", miesiace: "mies." },
+      korekta: ({ liczba }: { liczba: string }) => `, korekta ${liczba} dni`,
+      plusWymiar: ({ kotwica, wpis }: { kotwica: string; wpis: string }) => `${kotwica} i wymiar: ${wpis}`,
+      dzienPrzedUrodzinami: ({ lata }: { lata: string }) => `dzień przed ${lata}. urodzinami dziecka`,
+      koniecRokuUrodzin: ({ lata }: { lata: string }) => `31 grudnia roku, w którym dziecko kończy ${lata} lat`,
+      koniecMiesiacaWieku: ({ miesiace }: { miesiace: string }) => `ostatni dzień miesiąca, w którym dziecko kończy ${miesiace} miesięcy`,
+      coroczny: ({ dzien }: { dzien: string }) => `co roku do ${dzien}`,
+      dwaTerminy: ({ pierwszy, drugi }: { pierwszy: string; drugi: string }) => `${pierwszy}, drugi termin ${drugi}`,
+    },
+    wylaczenie: {
+      naglowek: "Pozycja w planach rodzin",
+      aktywna: "Pozycja jest w planach rodzin. Po wyłączeniu sprawa znika z planów rodzin i kalendarzy terminów przy najbliższym wyliczeniu.",
+      wylaczona: "Pozycja jest wyłączona. Po włączeniu sprawa wraca do planów rodzin, które spełniają jej warunek.",
+      wylacz: "Wyłącz pozycję",
+      wlacz: "Włącz pozycję",
+    },
+    zapisz: "Zapisz zmiany",
+    anuluj: "Anuluj",
+    czesci: {
+      sprawa: "Sprawa i warunek",
+      kanal: "Instytucja, kanał i dokumenty",
+      termin: "Termin i stan pozycji",
+    },
+    // koniec ViewCatalogItemEdit
+  },
+  ViewCatalogDocumentEdit: {
+    tytulStrony: "Wpis słownika dokumentów",
+    naglowekZmiany: "Zmiana wpisu słownika dokumentów",
+    naglowekNowego: "Nowy wpis słownika dokumentów",
+    wstep: "Kreatory wniosków i instrukcje spraw pokazują dokumenty, adresata i termin z tego wpisu od zapisu zmiany.",
+    powrot: "Katalog świadczeń",
+    brakWpisu: "Słownik nie zawiera tego wpisu. Wróć do słownika dokumentów.",
+    grupa: "Grupa słownika",
+    wybierzGrupe: "Wybierz grupę",
+    nazwa: "Świadczenie albo wniosek",
+    podpowiedzNazwy: "Nazwa świadczenia albo wniosku, do 120 znaków.",
+    formy: "Formy zatrudnienia",
+    podpowiedzForm: "Zaznacz formy zatrudnienia, których dotyczy wpis. Wszystkie cztery formy oznaczają każdą formę zatrudnienia.",
+    dokumenty: "Dokumenty i załączniki",
+    podpowiedzDokumentow: "Jeden dokument w wierszu, najwyżej 20 wierszy po 500 znaków.",
+    adresat: "Adresat",
+    podpowiedzAdresata: "Instytucja albo osoba, do której rodzic składa wniosek, do 500 znaków.",
+    termin: "Termin",
+    podpowiedzTerminu: "Termin złożenia wniosku opisany słowami, do 500 znaków.",
+    zapisz: "Zapisz wpis",
+    anuluj: "Anuluj",
+    // koniec ViewCatalogDocumentEdit
+  },
+  ViewCatalogEntryAdd: {
+    tytulStrony: "Nowa wartość w katalogu świadczeń",
+    naglowek: "Nowa wartość w katalogu świadczeń",
+    wstep: "Nowa wartość trafia do słownika z pierwszą wersją od podanej daty. Kolejne wersje dopiszesz przyciskiem Zmień w tabeli słownika.",
+    powrot: "Katalog świadczeń",
+    slownik: "Słownik",
+    nazwa: "Nazwa wartości",
+    podpowiedzNazwy: "Nazwa, pod którą wartość stoi w słowniku, do 120 znaków, inna niż nazwy pozostałych wpisów.",
+    etykieta: "Opis wartości (opcjonalnie)",
+    podpowiedzEtykiety: "Krótki opis pola wartości, do 120 znaków. Puste pole oznacza nazwę wartości.",
+    jednostka: "Jednostka",
+    wybierzJednostke: "Wybierz jednostkę",
+    jednostki: {
+      zl: "Kwota w złotych",
+      procent: "Stawka w procentach",
+      tygodnie: "Tygodnie",
+      dni: "Dni",
+      miesiace: "Miesiące",
+      lata: "Lata",
+    },
+    wartosc: "Wartość",
+    od: "Obowiązuje od",
+    podpowiedzOd: "Data w formacie DD.MM.RRRR.",
+    zapisz: "Zapisz wartość",
+    anuluj: "Anuluj",
+    // koniec ViewCatalogEntryAdd
   },
   ViewCatalogValueEdit: {
     tytulStrony: "Zmiana wartości w katalogu świadczeń",
@@ -9020,6 +9456,14 @@ export const teksty = {
     kartaWnioski: "Wnioski o świadczenia na dziecko",
     wniosek800: "Wniosek o świadczenie wychowawcze 800+",
     wniosekAktywnyRodzic: "Wniosek o świadczenie z programu Aktywny Rodzic",
+    kartaZasilki: "Zasiłek macierzyński",
+    wniosekZas23: "Wniosek ZAS-23 o skrócenie okresu wypłaty zasiłku macierzyńskiego",
+    kartaKonta: "Konto ubezpieczonego",
+    kontoWstep: "Sprawdź dane zgromadzone na Twoim koncie w ZUS i zadaj pytanie, gdy masz wątpliwości.",
+    daneKonta: "Dane o ubezpieczeniu, podstawach składek, członkach rodziny i zasiłkach",
+    zaswiadczeniaEzla: "Zaświadczenia lekarskie e-ZLA",
+    stanRozliczen: "Stan rozliczeń składek",
+    pytanieDoZus: "Zadaj pytanie do ZUS",
     notatka: "Po wysłaniu wniosku wróć do karty przewodnika i oznacz sprawę w instrukcji.",
     // koniec ViewEzusHome
   },
@@ -9074,6 +9518,61 @@ export const teksty = {
         "ZUS odmówił przyznania świadczenia. Decyzję z uzasadnieniem i pouczeniem o prawie do odwołania znajdziesz w eZUS w zakładce Dokumenty i wiadomości. Jeśli nie zgadzasz się z decyzją, złóż odwołanie za pośrednictwem ZUS albo złóż nowy wniosek z uzupełnionymi danymi.",
     },
     // koniec ViewEzusApplicationDetails
+  },
+  ViewEzusZas23: {
+    tytulStrony: "eZUS: wniosek ZAS-23 o skrócenie okresu wypłaty zasiłku macierzyńskiego",
+    naglowek: "Wniosek ZAS-23",
+    wstep:
+      "Wniosek o skrócenie okresu wypłaty zasiłku macierzyńskiego. Złożysz go po wykorzystaniu co najmniej 14 tygodni zasiłku po porodzie, gdy pozostałą część zasiłku przejmie ojciec dziecka.",
+    kartaWniosku: "Skrócenie okresu wypłaty zasiłku",
+    kartaOswiadczenia: "Oświadczenie ojca dziecka",
+    ubezpieczona: "Ubezpieczona",
+    zasilekZaUrlop: "Zasiłek za okres urlopu macierzyńskiego",
+    wniosekZam: "Wniosek o zasiłek macierzyński",
+    wniosekZamNumer: ({ numer, data }: { numer: string; data: string }) => `${numer}, złożony ${data}`,
+    wniosekZamWZus: "Złożony w ZUS",
+    poleDaty: "Data, od której rezygnujesz z zasiłku macierzyńskiego",
+    podpowiedzDaty: ({ od, do_ }: { od: string; do_: string }) => `Od ${od} do ${do_}, w formacie DD.MM.RRRR.`,
+    ojciecPobiera: "Ojciec dziecka pobiera zasiłek macierzyński",
+    oswiadczenieWstep:
+      "Do wniosku dołączasz oświadczenie, od kiedy ojciec dziecka będzie korzystał z zasiłku macierzyńskiego. Po wysłaniu wniosku wydrukujesz oświadczenie do podpisu ojca dziecka.",
+    poleOjca: "Imię i nazwisko ojca dziecka",
+    potwierdzenie: ({ data }: { data: string }) =>
+      `Ojciec dziecka podpisze oświadczenie, że od ${data} będzie korzystał z zasiłku macierzyńskiego, a ja dostarczę je do placówki ZUS osobiście albo pocztą przed tym dniem.`,
+    potwierdzenieBezDaty:
+      "Ojciec dziecka podpisze oświadczenie, od kiedy będzie korzystał z zasiłku macierzyńskiego, a ja dostarczę je do placówki ZUS osobiście albo pocztą przed tym dniem.",
+    potwierdzenieZleceniodawca: ({ data }: { data: string }) =>
+      `Ojciec dziecka podpisze oświadczenie, że od ${data} będzie korzystał z zasiłku macierzyńskiego, a ja złożę je zleceniodawcy razem z wnioskiem przed tym dniem.`,
+    potwierdzenieZleceniodawcaBezDaty:
+      "Ojciec dziecka podpisze oświadczenie, od kiedy będzie korzystał z zasiłku macierzyńskiego, a ja złożę je zleceniodawcy razem z wnioskiem przed tym dniem.",
+    wyslij: "Wyślij wniosek do ZUS",
+    przygotuj: "Przygotuj dokumenty do wydruku",
+    kartaPotwierdzenia: "Wniosek ZAS-23",
+    numerPotwierdzenia: "Numer potwierdzenia",
+    dataZlozenia: "Data złożenia",
+    dataPrzygotowania: "Data przygotowania",
+    rezygnacjaOd: "Rezygnacja z zasiłku od",
+    ojciecDziecka: "Ojciec dziecka",
+    okresOjca: "Okres zasiłku ojca dziecka",
+    okres: ({ od, do_ }: { od: string; do_: string }) => `${od} – ${do_}`,
+    dokumentOswiadczenia: "Oświadczenie ojca dziecka o przejęciu zasiłku macierzyńskiego",
+    trescOswiadczenia: ({ ojciec, matka, data }: { ojciec: string; matka: string; data: string }) =>
+      `Ja, ${ojciec}, oświadczam, że od ${data} będę korzystać z zasiłku macierzyńskiego za pozostały okres zasiłku, z którego rezygnuje matka dziecka, ${matka}, i w tym okresie przerwę działalność zarobkową, żeby osobiście opiekować się dzieckiem.`,
+    dokumentWniosku: "Wniosek o rezygnację z dalszej części zasiłku macierzyńskiego",
+    trescWniosku: ({ matka, data, platnik }: { matka: string; data: string; platnik: string }) =>
+      `Ja, ${matka}, rezygnuję z pobierania zasiłku macierzyńskiego od ${data}, po wykorzystaniu zasiłku przez co najmniej 14 tygodni po porodzie. Pozostałą część zasiłku przejmie ojciec dziecka. Wniosek składam do płatnika zasiłku: ${platnik}.`,
+    trescWnioskuZOrzeczeniem: ({ matka, data, platnik }: { matka: string; data: string; platnik: string }) =>
+      `Ja, ${matka}, rezygnuję z pobierania zasiłku macierzyńskiego od ${data}, po wykorzystaniu zasiłku przez co najmniej 8 tygodni po porodzie, na podstawie orzeczenia o niezdolności do samodzielnej egzystencji. Pozostałą część zasiłku przejmie ojciec dziecka. Wniosek składam do płatnika zasiłku: ${platnik}.`,
+    zleceniodawca: "zleceniodawca",
+    miejscePodpisu: "Data i czytelny podpis",
+    nazwaPlikuOswiadczenia: "oswiadczenie-ojca-dziecka.pdf",
+    nazwaPlikuWniosku: "rezygnacja-z-zasilku-macierzynskiego.pdf",
+    oswiadczenieOjcaZalacznik: ({ imieINazwisko }: { imieINazwisko: string }) =>
+      `Oświadczenie ojca dziecka, ${imieINazwisko}, od kiedy będzie korzystał z zasiłku macierzyńskiego`,
+    brakDatyPorodu: "Wniosek ZAS-23 złożysz po potwierdzeniu daty porodu w profilu rodziny.",
+    brakRodziny: "Zaloguj się w przewodniku, żeby złożyć wniosek ZAS-23 z danymi rodziny.",
+    przejdzDoRezygnacji: "Przejdź do rezygnacji w przewodniku",
+    // koniec ViewEzusZas23
   },
   ViewZusEVisit: {
     tytulStrony: "e-wizyta w ZUS",
@@ -9695,6 +10194,116 @@ export const teksty = {
     anuluj: "Anuluj",
     // koniec SheetFamilyDataDeleteConfirm
   },
+  // Strona /api-docs i opis OpenAPI 3.1 w GET /api/v1/openapi.json (REST API logiki biznesowej przewodnika).
+  ViewApiDocs: {
+    tytulStrony: "REST API przewodnika",
+    opisStrony: "Punkty końcowe REST API przewodnika w wersji 1 z przykładami żądań i odpowiedzi.",
+    naglowek: "REST API przewodnika, wersja 1",
+    wstep:
+      "Logika biznesowa przewodnika działa na serwerze jako REST API. Kalkulatory zasiłku, plan rodziny z terminami, świadczenia w ciąży, weryfikacja przykładowych spraw, walidacje pól i symulowany ZUS liczą wynik tymi samymi funkcjami domeny co aplikacja i korzystają z katalogu świadczeń zapisanego na serwerze.",
+    zasadyNaglowek: "Zasady wywołań",
+    zasady: [
+      "Wysyłaj treść żądania POST w formacie JSON z nagłówkiem Content-Type: application/json.",
+      "Podawaj daty w formacie RRRR-MM-DD, chwile w formacie RRRR-MM-DDTHH:MM:SS w strefie Europe/Warsaw, a kwoty w groszach.",
+      "Pole dzis podstawia dzień wyliczenia, a pole dataDemo albo nagłówek X-Data-Demo działa jak data demonstracyjna z ustawień demo. Bez nich serwer liczy od bieżącej daty w strefie Europe/Warsaw. W żądaniach GET te pola są parametrami adresu.",
+      "Błąd ma postać { kod, pola, parametry } z kodem z tablicy komunikatów i statusem HTTP z kolumny Kod HTTP tej tablicy. Komunikat informacyjny, który blokuje operację, dostaje status 422.",
+      "Przełączniki symulacji z ustawień demo przekazuj w polu symulacje albo w nagłówku X-Symulacje: daneZusNiedostepne, stanRozliczenNiedostepny, wysylkaDoZusNiedostepna i pueEzusNiedostepne.",
+    ],
+    openApiNaglowek: "Opis OpenAPI",
+    openApiOpis: "Pełny opis API w formacie OpenAPI 3.1 pobierzesz pod adresem",
+    spisTresci: "Spis punktów końcowych",
+    etykiety: {
+      zadanie: "Przykładowe żądanie",
+      odpowiedz: "Przykładowa odpowiedź w skrócie",
+      bledy: "Kody błędów",
+      status: ({ status }: { status: string }) => `Status ${status}`,
+      bezTresci: "Żądanie bez treści, parametry w adresie.",
+    },
+    grupy: {
+      kalkulatory: "Kalkulatory decyzji",
+      plan: "Plan rodziny i świadczenia",
+      sprawy: "Przykładowe sprawy",
+      zus: "Symulowany ZUS",
+      walidacje: "Walidacje pól",
+      opis: "Opis API",
+    },
+    endpointy: {
+      zasilekMacierzynski: {
+        tytul: "Zintegrowany kalkulator zasiłku macierzyńskiego",
+        opis: "Liczy okresy urlopów, stawki, kwoty miesięczne, harmonogram wypłat, sumy i daty powrotu do pracy z danych wejściowych kalkulatora, parametrów scenariusza i podstaw wymiaru rodziców. Podstawę podasz jako kwotę, podstawy składek z 12 miesięcy albo PESEL konta w symulowanym ZUS.",
+      },
+      wariant: {
+        tytul: "Kalkulator wariantu zasiłku macierzyńskiego",
+        opis: "Porównuje wypłaty w wariancie 81,5% i w wariancie 100% i 70% dla podstawy wymiaru, daty porodu, liczby dzieci i liczby tygodni urlopu rodzicielskiego przed powrotem do pracy.",
+      },
+      podzialUrlopu: {
+        tytul: "Kalkulator podziału urlopu rodzicielskiego",
+        opis: "Dzieli urlop rodzicielski między rodziców, liczy tygodnie przepadające, stawki i szacunkowe wypłaty miesięczne każdego rodzica.",
+      },
+      plan: {
+        tytul: "Plan rodziny i kalendarz terminów",
+        opis: "Wylicza sprawy planu rodziny z etapami, statusami i ostrzeżeniami oraz terminy spraw z kosztem spóźnienia z profilu rodziny, danych ciąży i dziecka, danych konta ZUS, wniosków i wyników kalkulacji.",
+      },
+      swiadczeniaWCiazy: {
+        tytul: "Świadczenia w ciąży",
+        opis: "Ustala prawo do zasiłku chorobowego, świadczenia rehabilitacyjnego, zasiłku wyrównawczego i zasiłku macierzyńskiego oraz okres zasiłkowy z profilu rodziny i danych konta ZUS.",
+      },
+      weryfikacjaSprawy: {
+        tytul: "Weryfikacja przykładowej sprawy",
+        opis: "Sprawdza osiem warunków prawa do świadczeń z ubezpieczenia chorobowego, porównuje wynik z rozstrzygnięciem, ustala podstawę wymiaru i wylicza zasiłek macierzyński dla sprawy wzorcowej przewodnika albo danych sprawy z dokumentów.",
+      },
+      kontoZus: {
+        tytul: "Dane z konta ZUS",
+        opis: "Zwraca symulowany odczyt danych konta ZUS: tytuły ubezpieczenia z podstawami składek, członków rodziny, zasiłki, świadczenia rodzinne, wnioski, zaświadczenia e-ZLA przy zgodzie na dane dotyczące zdrowia i pełnomocnictwa. PESEL konta przekaż w nagłówku X-Pesel. Parametr postac=zrodlowe zwraca dane źródłowe konta przed filtrami odczytu, a kanal=pue-ezus oznacza odczyt przez PUE/eZUS.",
+      },
+      stanRozliczen: {
+        tytul: "Stan rozliczeń składek",
+        opis: "Zwraca stan rozliczeń składek osoby prowadzącej działalność na wskazany dzień, rodzaj dokumentu, który ZUS wyda w tym dniu, i komunikaty o skutku zadłużenia dla prawa do świadczeń.",
+      },
+      zaswiadczenie: {
+        tytul: "Zaświadczenie o niezaleganiu w opłacaniu składek",
+        opis: "Wydaje symulowane zaświadczenie o niezaleganiu albo decyzję o odmowie jego wydania według stanu rozliczeń składek ze wskazanego dnia. Pole stanSymulowany przekazuje stan symulowanego ZUS z ustawień demo, na przykład oś zadłużenia ze scenariusza.",
+      },
+      ezla: {
+        tytul: "Zaświadczenia lekarskie e-ZLA",
+        opis: "Zwraca zaświadczenia lekarskie e-ZLA z ostatnich 12 miesięcy, od najnowszych. Potwierdź zgodę na dane dotyczące zdrowia parametrem zgodaNaDaneZdrowia=tak.",
+      },
+      wnioski: {
+        tytul: "Wysłanie wniosku do ZUS",
+        opis: "Przyjmuje wniosek ZAM, ZAS-53 albo Z-15 po kontroli oświadczeń i załączników i zwraca numer potwierdzenia symulowanego ZUS.",
+      },
+      pytania: {
+        tytul: "Pytanie do ZUS",
+        opis: "Wysyła pytanie do symulowanego ZUS przez PUE/eZUS i zwraca pytanie w stanie wysłanym z chwilą symulowanej odpowiedzi.",
+      },
+      walidacje: {
+        tytul: "Walidacja pola albo danych",
+        opis: "Sprawdza wartość pola albo dane formularza tymi samymi regułami co formularze przewodnika i zwraca wartość po normalizacji.",
+      },
+      openApi: {
+        tytul: "Opis OpenAPI 3.1",
+        opis: "Zwraca opis wszystkich punktów końcowych w formacie OpenAPI 3.1.",
+      },
+    },
+    openApiInfo: {
+      tytul: "REST API przewodnika przyszłej mamy",
+      opis: "REST API logiki biznesowej modułu Przewodnik przyszłej mamy w aplikacji mZUS. Daty mają format RRRR-MM-DD, kwoty są w groszach, a błąd ma postać BladApi z kodem z tablicy komunikatów.",
+      opisBledu: "Błąd z kodem z tablicy komunikatów, kodami pól i parametrami treści komunikatu.",
+      opisDanych: "Obiekt zgodny z typem TypeScript z katalogu web/src/domena/typy.",
+      opisDzis: "Dzień wyliczenia w formacie RRRR-MM-DD.",
+      opisDatyDemo: "Data demonstracyjna w formacie RRRR-MM-DD.",
+      opisTeraz: "Chwila wyliczenia w formacie RRRR-MM-DDTHH:MM:SS.",
+      opisSymulacji: "Przełączniki symulacji z ustawień demo, nazwy oddzielone przecinkami.",
+      opisPeselu: "Numer PESEL konta w symulowanym ZUS. Przekaż go w nagłówku żądania, dzięki czemu numer nie trafia do adresu, logów serwera ani historii przeglądarki.",
+      opisRodzajuWalidacji: "Rodzaj walidacji.",
+      opisDnia: "Dzień stanu rozliczeń w formacie RRRR-MM-DD.",
+      opisZgody: "Zgoda na dane dotyczące zdrowia: tak albo nie.",
+      opisPostaci: "Postać odpowiedzi: zrodlowe zwraca dane źródłowe konta przed filtrami odczytu.",
+      opisKanalu: "Kanał odczytu: pue-ezus oznacza odczyt przez PUE/eZUS.",
+      odpowiedzPoprawna: "Odpowiedź poprawna.",
+    },
+    // koniec ViewApiDocs
+  },
   SheetEmploymentChoice: {
     tytul: "Wybierz formę zatrudnienia",
     opis: "Wybierz formę, którą ma uwzględnić Twój plan. Zaznaczyliśmy formę z Twojego konta ZUS.",
@@ -9973,8 +10582,11 @@ export const teksty = {
   SheetCalcWorkCombination: {
     tytul: "Łączenie urlopu rodzicielskiego z pracą",
     wstep: ({ kto }: { kto: string }) =>
-      `${kto}: umowa o pracę. Łączysz urlop rodzicielski z pracą u pracodawcy, który udziela Ci urlopu. Urlop wydłuża się o czas pracy, a zasiłek za okres łączenia i wydłużenia jest proporcjonalnie niższy.`,
-    opisTygodni: "Liczba tygodni łączenia: od 1 do liczby tygodni wybranej części, licząc od jej pierwszego dnia.",
+      `Forma zatrudnienia, ${kto}: umowa o pracę. Łączysz urlop rodzicielski z pracą u pracodawcy, który udziela Ci urlopu. Za okres łączenia zasiłek jest niższy o wymiar pracy, a urlop wydłuża się o czas pracy i za wydłużenie dostajesz zasiłek w pełnej stawce okresu.`,
+    opisTygodni: "Liczba tygodni łączenia: od 1 do liczby tygodni wybranej części, licząc od tygodnia początku łączenia.",
+    opisOboje: "Łączenie zapisujesz osobno dla każdej części. Oboje rodzice na umowie o pracę mogą łączyć swoje części z pracą.",
+    tydzienPoczatku: "Tydzień części, od którego łączysz urlop z pracą",
+    tydzienPoczatkuPodpowiedz: ({ maks }: { maks: string }) => `Od 1 do ${maks}. Wpisz 1, gdy łączysz od pierwszego dnia części.`,
     opisWymiaru: "Wymiar pracy: od 1% do 50% etatu, liczba całkowita.",
     czesc: "Część urlopu rodzicielskiego",
     wybierz: "Wybierz",
@@ -10001,9 +10613,10 @@ export const teksty = {
     wierszBezLaczenia: ({ od, do_ }: { od: string; do_: string }) => `Urlop bez łączenia od ${od} do ${do_}`,
     wierszWydluzenie: ({ od, do_ }: { od: string; do_: string }) => `Wydłużenie urlopu od ${od} do ${do_}`,
     objasnienie: ({ stawka, wymiar, wynik }: { stawka: string; wymiar: string; wynik: string }) =>
-      `Stawkę za okres łączenia i wydłużenia pomniejszamy o wymiar pracy: ${stawka} × (100% − ${wymiar}) = ${wynik}. Wydłużenie krótsze niż pełny tydzień liczymy w pełnych dniach i pomijamy niepełny dzień, na przykład 7 tygodni przy 25% etatu to 12 dni.`,
+      `Stawkę za okres łączenia pomniejszamy o wymiar pracy: ${stawka} × (100% − ${wymiar}) = ${wynik}. Za wydłużenie urlopu zasiłek ma pełną stawkę okresu, ${stawka}. Wydłużenie krótsze niż pełny tydzień liczymy w pełnych dniach i pomijamy niepełny dzień, na przykład 7 tygodni przy 25% etatu to 12 dni.`,
     poPoprawieniu: "Popraw pola, a pokażemy wydłużenie urlopu i zasiłek.",
     brakCzesci: "Łączenie z pracą zaplanujesz po dodaniu części urlopu rodzicielskiego pracownika w podziale urlopów.",
+    usun: "Usuń łączenie tej części",
     anuluj: "Anuluj",
     zapisz: "Zapisz łączenie",
     // koniec SheetCalcWorkCombination
@@ -10035,6 +10648,7 @@ export const teksty = {
     anuluj: "Anuluj",
     zapisz: "Zapisz zmianę",
     matki: "matki",
+    rodzicaPrzyjmujacego: "rodzica, który przyjął dziecko",
     drugiegoRodzica: "drugiego rodzica",
     // koniec SheetCalcReturnToWork
   },

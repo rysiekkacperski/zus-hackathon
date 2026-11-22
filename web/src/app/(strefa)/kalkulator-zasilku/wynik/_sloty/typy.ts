@@ -8,14 +8,19 @@ import type {
   RodzicWRodzinie,
   WynikScenariusza,
 } from '@/domena/typy';
+import type { PodstawaWZadaniuApi } from '@/domena/typy/api-v1';
 
 export interface PropsSlotuWyniku {
   idSprawy: IdSprawy | null; // parametr ?sprawa=
   zrodlo: string | null; // parametr ?zrodlo=
   daneWejsciowe: DaneWejscioweKalkulatora;
   podstawy: Partial<Record<RodzicWRodzinie, PodstawaWymiaru>>;
+  // Te same podstawy w postaci żądania REST API, dla podglądów liczonych przez POST /api/v1/kalkulator/zasilek-macierzynski.
+  podstawyApi: Partial<Record<RodzicWRodzinie, PodstawaWZadaniuApi>>;
   parametry: ParametryScenariusza;
   wynik: WynikScenariusza;
+  // Wynik przelicza się po zmianie danych, a `wynik` pochodzi z poprzedniej odpowiedzi REST API.
+  przeliczanie?: boolean;
   onZmianaParametrow: (parametry: ParametryScenariusza) => void;
 }
 

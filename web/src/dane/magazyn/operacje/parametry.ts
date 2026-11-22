@@ -30,8 +30,8 @@ import {
   zmienGlobalne,
   zmienStanZus,
 } from '@/dane/magazyn/stan';
+import { zapiszZmianeKatalogu, zaplanujWysylkeKatalogu } from '@/dane/magazyn/katalog-serwer';
 import {
-  edycjeKataloguPoczatkowe,
   kontoPrzewodnikaZKontaDemo,
   stanKontaPoczatkowy,
 } from '@/dane/magazyn/stan-poczatkowy';
@@ -95,14 +95,16 @@ export function przywrocParametryPoczatkowe(ctx: KontekstOperacji): WynikOperacj
 }
 
 /**
- * Usuwa edycje katalogu Administratora. Wersja katalogu rośnie, więc rodziny przeliczą plan
- * przy najbliższej synchronizacji.
+ * Usuwa edycje katalogu Administratora w tej przeglądarce i we wspólnym katalogu usługi /api/katalog.
+ * Wersja katalogu rośnie, więc rodziny przeliczą plan przy najbliższej synchronizacji.
  */
 export function przywrocKatalogPoczatkowy(ctx: KontekstOperacji): WynikOperacji {
   void ctx;
-  return wykonajOperacje(() => {
-    zmienGlobalne((g) => ({ ...g, edycjeKatalogu: edycjeKataloguPoczatkowe(g.edycjeKatalogu.wersja + 1) }), 'systemowe');
+  const wynik = wykonajOperacje(() => {
+    zapiszZmianeKatalogu({ rodzaj: 'przywrocenie' }, 'systemowe');
   });
+  if (wynik.ok) zaplanujWysylkeKatalogu();
+  return wynik;
 }
 
 /** Scenariusze demonstracyjne z rejestru dane/scenariusze w kolejności jednostek. */

@@ -31,9 +31,9 @@ export function czyCzescDziecka(sprawa: SprawaPrzykladowa): boolean {
   );
 }
 
-/** Sprawa ma świadczenia przyznane przez ZUS ze zrzutu z systemu. */
+/** Sprawa ma świadczenia przyznane albo odmówione przez ZUS ze zrzutu z systemu. */
 export function czyCzescPrzyznanych(sprawa: SprawaPrzykladowa): boolean {
-  return (sprawa.dane.swiadczeniaPrzyznane.wartosc ?? []).length > 0;
+  return (sprawa.dane.swiadczeniaPrzyznane.wartosc ?? []).length > 0 || (sprawa.dane.swiadczeniaOdmowione?.wartosc ?? []).length > 0;
 }
 
 /** Części ekranu danych sprawy w kolejności; ostatnia część ma oczekiwane rozstrzygnięcie i zatwierdzenie danych. */

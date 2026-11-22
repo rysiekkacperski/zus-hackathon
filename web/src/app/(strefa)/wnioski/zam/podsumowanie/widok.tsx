@@ -17,6 +17,7 @@ import { formatujRachunek } from '@/domena/walidacje';
 import { czyPotrzebneZ3a, daneRodzicaWniosku, zalacznikiZam } from '@/domena/wnioski/zam';
 import { listaDokumentowPrzyjecia } from '@/domena/wnioski/zam-przyjecie';
 import { parametryOkresuZam } from '@/domena/wnioski/zam-okresy';
+import { adresCzesci } from '@/komponenty/czesci-formularza';
 import { Ikona } from '@/komponenty/ikona';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
@@ -107,7 +108,7 @@ function PanelZakladki({
             {children}
           </div>
           {ekran ? (
-            <Odnosnik href={adresEkranuZam(ekran, idWniosku)} aria-label={t.zmienSekcje({ sekcja: SEKCJA_ZAKLADKI[zakladka] })}>
+            <Odnosnik href={zakladka === 'rachunek' ? adresCzesci(adresEkranuZam(ekran, idWniosku), 2) : adresEkranuZam(ekran, idWniosku)} aria-label={t.zmienSekcje({ sekcja: SEKCJA_ZAKLADKI[zakladka] })}>
               {t.zmien}
             </Odnosnik>
           ) : null}
@@ -294,7 +295,16 @@ function Podsumowanie({ dane }: { dane: DaneWnioskuZam }) {
     ),
     rachunek: (
       <DaneBoczne
-        pozycje={[{ etykieta: t.sekcje.rachunek, wartosc: wniosek.numerRachunku ? formatujRachunek(wniosek.numerRachunku) : '' }]}
+        pozycje={[
+          {
+            etykieta: t.sekcje.rachunek,
+            wartosc: wniosek.numerRachunku
+              ? formatujRachunek(wniosek.numerRachunku)
+              : adresat === 'platnik-skladek'
+                ? t.rachunekNiepodany
+                : t.przekazPocztowy,
+          },
+        ]}
       />
     ),
     oswiadczenia: (

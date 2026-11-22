@@ -11,10 +11,13 @@ import { Odnosnik } from '@/komponenty/odnosnik';
 import { PoleKwoty, PoleLiczby } from '@/komponenty/pole-tekstowe';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { StanPusty } from '@/komponenty/stan-pusty';
+import { BladWyliczenia, StatusPrzeliczania, SzkieletWyliczenia } from '@/komponenty/stan-wyliczenia';
 import { Tabela } from '@/komponenty/tabela';
 import { Ikona } from '@/komponenty/ikona';
 import { trasy } from '@/komponenty/rama/trasy';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
+import { porownajWariantyZasilku } from '@/dane/api/klient';
+import { useWyliczenieApi } from '@/dane/api/wyliczenie';
 import { useKontekstRodziny } from '@/dane/magazyn/hooki';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { zapiszDecyzjeWariantu } from '@/dane/magazyn/operacje/kalkulacje-decyzje';
@@ -24,7 +27,6 @@ import { useStanRoboczy } from '@/app/(strefa)/kalkulator-zasilku/_czesci/stan-r
 import {
   daneDzieckaDoKalkulatora,
   matkaMaPrawoDoZasilku,
-  porownajWarianty,
   sprawaWariantu,
   tygodnieRodzicielskiegoJednegoRodzica,
   tygodnieUrlopuMacierzynskiego,
@@ -32,7 +34,7 @@ import {
 } from '@/domena/kalkulatory/wariant';
 import type { KodKomunikatu, PodstawaWymiaru, WynikiKalkulacji } from '@/domena/typy';
 import { teksty } from '@/teksty';
-import { ostatniePorownanie, podstawaZKontaZus, wybranyWariantSprawy, wynikiRodziny } from '../_czesci/dane-kalkulatorow';
+import { ostatniePorownanie, podstawaDoZadaniaApi, podstawaZKontaZus, wybranyWariantSprawy, wynikiRodziny } from '../_czesci/dane-kalkulatorow';
 import { KafleWariantow } from './_czesci/kafle-wariantow';
 import { ZestawienieWariantow } from './_czesci/zestawienie-wariantow';
 
@@ -142,21 +144,22 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
   const [bladZapisu, setBladZapisu] = useState<KodKomunikatu | null>(null);
   const [zapisywanie, setZapisywanie] = useState(false);
 
-  const wynik = useMemo(
-    () =>
-      wejscie === null
-        ? null
-        : porownajWarianty({
-            podstawa: wejscie.podstawa,
-            dataPorodu,
-            liczbaDzieci: dziecko.liczbaDzieci,
-            zaZyciem: dziecko.zaZyciem,
-            tygodniePrzedPowrotem: wejscie.tygodnie,
-            dzis,
-            katalog,
-          }),
-    [wejscie, dataPorodu, dziecko.liczbaDzieci, dziecko.zaZyciem, dzis, katalog],
+  // Porównanie wariantów liczy serwer: POST /api/v1/kalkulator/wariant, z podstawą z konta ZUS jako podstawami składek.
+  const kopiaPodstawy = kontekst.daneZusMatki ?? kontekst.daneZusKonta;
+  const wyliczenie = useWyliczenieApi(
+    wejscie === null
+      ? null
+      : {
+          dzis,
+          podstawa: podstawaDoZadaniaApi(wejscie.podstawa, kopiaPodstawy, forma),
+          dataPorodu,
+          liczbaDzieci: dziecko.liczbaDzieci,
+          zaZyciem: dziecko.zaZyciem,
+          tygodniePrzedPowrotem: wejscie.tygodnie,
+        },
+    porownajWariantyZasilku,
   );
+  const wynik = wyliczenie.wartosc?.wynik ?? null;
   const poTerminie = wynik !== null && !wynik.szczegoly.wariant81Dostepny;
 
   function oblicz() {
@@ -168,7 +171,8 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
   }
 
   function wybierz(wariant: Wariant) {
-    if (wejscie === null || wynik === null) return;
+    // Zapis tylko z odpowiedzią dla bieżących danych, a nie z poprzednim wynikiem w trakcie przeliczania.
+    if (wejscie === null || wynik === null || !wyliczenie.aktualne) return;
     setZapisywanie(true);
     const r = zapiszDecyzjeWariantu(
       {
@@ -208,6 +212,7 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
         akcje={<Odnosnik href={trasy.ViewCalcMaternityResult({ sprawa })}>{t.otworzKalkulator}</Odnosnik>}
       />
       <div className="flex max-w-tresc flex-col gap-7.5">
+        <StatusPrzeliczania laduje={wyliczenie.laduje && wynik !== null} />
         {poTerminie ? <Komunikat kod="0038" /> : null}
         {bladZapisu ? <Komunikat kod={bladZapisu} /> : null}
         {zapisano && wynik && s ? (
@@ -444,7 +449,13 @@ function Kalkulator({ sprawa, kontekst, dataPorodu, dziecko, powrot }: Kalkulato
           </>
         ) : (
           <Karta tytul={t.porownanieTytul} bezLinii>
-            <StanPusty ikona="kalkulator">{t.pustePorownanie}</StanPusty>
+            {wejscie !== null && wyliczenie.blad ? (
+              <BladWyliczenia kod={wyliczenie.blad.kod} parametry={wyliczenie.blad.parametry as never} onPonow={wyliczenie.ponow} />
+            ) : wejscie !== null ? (
+              <SzkieletWyliczenia />
+            ) : (
+              <StanPusty ikona="kalkulator">{t.pustePorownanie}</StanPusty>
+            )}
           </Karta>
         )}
       </div>

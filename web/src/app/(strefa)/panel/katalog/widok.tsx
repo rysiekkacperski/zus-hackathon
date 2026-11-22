@@ -8,6 +8,7 @@ import { use, useMemo } from 'react';
 import { slotyKatalogu } from '@/app/(strefa)/panel/katalog/_sloty';
 import type { ZakladkaKatalogu } from '@/app/(strefa)/panel/katalog/_sloty/typy';
 import { KomunikatyKatalogu } from '@/app/(strefa)/panel/katalog/_czesci/komunikaty-katalogu';
+import { StanWspolnegoKatalogu } from '@/app/(strefa)/panel/katalog/_czesci/stan-wspolnego-katalogu';
 import { TabelaPozycji } from '@/app/(strefa)/panel/katalog/_czesci/tabela-pozycji';
 import { TabelaSlownika } from '@/app/(strefa)/panel/katalog/_czesci/tabela-slownika';
 import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
@@ -90,6 +91,7 @@ export function WidokKatalogu() {
       />
       <div className="flex max-w-tresc min-w-0 flex-col gap-7.5">
         <KomunikatyKatalogu komunikaty={komunikaty} katalog={katalog} />
+        <StanWspolnegoKatalogu />
         <Zakladki<ZakladkaKatalogu>
           etykieta={t.zakladkiEtykieta}
           zakladki={ZAKLADKI.map((z) => ({ wartosc: z, etykieta: etykietyZakladek[z] }))}

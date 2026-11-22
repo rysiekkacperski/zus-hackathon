@@ -1,6 +1,7 @@
 // Krok planu `straznik` (historyjka 3.6.1.3.1, kontrakt 7.2). Właściciel: u12.
 // Dla matki JDG albo UZ z dobrowolnym ubezpieczeniem chorobowym do potwierdzenia daty porodu: ostrzeżenia
-// o braku aktywnego DUCh i o podwyższeniu podstawy przy sprawie K08, sprawa Opłacenie składek za poprzedni
+// o braku aktywnego DUCh i o podwyższeniu podstawy przy sprawie K08 (bez K08 w planie przy sprawie K07 matki
+// na umowie o pracę), sprawa Opłacenie składek za poprzedni
 // miesiąc (wyłącznie JDG) ze statusem ze stanu rozliczeń składek albo z potwierdzenia rodzica.
 // Po potwierdzeniu daty porodu: koniec ostrzeżeń i nowych spraw Opłacenie składek, informacja przy K19.
 import type { KrokPlanu } from '@/domena/plan/kroki/typ';
@@ -36,12 +37,15 @@ export const straznik: KrokPlanu = (pozycje, w) => {
   });
   const informacjaPoPorodzie = czyInformacjaPoPorodzie(w.daneRodziny, w.daneCiazy);
   const ostrzezeniaK08 = ocena ? ostrzezeniaPrawaDoZasilku(ocena) : [];
+  // Matka na umowie o pracę, której umowa trwa, ma w planie urlop macierzyński u pracodawcy K07 zamiast wniosku
+  // o zasiłek macierzyński K08, więc ostrzeżenie o podwyższeniu podstawy trafia wtedy do sprawy K07.
+  const sprawaOstrzezen = pozycje.some((p) => p.idPozycji === 'K08') ? 'K08' : 'K07';
 
   const sprawy: PozycjaPlanu[] = pozycje
     .filter((p) => !czySprawaOplacenia(p.idSprawy))
     .map((p) => {
       const ostrzezenia = bezOstrzezenPrzySprawie(p.ostrzezenia);
-      if (p.idPozycji === 'K08' && ostrzezeniaK08.length > 0) ostrzezenia.push(...ostrzezeniaK08);
+      if (p.idPozycji === sprawaOstrzezen && ostrzezeniaK08.length > 0) ostrzezenia.push(...ostrzezeniaK08);
       if (p.idPozycji === 'K19' && informacjaPoPorodzie) ostrzezenia.push({ rodzaj: 'informacja-po-porodzie' });
       return ostrzezenia.length === p.ostrzezenia.length && ostrzezenia.every((o, i) => o === p.ostrzezenia[i])
         ? p

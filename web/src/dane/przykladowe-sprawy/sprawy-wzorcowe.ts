@@ -57,6 +57,8 @@ interface OpisSprawy {
   okresMatki?: { od: DataISO; do: DataISO };
   zadluzenie?: { kwota: Grosze; dzien: DataISO };
   rozstrzygniecie: Omit<RozstrzygniecieSprawy, 'zrodlo'>[];
+  /** Dokumenty przykładowe z public/przyklady z tymi samymi danymi, pokazywane w podglądzie dokumentu sprawy. */
+  pliki?: Partial<Record<RodzajDokumentuSprawy, string>>;
 }
 
 function daneSprawy(o: OpisSprawy): DaneSprawy {
@@ -98,7 +100,7 @@ function sprawa(o: OpisSprawy): SprawaPrzykladowa {
   const dokumenty: DokumentSprawy[] = o.dokumenty.map((rodzaj) => {
     const numer = (numery.get(rodzaj) ?? 0) + 1;
     numery.set(rodzaj, numer);
-    return { id: `${o.id}-${rodzaj}-${numer}`, rodzaj, numer, wgrano: '', plikZespolu: `${o.id}-${rodzaj}.pdf`, konto: '' };
+    return { id: `${o.id}-${rodzaj}-${numer}`, rodzaj, numer, wgrano: '', plikZespolu: o.pliki?.[rodzaj] ?? `${o.id}-${rodzaj}.pdf`, konto: '' };
   });
   return {
     idSprawy: o.id,
@@ -120,6 +122,7 @@ export const sprawyWzorcowe: readonly SprawaPrzykladowa[] = [
     liczbaUb: 'do-20', kwoty: miesiace('2025-09', 12, 700000, 'wynagrodzenie'), porod: '2026-09-02',
     swiadczenia: ['zasilek-macierzynski'], okresy: [{ rodzajUrlopu: 'macierzynski', od: '2026-09-02', do: '2027-01-19' }],
     rozstrzygniecie: [{ swiadczenie: 'zasilek-macierzynski', prawo: 'przysluguje', platnik: 'zus', okres: { od: '2026-09-02', do: '2027-01-19' }, stawka: 100, miesiecznaKwota: 604030 }],
+    pliki: { 'z-3': 'z3-kowalczyk.pdf' },
   }),
   sprawa({
     id: 'S02', sytuacja: 'Pracownica u płatnika uprawnionego z wynagrodzeniem poniżej minimalnej podstawy', dokumenty: ['z-3'],
@@ -137,6 +140,7 @@ export const sprawyWzorcowe: readonly SprawaPrzykladowa[] = [
     swiadczenia: ['zasilek-macierzynski'],
     okresy: [{ rodzajUrlopu: 'macierzynski', od: '2026-08-20', do: '2027-01-06' }, { rodzajUrlopu: 'rodzicielski', od: '2027-01-07', do: '2027-08-18' }],
     rozstrzygniecie: [{ swiadczenie: 'zasilek-macierzynski', prawo: 'przysluguje', platnik: 'zus', okres: { od: '2026-08-20', do: '2027-08-18' }, stawka: 81.5, miesiecznaKwota: 365697 }],
+    pliki: { 'z-3a': 'z3a-sadowska.pdf', zam: 'zam-sadowska.pdf' },
   }),
   sprawa({
     id: 'S04', sytuacja: 'Osoba prowadząca działalność z dobrowolnym ubezpieczeniem chorobowym od 2 lat', dokumenty: ['poswiadczenie', 'zam'],
@@ -146,6 +150,7 @@ export const sprawyWzorcowe: readonly SprawaPrzykladowa[] = [
     porod: '2026-11-03', zlozenie: '2026-11-05', swiadczenia: ['zasilek-macierzynski'],
     okresy: [{ rodzajUrlopu: 'macierzynski', od: '2026-11-03', do: '2027-03-22' }],
     rozstrzygniecie: [{ swiadczenie: 'zasilek-macierzynski', prawo: 'przysluguje', platnik: 'zus', okres: { od: '2026-11-03', do: '2027-03-22' }, stawka: 100, miesiecznaKwota: 560885 }],
+    pliki: { poswiadczenie: 'poswiadczenie-pawlak.pdf', zam: 'zam-pawlak.pdf' },
   }),
   sprawa({
     id: 'S05', sytuacja: 'Osoba prowadząca działalność bez dobrowolnego ubezpieczenia chorobowego', dokumenty: ['poswiadczenie', 'zam'],
@@ -154,6 +159,7 @@ export const sprawyWzorcowe: readonly SprawaPrzykladowa[] = [
     kwoty: miesiace('2025-08', 12, 565200, 'podstawa-skladek'), porod: '2026-08-12', zlozenie: '2026-08-20',
     swiadczenia: ['zasilek-macierzynski'], okresy: [{ rodzajUrlopu: 'macierzynski', od: '2026-08-12', do: '2026-12-29' }],
     rozstrzygniecie: [{ swiadczenie: 'zasilek-macierzynski', prawo: 'nie-przysluguje' }],
+    pliki: { zam: 'zam-krawczyk.pdf' },
   }),
   sprawa({
     id: 'S06', sytuacja: 'Osoba prowadząca działalność ubezpieczona od 2 miesięcy', dokumenty: ['poswiadczenie', 'zam'],
@@ -175,6 +181,7 @@ export const sprawyWzorcowe: readonly SprawaPrzykladowa[] = [
       { swiadczenie: 'zwzm', prawo: 'przysluguje', platnik: 'zus', okres: { od: '2026-10-01', do: '2026-11-09' }, stawka: 100, miesiecznaKwota: 534998 },
       { swiadczenie: 'zasilek-macierzynski', prawo: 'przysluguje', platnik: 'zus', okres: { od: '2026-11-10', do: '2027-03-29' }, stawka: 100, miesiecznaKwota: 534998 },
     ],
+    pliki: { 'z-3': 'z3-zajac.pdf', zam: 'zam-zajac.pdf' },
   }),
   sprawa({
     id: 'S08', sytuacja: 'Zleceniobiorczyni z umową zakończoną przed porodem', dokumenty: ['z-3a', 'zam'],
@@ -210,5 +217,6 @@ export const sprawyWzorcowe: readonly SprawaPrzykladowa[] = [
     kwoty: miesiace('2026-09', 1, 480600, 'przychod'), niezdolnosc: { od: '2026-10-15', do: '2026-11-14', kod: 'B' },
     swiadczenia: ['zasilek-chorobowy'], okresy: [],
     rozstrzygniecie: [{ swiadczenie: 'zasilek-chorobowy', prawo: 'nie-przysluguje', platnik: 'zus', okres: { od: '2026-10-15', do: '2026-11-14' } }],
+    pliki: { 'z-3a': 'z3a-gorska.pdf' },
   }),
 ];

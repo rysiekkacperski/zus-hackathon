@@ -2,9 +2,13 @@
 
 // Slot ViewCatalogList „zakladka-regul” w liście slotyKatalogu (kontrakt, sekcja 12.4). Właściciel: u16.
 // Reguły świadczeń z ubezpieczenia chorobowego z treścią i wpisami słowników, z których reguła odczytuje wartość
-// obowiązującą (wzór cz1/P05-15). Teksty: teksty.ViewCatalogList.zakladkaRegul.
+// obowiązującą (wzór cz1/P05-15). Nazwa edytowalnego wpisu prowadzi do zmiany jego wartości (ViewCatalogValueEdit),
+// więc Administrator zmienia liczby reguły w słowniku. Teksty: teksty.ViewCatalogList.zakladkaRegul.
+import { czyWpisEdytowalny } from '@/domena/katalog/edycja';
 import { ListaAkordeonowa } from '@/komponenty/akordeon';
 import { Karta } from '@/komponenty/karta';
+import { Odnosnik } from '@/komponenty/odnosnik';
+import { trasy } from '@/komponenty/rama/trasy';
 import { formatujDate, porownajDaty } from '@/domena/daty';
 import { teksty } from '@/teksty';
 import type { PropsSlotu } from './typy';
@@ -31,7 +35,19 @@ export function SlotZakladkaRegul({ katalog, dzis }: PropsSlotu<'zakladka'>) {
                 );
                 return (
                   <li key={idWpisu}>
-                    {wpis ? wpis.nazwa : idWpisu}
+                    {wpis && czyWpisEdytowalny(wpis) ? (
+                      <Odnosnik
+                        href={trasy.ViewCatalogValueEdit({ idWpisu: wpis.id })}
+                        aria-label={teksty.ViewCatalogList.zmienWartosc({ nazwa: wpis.nazwa })}
+                        wTekscie
+                      >
+                        {wpis.nazwa}
+                      </Odnosnik>
+                    ) : wpis ? (
+                      wpis.nazwa
+                    ) : (
+                      idWpisu
+                    )}
                     {wersja ? `, ${T.obowiazujeOd({ data: formatujDate(wersja.od) })}` : wpis ? null : `, ${T.wpisPoza}`}
                   </li>
                 );

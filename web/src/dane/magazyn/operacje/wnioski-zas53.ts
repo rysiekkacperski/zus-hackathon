@@ -1,6 +1,7 @@
 // Kreator wniosku o zasiłek chorobowy ZAS-53 (kontrakt, sekcja 6.5). Właściciel: u30 (Kreator wniosku o zasiłek chorobowy ZAS-53).
-// Szkic wniosku w grupie Wnioski rodziny, zapis kroków, dołączanie plików i wysyłka do ZUS (w trybie demonstracyjnym
-// numer ZAS53-DEMO-RRRRMMDD-NNNN). Status sprawy K24 zmienia operacja planu ustawStatusSprawy.
+// Szkic wniosku w grupie Wnioski rodziny, zapis kroków, dołączanie plików i wysyłka do ZUS przez REST API symulowanego ZUS
+// (POST /api/v1/zus/wnioski, w trybie demonstracyjnym numer ZAS53-DEMO-RRRRMMDD-NNNN z odpowiedzi). Status sprawy K24
+// zmienia operacja planu ustawStatusSprawy.
 import { kluczZaswiadczenia, zaswiadczenieZEzla } from '@/domena/wnioski/zas53';
 import { idZLosowych } from '@/domena/numery';
 import { walidujPlik } from '@/domena/walidacje';
@@ -15,13 +16,13 @@ import type {
   WniosekZas53,
   WynikOperacji,
 } from '@/domena/typy';
+import { wyslijWniosekDoZus } from '@/dane/api/klient';
+import { opcjeSymulowanegoZus } from '@/dane/api/symulowany-zus';
 import { losowyCiag } from '@/dane/magazyn/losowanie';
-import { nastepnyNumerPotwierdzenia } from '@/dane/magazyn/operacje/konto';
 import { ustawStatusSprawy } from '@/dane/magazyn/operacje/plan';
 import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
 import { usunPlik, zapiszPlik } from '@/dane/magazyn/pliki';
 import {
-  czySymulacja,
   czyTrybDemonstracyjny,
   odczytajZalogowanego,
   rodzinaKonta,
@@ -168,7 +169,10 @@ export async function dolaczPlikZas53(
   return wynik;
 }
 
-/** Wysłanie wniosku do ZUS (0043 bez oświadczenia, 0044 przy niedostępnym kanale, szkic zachowany). */
+/**
+ * Wysłanie wniosku do ZUS przez REST API symulowanego ZUS (0043 bez oświadczenia, 0149 bez wymaganego pliku, 0044 przy
+ * niedostępnym kanale albo błędzie sieci, szkic zachowany). Numer potwierdzenia i datę złożenia nadaje API.
+ */
 export async function wyslijZas53(id: IdWniosku, ctx: KontekstOperacji): Promise<WynikOperacji<{ potwierdzenie: string }>> {
   const k = kontekstZalogowanego();
   const obecny = k?.rodzina.wnioski.find((w): w is WniosekZas53 => w.idWniosku === id && w.rodzaj === 'zas-53');
@@ -176,16 +180,19 @@ export async function wyslijZas53(id: IdWniosku, ctx: KontekstOperacji): Promise
   if (!obecny.oswiadczeniePotwierdzone) return { ok: false, kod: '0043' };
   if (obecny.zalaczniki.some((z) => z.wymagany && !z.plik)) return { ok: false, kod: '0149' };
   // Kanał wniosków eZUS: prototyp wysyła wyłącznie w trybie demonstracyjnym; poza nim kanał jest niedostępny.
-  if (!czyTrybDemonstracyjny() || czySymulacja('wysylkaDoZusNiedostepna')) return { ok: false, kod: '0044' };
+  if (!czyTrybDemonstracyjny()) return { ok: false, kod: '0044' };
+
+  const odpowiedz = await wyslijWniosekDoZus({ wniosek: obecny, teraz: ctx.teraz }, opcjeSymulowanegoZus());
+  if (!odpowiedz.ok) return { ok: false, kod: odpowiedz.kod === '0043' || odpowiedz.kod === '0149' ? odpowiedz.kod : '0044' };
+  const { potwierdzenie, dataZlozenia } = odpowiedz.wartosc;
 
   const pliki = obecny.zalaczniki.flatMap((z) => (z.plik ? [z.plik.idPliku] : []));
   const wynik = wykonajOperacjeZWynikiem<{ potwierdzenie: string }>(() => {
-    const potwierdzenie = nastepnyNumerPotwierdzenia('ZAS53-DEMO', ctx.dzis);
     const wyslany: WniosekZas53 = {
       ...obecny,
       stan: 'wyslany',
       adresat: 'zus',
-      dataZlozenia: ctx.dzis,
+      dataZlozenia,
       potwierdzenie,
       zaktualizowano: ctx.teraz,
       zalaczniki: obecny.zalaczniki.map(({ plik, ...z }) => (plik ? { ...z, nazwaPoWyslaniu: plik.nazwa } : z)),
@@ -199,7 +206,7 @@ export async function wyslijZas53(id: IdWniosku, ctx: KontekstOperacji): Promise
           idWniosku: potwierdzenie,
           rodzaj: 'zasilek-chorobowy',
           kanal: 'przewodnik',
-          dataZlozenia: ctx.dzis,
+          dataZlozenia,
           status: 'zlozony',
           idWnioskuPrzewodnika: id,
         },

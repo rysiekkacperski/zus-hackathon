@@ -1,19 +1,13 @@
 // Weryfikacja przykładowej sprawy i zapis wyniku kalkulacji (kontrakt, sekcja 6.5).
+// Weryfikację liczy REST API (POST /api/v1/przykladowe-sprawy/weryfikacja); operacje odczytują sprawę do żądania
+// i zapisują wynik weryfikacji z odpowiedzi.
 // Właściciel: u21 (Przykładowe sprawy: weryfikacja i sprawdzenie wyliczeń).
 // Przykładowa sprawa żyje w danych sesji (StanSesji.przykladowaSprawa); wynik kalkulatora trafia do Wyników
 // kalkulacji konta, więc profil rodziny, plan rodziny i terminy pozostają bez zmian. Gość (tryb gościa) ma sprawę
 // w stanie sesji gościa, a wynik kalkulatora w wynikach kalkulacji gościa (wlasciciel.ts).
 import { roznicaDni } from '@/domena/daty';
-import { komunikatyPorownaniaWeryfikacji, porownajWeryfikacje } from '@/domena/przykladowe-sprawy/porownanie';
-import { walidujDaneSprawy } from '@/domena/przykladowe-sprawy/walidacja';
-import {
-  brakiDoWeryfikacji,
-  daneWejscioweZeSprawy,
-  ustalPodstaweZeSprawy,
-  weryfikujUbezpieczenieChorobowe,
-} from '@/domena/przykladowe-sprawy/weryfikacja';
+import { daneWejscioweZeSprawy, ustalPodstaweZeSprawy } from '@/domena/przykladowe-sprawy/weryfikacja';
 import type {
-  KodKomunikatu,
   KontekstOperacji,
   ParametryScenariusza,
   RodzicWRodzinie,
@@ -21,6 +15,7 @@ import type {
   SprawaPrzykladowa,
   WynikOperacji,
   WynikScenariusza,
+  WynikWeryfikacjiSprawy,
 } from '@/domena/typy';
 import { odczytajKatalog, wykonajOperacjeZWynikiem } from '@/dane/magazyn/stan';
 import {
@@ -40,28 +35,23 @@ function biezacaSprawa(): { wlasciciel: WlascicielDanych; sprawa: SprawaPrzyklad
   return { wlasciciel, sprawa };
 }
 
-/** Walidacja danych sprawy i zapis wyniku weryfikacji. */
-export function zatwierdzDaneSprawy(ctx: KontekstOperacji): WynikOperacji {
+/** Bieżąca przykładowa sprawa do żądania weryfikacji; 0109 bez sprawy w danych sesji. */
+export function odczytajSpraweDoWeryfikacji(): WynikOperacji<SprawaPrzykladowa> {
+  const biezaca = biezacaSprawa();
+  return biezaca === null ? { ok: false, kod: '0109' } : { ok: true, wartosc: biezaca.sprawa };
+}
+
+/**
+ * Zapis wyniku weryfikacji z odpowiedzi POST /api/v1/przykladowe-sprawy/weryfikacja: wynik z porównaniem
+ * z rozstrzygnięciem, komunikatami porównania i chwilą weryfikacji.
+ */
+export function zapiszWeryfikacjeSprawy(weryfikacja: WynikWeryfikacjiSprawy): WynikOperacji {
   const biezaca = biezacaSprawa();
   if (biezaca === null) return { ok: false, kod: '0109' };
-  const { sprawa, wlasciciel } = biezaca;
-
-  // Kolejność kontroli: format i wartości pól, potem kompletność danych do weryfikacji.
-  const bledyPol: Record<string, KodKomunikatu> = {};
-  for (const [pole, kod] of Object.entries(walidujDaneSprawy(sprawa.dane))) if (kod !== undefined) bledyPol[pole] = kod;
-  const pierwszyBlad = Object.values(bledyPol)[0];
-  if (pierwszyBlad !== undefined) return { ok: false, kod: pierwszyBlad, bledyPol };
-  const braki = brakiDoWeryfikacji(sprawa.dane);
-  if (Object.keys(braki).length > 0) return { ok: false, kod: '0109', bledyPol: braki };
-
-  const wynik = weryfikujUbezpieczenieChorobowe(sprawa.dane, odczytajKatalog(), sprawa.dokumenty);
-  const porownanie = porownajWeryfikacje(wynik, sprawa.rozstrzygniecie);
-  const komunikaty = [...wynik.komunikaty, ...komunikatyPorownaniaWeryfikacji(porownanie)];
+  const { wlasciciel } = biezaca;
   return wykonajOperacjeZWynikiem(() => {
     const zmieniony = zmienStanSesjiDla(wlasciciel, (stan) =>
-      stan.przykladowaSprawa === undefined
-        ? stan
-        : { ...stan, przykladowaSprawa: { ...stan.przykladowaSprawa, weryfikacja: { ...wynik, porownanie, komunikaty, czas: ctx.teraz } } },
+      stan.przykladowaSprawa === undefined ? stan : { ...stan, przykladowaSprawa: { ...stan.przykladowaSprawa, weryfikacja } },
     );
     return zmieniony === null ? { ok: false, kod: '0003' } : { ok: true, wartosc: undefined };
   });

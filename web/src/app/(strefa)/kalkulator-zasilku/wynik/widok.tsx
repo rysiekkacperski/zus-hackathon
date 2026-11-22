@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { dodajDni, formatujDate, porownajDaty } from '@/domena/daty';
-import { domyslneParametry, wyliczScenariusz } from '@/domena/kalkulatory';
+import { domyslneParametry, podstawaWDniuZasilku } from '@/domena/kalkulatory';
 import { walidujDateWZakresie, walidujLiczbeCalkowita } from '@/domena/walidacje';
 import type {
   DaneWejscioweKalkulatora,
@@ -11,7 +11,9 @@ import type {
   ParametryScenariusza,
   PodstawaWymiaru,
   RodzicWRodzinie,
+  WynikScenariusza,
 } from '@/domena/typy';
+import { BladWyliczenia, StatusPrzeliczania, SzkieletWyliczenia } from '@/komponenty/stan-wyliczenia';
 import { formatujKwote } from '@/komponenty/format';
 import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
@@ -43,6 +45,7 @@ import { useKontekstKalkulatora, type KontekstKalkulatora } from '../_czesci/kon
 import { NotatkaLogowania, useAdresLogowania } from '../_czesci/notatka-logowania';
 import { RODZICE, formaRodzica, podstawyDoWyliczenia, podstawyRodzicow } from '../_czesci/podstawy';
 import { ustawStanRoboczy, useStanRoboczy, type StanRoboczyKalkulatora } from '../_czesci/stan-roboczy';
+import { podstawyDoZadaniaApi, useScenariuszApi } from '../_czesci/wyliczenie-api';
 import { slotyWyniku } from './_sloty';
 import { ArkuszPodstawyWymiaru, type ZapisPodstawy } from './_czesci/arkusz-podstawy-wymiaru';
 import { KartaDanych, KartaHarmonogramu, TabelaOkresow } from './_czesci/karty-wyniku';
@@ -53,6 +56,18 @@ const ti = teksty.ViewCalcMaternityInput;
 const ts = teksty.SheetCalcBaseSource;
 // Komunikaty, które widok pokazuje w kartach, a nie pod nagłówkiem.
 const KOMUNIKATY_W_KARTACH: readonly KodKomunikatu[] = ['0038', '0165', '0064', '0101', '0166'];
+// W trybie przykładowej sprawy wynik liczy slot porownanie-z-rozstrzygnieciem, a gospodarz przekazuje slotom pusty wynik.
+const WYNIK_PUSTY: WynikScenariusza = {
+  okresy: [],
+  harmonogram: [],
+  sumy: { razem: 0 },
+  datyPowrotu: {},
+  tygodniePrzepadajace: 0,
+  tygodnieNiewykorzystane: 0,
+  uprawnieniaPoPowrocie: [],
+  zastosowaneReguly: [],
+  komunikaty: [],
+};
 
 export function WidokWynikuKalkulatora() {
   const kontekst = useKontekstKalkulatora();
@@ -121,7 +136,9 @@ function TrescWyniku({
   const zdarzenie = dane.zdarzenie.wartosc;
   const dzienZdarzenia = dataZdarzenia(dane);
   const poStracie = Boolean(dane.strata && dane.strata.wartosc.liczbaDzieci >= dane.liczbaDzieci.wartosc);
-  const wariant81 = czyWariant81Dostepny(dane, dzis) && !dane.strata;
+  // Przy stracie części dzieci z porodu mnogiego urlop rodzicielski przysługuje na dzieci pozostałe przy życiu, więc
+  // wariant 81,5% jest dostępny tak jak w silniku; bez dziecka przy życiu zasiłek ma stawkę 100%.
+  const wariant81 = czyWariant81Dostepny(dane, dzis) && !poStracie;
 
   const parametryBazowe = useMemo(() => stan?.parametry ?? domyslneParametry(dane, katalog), [stan, dane, katalog]);
   const parametry: ParametryScenariusza = useMemo(
@@ -143,23 +160,21 @@ function TrescWyniku({
     [dane, kontekst.daneZus, stan, parametry, katalog, dzienZdarzenia, dzis],
   );
   const podstawyWyliczenia = useMemo(() => podstawyDoWyliczenia(podstawy), [podstawy]);
-  const wynik = useMemo(
-    () => wyliczScenariusz(dane, podstawyWyliczenia, parametry, katalog, dzis),
-    [dane, podstawyWyliczenia, parametry, katalog, dzis],
+  const podstawyApi = useMemo(() => podstawyDoZadaniaApi(dane, podstawy), [dane, podstawy]);
+
+  // W trybie przykładowej sprawy wynik pokazuje slot porownanie-z-rozstrzygnieciem, który liczy świadczenia z danych sprawy
+  // (oświadczenie 81,5%, rola ojca, ZWZM, zasiłek chorobowy) tak samo jak ekran weryfikacji sprawy, więc karty
+  // ogólnego kalkulatora, jego komunikaty i reguły pomijamy, żeby strona pokazywała jedno wyliczenie.
+  const trybSprawy = zrodloAdresu === 'przykladowa-sprawa';
+  // Wynik i sumę drugiego wariantu liczy serwer: POST /api/v1/kalkulator/zasilek-macierzynski, dwa żądania równolegle.
+  const wyliczenie = useScenariuszApi(trybSprawy ? null : { dane, podstawy: podstawyApi, parametry, dzis });
+  const wyliczenieDrugiegoWariantu = useScenariuszApi(
+    trybSprawy || !wariant81
+      ? null
+      : { dane, podstawy: podstawyApi, parametry: { ...parametry, wariant: parametry.wariant === '81-5' ? '100-70' : '81-5' }, dzis },
   );
-  const wynikDrugiegoWariantu = useMemo(
-    () =>
-      wariant81
-        ? wyliczScenariusz(
-            dane,
-            podstawyWyliczenia,
-            { ...parametry, wariant: parametry.wariant === '81-5' ? '100-70' : '81-5' },
-            katalog,
-            dzis,
-          )
-        : null,
-    [wariant81, dane, podstawyWyliczenia, parametry, katalog, dzis],
-  );
+  const wynik: WynikScenariusza | null = trybSprawy ? WYNIK_PUSTY : (wyliczenie.wartosc?.wynik ?? null);
+  const wynikDrugiegoWariantu = wyliczenieDrugiegoWariantu.wartosc?.wynik ?? null;
   const brakPodstawyZPrawem = (['matka', 'drugi-rodzic'] as const).some((r) => podstawy[r].prawo && !podstawy[r].efektywna);
 
   // Każda zmiana na wyniku zapisuje stan roboczy; bez niego tworzy go z bieżących danych.
@@ -200,22 +215,12 @@ function TrescWyniku({
 
   const komunikaty = useMemo(() => {
     const widziane = new Set<string>();
-    return wynik.komunikaty.filter((k) => {
+    return (wynik?.komunikaty ?? []).filter((k) => {
       if (KOMUNIKATY_W_KARTACH.includes(k.kod) || widziane.has(k.kod)) return false;
       widziane.add(k.kod);
       return true;
     });
-  }, [wynik.komunikaty]);
-
-  const propsSlotu = {
-    idSprawy,
-    zrodlo: zrodloAdresu,
-    daneWejsciowe: dane,
-    podstawy: podstawyWyliczenia,
-    parametry,
-    wynik,
-    onZmianaParametrow: ustawParametry,
-  };
+  }, [wynik]);
 
   const adresOrganizacji = trasy.ViewSupportOrganizations({
     ...(dane.strata ? { sytuacja: dane.strata.wartosc.rodzaj } : {}),
@@ -239,9 +244,11 @@ function TrescWyniku({
         stanNa={dzis}
         powrot={{ href: adresDanych, etykieta: t.powrot }}
         akcje={
-          <Przycisk type="button" wariant="tlo" ikona="info" onClick={() => ustawOknoRegul(true)}>
-            {t.zastosowaneReguly}
-          </Przycisk>
+          trybSprawy ? undefined : (
+            <Przycisk type="button" wariant="tlo" ikona="info" onClick={() => ustawOknoRegul(true)}>
+              {t.zastosowaneReguly}
+            </Przycisk>
+          )
         }
       />
       <Stos odstep={7.5} className="max-w-tresc">
@@ -255,18 +262,35 @@ function TrescWyniku({
           <Komunikat kod="0101" tresc={trescKomunikatu('0101')} />
         ) : null}
         {dane.strata ? <Komunikat kod="0166" tresc={trescKomunikatu('0166')} /> : null}
-        {komunikaty.map((k) => (
+        {(trybSprawy ? [] : komunikaty).map((k) => (
           <Komunikat key={k.kod} kod={k.kod} tresc={trescKomunikatu(k.kod, k.parametry as never)} />
         ))}
-
-        {poStracie ? (
-          <KartaPoStracie
-            wynik={wynik}
-            podstawa={podstawyWyliczenia.matka ?? podstawyWyliczenia['drugi-rodzic'] ?? null}
-            onSprawdzPodstawe={() => ustawArkuszRodzica(podstawyWyliczenia.matka ? 'matka' : 'drugi-rodzic')}
+        <StatusPrzeliczania laduje={!trybSprawy && wyliczenie.laduje && wynik !== null} />
+        {wynik === null && wyliczenie.blad ? (
+          <BladWyliczenia
+            kod={wyliczenie.blad.kod}
+            parametry={wyliczenie.blad.parametry as never}
+            onPonow={wyliczenie.ponow}
+            akcje={<Odnosnik href={adresDanych}>{teksty.wspolne.wyliczenie.zmienDane}</Odnosnik>}
           />
         ) : null}
-        {poStracie ? (
+
+        {poStracie && !trybSprawy && wynik !== null
+          ? (() => {
+              // Podstawa rodzica, któremu przysługuje zasiłek po stracie dziecka, czyli rodzica okresu macierzyńskiego.
+              const rodzicStraty =
+                wynik.okresy.find((o) => o.rodzaj === 'macierzynski')?.rodzic ??
+                (podstawy.matka.prawo ? 'matka' : 'drugi-rodzic');
+              return (
+                <KartaPoStracie
+                  wynik={wynik}
+                  podstawa={podstawyWyliczenia[rodzicStraty] ?? null}
+                  onSprawdzPodstawe={() => ustawArkuszRodzica(rodzicStraty)}
+                />
+              );
+            })()
+          : null}
+        {poStracie && !trybSprawy ? (
           <Karta tytul={t.kartaWsparcia} bezLinii>
             <p className="m-0 mb-6 text-body">{t.wsparcieOpis}</p>
             {kontekst.gosc ? (
@@ -289,7 +313,7 @@ function TrescWyniku({
           }
         />
 
-        {poStracie ? null : (
+        {poStracie || trybSprawy ? null : (
           <Karta tytul={t.kartaPodstawy} bezLinii>
             <div className="flex flex-wrap gap-7.5">
               {RODZICE.filter((r) => r === 'matka' || dane.formaDrugiegoRodzica.wartosc.forma !== 'brak-drugiego-rodzica').map(
@@ -310,7 +334,12 @@ function TrescWyniku({
                         <>
                           {p.efektywna ? (
                             <>
-                              <p className="m-0 text-amount text-success-text">{formatujKwote(p.efektywna.kwota)}</p>
+                              {/* Podstawa w dniu zdarzenia z minimalną podstawą pracownika na pełnym etacie, tak jak w wyliczeniu. */}
+                              <p className="m-0 text-amount text-success-text">
+                                {formatujKwote(
+                                  podstawaWDniuZasilku(p.efektywna, katalog, dzienZdarzenia ?? dzis, formaRodzica(dane, r) === 'umowa-o-prace'),
+                                )}
+                              </p>
                               <p className="m-0 text-small">
                                 {ti.zrodlo({ zrodlo: t.zrodlaPodstawy[p.efektywna.zrodlo] })}
                               </p>
@@ -337,36 +366,54 @@ function TrescWyniku({
           </Karta>
         )}
 
-        {poStracie ? null : (
-          <KartaWariantu
-            dane={dane}
-            dzis={dzis}
-            dostepny={wariant81}
-            parametry={parametry}
-            // Bez ustalonej podstawy rodzica z prawem do zasiłku sumy wariantów nie są porównywalne, więc ich nie pokazujemy.
-            sumaBiezaca={brakPodstawyZPrawem ? 0 : wynik.sumy.razem}
-            sumaDrugiego={brakPodstawyZPrawem ? null : (wynikDrugiegoWariantu?.sumy.razem ?? null)}
-            onZmiana={(wariant) => ustawParametry({ ...parametry, wariant })}
-          />
+        {wynik === null ? (
+          wyliczenie.blad ? null : <SzkieletWyliczenia />
+        ) : (
+          <>
+            {poStracie || trybSprawy ? null : (
+              <KartaWariantu
+                dane={dane}
+                dzis={dzis}
+                dostepny={wariant81}
+                parametry={parametry}
+                // Bez ustalonej podstawy rodzica z prawem do zasiłku sumy wariantów nie są porównywalne, więc ich nie pokazujemy.
+                sumaBiezaca={brakPodstawyZPrawem ? 0 : wynik.sumy.razem}
+                sumaDrugiego={brakPodstawyZPrawem ? null : (wynikDrugiegoWariantu?.sumy.razem ?? null)}
+                onZmiana={(wariant) => ustawParametry({ ...parametry, wariant })}
+              />
+            )}
+
+            {poStracie || trybSprawy ? null : (
+              <KartaOkresow
+                key={`${parametry.tygodniePrzedPorodem}-${parametry.poczatekNaWarunkach ?? ''}`}
+                dane={dane}
+                wynik={wynik}
+                parametry={parametry}
+                etykiety={etykiety}
+                prawo={{ matka: podstawy.matka.prawo, 'drugi-rodzic': podstawy['drugi-rodzic'].prawo }}
+                onZmiana={ustawParametry}
+              />
+            )}
+
+            {trybSprawy ? null : <KartaHarmonogramu wynik={wynik} etykiety={etykiety} />}
+
+            {/* Slot porównania sam zapisuje wynik sprawy w Wynikach kalkulacji, więc w trybie sprawy pozostałe sloty pomijamy. */}
+            {slotyWyniku.filter(({ id }) => !trybSprawy || id === 'porownanie-z-rozstrzygnieciem').map(({ id, Komponent }) => (
+              <Komponent
+                key={id}
+                idSprawy={idSprawy}
+                zrodlo={zrodloAdresu}
+                daneWejsciowe={dane}
+                podstawy={podstawyWyliczenia}
+                podstawyApi={podstawyApi}
+                parametry={parametry}
+                wynik={wynik}
+                przeliczanie={!trybSprawy && wyliczenie.laduje}
+                onZmianaParametrow={ustawParametry}
+              />
+            ))}
+          </>
         )}
-
-        {poStracie ? null : (
-          <KartaOkresow
-            key={`${parametry.tygodniePrzedPorodem}-${parametry.poczatekNaWarunkach ?? ''}`}
-            dane={dane}
-            wynik={wynik}
-            parametry={parametry}
-            etykiety={etykiety}
-            prawo={{ matka: podstawy.matka.prawo, 'drugi-rodzic': podstawy['drugi-rodzic'].prawo }}
-            onZmiana={ustawParametry}
-          />
-        )}
-
-        <KartaHarmonogramu wynik={wynik} etykiety={etykiety} />
-
-        {slotyWyniku.map(({ id, Komponent }) => (
-          <Komponent key={id} {...propsSlotu} />
-        ))}
       </Stos>
 
       <ArkuszPodstawyWymiaru
@@ -397,7 +444,7 @@ function TrescWyniku({
       <OknoZastosowanychRegul
         otwarte={oknoRegul}
         onZamknij={() => ustawOknoRegul(false)}
-        reguly={wynik.zastosowaneReguly}
+        reguly={wynik?.zastosowaneReguly ?? []}
         katalog={katalog}
         zdarzenie={zdarzenie}
         dataZdarzenia={dzienZdarzenia}
@@ -411,11 +458,15 @@ function KartaPoStracie({
   podstawa,
   onSprawdzPodstawe,
 }: {
-  wynik: ReturnType<typeof wyliczScenariusz>;
+  wynik: WynikScenariusza;
   podstawa: PodstawaWymiaru | null;
   onSprawdzPodstawe: () => void;
 }) {
   const okres = wynik.okresy.find((o) => o.rodzaj === 'macierzynski');
+  // Podwyższenie do kwoty świadczenia rodzicielskiego z harmonogramu, żeby karta zgadzała się z harmonogramem wypłat.
+  const podwyzszenie = okres
+    ? wynik.harmonogram.filter((h) => h.rodzic === okres.rodzic).reduce((s, h) => s + h.podwyzszenie, 0)
+    : 0;
   return (
     <Karta tytul={t.kartaZasilkuPoStracie} bezLinii>
       <Stos odstep={6}>
@@ -433,6 +484,7 @@ function KartaPoStracie({
             <div className="flex min-w-0 grow basis-60 flex-col gap-1">
               <Kwota etykieta={t.zasilekZaDni({ dni: String(okres.dni) })} kwota={okres.zaOkres} />
               <p className="m-0 text-small">{t.miesiecznieZaliczka({ kwota: formatujKwote(okres.miesiecznie) })}</p>
+              {podwyzszenie > 0 ? <Kwota etykieta={t.podwyzszenie} kwota={podwyzszenie} /> : null}
             </div>
           ) : null}
           <div className="flex min-w-0 grow basis-60 flex-col items-start gap-1">
@@ -526,7 +578,7 @@ function KartaOkresow({
   onZmiana,
 }: {
   dane: DaneWejscioweKalkulatora;
-  wynik: ReturnType<typeof wyliczScenariusz>;
+  wynik: WynikScenariusza;
   parametry: ParametryScenariusza;
   etykiety: Record<RodzicWRodzinie, string>;
   prawo: Record<RodzicWRodzinie, boolean>;
@@ -632,7 +684,7 @@ function KartaOkresow({
 
         {pokazaneRodzice.map((r) =>
           prawo[r] ? (
-            <TabelaOkresow key={r} wynik={wynik} rodzic={r} etykieta={etykiety[r]} />
+            <TabelaOkresow key={r} wynik={wynik} rodzic={r} etykieta={etykiety[r]} przyjecie={zdarzenie === 'przyjecie'} />
           ) : (
             <div key={r} className="flex flex-col gap-3">
               <h3 className="m-0 text-body-strong">{etykiety[r]}</h3>
@@ -645,7 +697,7 @@ function KartaOkresow({
           <Stos odstep={4} className="min-w-0 grow basis-140">
             {wymiar > 0 ? (
               <p className="m-0 text-body">
-                {t.podsumowanieTygodni({
+                {(zdarzenie === 'przyjecie' ? t.podsumowanieTygodniPrzyjecie : t.podsumowanieTygodni)({
                   razem: t.tygodnie({ liczba: wymiar }),
                   matka: t.tygodnie({ liczba: tygMatki }),
                   drugi: t.tygodnie({ liczba: tygDrugiego }),

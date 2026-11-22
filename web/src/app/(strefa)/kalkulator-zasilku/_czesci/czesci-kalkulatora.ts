@@ -18,9 +18,9 @@ export const POLA_CZESCI: Record<CzescKalkulatora, readonly PoleFormularza[]> = 
   sprawa: [],
   zdarzenie: ['zdarzenie', 'dataPorodu', 'przewidywanyTermin'],
   przyjecie: ['formaPrzyjecia', 'odroczenie'],
-  datyPrzyjecia: ['dataPrzyjecia', 'dataUrodzeniaDziecka'],
-  dziecko: ['liczbaDzieci', 'zaZyciem'],
-  wczesniactwo: ['wczesniactwo', 'tydzienCiazy', 'masaG', 'dniPobytu'],
+  datyPrzyjecia: ['dataPrzyjecia', 'dataUrodzeniaDziecka', 'dataUprawomocnienia'],
+  dziecko: ['liczbaDzieci', 'datyUrodzeniaKolejnych', 'zaZyciem'],
+  wczesniactwo: ['wczesniactwo', 'tydzienCiazy', 'masaG', 'dniPobytu', 'pierwszyDzienPobytu'],
   strata: ['strata', 'rodzajStraty', 'dataZgonu', 'liczbaDzieciStraty'],
   formy: ['formaMatki', 'formaDrugiego'],
 };

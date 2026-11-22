@@ -238,7 +238,7 @@
 | 0222 | Pełnomocnictwo PEL ograniczone do korespondencji | WARNING | 200 | Pełnomocnictwo od [imię i nazwisko] obejmuje wyłącznie korespondencję. Poproś o pełnomocnictwo PEL do roli Ubezpieczony bez ograniczenia do korespondencji. |
 | 0223 | Brak pełnomocnictwa PEL od drugiego rodzica | INFO | 200 | Drugi rodzic nie udzielił Ci jeszcze pełnomocnictwa. Pokaż mu instrukcję udzielenia pełnomocnictwa PEL w eZUS. |
 | 0224 | Pełnomocnictwo PEL od przyszłej daty | INFO | 200 | Pełnomocnictwo od [imię i nazwisko] obowiązuje od [data]. Dane drugiego rodzica pobierzemy od tego dnia. |
-| 0225 | Rozstrzygnięcie uzupełnione ze zrzutu z systemu ZUS | INFO | 200 | Rozstrzygnięcie sprawy uzupełniliśmy świadczeniami przyznanymi w zrzucie z systemu ZUS. Sprawdź je przed weryfikacją. |
+| 0225 | Rozstrzygnięcie uzupełnione ze zrzutu z systemu ZUS | INFO | 200 | Rozstrzygnięcie sprawy uzupełniliśmy świadczeniami przyznanymi i odmówionymi w zrzucie z systemu ZUS. Sprawdź je przed weryfikacją. |
 | 0226 | Początek zasiłku wcześniej niż 6 tygodni przed terminem porodu | WARNING | 200 | Okres zasiłku we wniosku zaczyna się [data początku z wniosku], czyli wcześniej niż 6 tygodni przed przewidywanym terminem porodu [termin porodu]. Do wyliczenia przyjmujemy początek [data początku do wyliczenia]. |
 | 0227 | Brak zaświadczenia o przewidywanej dacie porodu w przykładowej sprawie | INFO | 200 | Zasiłek za okres przed porodem wymaga zaświadczenia lekarskiego o przewidywanej dacie porodu. Dodaj je do sprawy, jeśli jest w zestawie dokumentów. |
 | 0228 | Brak zaświadczenia o przewidywanej dacie porodu | ERROR | 400 | Dołącz zaświadczenie lekarskie o przewidywanej dacie porodu. |
@@ -348,3 +348,10 @@
 | 0332 | Ojciec bez przerwy w pracy | WARNING | 409 | Dodatkowy zasiłek opiekuńczy przysługuje, gdy przerwiesz pracę albo działalność zarobkową, żeby osobiście opiekować się dzieckiem. |
 | 0333 | Dodatkowy zasiłek opiekuńczy poza limitem dni | INFO | 200 | Dni dodatkowego zasiłku opiekuńczego na nowo narodzone dziecko liczymy poza rocznym limitem zasiłku opiekuńczego, więc w tym roku nadal masz [liczba] dni zasiłku opiekuńczego. |
 | 0334 | Pobyt matki w szpitalu bez daty wypisu | INFO | 200 | Dodatkowy zasiłek opiekuńczy przysługuje za dni pobytu mamy w szpitalu. Gdy mama wróci ze szpitala, poinformuj płatnika zasiłku o dniu wypisu. |
+| 0335 | Usługa wyliczeń przewodnika niedostępna | ERROR | 503 | Nie udało się wykonać wyliczenia. Spróbuj ponownie za chwilę. |
+| 0336 | Data rezygnacji z zasiłku macierzyńskiego nie później niż dziś | ERROR | 400 | Rezygnację składasz przed dniem, od którego rezygnujesz z zasiłku. Podaj datę późniejszą niż dzisiejsza. |
+| 0337 | Wniosek ZAS-23 wysłany | INFO | 201 | Wniosek ZAS-23 wysłaliśmy do ZUS [data]. Dostarcz podpisane oświadczenie ojca dziecka do placówki ZUS osobiście albo pocztą przed [data rezygnacji]. Ojciec dziecka złoży wniosek o zasiłek macierzyński za okres od [data rezygnacji]. |
+| 0338 | Wniosek ZAS-23 niedostępny | INFO | 200 | Wniosek ZAS-23 składasz w eZUS, gdy zasiłek macierzyński wypłaca Ci ZUS na podstawie Twojego wniosku o zasiłek macierzyński. Sprawdź rezygnację w przewodniku. |
+| 0339 | Rezygnacja z części zasiłku dla zleceniodawcy przygotowana | INFO | 201 | Wniosek o rezygnację i oświadczenie ojca dziecka są gotowe do wydruku. Złóż je zleceniodawcy przed [data rezygnacji]. |
+| 0340 | Puste pole tekstowe katalogu | ERROR | 400 | Uzupełnij to pole. |
+| 0341 | Nazwa wpisu słownika już istnieje | ERROR | 409 | W słowniku jest już wpis o tej nazwie. |

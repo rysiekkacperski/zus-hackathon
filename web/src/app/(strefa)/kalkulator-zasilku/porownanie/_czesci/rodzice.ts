@@ -30,6 +30,7 @@ function nazwa(
   dopelniacz: string | undefined,
   rodzic: RodzicWRodzinie,
   pesel?: string,
+  przyjecie = false,
 ): NazwaRodzica {
   if (imie && nazwisko) {
     const mianownik = `${imie} ${nazwisko}`;
@@ -40,13 +41,15 @@ function nazwa(
     const wlasny = dopelniacz && dopelniacz !== mianownik ? dopelniacz : undefined;
     return { mianownik, dopelniacz: wlasny ?? zDemo ?? mianownik, znana: true };
   }
+  if (rodzic === 'matka' && przyjecie) return { mianownik: tz.rodzicPrzyjmujacy, dopelniacz: t.rodzicaPrzyjmujacego, znana: false };
   return rodzic === 'matka'
     ? { mianownik: tz.matka, dopelniacz: t.matki, znana: false }
     : { mianownik: tz.drugiRodzic, dopelniacz: t.drugiegoRodzica, znana: false };
 }
 
 /** Imiona i nazwiska matki i drugiego rodzica z kont rodziny, Danych rodziny albo konta Nowego użytkownika. */
-export function useNazwyRodzicow(): NazwyRodzicow {
+/** Przy przyjęciu dziecka na wychowanie nieznany rodzic w roli matki to „rodzic, który przyjął dziecko”. */
+export function useNazwyRodzicow(przyjecie = false): NazwyRodzicow {
   const konto = useKonto();
   const rodzina = useRodzina();
   const osoby = useMemo(() => (rodzina === null ? null : osobyRodziny(rodzina.daneRodziny)), [rodzina]);
@@ -57,7 +60,7 @@ export function useNazwyRodzicow(): NazwyRodzicow {
       const wlasna = konto ? nazwa(konto.imie, konto.nazwisko, konto.imieINazwiskoDopelniacz, 'matka') : null;
       const kobieta = konto?.plec === 'kobieta';
       return {
-        matka: kobieta && wlasna ? wlasna : nazwa(undefined, undefined, undefined, 'matka'),
+        matka: kobieta && wlasna ? wlasna : nazwa(undefined, undefined, undefined, 'matka', undefined, przyjecie),
         'drugi-rodzic': !kobieta && wlasna ? wlasna : nazwa(undefined, undefined, undefined, 'drugi-rodzic'),
       };
     }
@@ -66,8 +69,8 @@ export function useNazwyRodzicow(): NazwyRodzicow {
     const drugi = rodzina.daneRodziny.drugiRodzic;
     return {
       matka: kontoMatki
-        ? nazwa(kontoMatki.imie, kontoMatki.nazwisko, kontoMatki.imieINazwiskoDopelniacz, 'matka', kontoMatki.pesel)
-        : nazwa(undefined, undefined, undefined, 'matka'),
+        ? nazwa(kontoMatki.imie, kontoMatki.nazwisko, kontoMatki.imieINazwiskoDopelniacz, 'matka', kontoMatki.pesel, przyjecie)
+        : nazwa(undefined, undefined, undefined, 'matka', undefined, przyjecie),
       'drugi-rodzic': kontoDrugiego
         ? nazwa(kontoDrugiego.imie, kontoDrugiego.nazwisko, kontoDrugiego.imieINazwiskoDopelniacz, 'drugi-rodzic', kontoDrugiego.pesel)
         : nazwa(
@@ -78,7 +81,7 @@ export function useNazwyRodzicow(): NazwyRodzicow {
             osoby?.peselDrugiegoRodzica,
           ),
     };
-  }, [konto, rodzina, osoby, stanMatki, stanDrugiego]);
+  }, [konto, rodzina, osoby, stanMatki, stanDrugiego, przyjecie]);
 }
 
 /** Opis formy zatrudnienia z ubezpieczeniem chorobowym, małą literą. */

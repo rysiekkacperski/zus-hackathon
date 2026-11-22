@@ -4,15 +4,17 @@
 // harmonogram z podwyższeniem do kwoty świadczenia rodzicielskiego, skutek powrotu do pracy, termin decyzji.
 import {
   czesciDaty,
-  dataZMiesiaca,
   dniWMiesiacu,
   dodajDni,
-  dodajMiesiaceDoMiesiaca,
   liczbaDniWlacznie,
   miesiacZDaty,
   roznicaDni,
 } from '@/domena/daty';
-import { minimalnaPodstawaPracownika } from '@/domena/kalkulatory/podstawa';
+import {
+  podstawaWDniuZasilku,
+  podstawyWOkresie as podstawyWOkresieZasilku,
+  type CzescPodstawy as CzescPodstawyWymiaru,
+} from '@/domena/kalkulatory/podstawa';
 import { formatujDate } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
@@ -231,40 +233,17 @@ export function sumaZaDni(podstawa: Grosze, stawka: Procent, dni: number): Grosz
   return stawkaDzienna(podstawa, stawka) * dni;
 }
 
-/** Część okresu zasiłku z podstawą wymiaru obowiązującą w tej części. */
-export interface CzescPodstawy { od: DataISO; do: DataISO; kwota: Grosze }
-
-/** Podstawa przed podniesieniem do minimalnej podstawy pracownika (średnia pomniejszona o składki). */
-function podstawaPrzedMinimum(p: PodstawaWymiaru): Grosze {
-  const srednia = p.skladniki?.find((s) => s.opis === 'srednia');
-  const pomniejszenie = p.skladniki?.find((s) => s.opis === 'pomniejszenie');
-  return srednia && pomniejszenie ? srednia.kwota - pomniejszenie.kwota : p.kwota;
-}
+/** Część okresu zasiłku z podstawą wymiaru obowiązującą w tej części (reguła z podstawa.ts). */
+export type CzescPodstawy = CzescPodstawyWymiaru;
 
 /** Podstawa wymiaru w dniu: pracownik na pełnym etacie co najmniej minimalna podstawa obowiązująca w tym dniu. */
 export function podstawaWDniu(p: PodstawaWymiaru, k: Katalog, dzien: DataISO): Grosze {
-  if (p.pelnyEtat !== true) return p.kwota;
-  return Math.max(podstawaPrzedMinimum(p), minimalnaPodstawaPracownika(k, dzien));
+  return podstawaWDniuZasilku(p, k, dzien);
 }
 
 /** Podstawa wymiaru za dni przed zmianą minimalnej podstawy i od dnia zmiany (zmiany od 1. dnia miesiąca). */
 export function podstawyWOkresie(p: PodstawaWymiaru, k: Katalog, okres: Okres): CzescPodstawy[] {
-  const wynik: CzescPodstawy[] = [];
-  let od = okres.od;
-  let kwota = podstawaWDniu(p, k, od);
-  let m = dodajMiesiaceDoMiesiaca(miesiacZDaty(okres.od), 1);
-  while (dataZMiesiaca(m) <= okres.do) {
-    const dzien = dataZMiesiaca(m);
-    const nowa = podstawaWDniu(p, k, dzien);
-    if (nowa !== kwota) {
-      wynik.push({ od, do: dodajDni(dzien, -1), kwota });
-      od = dzien;
-      kwota = nowa;
-    }
-    m = dodajMiesiaceDoMiesiaca(m, 1);
-  }
-  wynik.push({ od, do: okres.do, kwota });
-  return wynik;
+  return podstawyWOkresieZasilku(p, k, okres);
 }
 
 /** Okres podzielony na części z podstawą wymiaru obowiązującą w każdej części. */

@@ -1,5 +1,6 @@
 // Wybór kanału załatwienia sprawy, dokumentów i adresata wniosku (kontrakt, sekcja 7.2; ANALIZY/08 R-KAN, R-DOK, R-OZN).
 // Właściciel: u17 (Instrukcje spraw i przejścia do kanałów). Funkcje są czyste: dane wejściowe dostają w argumentach.
+import { SWIADCZENIA_SLOWNIKA } from '@/dane/katalog/slownik-dokumentow';
 import { wybierzDokumenty } from '@/domena/zasilki/dokumenty';
 import type {
   DaneRodzica,
@@ -193,6 +194,12 @@ export function wybierzKanal(
   if (idPozycji === 'K08' && forma === 'umowa-o-prace' && (czyUstanieWCiazy(dane) || czyUmowaPrzedluzonaDoPorodu(dane))) {
     spec = EZUS;
   }
+  // K34 przy umowie zlecenia, gdy zasiłek wypłaca płatnik składek (więcej niż 20 zgłoszonych do ubezpieczenia
+  // chorobowego według stanu na 30 listopada poprzedniego roku, art. 61 ust. 1 ustawy zasiłkowej): wniosek ZAM
+  // z dokumentem o martwym urodzeniu przyjmuje zleceniodawca, tak jak wskazuje słownik dokumentów (zm-uz-platnik).
+  if (idPozycji === 'K34' && forma === 'umowa-zlecenia' && dane.platnikZasilku?.wartosc === 'platnik-skladek') {
+    spec = PRACODAWCA;
+  }
   if (spec === null && pozycjaKatalogu !== null) {
     spec =
       specyfikacjaZKatalogu(forma === null ? undefined : pozycjaKatalogu.kanaly[forma]) ??
@@ -235,15 +242,51 @@ export function rodzajOznaczenia(rodzaj: RodzajPozycji): 'zlozona' | 'zalatwiona
 // --- Dokumenty i adresat wniosku (R-DOK) -------------------------------------------------------
 
 type GrupaDokumentow = WpisSlownikaDokumentow['grupa'];
+type SwiadczenieSlownika = (typeof SWIADCZENIA_SLOWNIKA)[keyof typeof SWIADCZENIA_SLOWNIKA];
 
-/** Sprawy rodzaju świadczenie, których dokumenty i adresat zależą od płatnika zasiłku. */
-const GRUPY_SPRAW: Partial<Record<IdPozycji, GrupaDokumentow>> = {
-  K08: 'zasilek-macierzynski',
-  K24: 'zasilek-chorobowy',
-  K25: 'swiadczenie-rehabilitacyjne',
-  K26: 'zwzm',
-  K32: 'zasilek-macierzynski',
-  K34: 'zasilek-macierzynski',
+/**
+ * Wpisy słownika dokumentów, które instrukcja sprawy pokazuje przy wniosku. `grupa` wskazuje świadczenie,
+ * którego dokumenty i adresat zależą od płatnika zasiłku. `wnioskiPracownika` to wnioski do pracodawcy
+ * dołączane przy umowie o pracę rodzica sprawy, a `zalaczniki` to załączniki sytuacji dla każdej formy
+ * zatrudnienia. Przy umowie o pracę wniosek pracownika zawiera już załączniki sytuacji, więc instrukcja
+ * pokazuje załączniki sytuacji tylko wtedy, gdy sprawa nie ma wniosku pracownika dla tej formy.
+ */
+interface DokumentySprawy {
+  grupa: GrupaDokumentow;
+  wnioskiPracownika?: readonly SwiadczenieSlownika[];
+  zalaczniki?: readonly { swiadczenie: SwiadczenieSlownika; sytuacja: string }[];
+}
+
+const S = SWIADCZENIA_SLOWNIKA;
+const ZALACZNIK_PRZYJECIE = { swiadczenie: S.zalacznikPrzyjecie, sytuacja: 'przyjecie' } as const;
+
+/**
+ * Sprawy z wnioskiem, których instrukcja pokazuje dokumenty i adresata ze słownika dokumentów: świadczenia
+ * z ubezpieczenia chorobowego oraz urlopy u pracodawcy i w kreatorze ZAM, za które przysługuje zasiłek
+ * macierzyński. Adresat zasiłku zależy od płatnika: płatnik składek, który według stanu na 30 listopada
+ * poprzedniego roku zgłaszał do ubezpieczenia chorobowego więcej niż 20 osób, sam wypłaca zasiłek,
+ * a w pozostałych przypadkach zasiłek wypłaca ZUS (domena/profil/platnik.ts).
+ */
+const DOKUMENTY_SPRAW: Partial<Record<IdPozycji, DokumentySprawy>> = {
+  K07: { grupa: 'zasilek-macierzynski', wnioskiPracownika: [S.wniosekRodzicielski] },
+  K08: { grupa: 'zasilek-macierzynski' },
+  K09: { grupa: 'zasilek-macierzynski', wnioskiPracownika: [S.wniosekOjcowski] },
+  K10: { grupa: 'zasilek-macierzynski', wnioskiPracownika: [S.wniosekRodzicielski] },
+  K11: {
+    grupa: 'zasilek-macierzynski',
+    wnioskiPracownika: [S.wniosekUzupelniajacy],
+    zalaczniki: [{ swiadczenie: S.zalacznikUzupelniajacy, sytuacja: 'uzupelniajacy' }],
+  },
+  K24: { grupa: 'zasilek-chorobowy' },
+  K25: { grupa: 'swiadczenie-rehabilitacyjne' },
+  K26: { grupa: 'zwzm' },
+  K31: { grupa: 'zasilek-macierzynski', wnioskiPracownika: [S.wniosekNaWarunkach], zalaczniki: [ZALACZNIK_PRZYJECIE] },
+  K32: { grupa: 'zasilek-macierzynski', zalaczniki: [ZALACZNIK_PRZYJECIE] },
+  K34: {
+    grupa: 'zasilek-macierzynski',
+    zalaczniki: [{ swiadczenie: S.zalacznikMartweUrodzenie, sytuacja: 'martwe-urodzenie' }],
+  },
+  K37: { grupa: 'zasilek-macierzynski', wnioskiPracownika: [S.wniosekLaczenie] },
 };
 
 const NAZWY_GRUP: Record<GrupaDokumentow, string> = {
@@ -255,16 +298,22 @@ const NAZWY_GRUP: Record<GrupaDokumentow, string> = {
   'wnioski-pracownika': 'Wnioski pracownika',
 };
 
+/** Dokumenty i adresat wniosku przy jednym płatniku zasiłku. */
+export interface WariantDokumentow {
+  dokumenty: string[];
+  adresat: string | null;
+  platnik: 'zus' | 'platnik-skladek';
+}
+
 export type DokumentyIAdresat =
   | { typ: 'nie-dotyczy' }
   | { typ: 'platnik-nieustalony'; kod: '0087' }
-  | {
-      typ: 'lista';
-      dokumenty: string[];
-      adresat: string | null;
-      platnik: 'zus' | 'platnik-skladek';
-      nazwaPlatnika?: string;
-    };
+  | ({ typ: 'lista'; nazwaPlatnika?: string } & WariantDokumentow)
+  /**
+   * Płatnik zasiłku rodzica sprawy jest nieustalony, a odpowiedź o płatniku zapisuje drugi rodzic na swoim
+   * koncie: instrukcja pokazuje dokumenty i adresata przy płatniku składek i przy ZUS.
+   */
+  | { typ: 'warianty-platnika'; warianty: WariantDokumentow[] };
 
 function pasujeDoKlucza(
   wpis: WpisSlownikaDokumentow,
@@ -279,53 +328,100 @@ function pasujeDoKlucza(
   return Boolean(wpis.klucz.poUstaniu) === poUstaniu;
 }
 
+/** Wpisy wniosków pracownika i załączników sytuacji sprawy dla formy zatrudnienia rodzica sprawy. */
+function wpisyDodatkowe(opis: DokumentySprawy, forma: FormaZatrudnienia, katalog: Katalog): WpisSlownikaDokumentow[] {
+  const zListy = (w: ReturnType<typeof wybierzDokumenty>) => (Array.isArray(w) ? w : []);
+  const wnioski =
+    forma === 'umowa-o-prace'
+      ? (opis.wnioskiPracownika ?? []).flatMap((s) =>
+          zListy(wybierzDokumenty({ swiadczenieAlboWniosek: s, forma, platnik: undefined, poUstaniu: false }, katalog)),
+        )
+      : [];
+  const zalaczniki =
+    wnioski.length > 0
+      ? []
+      : (opis.zalaczniki ?? []).flatMap((z) =>
+          zListy(
+            wybierzDokumenty({ swiadczenieAlboWniosek: z.swiadczenie, forma, platnik: undefined, poUstaniu: false, sytuacja: z.sytuacja }, katalog),
+          ),
+        );
+  return [...wnioski, ...zalaczniki];
+}
+
+/** Dokumenty i adresat przy płatniku zasiłku: wpisy świadczenia, potem wnioski pracownika i załączniki sytuacji. */
+function wariantDokumentow(
+  opis: DokumentySprawy,
+  forma: FormaZatrudnienia,
+  platnik: 'zus' | 'platnik-skladek',
+  poUstaniu: boolean,
+  katalog: Katalog,
+): WariantDokumentow | { kod: '0087' } {
+  const platnikKlucza = platnik === 'zus' ? 'zus' : 'platnik-uprawniony';
+  const zSlownika = wybierzDokumenty(
+    { swiadczenieAlboWniosek: NAZWY_GRUP[opis.grupa], forma, platnik: platnikKlucza, poUstaniu },
+    katalog,
+  );
+  if (!Array.isArray(zSlownika)) return { kod: zSlownika.kod };
+
+  const wpisySwiadczenia = (
+    zSlownika.length > 0
+      ? zSlownika
+      : katalog.dokumenty.filter((w) => pasujeDoKlucza(w, opis.grupa, forma, platnikKlucza, poUstaniu))
+  )
+    .slice()
+    .sort((a, b) => a.kolejnosc - b.kolejnosc);
+  const wpisy = [...wpisySwiadczenia, ...wpisyDodatkowe(opis, forma, katalog)];
+
+  // Dokument, którego treść bez kropki zaczyna inny dokument listy, powtarza go w krótszym brzmieniu,
+  // np. „Odpis skrócony aktu urodzenia.” obok „Odpis skrócony aktu urodzenia dziecka.”.
+  const wszystkie = [...new Set(wpisy.flatMap((w) => w.dokumenty))];
+  const dokumenty = wszystkie.filter((d) => {
+    const rdzen = d.replace(/\.$/, '');
+    return !wszystkie.some((inny) => inny !== d && inny.startsWith(`${rdzen} `));
+  });
+  const adresat = wpisy.find((w) => w.adresat.trim().length > 0)?.adresat ?? null;
+  return { dokumenty, adresat, platnik };
+}
+
 /**
- * Dokumenty, załączniki i adresat wniosku sprawy rodzaju świadczenie ze słownika dokumentów i adresatów
- * wniosków, według formy zatrudnienia rodzica sprawy i płatnika zasiłku z Danych rodziny. Płatnik
- * nieustalony daje 0087 z przejściem do ViewProfilePayer.
+ * Dokumenty, załączniki i adresat wniosku sprawy z wnioskiem ze słownika dokumentów i adresatów wniosków,
+ * według formy zatrudnienia rodzica sprawy i płatnika zasiłku z Danych rodziny. Płatnik nieustalony daje
+ * 0087 z przejściem do ViewProfilePayer, gdy odpowiedź o płatniku zapisuje rodzic, który ogląda instrukcję
+ * (`rodzicOdpowiadajacy`, ten sam rodzic, którego dane zmienia ViewProfilePayer). Gdy sprawa dotyczy
+ * drugiego z rodziców, instrukcja pokazuje dokumenty i adresata przy obu płatnikach.
  */
 export function wybierzDokumentyIAdresata(
   sprawa: PozycjaPlanu,
   daneRodziny: DaneRodziny,
   katalog: Katalog,
+  rodzicOdpowiadajacy: 'matka' | 'drugi-rodzic' = daneRodziny.rodzicKonta === 'drugi-rodzic' ? 'drugi-rodzic' : 'matka',
 ): DokumentyIAdresat {
-  if (sprawa.rodzaj !== 'swiadczenie') return { typ: 'nie-dotyczy' };
   const idPozycji = idPozycjiSprawy(sprawa);
-  const grupa = idPozycji === null ? undefined : GRUPY_SPRAW[idPozycji];
-  if (grupa === undefined) return { typ: 'nie-dotyczy' };
+  const opis = idPozycji === null ? undefined : DOKUMENTY_SPRAW[idPozycji];
+  if (opis === undefined) return { typ: 'nie-dotyczy' };
 
   const pozycjaKatalogu = pozycjaSprawy(sprawa, katalog);
-  const { forma, dane } = daneRodzicaSprawy(sprawa, pozycjaKatalogu, daneRodziny);
+  const { rodzic, forma, dane } = daneRodzicaSprawy(sprawa, pozycjaKatalogu, daneRodziny);
   if (forma === null || forma === 'brak-tytulu') return { typ: 'nie-dotyczy' };
 
   const zapisany = dane.platnikZasilku?.wartosc ?? 'nieustalony';
   const platnik: 'zus' | 'platnik-skladek' | 'nieustalony' | 'brak-platnika' = forma === 'jdg' ? 'zus' : zapisany;
   if (platnik === 'brak-platnika') return { typ: 'nie-dotyczy' };
-  if (platnik === 'nieustalony') return { typ: 'platnik-nieustalony', kod: '0087' };
-
   const poUstaniu = czyUstanieWCiazy(dane);
-  const platnikKlucza = platnik === 'zus' ? 'zus' : 'platnik-uprawniony';
-  const zSlownika = wybierzDokumenty(
-    { swiadczenieAlboWniosek: NAZWY_GRUP[grupa], forma, platnik: platnikKlucza, poUstaniu },
-    katalog,
-  );
-  if (!Array.isArray(zSlownika)) return { typ: 'platnik-nieustalony', kod: zSlownika.kod };
 
-  const wpisy = (
-    zSlownika.length > 0
-      ? zSlownika
-      : katalog.dokumenty.filter((w) => pasujeDoKlucza(w, grupa, forma, platnikKlucza, poUstaniu))
-  )
-    .slice()
-    .sort((a, b) => a.kolejnosc - b.kolejnosc);
+  if (platnik === 'nieustalony') {
+    if (rodzic === rodzicOdpowiadajacy) return { typ: 'platnik-nieustalony', kod: '0087' };
+    const warianty = (['platnik-skladek', 'zus'] as const)
+      .map((p) => wariantDokumentow(opis, forma, p, poUstaniu, katalog))
+      .filter((w): w is WariantDokumentow => 'dokumenty' in w);
+    return warianty.length > 0 ? { typ: 'warianty-platnika', warianty } : { typ: 'nie-dotyczy' };
+  }
 
-  const dokumenty = [...new Set(wpisy.flatMap((w) => w.dokumenty))];
-  const adresat = wpisy.find((w) => w.adresat.trim().length > 0)?.adresat ?? null;
+  const wariant = wariantDokumentow(opis, forma, platnik, poUstaniu, katalog);
+  if ('kod' in wariant) return { typ: 'platnik-nieustalony', kod: wariant.kod };
   return {
     typ: 'lista',
-    dokumenty,
-    adresat,
-    platnik,
+    ...wariant,
     nazwaPlatnika: platnik === 'platnik-skladek' ? dane.platnikZasilku?.nazwaPlatnika : undefined,
   };
 }

@@ -41,7 +41,7 @@ import { etapZeSlugu, PARAMETR_ETAPU } from '@/app/(strefa)/plan-rodziny/_czesci
 import { sekcjeInstrukcji } from './_sekcje';
 import { ArkuszOznaczeniaSprawy } from './_czesci/arkusz-oznaczenia-sprawy';
 import { KafelkiInformacji, type KafelekInformacji } from './_czesci/kafelki-informacji';
-import { etykietaAkcjiZewnetrznej, kafelkiKanalu, notatkaKanalu } from './_czesci/opis-kanalu';
+import { etykietaAkcjiZewnetrznej, kafelkiKanalu, notatkaKanalu, zdanieKanalu } from './_czesci/opis-kanalu';
 
 const t = teksty.ViewCaseGuide;
 const POCHODZENIA: readonly Pochodzenie[] = ['plan', 'terminy', 'wnioski', 'asystent'];
@@ -102,7 +102,13 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
         demonstracyjny: parametry.trybDemonstracyjny,
         mobywatelZainstalowany: parametry.trybDemonstracyjny && parametry.symulacje.mobywatelZainstalowany,
       }),
-      dokumenty: wybierzDokumentyIAdresata(sprawa, rodzina.daneRodziny, katalog),
+      // Odpowiedź o płatniku zasiłku zapisuje ten sam rodzic, którego dane zmienia ViewProfilePayer.
+      dokumenty: wybierzDokumentyIAdresata(
+        sprawa,
+        rodzina.daneRodziny,
+        katalog,
+        kontekst.konto.rola === 'drugi-rodzic' || rodzina.daneRodziny.rodzicKonta === 'drugi-rodzic' ? 'drugi-rodzic' : 'matka',
+      ),
       sprawaK16: rodzina.plan?.pozycje.find((p) => idPozycjiSprawy(p) === 'K16') ?? null,
     };
   }, [kontekst, sprawa, parametry]);
@@ -237,11 +243,9 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
         ? t.oznaczono({ data: formatujDate(sprawa.dataOznaczenia) })
         : t.rodzajSprawy({ rodzaj: t.rodzajePozycji[sprawa.rodzaj] }),
   };
-  const kafelki: KafelekInformacji[] = [
-    kafelekTerminu,
-    ...kafelkiKanalu({ wybor, forma, dokumenty, pozycja, nazwaPracodawcy }),
-    kafelekStatusu,
-  ];
+  const kafelkiKanaluSprawy = kafelkiKanalu({ wybor, forma, dokumenty, pozycja, nazwaPracodawcy });
+  const kafelki: KafelekInformacji[] = [kafelekTerminu, ...kafelkiKanaluSprawy, kafelekStatusu];
+  const zdanieInstytucjiIKanalu = zdanieKanalu(kafelkiKanaluSprawy);
 
   const kroki = pozycja?.instrukcja.kroki ?? [];
   const daneIDokumenty = pozycja?.instrukcja.daneIDokumenty ?? [];
@@ -308,6 +312,29 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
             </div>
           </>
         ) : null}
+        {dokumenty.typ === 'warianty-platnika' ? (
+          <>
+            <h3 className="m-0 mt-2 text-body-strong">{t.dokumentyIAdresat}</h3>
+            <p className="m-0 text-body">{t.wariantyPlatnikaWstep}</p>
+            {dokumenty.warianty.map((w) => (
+              <div key={w.platnik} className="flex flex-col gap-2 rounded-sm bg-surface-page px-5 py-4">
+                <h4 className="m-0 text-body-strong text-ink-strong">{t.wariantPlatnika[w.platnik]}</h4>
+                {w.dokumenty.length > 0 ? (
+                  <ul className="m-0 flex flex-col gap-2 pl-5">
+                    {w.dokumenty.map((d) => (
+                      <li key={d}>{d}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="m-0 text-body">{t.brakDokumentowWSlowniku}</p>
+                )}
+                <p className="m-0 text-body">
+                  {t.adresatWariantu({ adresat: w.adresat ?? (w.platnik === 'zus' ? t.adresatZus : t.adresatPlatnik) })}
+                </p>
+              </div>
+            ))}
+          </>
+        ) : null}
       </Stos>
     </Karta>
   ) : null;
@@ -324,9 +351,9 @@ export function WidokInstrukcjiSprawy({ params }: { params: PageProps<'/sprawy/[
 
         <Karta tytul={t.kartaNajwazniejsze} bezLinii>
           <Stos>
-            {wstepFormy || pozycja ? (
+            {wstepFormy || zdanieInstytucjiIKanalu ? (
               <p className="m-0 text-body">
-                {[wstepFormy, pozycja?.instytucjaIKanal].filter(Boolean).join(' ')}
+                {[wstepFormy, zdanieInstytucjiIKanalu].filter(Boolean).join(' ')}
               </p>
             ) : null}
             <p className="m-0 my-1 text-body">{teksty.wspolne.stanNa({ data: formatujDate(kontekst.dzis) })}</p>

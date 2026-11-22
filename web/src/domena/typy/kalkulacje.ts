@@ -24,7 +24,11 @@ export interface PodstawaWymiaru { kwota: Grosze; zrodlo: 'konto-zus' | 'wartosc
 export interface DaneWejscioweKalkulatora {
   zdarzenie: WartoscKalkulatora<'porod' | 'przewidywany-porod' | 'przyjecie'>;
   dataPorodu?: WartoscKalkulatora<DataISO>; przewidywanyTerminPorodu?: WartoscKalkulatora<DataISO>;
-  przyjecie?: WartoscKalkulatora<{ forma: FormaPrzyjecia; dataPrzyjecia: DataISO; dataUrodzeniaDziecka: DataISO; odroczenie: boolean }>;
+  przyjecie?: WartoscKalkulatora<{ forma: FormaPrzyjecia; dataPrzyjecia: DataISO; dataUrodzeniaDziecka: DataISO; odroczenie: boolean;
+    /** Daty urodzenia każdego z jednocześnie przyjętych dzieci; pierwsza równa `dataUrodzeniaDziecka`. */
+    datyUrodzeniaDzieci?: DataISO[];
+    /** Dzień uprawomocnienia postanowienia o przysposobieniu, od którego liczy się 12 miesięcy urlopu ojcowskiego. */
+    dataUprawomocnienia?: DataISO }>;
   liczbaDzieci: WartoscKalkulatora<LiczbaDzieci>; zaZyciem: WartoscKalkulatora<boolean>;
   wczesniactwo?: WartoscKalkulatora<{ tydzienCiazy: number; masaG: number; dniPobytu: number; pierwszyDzienPobytu?: number }>;
   strata?: WartoscKalkulatora<{ rodzaj: 'martwe-urodzenie' | 'zgon-dziecka' | 'poronienie'; dataZgonu?: DataISO; liczbaDzieci: number }>;
@@ -32,6 +36,8 @@ export interface DaneWejscioweKalkulatora {
   formaDrugiegoRodzica: WartoscKalkulatora<{ forma: FormaZatrudnieniaDrugiegoRodzica; dobrowolne: boolean }>;
 }
 export interface CzescUrlopuRodzicielskiego { rodzic: RodzicWRodzinie; od: DataISO; tygodnie: number }
+/** Łączenie części urlopu rodzicielskiego z pracą: `odTygodnia` to tydzień części, od którego rodzic łączy urlop z pracą (0 = pierwszy). */
+export interface LaczenieZPraca { indeksCzesci: number; tygodnie: number; wymiarPracy: number; odTygodnia?: number }
 export interface ParametryScenariusza {
   wariant: '81-5' | '100-70'; tygodniePrzedPorodem: number;          // 0..6
   poczatekNaWarunkach?: DataISO; rodzicUzupelniajacego?: RodzicWRodzinie;
@@ -39,7 +45,9 @@ export interface ParametryScenariusza {
   ojcowski: { wymiar: '14-dni' | '7-dni' | 'brak'; czesci: DataISO[] };
   drugiRodzicPoPorodzie?: { dataUbezpieczenia: DataISO; forma: FormaZatrudnienia };
   przejecie?: { sytuacja: string; data: DataISO; koniecPobytuMatki?: DataISO };
-  laczenie?: { indeksCzesci: number; tygodnie: number; wymiarPracy: number };
+  laczenie?: LaczenieZPraca;
+  /** Łączenie z pracą w kolejnych częściach urlopu rodzicielskiego, także przez drugiego rodzica. */
+  laczeniaDodatkowe?: LaczenieZPraca[];
   datyPowrotu: Partial<Record<RodzicWRodzinie, DataISO>>;
 }
 export interface OkresScenariusza { rodzic: RodzicWRodzinie; rodzaj: RodzajUrlopu | 'wydluzenie-rodzicielskiego'; od: DataISO; do: DataISO;

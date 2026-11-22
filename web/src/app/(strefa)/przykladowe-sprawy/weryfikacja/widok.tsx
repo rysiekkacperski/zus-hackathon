@@ -1,27 +1,36 @@
 'use client';
 
 // ViewSampleCaseVerification: wynik weryfikacji ubezpieczenia chorobowego przykładowej sprawy (wzory P13-13 do P13-16).
-// Właściciel: u21. Wynik zapisuje operacja zatwierdzDaneSprawy wywoływana z ekranu ViewSampleCaseData.
+// Właściciel: u21. Wynik weryfikacji z POST /api/v1/przykladowe-sprawy/weryfikacja zapisuje ekran ViewSampleCaseData.
+// Ekran odpowiada wprost, czy osoba ma ubezpieczenie chorobowe w dniu zdarzenia. Sprawdź wyliczenia prowadzi do
+// kalkulatora zasiłku macierzyńskiego, gdy zasiłek macierzyński przysługuje, a przy samym zasiłku chorobowym albo ZWZM
+// pokazuje wyliczenia i porównanie z rozstrzygnięciem pod wynikiem weryfikacji.
+import { useRef, useState } from 'react';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { Notatka } from '@/komponenty/notatka';
 import { Odnosnik } from '@/komponenty/odnosnik';
-import { PrzyciskLink } from '@/komponenty/przycisk';
+import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { StanPusty } from '@/komponenty/stan-pusty';
+import { BladWyliczenia, SzkieletWyliczenia } from '@/komponenty/stan-wyliczenia';
 import { Tabela } from '@/komponenty/tabela';
 import { Stos } from '@/komponenty/uklad';
 import { trasy } from '@/komponenty/rama/trasy';
 import { formatujDate, formatujDateICzas } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
-import { czyZasilekMacierzynskiPrzysluguje } from '@/domena/przykladowe-sprawy/weryfikacja';
+import { czyZasilekMacierzynskiPrzysluguje, ustalUbezpieczenie } from '@/domena/przykladowe-sprawy/weryfikacja';
+import { czyJestCoWyliczyc } from '@/domena/przykladowe-sprawy/wyliczenie';
 import type { KodKomunikatu, SprawaPrzykladowa, WynikWeryfikacjiSprawy } from '@/domena/typy';
-import { useCzyGosc, useStanSesji } from '@/dane/magazyn/hooki';
+import { useCzyGosc, useDzis, useParametry, useStanSesji } from '@/dane/magazyn/hooki';
 import { teksty } from '@/teksty';
 import { adresCzesciDanychSprawy } from '../_czesci/czesci-danych-sprawy';
+import { useWyliczeniaSprawyApi } from '../_czesci/wyliczenia-api';
+import { WyliczeniaSprawy } from '../_czesci/wyliczenia-sprawy';
 import { LegendaWynikow, ZnacznikPorownania, ZnacznikWarunku, ZIkona } from './_czesci/znacznik-wyniku';
 
 const T = teksty.ViewSampleCaseVerification;
+const ID_WYLICZEN = 'wyliczenia-sprawy';
 
 type WynikSwiadczenia = WynikWeryfikacjiSprawy['wyniki'][number];
 
@@ -99,7 +108,39 @@ function KomunikatyWeryfikacji({ sprawa, wynik }: { sprawa: SprawaPrzykladowa; w
   );
 }
 
-function KartaWyniku({ sprawa, wynik }: { sprawa: SprawaPrzykladowa; wynik: WynikWeryfikacjiSprawy }) {
+function OdpowiedzUbezpieczenia({ sprawa, wynik }: { sprawa: SprawaPrzykladowa; wynik: WynikWeryfikacjiSprawy }) {
+  const u = ustalUbezpieczenie(sprawa.dane, wynik.dataZdarzenia.data);
+  const zdarzenie = `${T.rodzajeZdarzenia[wynik.rozszerzenie?.rodzajZdarzenia ?? 'porod']} ${formatujDate(wynik.dataZdarzenia.data)}`;
+  const okres =
+    u.od === null ? '' : u.do === null ? T.reguly.okresOd({ od: formatujDate(u.od) }) : T.reguly.okresOdDo({ od: formatujDate(u.od), do: formatujDate(u.do) });
+  const rodzaj = u.rodzaj === null ? '' : T.ubezpieczenie.rodzaje[u.rodzaj];
+  const tekst =
+    u.stan === 'podlega'
+      ? T.ubezpieczenie.tak({ rodzaj, okres, zdarzenie })
+      : u.stan === 'po-ustaniu'
+        ? T.ubezpieczenie.poUstaniu({ rodzaj, okres, zdarzenie })
+        : u.stan === 'przed-poczatkiem'
+          ? T.ubezpieczenie.przedPoczatkiem({ rodzaj, okres, zdarzenie })
+          : T.ubezpieczenie.brak({ zdarzenie });
+  return (
+    <div className="rounded-sm border border-line bg-brand-wash px-5 py-4">
+      <h3 className="m-0 text-body-strong">{T.ubezpieczenie.tytul}</h3>
+      <div className="mt-2">
+        <ZIkona ikona={u.stan === 'podlega' ? 'sukces' : 'odmowa'}>{tekst}</ZIkona>
+      </div>
+    </div>
+  );
+}
+
+function KartaWyniku({
+  sprawa,
+  wynik,
+  onSprawdzWyliczenia,
+}: {
+  sprawa: SprawaPrzykladowa;
+  wynik: WynikWeryfikacjiSprawy;
+  onSprawdzWyliczenia: () => void;
+}) {
   const rozszerzenie = wynik.rozszerzenie;
   const zdarzenie =
     rozszerzenie?.rodzajZdarzenia === 'przewidywany-termin'
@@ -117,6 +158,7 @@ function KartaWyniku({ sprawa, wynik }: { sprawa: SprawaPrzykladowa; wynik: Wyni
     .join(' ');
   const zm = czyZasilekMacierzynskiPrzysluguje(wynik);
   const zwzm = wynik.wyniki.some((w) => w.swiadczenie === 'zwzm' && w.prawo === 'przysluguje');
+  const innePrzysluguja = !zm && czyJestCoWyliczyc(wynik);
   const rodzicielskie = rozszerzenie?.szczegoly.find((s) => s.swiadczenieRodzicielskie !== undefined)?.swiadczenieRodzicielskie;
   const okres = rozszerzenie?.okresDoWyliczenia;
   const pokazOkres = zm && okres !== undefined && (okres.skorygowany || wynik.komunikaty.includes('0227'));
@@ -127,6 +169,7 @@ function KartaWyniku({ sprawa, wynik }: { sprawa: SprawaPrzykladowa; wynik: Wyni
       bezLinii
     >
       <Stos odstep={6}>
+        <OdpowiedzUbezpieczenia sprawa={sprawa} wynik={wynik} />
         <p className="m-0 text-body">{opisZdarzenia}</p>
         <Tabela
           podpis={T.podpisWynikow}
@@ -171,12 +214,16 @@ function KartaWyniku({ sprawa, wynik }: { sprawa: SprawaPrzykladowa; wynik: Wyni
             <PrzyciskLink href={trasy.ViewCalcMaternityInput({ zrodlo: 'przykladowa-sprawa' })} wariant="glowny" ikona="kalkulator">
               {T.sprawdzWyliczenia}
             </PrzyciskLink>
+          ) : innePrzysluguja ? (
+            <Przycisk wariant="glowny" ikona="kalkulator" onClick={onSprawdzWyliczenia} aria-controls={ID_WYLICZEN}>
+              {T.sprawdzWyliczenia}
+            </Przycisk>
           ) : null}
           <PrzyciskLink href={trasy.ViewSampleCaseData()} wariant="drugorzedny">
             {T.wrocDoDanychSprawyPrzycisk}
           </PrzyciskLink>
           <p className="m-0 min-w-0 flex-[1_1_17.5rem] text-body">
-            {zm ? (zwzm ? T.opisSprawdzeniaZwzm : T.opisSprawdzenia) : T.opisBezSprawdzenia}
+            {zm ? (zwzm ? T.opisSprawdzeniaZwzm : T.opisSprawdzenia) : innePrzysluguja ? T.sprawdzWyliczeniaTutaj : T.opisBezSprawdzenia}
           </p>
         </div>
       </Stos>
@@ -212,11 +259,44 @@ function KartaWarunkow({ wynik }: { wynik: WynikWeryfikacjiSprawy }) {
   );
 }
 
+// Wyliczenia i porównanie z rozstrzygnięciem liczy serwer: POST /api/v1/przykladowe-sprawy/weryfikacja.
+function SekcjaWyliczen({ sprawa }: { sprawa: SprawaPrzykladowa }) {
+  const { tolerancjaPorownaniaKwotyGrosze: tolerancja } = useParametry();
+  const dzis = useDzis();
+  const wyliczenie = useWyliczeniaSprawyApi(sprawa, tolerancja, dzis);
+  const odpowiedz = wyliczenie.wartosc;
+  if (odpowiedz === null) {
+    return wyliczenie.blad ? (
+      <BladWyliczenia kod={wyliczenie.blad.kod} parametry={wyliczenie.blad.parametry as never} onPonow={wyliczenie.ponow} />
+    ) : (
+      <SzkieletWyliczenia />
+    );
+  }
+  if (odpowiedz.komunikatWyliczen) return <Komunikat kod={odpowiedz.komunikatWyliczen.kod} />;
+  if (odpowiedz.wyliczeniaSwiadczen === null || odpowiedz.porownanieSwiadczen === undefined) return null;
+  return (
+    <WyliczeniaSprawy
+      sprawa={sprawa}
+      wyliczenie={odpowiedz.wyliczeniaSwiadczen}
+      porownanie={odpowiedz.porownanieSwiadczen}
+      tolerancja={tolerancja}
+    />
+  );
+}
+
 export function WidokWeryfikacjiSprawy() {
   const stanSesji = useStanSesji();
   const gosc = useCzyGosc();
   const sprawa = stanSesji?.przykladowaSprawa;
   const wynik = sprawa?.weryfikacja;
+  const [wyliczeniaWidoczne, setWyliczeniaWidoczne] = useState(false);
+  const sekcjaWyliczen = useRef<HTMLElement>(null);
+
+  function pokazWyliczenia() {
+    setWyliczeniaWidoczne(true);
+    // Sekcja pojawia się po renderze, więc fokus przenosimy w następnej klatce.
+    requestAnimationFrame(() => sekcjaWyliczen.current?.focus());
+  }
 
   if (sprawa === undefined || wynik === undefined) {
     return (
@@ -254,7 +334,12 @@ export function WidokWeryfikacjiSprawy() {
       />
       <Stos odstep={7.5} className="max-w-tresc">
         <KomunikatyWeryfikacji sprawa={sprawa} wynik={wynik} />
-        <KartaWyniku sprawa={sprawa} wynik={wynik} />
+        <KartaWyniku sprawa={sprawa} wynik={wynik} onSprawdzWyliczenia={pokazWyliczenia} />
+        {wyliczeniaWidoczne ? (
+          <section id={ID_WYLICZEN} ref={sekcjaWyliczen} tabIndex={-1} aria-label={T.sprawdzWyliczenia} className="outline-none">
+            <SekcjaWyliczen sprawa={sprawa} />
+          </section>
+        ) : null}
         <KartaWarunkow wynik={wynik} />
         <Notatka>{gosc ? T.notaNiezaleznoscGosc : T.notaNiezaleznosc}</Notatka>
       </Stos>

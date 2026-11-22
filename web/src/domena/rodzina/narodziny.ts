@@ -208,14 +208,15 @@ function numerSprawy(idSprawy: IdSprawy): number {
 
 /**
  * Czy umowa o pracę matki trwa po dniu porodu (3.3.2.2.3): forma umowa o pracę bez ustania tej umowy
- * przed porodem, w dniu porodu ani przez przedłużenie do dnia porodu.
+ * przed porodem ani w dniu porodu, także przez przedłużenie do dnia porodu.
  */
 export function czyUmowaOPraceTrwaPoPorodzie(matka: DaneRodzica | null, dataPorodu: DataISO): boolean {
   if (matka?.formaZatrudnienia?.wartosc !== 'umowa-o-prace') return false;
   const zmiana = matka.zmianaZatrudnienia;
   if (zmiana?.rodzaj.wartosc !== 'ustanie') return true;
   if (zmiana.forma !== undefined && zmiana.forma.wartosc !== 'umowa-o-prace') return true;
-  if (zmiana.umowaPrzedluzonaDoPorodu === true) return false;
+  // Umowa przedłużona do dnia porodu (art. 177 § 3 Kodeksu pracy) kończy się w dniu porodu, a przy porodzie przed
+  // dniem jej rozwiązania przedłużenie nie następuje i umowa trwa do tego dnia, więc rozstrzyga sama data ustania.
   const dataUstania = zmiana.data?.wartosc;
   return dataUstania !== undefined && porownajDaty(dataUstania, dataPorodu) > 0;
 }

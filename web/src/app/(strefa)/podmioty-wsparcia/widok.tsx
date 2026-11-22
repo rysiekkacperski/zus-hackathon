@@ -14,6 +14,7 @@ import {
   tekstAdresuStrony,
 } from '@/domena/przewodnik/ryzyka';
 import type { Katalog, PodmiotWsparcia, RodzajSytuacjiSzczegolnej } from '@/domena/typy';
+import { formatujDate } from '@/komponenty/format';
 import { Ikona } from '@/komponenty/ikona';
 import { Komunikat } from '@/komponenty/komunikat';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -50,6 +51,13 @@ function KartaOrganizacji({ podmiot, indeks }: { podmiot: PodmiotWsparcia; indek
         {podmiot.nazwa}
       </h2>
       <p className="m-0 mt-2 text-body">{podmiot.zakresPomocy}</p>
+      {podmiot.krs ? (
+        <p className="m-0 mt-2 text-small text-ink-muted">
+          {podmiot.weryfikacjaKrs
+            ? tekst.statusOppZWeryfikacja({ krs: podmiot.krs, data: formatujDate(podmiot.weryfikacjaKrs) })
+            : tekst.statusOpp({ krs: podmiot.krs })}
+        </p>
+      ) : null}
       <ul className="m-0 mt-4 grid list-none gap-3 border-t border-line-row p-0 pt-4">
         {podmiot.telefon ? (
           <li>
@@ -133,6 +141,7 @@ export function WidokPodmiotowWsparcia() {
               onZmiana={zmienSytuacje}
             />
           </div>
+          <p className="m-0 mt-4 text-body">{tekst.charytatywne}</p>
           <p className="m-0 mt-4 text-body" aria-live="polite">
             {tekst.licznik} <strong>{organizacje.length}</strong>
           </p>

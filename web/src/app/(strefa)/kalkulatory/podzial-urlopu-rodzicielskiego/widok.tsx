@@ -10,19 +10,22 @@ import { Odnosnik } from '@/komponenty/odnosnik';
 import { PoleKwoty, PoleLiczby } from '@/komponenty/pole-tekstowe';
 import { Przycisk, PrzyciskLink } from '@/komponenty/przycisk';
 import { StanPusty } from '@/komponenty/stan-pusty';
+import { BladWyliczenia, SzkieletWyliczenia } from '@/komponenty/stan-wyliczenia';
 import { Ikona } from '@/komponenty/ikona';
 import { trasy } from '@/komponenty/rama/trasy';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
+import { wyliczPodzialUrlopu } from '@/dane/api/klient';
+import { useWyliczenieApi } from '@/dane/api/wyliczenie';
 import { useKontekstRodziny } from '@/dane/magazyn/hooki';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { zapiszPlanPodzialu } from '@/dane/magazyn/operacje/kalkulacje-decyzje';
 import { formatujDate } from '@/domena/daty';
 import { formatujKwote, parsujKwote } from '@/domena/kwoty';
 import { daneDzieckaDoKalkulatora, maPrawoDoZasilku, walidujPodstawe, walidujTygodnie } from '@/domena/kalkulatory/wariant';
-import { wartosciStartowe, wyliczPodzial, zasadyPodzialu, type WynikPodzialu } from '@/domena/kalkulatory/podzial';
+import { wartosciStartowe, zasadyPodzialu } from '@/domena/kalkulatory/podzial';
 import type { BledyPol, KodKomunikatu, PodstawaWymiaru, RodzicWRodzinie } from '@/domena/typy';
 import { teksty } from '@/teksty';
-import { ostatniPodzial, podstawaZKontaZus, wariantMatkiZPlanu, wybranyWariantSprawy, type StanPodstawy } from '../_czesci/dane-kalkulatorow';
+import { ostatniPodzial, podstawaDoZadaniaApi, podstawaZKontaZus, wariantMatkiZPlanu, wybranyWariantSprawy, type StanPodstawy } from '../_czesci/dane-kalkulatorow';
 import { WynikPodzialuUrlopu } from './_czesci/wynik-podzialu';
 
 const t = teksty.ViewCalcParentalSplit;
@@ -35,6 +38,12 @@ const POLA: Record<Pole, string> = {
   tygodnieDrugiegoRodzica: 'tygodnieDrugiegoRodzica',
   podstawaDrugiego: 'podstawaDrugiego',
 };
+/** Tygodnie i podstawy rodziców ostatniego wyliczenia. */
+interface WejsciePodzialu {
+  M: number;
+  D: number;
+  podstawy: Partial<Record<RodzicWRodzinie, PodstawaWymiaru>>;
+}
 interface WpisPodzialu {
   tekstMatki: string;
   tekstDrugiego: string;
@@ -97,29 +106,46 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
   const [zapisano, setZapisano] = useState(false);
   const [bladZapisu, setBladZapisu] = useState<KodKomunikatu | null>(null);
 
-  const policz = (M: number, D: number, podstawy: Partial<Record<RodzicWRodzinie, PodstawaWymiaru>>) => ({
-    M,
-    D,
-    podstawy,
-    wynik: wyliczPodzial({
-      podstawy,
-      wariantMatki,
-      liczbaDzieci: dziecko.liczbaDzieci,
-      zaZyciem: dziecko.zaZyciem,
-      tygodnieMatki: M,
-      tygodnieDrugiegoRodzica: D,
-      katalog,
-      dzien,
-      drugiRodzicBezPrawa: bezPrawa,
-    }),
-  });
-  const [wyliczenie, setWyliczenie] = useState<{ M: number; D: number; podstawy: Partial<Record<RodzicWRodzinie, PodstawaWymiaru>>; wynik: WynikPodzialu } | null>(() => {
+  // Wynik podziału liczy serwer: POST /api/v1/kalkulator/podzial-urlopu, z podstawą z konta ZUS jako podstawami składek.
+  // Na starcie wynik pokazuje zapisany albo startowy podział, gdy tygodnie mieszczą się w wymiarze.
+  const [wejscie, setWejscie] = useState<WejsciePodzialu | null>(() => {
     if (podstawaMatkiZus === null || poleDrugiego) return null;
     const podstawy: Partial<Record<RodzicWRodzinie, PodstawaWymiaru>> = { matka: podstawaMatkiZus };
     if (podstawaDrugiegoZus) podstawy['drugi-rodzic'] = podstawaDrugiegoZus;
-    const w = policz(start.tygodnieMatki, bezPrawa ? 0 : start.tygodnieDrugiegoRodzica, podstawy);
-    return Object.keys(w.wynik.bledy).length === 0 ? w : null;
+    const M = start.tygodnieMatki;
+    const D = bezPrawa ? 0 : start.tygodnieDrugiegoRodzica;
+    const tm = walidujTygodnie(String(M), z.maks);
+    const td = walidujTygodnie(String(D), z.maks);
+    return 'kod' in tm || 'kod' in td || M + D > z.wymiar ? null : { M, D, podstawy };
   });
+  const formaMatki = dane.matka.formaZatrudnienia?.wartosc;
+  const formaDrugiegoDoPodstawy = formaDrugiego === 'brak-drugiego-rodzica' ? null : formaDrugiego;
+  // Hook wyliczenia porównuje treść żądania, więc żądanie powstaje przy każdym renderze bez memoizacji.
+  const drugiegoWejscia = wejscie?.podstawy['drugi-rodzic'];
+  const zadanieApi =
+    wejscie === null || wejscie.podstawy.matka === undefined
+      ? null
+      : {
+          dzis,
+          dataPorodu: dzien,
+          liczbaDzieci: dziecko.liczbaDzieci,
+          zaZyciem: dziecko.zaZyciem,
+          wariantMatki,
+          drugiRodzicBezPrawa: bezPrawa,
+          tygodnieMatki: wejscie.M,
+          tygodnieDrugiegoRodzica: wejscie.D,
+          podstawy: {
+            matka: podstawaDoZadaniaApi(wejscie.podstawy.matka, kopiaMatki, formaMatki),
+            ...(drugiegoWejscia
+              ? { 'drugi-rodzic': podstawaDoZadaniaApi(drugiegoWejscia, kontekst.daneZusDrugiegoRodzica, formaDrugiegoDoPodstawy) }
+              : {}),
+          },
+        };
+  const wyliczenieApi = useWyliczenieApi(zadanieApi, wyliczPodzialUrlopu);
+  // Wynik pokazujemy wyłącznie z odpowiedzią dla bieżących tygodni i podstaw, bo zapis bierze tygodnie z wejścia.
+  const wyliczenie = wejscie !== null && wyliczenieApi.aktualne && wyliczenieApi.wartosc
+    ? { ...wejscie, wynik: wyliczenieApi.wartosc.wynik }
+    : null;
 
   const razem = (Number(tekstMatki.trim()) || 0) + (bezPrawa ? 0 : Number(tekstDrugiego.trim()) || 0);
 
@@ -156,12 +182,12 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
   function wylicz() {
     setZapisano(false);
     if (!walidacja.sprobujWyslac()) {
-      setWyliczenie(null);
+      setWejscie(null);
       return;
     }
     const { tm, td, podstawy } = ocen({ tekstMatki, tekstDrugiego, tekstPodstawyMatki, tekstPodstawyDrugiego });
     if ('kod' in tm || 'kod' in td) return;
-    setWyliczenie(policz(tm.tygodnie, td.tygodnie, podstawy));
+    setWejscie({ M: tm.tygodnie, D: td.tygodnie, podstawy });
   }
 
   function zapisz() {
@@ -381,6 +407,10 @@ function Kalkulator({ kontekst }: { kontekst: NonNullable<ReturnType<typeof useK
                 )}
               </div>
             </>
+          ) : wejscie !== null && wyliczenieApi.blad ? (
+            <BladWyliczenia kod={wyliczenieApi.blad.kod} parametry={wyliczenieApi.blad.parametry as never} onPonow={wyliczenieApi.ponow} />
+          ) : wejscie !== null ? (
+            <SzkieletWyliczenia />
           ) : (
             <StanPusty ikona="kalkulator">{poleDrugiego ? t.pustyWynikPodstawa : t.pustyWynik}</StanPusty>
           )}

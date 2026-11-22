@@ -38,7 +38,7 @@ export function KomunikatRezygnacjiPoWyslaniuZam(props: Props) {
         termin: formatujDate(rezygnacja.termin),
       }}
       akcje={
-        <PrzyciskLink href={trasy.ViewEzusHome()} wariant="drugorzedny" nowaKarta>
+        <PrzyciskLink href={trasy.ViewEzusZas23()} wariant="drugorzedny" nowaKarta>
           {t.przejdzDoEzus}
         </PrzyciskLink>
       }

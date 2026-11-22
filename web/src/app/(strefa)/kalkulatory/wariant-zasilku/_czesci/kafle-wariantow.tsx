@@ -64,6 +64,8 @@ export function KafleWariantow({ s, wybrany, zapisywanie, onWybor }: KafleWarian
   const tygRazem = s.tygodnieMacierzynskiego + s.tygodnieRodzicielskiego;
   const [m81, r81] = s.wariant81.okresy;
   const [m100, r70] = s.wariant100i70.okresy;
+  // Stawki z odpowiedzi silnika, czyli z katalogu w dniu zdarzenia.
+  const st = { s815: formatujProcent(m81.stawka), s100: formatujProcent(m100.stawka), s70: formatujProcent(r70.stawka) };
   const zero = s.tygodnieRodzicielskiego === 0;
 
   const akcja = (w: Wariant) => {
@@ -76,7 +78,7 @@ export function KafleWariantow({ s, wybrany, zapisywanie, onWybor }: KafleWarian
         </p>
       );
     }
-    const etykieta = wybrany === null ? (w === '81-5' ? t.wybierz81 : t.wybierz100) : w === '81-5' ? t.zmienNa81 : t.zmienNa100;
+    const etykieta = wybrany === null ? (w === '81-5' ? t.wybierz81(st) : t.wybierz100(st)) : w === '81-5' ? t.zmienNa81(st) : t.zmienNa100(st);
     return (
       <Przycisk wariant="drugorzedny" szerokosc="pelna" zajety={zapisywanie} onClick={() => onWybor(w)}>
         {etykieta}
@@ -85,7 +87,7 @@ export function KafleWariantow({ s, wybrany, zapisywanie, onWybor }: KafleWarian
   };
 
   const kafel100 = (
-    <Kafel id="w10070-tytul" tytul={t.wariant100} opis={t.wariant100Opis} akcja={akcja('100-70')}>
+    <Kafel id="w10070-tytul" tytul={t.wariant100(st)} opis={t.wariant100Opis} akcja={akcja('100-70')}>
       <Kwota etykieta={t.miesiecznieMacierzynski({ tygodnie: t.tygodnie(s.tygodnieMacierzynskiego) })} kwota={m100.miesiecznie} dopisek={okresTekst(m100.okres)} />
       <Podwyzszenie w={m100} />
       {zero ? (
@@ -107,11 +109,11 @@ export function KafleWariantow({ s, wybrany, zapisywanie, onWybor }: KafleWarian
 
   return (
     <div className="flex flex-wrap items-stretch gap-6">
-      <Kafel id="w815-tytul" tytul={t.wariant81} opis={zero ? t.wariant81OpisZero : t.wariant81Opis} akcja={akcja('81-5')}>
+      <Kafel id="w815-tytul" tytul={t.wariant81(st)} opis={zero ? t.wariant81OpisZero : t.wariant81Opis} akcja={akcja('81-5')}>
         {zero ? (
           <>
             <Kwota etykieta={t.miesiecznieMacierzynski({ tygodnie: t.tygodnie(s.tygodnieMacierzynskiego) })} kwota={m81.miesiecznie} dopisek={okresTekst(m81.okres)} />
-            <Kwota etykieta={t.wyrownanieTytul} kwota={s.wariant81.wyrownanie} dopisek={t.jednorazowo} />
+            <Kwota etykieta={t.wyrownanieTytul(st)} kwota={s.wariant81.wyrownanie} dopisek={t.jednorazowo} />
           </>
         ) : (
           <>

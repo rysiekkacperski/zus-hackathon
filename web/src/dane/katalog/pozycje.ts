@@ -19,13 +19,13 @@ export const ADRESY_KANALOW = {
 
 /** Odnośniki do serwisów informacyjnych w instrukcjach pozycji. */
 export const ODNOSNIKI = {
-  zus: { etykieta: 'Zasiłki – serwis informacyjny ZUS', url: 'https://www.zus.pl/swiadczenia/zasilki' },
+  zus: { etykieta: 'Zasiłki: serwis informacyjny ZUS', url: 'https://www.zus.pl/swiadczenia/zasilki' },
   mrpips: {
-    etykieta: 'Urlop rodzicielski – Ministerstwo Rodziny, Pracy i Polityki Społecznej',
+    etykieta: 'Urlop rodzicielski: Ministerstwo Rodziny, Pracy i Polityki Społecznej',
     url: 'https://www.gov.pl/web/rodzina/urlop-rodzicielski',
   },
   pip: {
-    etykieta: 'Rodzicielstwo – porady prawne Państwowej Inspekcji Pracy',
+    etykieta: 'Rodzicielstwo: porady prawne Państwowej Inspekcji Pracy',
     url: 'https://www.pip.gov.pl/dla-pracodawcow/porady-prawne/rodzicielstwo',
   },
 } as const;
@@ -194,7 +194,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     },
     instrukcja: instrukcja(
       [
-        'Sprawdź, czy dziecko ma już numer PESEL – nadaje go urząd stanu cywilnego po zgłoszeniu urodzenia.',
+        'Sprawdź, czy dziecko ma już numer PESEL. Nadaje go urząd stanu cywilnego po zgłoszeniu urodzenia.',
         'Przy jednoosobowej działalności gospodarczej wybierz przycisk Przejdź do eZUS i zaloguj się.',
         'W eZUS wypełnij zgłoszenie członka rodziny do ubezpieczenia zdrowotnego (ZUS ZCNA) i wyślij je.',
         'Przy umowie o pracę albo umowie zlecenia przekaż dane dziecka pracodawcy albo zleceniodawcy, który zgłosi dziecko w ZUS na formularzu ZUS ZCNA.',
@@ -203,7 +203,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
       [
         'Numer PESEL dziecka',
         'Imię, nazwisko i data urodzenia dziecka',
-        'Stopień pokrewieństwa – dziecko własne',
+        'Stopień pokrewieństwa: dziecko własne',
         'Adres zamieszkania dziecka, jeśli jest inny niż Twój',
       ],
       [],
@@ -242,8 +242,8 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
         'Adres zameldowania dziecka',
         'Adres do e-Doręczeń',
         'Twój adres e-mail i numer telefonu',
-        'Przez internet – bez dokumentów',
-        'Osobiście – dowód osobisty albo paszport',
+        'Przez internet: bez dokumentów',
+        'Osobiście: dowód osobisty albo paszport',
       ],
       [],
       ADRESY_KANALOW.zgloszenieUrodzenia,
@@ -262,7 +262,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     kosztSpoznienia: { typ: 'skutek', tekst: 'Utrata możliwości wyboru równych wypłat w wysokości 81,5% przez cały rok.' },
     instrukcja: instrukcja(
       [
-        'Przygotuj skrócony odpis aktu urodzenia dziecka – dostaniesz go po zgłoszeniu urodzenia.',
+        'Przygotuj skrócony odpis aktu urodzenia dziecka. Dostaniesz go po zgłoszeniu urodzenia.',
         'Napisz wniosek o urlop macierzyński od dnia porodu i o urlop rodzicielski, który zacznie się zaraz po nim. Wzór wniosku zwykle ma dział kadr.',
         'Złóż wniosek razem z odpisem aktu urodzenia w dziale kadr najpóźniej w terminie podanym w planie.',
         'Poproś o potwierdzenie przyjęcia wniosku i zachowaj jego kopię.',
@@ -294,17 +294,17 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     kosztSpoznienia: { typ: 'skutek', tekst: 'Utrata możliwości wyboru równych wypłat w wysokości 81,5% przez cały rok.' },
     instrukcja: instrukcja(
       [
-        'Po porodzie podaj w przewodniku datę porodu – przeliczymy termin wniosku.',
+        'Po porodzie podaj w przewodniku datę porodu. Przeliczymy wtedy termin wniosku.',
         'Wybierz przycisk Wypełnij wniosek. Kreator otworzy się w przewodniku.',
         'Wybierz rodzaj urlopu, za który chcesz otrzymać zasiłek, i wariant wysokości zasiłku.',
         'Sprawdź swoje dane, dane dziecka i numer rachunku do wypłaty zasiłku.',
         'Potwierdź oświadczenia i wyślij wniosek do ZUS.',
       ],
       [
-        'Data porodu i dane dziecka – po porodzie',
+        'Data porodu i dane dziecka, które podasz po porodzie',
         'Okres urlopu, za który chcesz otrzymać zasiłek',
         'Numer rachunku do wypłaty zasiłku',
-        'Wniosek o zasiłek macierzyński (ZAM) – przygotujesz go w kreatorze',
+        'Wniosek o zasiłek macierzyński (ZAM), który przygotujesz w kreatorze',
       ],
       URLOPY,
     ),
@@ -414,7 +414,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     },
     instrukcja: instrukcja(
       [
-        'Sprawdź, czy dziecko ma już numer PESEL – bez niego nie złożysz wniosku.',
+        'Sprawdź, czy dziecko ma już numer PESEL. Bez niego nie złożysz wniosku.',
         'Wybierz przycisk Złóż wniosek o 800+ w eZUS i zaloguj się.',
         'Wpisz dane dziecka, sprawdź swoje dane i podaj numer rachunku do wypłaty świadczenia.',
         'Wyślij wniosek. Informację o przyznaniu świadczenia ZUS przekaże na Twoje konto w eZUS.',
@@ -494,7 +494,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
         'Dane członków rodziny',
         'Numer rachunku do wypłaty',
         'Zaświadczenie lekarza albo położnej o opiece medycznej od 10. tygodnia ciąży do porodu',
-        'Dokumenty o dochodach – tylko jeśli dochód rodziny się zmienił',
+        'Dokumenty o dochodach, jeśli dochód rodziny się zmienił',
       ],
       [],
       ADRESY_KANALOW.empatia,
@@ -730,8 +730,8 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
       [
         'Gdy dziecko zachoruje, poproś lekarza o zaświadczenie lekarskie e-ZLA na opiekę nad dzieckiem.',
         'Zaświadczenie e-ZLA trafi do ZUS i do płatnika składek bez Twojego udziału.',
-        'Wybierz przycisk Przejdź do eZUS, zaloguj się i wypełnij wniosek o zasiłek opiekuńczy (Z-15).',
-        'Przy umowie o pracę przekaż wniosek Z-15 pracodawcy, a w pozostałych przypadkach wyślij go do ZUS.',
+        'Wybierz przycisk Wypełnij wniosek Z-15 i wypełnij wniosek o zasiłek opiekuńczy w kreatorze przewodnika.',
+        'Przy umowie o pracę przekaż wniosek Z-15 pracodawcy, przy umowie zlecenia zleceniodawcy, gdy wypłaca zasiłki, a w pozostałych przypadkach wyślij go do ZUS.',
         'Oznacz sprawę w przewodniku jako złożoną.',
       ],
       ['Zaświadczenie lekarskie e-ZLA na opiekę nad dzieckiem', 'Wniosek o zasiłek opiekuńczy (Z-15)', 'Numer rachunku do wypłaty zasiłku'],
@@ -792,9 +792,9 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
       [
         'Okres niezdolności do pracy z zaświadczenia e-ZLA',
         'Numer rachunku do wypłaty zasiłku',
-        'Zaświadczenie lekarskie e-ZLA – lekarz wysyła je sam',
-        'Zaświadczenie płatnika składek (Z-3 albo Z-3a) – wystawia pracodawca albo zleceniodawca',
-        'Wniosek o zasiłek chorobowy (ZAS-53) – przygotujesz go w kreatorze',
+        'Zaświadczenie lekarskie e-ZLA, które lekarz wysyła sam',
+        'Zaświadczenie płatnika składek (Z-3 albo Z-3a), które wystawia pracodawca albo zleceniodawca',
+        'Wniosek o zasiłek chorobowy (ZAS-53), który przygotujesz w kreatorze',
       ],
       ZASILKI,
     ),
@@ -1027,7 +1027,7 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
         'Dane dziecka',
         'Numer rachunku do wypłaty zasiłku',
         'Dokument sądu o przysposobieniu albo umowa ze starostą',
-        'Wniosek o zasiłek macierzyński (ZAM) – przygotujesz go w kreatorze',
+        'Wniosek o zasiłek macierzyński (ZAM), który przygotujesz w kreatorze',
       ],
       URLOPY,
     ),
@@ -1067,14 +1067,14 @@ export const pozycjeKatalogu: readonly PozycjaKatalogu[] = [
     warunekOpis:
       'Profil wskazuje urodzenie martwego dziecka, poronienie potwierdzone zaświadczeniem o martwym urodzeniu albo zgon dziecka, a matka podlegała ubezpieczeniu chorobowemu w dniu porodu.',
     instytucjaIKanal:
-      'Przy umowie o pracę pracodawca, w pozostałych przypadkach ZUS, wniosek ZAM w eZUS z odpisem skróconym aktu urodzenia z adnotacją o martwym urodzeniu albo z zaświadczeniem o martwym urodzeniu.',
+      'Przy umowie o pracę pracodawca, przy umowie zlecenia zleceniodawca, gdy wypłaca zasiłki, w pozostałych przypadkach ZUS, wniosek ZAM w eZUS z odpisem skróconym aktu urodzenia z adnotacją o martwym urodzeniu albo z zaświadczeniem o martwym urodzeniu.',
     kanaly: { 'umowa-o-prace': U_PRACODAWCY, 'umowa-zlecenia': ezus('/ezus'), jdg: ezus('/ezus') },
     regulaTerminu: BRAK_TERMINU,
     kosztSpoznienia: { typ: 'brak' },
     instrukcja: instrukcja(
       [
         'Poproś szpital o zaświadczenie o martwym urodzeniu albo urząd stanu cywilnego o odpis skrócony aktu urodzenia z adnotacją o martwym urodzeniu.',
-        'Przy umowie o pracę przekaż dokument pracodawcy razem z wnioskiem o urlop macierzyński.',
+        'Przy umowie o pracę przekaż dokument pracodawcy razem z wnioskiem o urlop macierzyński. Przy umowie zlecenia, gdy zasiłek wypłaca zleceniodawca, złóż mu wniosek o zasiłek macierzyński (ZAM) z tym dokumentem.',
         'W pozostałych przypadkach wybierz przycisk Przejdź do eZUS, zaloguj się i wypełnij wniosek o zasiłek macierzyński (ZAM).',
         'Dołącz dokument i wyślij wniosek do ZUS.',
         'Oznacz sprawę w przewodniku jako złożoną.',

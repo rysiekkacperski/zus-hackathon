@@ -1,8 +1,8 @@
 'use client';
 
 // ViewZamData (3.9.1.1.3): dane wnioskodawcy z konta ZUS, dane dziecka z profilu rodziny i rachunek do wypłaty.
-// Po porodzie ekran ma część z danymi wnioskodawcy i rachunkiem oraz dwie części na każde dziecko (imię, nazwisko
-// i data urodzenia, potem PESEL i miejscowość urodzenia). Przed porodem: dane wnioskodawcy z informacją o danych dziecka, potem rachunek.
+// Po porodzie ekran ma część z danymi wnioskodawcy, część z rachunkiem oraz dwie części na każde dziecko (imię, nazwisko
+// i data urodzenia, potem PESEL i miejscowość urodzenia). Przed porodem: dane wnioskodawcy, potem informacja o danych dziecka z rachunkiem.
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { useDzis, useStanKonta } from '@/dane/magazyn/hooki';
@@ -117,13 +117,13 @@ function walidujDane(w: FormularzDanych, dataUrodzeniaDziecka: (i: number) => st
 }
 
 /**
- * Pola każdej części w kolejności na ekranie. Po porodzie: rachunek, potem dwie części na każde dziecko.
- * Przed porodem: część z danymi wnioskodawcy bez pól, potem rachunek.
+ * Pola każdej części w kolejności na ekranie. Po porodzie: telefon, rachunek, potem dwie części na każde dziecko.
+ * Przed porodem: telefon, potem rachunek.
  */
 function podzialDanych(liczbaDzieci: number): string[][] {
   if (liczbaDzieci === 0) return [[ID_TELEFONU], [ID_RACHUNKU]];
   const dzieci = Array.from({ length: liczbaDzieci }, (_, i) => CZESCI_DZIECKA.map((pola) => pola.map((p) => idPola(p, i)))).flat();
-  return [[ID_TELEFONU, ID_RACHUNKU], ...dzieci];
+  return [[ID_TELEFONU], [ID_RACHUNKU], ...dzieci];
 }
 
 function FormularzDanych({ dane }: { dane: DaneWnioskuZam }) {
@@ -323,7 +323,7 @@ function FormularzDanych({ dane }: { dane: DaneWnioskuZam }) {
   const tytulDziecka = (i: number) => (liczbaDzieci > 1 ? t.dziecko.tytulNumer({ numer: i + 1 }) : t.dziecko.tytul);
 
   const czesciDzieci: ReactNode[] = dzieci.flatMap((d, i) => [
-    <CzescFormularza key={`${i}-imie`} czesci={czesci} numer={2 + 2 * i}>
+    <CzescFormularza key={`${i}-imie`} czesci={czesci} numer={3 + 2 * i}>
       <Karta tytul={tytulDziecka(i)} bezLinii>
         <div className="flex flex-col gap-6">
           {i === 0 ? <p className="m-0">{t.dziecko.wstep}</p> : null}
@@ -358,7 +358,7 @@ function FormularzDanych({ dane }: { dane: DaneWnioskuZam }) {
         </div>
       </Karta>
     </CzescFormularza>,
-    <CzescFormularza key={`${i}-pesel`} czesci={czesci} numer={3 + 2 * i}>
+    <CzescFormularza key={`${i}-pesel`} czesci={czesci} numer={4 + 2 * i}>
       <Karta tytul={tytulDziecka(i)} bezLinii>
         <div className="flex flex-col gap-6">
           {i === 0 && brakPeselWProfilu ? (
@@ -418,6 +418,8 @@ function FormularzDanych({ dane }: { dane: DaneWnioskuZam }) {
           <>
             <CzescFormularza czesci={czesci} numer={1}>
               {kartaWnioskodawcy}
+            </CzescFormularza>
+            <CzescFormularza czesci={czesci} numer={2}>
               {kartaRachunku}
             </CzescFormularza>
             {czesciDzieci}
@@ -426,11 +428,11 @@ function FormularzDanych({ dane }: { dane: DaneWnioskuZam }) {
           <>
             <CzescFormularza czesci={czesci} numer={1}>
               {kartaWnioskodawcy}
+            </CzescFormularza>
+            <CzescFormularza czesci={czesci} numer={2}>
               <Karta tytul={t.dziecko.tytul} bezLinii>
                 <p className="m-0">{t.dziecko.przedPorodem}</p>
               </Karta>
-            </CzescFormularza>
-            <CzescFormularza czesci={czesci} numer={2}>
               {kartaRachunku}
             </CzescFormularza>
           </>

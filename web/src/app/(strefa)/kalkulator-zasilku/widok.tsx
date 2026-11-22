@@ -4,8 +4,9 @@
 // mieści się w oknie bez przewijania, a pola walidują się po opuszczeniu. „Oblicz zasiłek” na ostatniej części
 // sprawdza cały formularz i przy błędzie przenosi do części z pierwszym błędnym polem.
 import { useSearchParams } from 'next/navigation';
-import { useState, type FormEvent, type ReactNode } from 'react';
-import { dodajMiesiace, formatujDate } from '@/domena/daty';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { dodajMiesiace, formatujDate, parsujDate } from '@/domena/daty';
+import { progiUzupelniajacego } from '@/domena/kalkulatory';
 import type {
   DaneWejscioweKalkulatora,
   FormaPrzyjecia,
@@ -13,7 +14,7 @@ import type {
   PodstawaWymiaru,
   RodzicWRodzinie,
 } from '@/domena/typy';
-import { useCzesciFormularza } from '@/komponenty/czesci-formularza';
+import { adresCzesci, useCzesciFormularza } from '@/komponenty/czesci-formularza';
 import { GrupaOpcji } from '@/komponenty/grupa-opcji';
 import { Karta } from '@/komponenty/karta';
 import { Komunikat } from '@/komponenty/komunikat';
@@ -40,12 +41,13 @@ import { slotyDanychWejsciowych, type PropsSlotu } from './_sloty';
 import { POLA_CZESCI, czesciKalkulatora, type CzescKalkulatora } from './_czesci/czesci-kalkulatora';
 import {
   KOLEJNOSC_POL,
-  MAKS_DNI_POBYTU,
   OPCJE_FORMY_DRUGIEGO,
   OPCJE_FORMY_MATKI,
   bledyFormularza,
+  datyKolejnych,
   formularzZDanych,
   kategoriaWczesniactwa,
+  maksDniPobytu,
   uzupelnijFormularz,
   walidujFormularz,
   zbudujDaneWejsciowe,
@@ -156,6 +158,16 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
   });
   const czesc: CzescKalkulatora = listaCzesci[czesci.czesc - 1] ?? 'zdarzenie';
 
+  // Gość trzyma szkic tylko w pamięci karty, więc po przeładowaniu strony z dalszą częścią w adresie zaczyna od części 1.
+  const szkicGosciaSprawdzony = useRef(false);
+  useEffect(() => {
+    if (szkicGosciaSprawdzony.current) return;
+    szkicGosciaSprawdzony.current = true;
+    if (!kontekst.gosc || stanRoboczy !== null) return;
+    if (Number(parametryAdresu.get('czesc') ?? '1') <= 1) return;
+    window.history.replaceState(window.history.state, '', adresCzesci(`${window.location.pathname}${window.location.search}${window.location.hash}`, 1));
+  }, [kontekst.gosc, stanRoboczy, parametryAdresu]);
+
   function zmien<P extends PoleFormularza>(nazwa: P, wartosc: FormularzKalkulatora[P]['wartosc']) {
     ustawFormularz((poprzedni) => zmienPole(poprzedni, nazwa, wartosc));
   }
@@ -243,9 +255,12 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
           : t.wstepBezDanych
       : t.wstepProfil;
 
+  // Progi uzupełniającego urlopu ze słownika wymiarów i okresów obowiązujące w dniu porodu.
+  const progiUzupelniajacegoUrlopu = progiUzupelniajacego(kontekst.katalog, parsujDate(f.dataPorodu.wartosc) ?? dzis);
   const kat = kategoriaWczesniactwa(
     /^\d+$/.test(f.tydzienCiazy.wartosc.trim()) ? Number(f.tydzienCiazy.wartosc.trim()) : null,
     /^\d+$/.test(f.masaG.wartosc.trim()) ? Number(f.masaG.wartosc.trim()) : null,
+    progiUzupelniajacegoUrlopu,
   );
 
   const opcjeZdarzen = (['porod', 'przewidywany-porod', 'przyjecie'] as const).map((w) => ({
@@ -392,6 +407,20 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
                 <ZrodloPola zrodlo={f.dataUrodzeniaDziecka.zrodlo} />
                 {informacja('dataUrodzeniaDziecka')}
               </div>
+              {f.formaPrzyjecia.wartosc === 'przysposobienie' ? (
+                <div className="grid gap-1">
+                  <PoleDaty
+                    id={idPola('dataUprawomocnienia')}
+                    etykieta={t.dataUprawomocnienia}
+                    podpowiedz={t.dataUprawomocnieniaPodpowiedz}
+                    wartosc={f.dataUprawomocnienia.wartosc}
+                    onZmiana={(w) => zmien('dataUprawomocnienia', w)}
+                    {...pole('dataUprawomocnienia')}
+                    szerokosc="waska"
+                  />
+                  {f.dataUprawomocnienia.wartosc !== '' ? <ZrodloPola zrodlo={f.dataUprawomocnienia.zrodlo} /> : null}
+                </div>
+              ) : null}
             </Stos>
           </Karta>
         );
@@ -410,6 +439,26 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
                 />
                 <ZrodloPola zrodlo={f.liczbaDzieci.zrodlo} />
               </div>
+              {zdarzenie === 'przyjecie' && f.liczbaDzieci.wartosc > 1 ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {datyKolejnych(f).map((tekst, i) => (
+                    <PoleDaty
+                      key={i}
+                      id={i === 0 ? idPola('datyUrodzeniaKolejnych') : `${idPola('datyUrodzeniaKolejnych')}-${i}`}
+                      etykieta={t.dataUrodzeniaKolejnego({ numer: String(i + 2) })}
+                      podpowiedz={i === 0 ? t.dataUrodzeniaKolejnegoPodpowiedz : undefined}
+                      wartosc={tekst}
+                      onZmiana={(w) => {
+                        const daty = [...datyKolejnych(f)];
+                        daty[i] = w;
+                        zmien('datyUrodzeniaKolejnych', daty);
+                      }}
+                      {...(i === 0 ? pole('datyUrodzeniaKolejnych') : { onOpuszczenie: () => walidacja.onOpuszczenie('datyUrodzeniaKolejnych') })}
+                      szerokosc="waska"
+                    />
+                  ))}
+                </div>
+              ) : null}
               <div>
                 <GrupaOpcji<'tak' | 'nie'>
                   nazwa={`${PREFIKS}-za-zyciem`}
@@ -467,9 +516,22 @@ function FormularzKalkulatoraWidok({ kontekst }: { kontekst: KontekstKalkulatora
                   wartosc={f.dniPobytu.wartosc}
                   onZmiana={(w) => zmien('dniPobytu', w)}
                   {...pole('dniPobytu')}
-                  parametryBledu={ocena.parametry.dniPobytu ?? { liczbaDni: String(MAKS_DNI_POBYTU[kat ?? 'a']) }}
+                  parametryBledu={
+                    ocena.parametry.dniPobytu ?? { liczbaDni: String(maksDniPobytu(kat ?? 'a', progiUzupelniajacegoUrlopu)) }
+                  }
                   szerokosc="waska"
                 />
+                {kat === 'c' ? (
+                  <PoleLiczby
+                    id={idPola('pierwszyDzienPobytu')}
+                    etykieta={t.pierwszyDzienPobytu}
+                    podpowiedz={t.pierwszyDzienPobytuPodpowiedz}
+                    wartosc={f.pierwszyDzienPobytu.wartosc}
+                    onZmiana={(w) => zmien('pierwszyDzienPobytu', w)}
+                    {...pole('pierwszyDzienPobytu')}
+                    szerokosc="waska"
+                  />
+                ) : null}
               </Stos>
             ) : null}
           </Karta>

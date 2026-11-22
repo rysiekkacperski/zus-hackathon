@@ -6,8 +6,11 @@
 import { useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import {
+  czesciWyniku,
+  dataZdarzenia,
   koniecCzesci,
   liczbaCalkowita,
+  limityUrlopow,
   walidujLaczenie,
   wyliczLaczenie,
   type FormularzLaczenia,
@@ -21,13 +24,15 @@ import { PoleLiczby } from '@/komponenty/pole-tekstowe';
 import { PoleWyboru } from '@/komponenty/pole-wyboru';
 import { Przycisk } from '@/komponenty/przycisk';
 import { Tabela } from '@/komponenty/tabela';
+import { BladWyliczenia, SzkieletWyliczenia } from '@/komponenty/stan-wyliczenia';
 import { useWalidacjaNaBiezaco } from '@/komponenty/walidacja-na-biezaco';
 import { useDzis, useKatalog } from '@/dane/magazyn/hooki';
 import { porownajDaty } from '@/domena/daty';
-import { wyliczScenariusz } from '@/domena/kalkulatory';
-import type { RodzicWRodzinie } from '@/domena/typy';
+import { laczeniaScenariusza } from '@/domena/kalkulatory';
+import type { LaczenieZPraca, ParametryScenariusza, RodzicWRodzinie } from '@/domena/typy';
 import { teksty } from '@/teksty';
 import { KLASY_ARKUSZA_Z_PRZYKLEJONA_STOPKA } from '../../_czesci/arkusz';
+import { useScenariuszApi } from '../../_czesci/wyliczenie-api';
 import type { PropsArkuszaWyniku } from './typy';
 
 const t = teksty.SheetCalcWorkCombination;
@@ -45,8 +50,8 @@ export function ArkuszLaczeniaZPraca(props: PropsArkuszaWyniku) {
   return <TrescArkuszaLaczenia {...props} />;
 }
 
-function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmianaParametrow, onZamknij }: PropsArkuszaWyniku) {
-  const nazwy = useNazwyRodzicow();
+function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawyApi, onZmianaParametrow, onZamknij }: PropsArkuszaWyniku) {
+  const nazwy = useNazwyRodzicow(d.zdarzenie.wartosc === 'przyjecie');
   const katalog = useKatalog();
   const dzis = useDzis();
   const parametryAdresu = useSearchParams();
@@ -60,7 +65,11 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
     return wskazany ? lista.filter((r) => r === wskazany) : lista;
   }, [d, rodzicZAdresu]);
 
-  const opcje = p.czesciRodzicielskiego
+  // Części, które liczy wynik: zapisane w podziale albo domyślne silnika, więc łączenie planujesz od razu na wyniku.
+  // Indeks łączenia wskazuje część na tej liście, tak jak w silniku kalkulatora (czesciScenariusza).
+  const czesciWyn = useMemo(() => czesciWyniku(d, p, katalog), [d, p, katalog]);
+  const zapisane = laczeniaScenariusza(p);
+  const opcje = czesciWyn
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => pracownicy.includes(c.rodzic))
     .map(({ c, i }) => ({
@@ -73,38 +82,81 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
       }),
     }));
 
-  const [f, ustawF] = useState<FormularzLaczenia>(() => ({
-    indeksCzesci: p.laczenie ? String(p.laczenie.indeksCzesci) : '',
-    tygodnie: p.laczenie ? String(p.laczenie.tygodnie) : '',
-    wymiarPracy: p.laczenie ? String(p.laczenie.wymiarPracy) : '',
-  }));
-  const czesciPracownikow = p.czesciRodzicielskiego.map((c) => (pracownicy.includes(c.rodzic) ? c : { ...c, tygodnie: 0 }));
+  const formularzCzesci = (indeksCzesci: string): FormularzLaczenia & { tydzienPoczatku: string } => {
+    const l = zapisane.find((z) => String(z.indeksCzesci) === indeksCzesci);
+    return {
+      indeksCzesci,
+      tygodnie: l ? String(l.tygodnie) : '',
+      wymiarPracy: l ? String(l.wymiarPracy) : '',
+      tydzienPoczatku: String((l?.odTygodnia ?? 0) + 1),
+    };
+  };
+  const [f, ustawF] = useState<FormularzLaczenia & { tydzienPoczatku: string }>(() => {
+    const pierwsze = zapisane.find((z) => opcje.some((o) => o.wartosc === String(z.indeksCzesci)));
+    return formularzCzesci(pierwsze ? String(pierwsze.indeksCzesci) : opcje.length === 1 ? opcje[0].wartosc : '');
+  });
+  const czesciPracownikow = czesciWyn.map((c) => (pracownicy.includes(c.rodzic) ? c : { ...c, tygodnie: 0 }));
+  // Najwyższy wymiar pracy przy łączeniu ze słownika wymiarów i okresów obowiązujący w dniu porodu albo przyjęcia.
+  const maksWymiarPracy = limityUrlopow(katalog, dataZdarzenia(d)).maksWymiarPracy;
+  // Tydzień początku łączenia: od 1 do liczby tygodni części; tygodnie łączenia najwyżej do końca części (0061).
+  const bledyLaczenia = (w: FormularzLaczenia & { tydzienPoczatku: string }) => {
+    const wybrana = w.indeksCzesci === '' ? undefined : czesciPracownikow[Number(w.indeksCzesci)];
+    const start = liczbaCalkowita(w.tydzienPoczatku);
+    const startOk = start !== null && start >= 1 && (wybrana === undefined || start <= wybrana.tygodnie);
+    const pozostale = wybrana && startOk ? { ...wybrana, tygodnie: wybrana.tygodnie - (start - 1) } : wybrana;
+    const lista = czesciPracownikow.map((c, i) => (pozostale && String(i) === w.indeksCzesci ? pozostale : c));
+    return { ...walidujLaczenie(w, lista, maksWymiarPracy), ...(startOk ? {} : { tydzienPoczatku: '0061' as const }) };
+  };
   const walidacja = useWalidacjaNaBiezaco({
     wartosci: f,
-    waliduj: (w) => walidujLaczenie(w, czesciPracownikow),
-    pola: POLA,
+    waliduj: bledyLaczenia,
+    pola: { ...POLA, tydzienPoczatku: `${ID}-tydzienPoczatku` },
   });
-  const poprawny = Object.keys(walidujLaczenie(f, czesciPracownikow)).length === 0;
+  const poprawny = Object.keys(bledyLaczenia(f)).length === 0;
   const indeks = Number(f.indeksCzesci);
   const tygodnie = liczbaCalkowita(f.tygodnie) ?? 0;
   const wymiar = liczbaCalkowita(f.wymiarPracy) ?? 0;
-  const laczenie = poprawny ? wyliczLaczenie(p.czesciRodzicielskiego, indeks, tygodnie, wymiar) : null;
-  const czesc = poprawny ? p.czesciRodzicielskiego[indeks] : undefined;
+  const odTygodnia = Math.max(0, (liczbaCalkowita(f.tydzienPoczatku) ?? 1) - 1);
+  const laczenie = poprawny ? wyliczLaczenie(czesciWyn, indeks, tygodnie, wymiar) : null;
+  const czesc = poprawny ? czesciWyn[indeks] : undefined;
 
-  const podglad = poprawny
-    ? wyliczScenariusz(d, podstawy, { ...p, laczenie: { indeksCzesci: indeks, tygodnie, wymiarPracy: wymiar } }, katalog, dzis)
-    : null;
+  /** Parametry z łączeniem tej części zamiast dotychczasowego łączenia tej części (null usuwa łączenie części). */
+  const zLaczeniem = (nowe: LaczenieZPraca | null): ParametryScenariusza => {
+    const lista = [...zapisane.filter((z) => z.indeksCzesci !== Number(f.indeksCzesci)), ...(nowe ? [nowe] : [])].sort(
+      (a, b) => a.indeksCzesci - b.indeksCzesci,
+    );
+    const wynikowe: ParametryScenariusza = { ...p };
+    delete wynikowe.laczenie;
+    delete wynikowe.laczeniaDodatkowe;
+    if (lista.length > 0) wynikowe.laczenie = lista[0];
+    if (lista.length > 1) wynikowe.laczeniaDodatkowe = lista.slice(1);
+    return wynikowe;
+  };
+  const noweLaczenie: LaczenieZPraca = { indeksCzesci: indeks, tygodnie, wymiarPracy: wymiar, ...(odTygodnia > 0 ? { odTygodnia } : {}) };
 
+  // Podgląd okresów z łączeniem liczy serwer (POST /api/v1/kalkulator/zasilek-macierzynski) z opóźnieniem po wpisaniu.
+  const wyliczeniePodgladu = useScenariuszApi(
+    poprawny ? { dane: d, podstawy: podstawyApi, parametry: zLaczeniem(noweLaczenie), dzis } : null,
+    { opoznienieMs: 300 },
+  );
+  const podglad = poprawny && wyliczeniePodgladu.aktualne ? (wyliczeniePodgladu.wartosc?.wynik ?? null) : null;
+
+  // Wiersze części w podglądzie silnika: od początku części do końca jej wydłużenia (część mogła przesunąć się
+  // o wydłużenie wcześniejszej części z łączeniem).
+  const wierszeCzesci = (() => {
+    if (!podglad || !czesc) return [];
+    const wlasne = podglad.okresy.filter(
+      (o) =>
+        o.rodzic === czesc.rodzic &&
+        (o.rodzaj === 'laczenie-z-praca' || o.rodzaj === 'rodzicielski' || o.rodzaj === 'wydluzenie-rodzicielskiego') &&
+        porownajDaty(o.od, czesc.od) >= 0,
+    );
+    const koniec = wlasne.findIndex((o) => o.rodzaj === 'wydluzenie-rodzicielskiego');
+    return koniec >= 0 ? wlasne.slice(0, koniec + 1) : wlasne;
+  })();
   const wierszeZasilku =
-    podglad && czesc && laczenie
-      ? podglad.okresy
-          .filter(
-            (o) =>
-              o.rodzic === czesc.rodzic &&
-              (o.rodzaj === 'laczenie-z-praca' || o.rodzaj === 'rodzicielski' || o.rodzaj === 'wydluzenie-rodzicielskiego') &&
-              porownajDaty(o.od, czesc.od) >= 0 &&
-              porownajDaty(o.do, laczenie.nowyKoniecCzesci) <= 0,
-          )
+    laczenie
+      ? wierszeCzesci
           .map((o, i) => ({
             id: `${o.rodzaj}-${i}`,
             okres:
@@ -120,21 +172,31 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
           }))
       : [];
   const stawkaCzesci =
-    podglad?.okresy.find((o) => czesc && o.rodzic === czesc.rodzic && o.rodzaj === 'rodzicielski' && porownajDaty(o.od, czesc.od) >= 0)?.stawka ??
+    wierszeCzesci.find((o) => o.rodzaj === 'wydluzenie-rodzicielskiego' || o.rodzaj === 'rodzicielski')?.stawka ??
     (p.wariant === '81-5' && czesc?.rodzic === 'matka' ? 81.5 : 70);
   const ktoPracuje = nazwy[czesc?.rodzic ?? pracownicy[0] ?? 'matka'].mianownik;
 
   const zapisz = () => {
     if (!walidacja.sprobujWyslac()) return;
-    onZmianaParametrow({ ...p, laczenie: { indeksCzesci: indeks, tygodnie, wymiarPracy: wymiar } });
+    onZmianaParametrow(zLaczeniem(noweLaczenie));
     onZamknij();
   };
+  const usun = () => {
+    onZmianaParametrow(zLaczeniem(null));
+    onZamknij();
+  };
+  const maLaczenie = zapisane.some((z) => String(z.indeksCzesci) === f.indeksCzesci);
 
   const stopka = (
     <div className="flex flex-wrap justify-end gap-3">
       <Przycisk wariant="drugorzedny" type="button" onClick={onZamknij}>
         {t.anuluj}
       </Przycisk>
+      {maLaczenie ? (
+        <Przycisk wariant="tlo" type="button" onClick={usun}>
+          {t.usun}
+        </Przycisk>
+      ) : null}
       {pracownicy.length > 0 && opcje.length > 0 ? (
         <Przycisk wariant="glowny" type="button" onClick={zapisz}>
           {t.zapisz}
@@ -169,17 +231,27 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
             <div className="flex flex-col gap-1 text-small text-ink-muted">
               <p className="m-0">{t.opisTygodni}</p>
               <p className="m-0">{t.opisWymiaru}</p>
+              {pracownicy.length > 1 ? <p className="m-0">{t.opisOboje}</p> : null}
             </div>
             <PoleWyboru
               id={`${ID}-indeksCzesci`}
               etykieta={t.czesc}
               opcje={opcje}
               wartosc={f.indeksCzesci}
-              onZmiana={(w) => ustawF({ ...f, indeksCzesci: w })}
+              onZmiana={(w) => ustawF(formularzCzesci(w))}
               pustaOpcja={t.wybierz}
               {...walidacja.pole('indeksCzesci')}
             />
-            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-3">
+              <PoleLiczby
+                id={`${ID}-tydzienPoczatku`}
+                etykieta={t.tydzienPoczatku}
+                podpowiedz={t.tydzienPoczatkuPodpowiedz({ maks: String(czesciWyn[Number(f.indeksCzesci)]?.tygodnie ?? 1) })}
+                wartosc={f.tydzienPoczatku}
+                onZmiana={(w) => ustawF({ ...f, tydzienPoczatku: w })}
+                {...walidacja.pole('tydzienPoczatku')}
+                szerokosc="waska"
+              />
               <PoleLiczby
                 id={`${ID}-tygodnie`}
                 etykieta={t.tygodnie}
@@ -237,6 +309,14 @@ function TrescArkuszaLaczenia({ daneWejsciowe: d, parametry: p, podstawy, onZmia
                       { klucz: 'suma', naglowek: t.kolumnaSuma, liczbowa: true },
                     ]}
                     wiersze={wierszeZasilku}
+                  />
+                ) : wyliczeniePodgladu.laduje ? (
+                  <SzkieletWyliczenia wysokosc="niski" />
+                ) : wyliczeniePodgladu.blad ? (
+                  <BladWyliczenia
+                    kod={wyliczeniePodgladu.blad.kod}
+                    parametry={wyliczeniePodgladu.blad.parametry as never}
+                    onPonow={wyliczeniePodgladu.ponow}
                   />
                 ) : null}
                 <p className="m-0 text-small text-ink-muted">

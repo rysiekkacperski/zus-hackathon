@@ -216,7 +216,8 @@ export function rachunekDoZapisu(tekst: string): string {
 export function zalacznikiZam(w: { wniosek: WniosekZam; adresat: AdresatWniosku }): ('zaswiadczenie-szpitala' | 'zaswiadczenie-lekarskie' | 'odpis-skrocony')[] {
   const lista: ('zaswiadczenie-szpitala' | 'zaswiadczenie-lekarskie' | 'odpis-skrocony')[] = [];
   if (w.wniosek.rodzajUrlopu === 'uzupelniajacy') lista.push('zaswiadczenie-szpitala');
-  if (w.wniosek.przedPorodem) lista.push('zaswiadczenie-lekarskie');
+  // Zaświadczenie lekarskie dołączone plikiem w kroku początku zasiłku wysyłamy razem z wnioskiem.
+  if (w.wniosek.przedPorodem && !w.wniosek.przedPorodem.zaswiadczenie?.plik) lista.push('zaswiadczenie-lekarskie');
   else if (w.adresat === 'platnik-skladek') lista.push('odpis-skrocony');
   return lista;
 }

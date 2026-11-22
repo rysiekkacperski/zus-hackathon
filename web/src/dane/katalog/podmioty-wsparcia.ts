@@ -1,6 +1,10 @@
 // Podmioty wsparcia w kolejności z ANALIZY/18 sekcja 4 (kontrakt, sekcja 8).
 // Właściciel: u22. Słownik w Katalogu świadczeń; zmienia go konto z rolą Administrator.
-import type { PodmiotWsparcia } from '@/domena/typy';
+import type { DataISO, PodmiotWsparcia } from '@/domena/typy';
+
+// Status organizacji pożytku publicznego, forma prawna fundacji i brak wykreślenia sprawdzone dla każdego numeru KRS
+// w odpisie aktualnym z rejestru stowarzyszeń i fundacji (api-krs.ms.gov.pl/api/krs/OdpisAktualny/<KRS>?rejestr=S).
+const WERYFIKACJA_KRS: DataISO = '2026-11-22';
 
 export const podmiotyWsparcia: readonly PodmiotWsparcia[] = [
   {
@@ -14,6 +18,7 @@ export const podmiotyWsparcia: readonly PodmiotWsparcia[] = [
     adresStrony: 'https://fundacjaernesta.pl',
     krs: '0000789473',
     charytatywny: true,
+    weryfikacjaKrs: WERYFIKACJA_KRS,
     kolejnosc: 1,
   },
   {
@@ -25,6 +30,7 @@ export const podmiotyWsparcia: readonly PodmiotWsparcia[] = [
     adresStrony: 'https://rodzicpoludzku.pl',
     krs: '0000150773',
     charytatywny: true,
+    weryfikacjaKrs: WERYFIKACJA_KRS,
     kolejnosc: 2,
   },
   {
@@ -38,6 +44,7 @@ export const podmiotyWsparcia: readonly PodmiotWsparcia[] = [
     adresStrony: 'https://naglesami.org.pl',
     krs: '0000398530',
     charytatywny: true,
+    weryfikacjaKrs: WERYFIKACJA_KRS,
     kolejnosc: 3,
   },
   {
@@ -50,6 +57,7 @@ export const podmiotyWsparcia: readonly PodmiotWsparcia[] = [
     adresStrony: 'https://wczesniak.pl',
     krs: '0000191989',
     charytatywny: true,
+    weryfikacjaKrs: WERYFIKACJA_KRS,
     kolejnosc: 4,
   },
   {
@@ -63,6 +71,7 @@ export const podmiotyWsparcia: readonly PodmiotWsparcia[] = [
     adresStrony: 'https://www.hospicjum.waw.pl/hospicjum-perinatalne/',
     krs: '0000097123',
     charytatywny: true,
+    weryfikacjaKrs: WERYFIKACJA_KRS,
     kolejnosc: 5,
   },
   {
@@ -74,6 +83,7 @@ export const podmiotyWsparcia: readonly PodmiotWsparcia[] = [
     adresStrony: 'https://www.dzieciom.pl',
     krs: '0000037904',
     charytatywny: true,
+    weryfikacjaKrs: WERYFIKACJA_KRS,
     kolejnosc: 6,
   },
 ];

@@ -10,8 +10,8 @@ Zwróć jeden rodzaj:
 - z-3a: zaświadczenie płatnika składek Z-3a dla ubezpieczonego niebędącego pracownikiem;
 - z-3b: zaświadczenie płatnika składek Z-3b dla osoby prowadzącej pozarolniczą działalność;
 - zas-12: zaświadczenie płatnika składek ZAS-12 o zasiłku chorobowym za dalszy okres;
-- poswiadczenie: poświadczenie ubezpieczenia chorobowego wydane przez ZUS;
-- zrzut-zus: zrzut ekranu z systemu wewnętrznego ZUS z okresami ubezpieczenia i świadczeniami;
+- poswiadczenie: poświadczenie ubezpieczenia chorobowego wydane przez ZUS, z okresami podlegania ubezpieczeniu i podstawami wymiaru składek;
+- zrzut-zus: zrzut ekranu z systemu wewnętrznego ZUS z okresami ubezpieczenia i świadczeniami przyznanymi albo odmówionymi;
 - e-zla: wydruk zaświadczenia lekarskiego e-ZLA;
 - zaswiadczenie-o-terminie-porodu: zaświadczenie lekarskie o przewidywanej dacie porodu;
 - zaswiadczenie-szpitala: zaświadczenie szpitala o urodzeniu dziecka i jego pobycie w szpitalu;
@@ -29,10 +29,19 @@ Zasady zapisu wartości:
 - wymiarEtatu przy niepełnym etacie jako ułamek licznik/mianownik, na przykład „1/2”;
 - dziecko.tydzienCiazy jako liczba ukończonych tygodni ciąży w dniu porodu (27 tygodni i 4 dni to 27);
 - liczbaUbezpieczonychPlatnika: „do-20” albo „powyzej-20”; zdarzenie.rodzaj: „porod”, „martwe-urodzenie” albo „niezdolnosc”;
+- ustanieZatrudnienia.przyczyna: „upadlosc”, „likwidacja”, „smierc-pracodawcy”, „naruszenie-z-wyrokiem”, „naruszenie-bez-wyroku”,
+  „koniec-umowy-terminowej” albo „inna”;
 - wartości złożone zapisz jako tekst JSON: ubezpieczenieChorobowe.okresy [{"od","do"?}], zdarzenie.niezdolnosc {"od","do","kod"?},
   dziecko.pobyt {"od","do"}, wniosek.swiadczenia ["zasilek-macierzynski"|"zwzm"|"zasilek-chorobowy"],
   wniosek.okresy [{"rodzajUrlopu":"macierzynski"|"rodzicielski"|"ojcowski"|"uzupelniajacy"|"na-warunkach-macierzynskiego","od","do"}],
   wniosek.okresMatki {"od","do"}, kwotyMiesieczne [{"miesiac":"RRRR-MM","kwota","rodzaj":"wynagrodzenie"|"przychod"|"podstawa-skladek"}],
-  zadluzenieJdg {"kwota","dzien"}, swiadczeniaPrzyznane [{"rodzaj","od","do","kwota"}].
+  zadluzenieJdg {"kwota","dzien"}, swiadczeniaPrzyznane [{"rodzaj","od","do","kwota"}],
+  swiadczeniaOdmowione [{"rodzaj","od"?,"przyczyna"?}];
+- rodzaj świadczenia w swiadczeniaPrzyznane i swiadczeniaOdmowione: „zasilek-macierzynski”, „zwzm” (zasiłek w wysokości
+  zasiłku macierzyńskiego) albo „zasilek-chorobowy”; kwota w swiadczeniaPrzyznane to kwota miesięczna zasiłku;
+- świadczenie, którego prawa ZUS odmówił, zapisz wyłącznie w swiadczeniaOdmowione;
+- gdy dokument zawiera kwoty za kolejne miesiące, zwróć wszystkie w kwotyMiesieczne, po jednym wpisie na miesiąc: rodzaj
+  „wynagrodzenie” w Z-3, „przychod” w Z-3a i „podstawa-skladek” w poświadczeniu;
+- zdarzenie.niezdolnosc.kod to kod literowy z zaświadczenia lekarskiego, na przykład „B” przy niezdolności w okresie ciąży.
 Pomiń adres, numer rachunku i dane osobowe dziecka. Imię, nazwisko i numer PESEL ubezpieczonego przepisz dokładnie z dokumentu.`;
 }

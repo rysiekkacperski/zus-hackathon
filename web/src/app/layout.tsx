@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { preload } from "react-dom";
+import { SynchronizacjaKatalogu } from "@/komponenty/rama/synchronizacja-katalogu";
 import { teksty } from "@/teksty";
 import "./globals.css";
 
@@ -22,7 +23,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 
   return (
     <html lang="pl">
-      <body className="min-h-dvh bg-surface-page font-sans text-ink">{children}</body>
+      <body className="min-h-dvh bg-surface-page font-sans text-ink">
+        <SynchronizacjaKatalogu />
+        {children}
+      </body>
     </html>
   );
 }

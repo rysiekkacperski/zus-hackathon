@@ -35,7 +35,8 @@ const profilNaStart = pozycja('ViewProfileZusData', 'profil', m.profilNaStart);
 const katalog = pozycja('ViewCatalogList', 'katalog', m.katalog);
 const podmiotyWsparcia = pozycja('ViewCatalogSupportOrganizations', 'serce', m.podmiotyWsparcia);
 
-// Sekcja 3.2 kontraktu.
+// Sekcja 3.2 kontraktu. Decyzja właściciela produktu: menu rodzica nie zawiera kalkulatora zasiłku
+// ani przykładowych spraw ZUS; rodzic otwiera je z ekranu startowego, z planu i ze spraw.
 const pozycjeRoli: Record<Rola, PozycjaMenu[]> = {
   rodzic: [planRodziny, profilRodziny, sytuacjeSzczegolne, terminy, twojeWnioski],
   'drugi-rodzic': [planRodziny, profilRodziny, sytuacjeSzczegolne, terminy, twojeWnioski],

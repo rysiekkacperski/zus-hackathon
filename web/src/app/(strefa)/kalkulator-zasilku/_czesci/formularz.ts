@@ -1,7 +1,13 @@
 // Formularz danych wejściowych kalkulatora zasiłku macierzyńskiego (ViewCalcMaternityInput, u15).
 // Czyste funkcje: uzupełnienie z profilu rodziny i konta ZUS, walidacja pól, budowa danych wejściowych silnika.
 import { dodajDni, dodajLata, dodajMiesiace, formatujDate, parsujDate, porownajDaty } from '@/domena/daty';
-import { walidujDaneWejsciowe } from '@/domena/kalkulatory';
+import {
+  MAKS_DZIEN_POCZATKU_POBYTU,
+  PROGI_UZUPELNIAJACEGO_DOMYSLNE,
+  progiUzupelniajacego,
+  walidujDaneWejsciowe,
+  type ProgiUzupelniajacego,
+} from '@/domena/kalkulatory';
 import { plecZPesel } from '@/domena/pesel';
 import { proponujFormeZatrudnienia } from '@/domena/profil/forma-zatrudnienia';
 import { wiekGraniczny } from '@/domena/rodzina/przyjecie';
@@ -69,11 +75,15 @@ export interface FormularzKalkulatora {
   formaPrzyjecia: PoleF<FormaPrzyjecia | null>;
   dataPrzyjecia: PoleF<string>;
   dataUrodzeniaDziecka: PoleF<string>;
+  /** Daty urodzenia 2. do 5. jednocześnie przyjętego dziecka (puste pole: data pierwszego dziecka). */
+  datyUrodzeniaKolejnych: PoleF<string[]>;
+  dataUprawomocnienia: PoleF<string>;
   odroczenie: PoleF<boolean>;
   wczesniactwo: PoleF<boolean>;
   tydzienCiazy: PoleF<string>;
   masaG: PoleF<string>;
   dniPobytu: PoleF<string>;
+  pierwszyDzienPobytu: PoleF<string>;
   strata: PoleF<boolean>;
   rodzajStraty: PoleF<RodzajStraty | null>;
   dataZgonu: PoleF<string>;
@@ -92,10 +102,13 @@ export const KOLEJNOSC_POL: readonly PoleFormularza[] = [
   'formaPrzyjecia',
   'dataPrzyjecia',
   'dataUrodzeniaDziecka',
+  'dataUprawomocnienia',
   'liczbaDzieci',
+  'datyUrodzeniaKolejnych',
   'tydzienCiazy',
   'masaG',
   'dniPobytu',
+  'pierwszyDzienPobytu',
   'rodzajStraty',
   'dataZgonu',
   'liczbaDzieciStraty',
@@ -118,11 +131,14 @@ export function pustyFormularz(): FormularzKalkulatora {
     formaPrzyjecia: pole(null, d),
     dataPrzyjecia: pole('', d),
     dataUrodzeniaDziecka: pole('', d),
+    datyUrodzeniaKolejnych: pole<string[]>([], d),
+    dataUprawomocnienia: pole('', d),
     odroczenie: pole(false, d),
     wczesniactwo: pole(false, d),
     tydzienCiazy: pole('', d),
     masaG: pole('', d),
     dniPobytu: pole('', d),
+    pierwszyDzienPobytu: pole('', d),
     strata: pole(false, d),
     rodzajStraty: pole(null, d),
     dataZgonu: pole('', d),
@@ -275,6 +291,10 @@ export function uzupelnijFormularz(w: WejscieUzupelnienia): FormularzKalkulatora
     f.dataUrodzeniaDziecka = pole(formatujDate(pr.dataUrodzeniaDziecka), p);
     f.odroczenie = pole(Boolean(pr.odroczenieObowiazkuSzkolnego), p);
     f.liczbaDzieci = pole(pr.liczbaPrzyjetychDzieci, p);
+    if (pr.datyUrodzeniaDzieci && pr.datyUrodzeniaDzieci.length > 1) {
+      f.datyUrodzeniaKolejnych = pole(pr.datyUrodzeniaDzieci.slice(1).map(formatujDate), p);
+    }
+    if (pr.dataUprawomocnienia) f.dataUprawomocnienia = pole(formatujDate(pr.dataUprawomocnienia), p);
   } else if (daneCiazy.dataPorodu) {
     f.zdarzenie = pole('porod', p);
     f.dataPorodu = pole(formatujDate(daneCiazy.dataPorodu), p);
@@ -318,6 +338,9 @@ export function formularzZDanych(d: DaneWejscioweKalkulatora): FormularzKalkulat
     f.dataPrzyjecia = pole(formatujDate(d.przyjecie.wartosc.dataPrzyjecia), z);
     f.dataUrodzeniaDziecka = pole(formatujDate(d.przyjecie.wartosc.dataUrodzeniaDziecka), z);
     f.odroczenie = pole(d.przyjecie.wartosc.odroczenie, z);
+    const daty = d.przyjecie.wartosc.datyUrodzeniaDzieci;
+    if (daty && daty.length > 1) f.datyUrodzeniaKolejnych = pole(daty.slice(1).map(formatujDate), z);
+    if (d.przyjecie.wartosc.dataUprawomocnienia) f.dataUprawomocnienia = pole(formatujDate(d.przyjecie.wartosc.dataUprawomocnienia), z);
   }
   f.liczbaDzieci = pole(d.liczbaDzieci.wartosc, d.liczbaDzieci.zrodlo);
   f.zaZyciem = pole(d.zaZyciem.wartosc, d.zaZyciem.zrodlo);
@@ -327,6 +350,9 @@ export function formularzZDanych(d: DaneWejscioweKalkulatora): FormularzKalkulat
     f.tydzienCiazy = pole(String(d.wczesniactwo.wartosc.tydzienCiazy), z);
     f.masaG = pole(String(d.wczesniactwo.wartosc.masaG), z);
     f.dniPobytu = pole(String(d.wczesniactwo.wartosc.dniPobytu), z);
+    if (d.wczesniactwo.wartosc.pierwszyDzienPobytu !== undefined) {
+      f.pierwszyDzienPobytu = pole(String(d.wczesniactwo.wartosc.pierwszyDzienPobytu), z);
+    }
   }
   if (d.strata) {
     const z = d.strata.zrodlo;
@@ -353,15 +379,33 @@ function liczbaCalkowita(tekst: string): number | null {
   return /^\d+$/.test(t) ? Number(t) : null;
 }
 
-/** Kategoria uzupełniającego urlopu: A do 27. tygodnia albo do 1000 g, B od 28. do 36. tygodnia, C od 37. tygodnia. */
-export function kategoriaWczesniactwa(tydzien: number | null, masa: number | null): KategoriaWczesniactwa | null {
+/**
+ * Kategoria uzupełniającego urlopu: A do 27. tygodnia albo do 1000 g, B od 28. do 36. tygodnia, C od 37. tygodnia.
+ * Progi pochodzą ze słownika wymiarów i okresów (progiUzupelniajacego), a bez katalogu z wartości startowych słownika.
+ */
+export function kategoriaWczesniactwa(
+  tydzien: number | null,
+  masa: number | null,
+  progi: ProgiUzupelniajacego = PROGI_UZUPELNIAJACEGO_DOMYSLNE,
+): KategoriaWczesniactwa | null {
   if (tydzien === null || masa === null || tydzien < 22 || tydzien > 44 || masa < 300 || masa > 7000) return null;
-  if (tydzien <= 27 || masa <= 1000) return 'a';
-  if (tydzien <= 36) return 'b';
+  if (tydzien < progi.tydzienCiazy || masa <= progi.masaG) return 'a';
+  if (tydzien < progi.tydzienWTerminie) return 'b';
   return 'c';
 }
 
-export const MAKS_DNI_POBYTU: Record<KategoriaWczesniactwa, number> = { a: 105, b: 56, c: 52 };
+/** Najwięcej dni pobytu w szpitalu branych pod uwagę w kategorii: 105, 56 albo 52 przy wartościach startowych słownika. */
+export function maksDniPobytu(kat: KategoriaWczesniactwa, progi: ProgiUzupelniajacego = PROGI_UZUPELNIAJACEGO_DOMYSLNE): number {
+  if (kat === 'a') return 7 * progi.tygodnieA;
+  if (kat === 'b') return 7 * progi.tygodniePozostale;
+  return 7 * progi.tygodniePozostale - (progi.poczatekPobytuOd - 1);
+}
+
+export const MAKS_DNI_POBYTU: Record<KategoriaWczesniactwa, number> = {
+  a: maksDniPobytu('a'),
+  b: maksDniPobytu('b'),
+  c: maksDniPobytu('c'),
+};
 
 /** Wiek graniczny przy przyjęciu dziecka: wartość z katalogu, a do czasu jej wpięcia 7, 10 albo 14 lat. */
 export function wiekGranicznyPrzyjecia(forma: FormaPrzyjecia, odroczenie: boolean, katalog: Katalog): number {
@@ -422,10 +466,24 @@ export function walidujFormularz(f: FormularzKalkulatora, dzis: DataISO, katalog
     if ('kod' in ru) w.bledy.dataUrodzeniaDziecka = ru.kod;
     else if (dataPrzyjecia !== null && porownajDaty(ru.data, dataPrzyjecia) > 0) w.bledy.dataUrodzeniaDziecka = '0090';
     else if (dataPrzyjecia !== null && forma !== null && forma !== 'rodzina-zastepcza-zawodowa') {
+      // 0091, gdy w dniu przyjęcia każde przyjęte dziecko ukończyło wiek graniczny (3.10.4.2.5).
       const wiek = wiekGranicznyPrzyjecia(forma, f.odroczenie.wartosc, katalog);
-      if (porownajDaty(dataPrzyjecia, dodajLata(ru.data, wiek)) >= 0) {
+      const kolejne = datyKolejnych(f).map((t) => parsujDate(t)).filter((x): x is DataISO => x !== null);
+      if ([ru.data, ...kolejne].every((u) => porownajDaty(dataPrzyjecia!, dodajLata(u, wiek)) >= 0)) {
         w.informacje.dataUrodzeniaDziecka = { kod: '0091', parametry: { wiek: `${wiek} lat` } };
       }
+    }
+    if (f.liczbaDzieci.wartosc > 1) {
+      for (const tekst of datyKolejnych(f)) {
+        if (tekst.trim() === '') continue;
+        const data = parsujDate(tekst);
+        if (data === null) w.bledy.datyUrodzeniaKolejnych = '0010';
+        else if (dataPrzyjecia !== null && porownajDaty(data, dataPrzyjecia) > 0) w.bledy.datyUrodzeniaKolejnych = '0090';
+        if (w.bledy.datyUrodzeniaKolejnych) break;
+      }
+    }
+    if (forma === 'przysposobienie' && f.dataUprawomocnienia.wartosc.trim() !== '' && parsujDate(f.dataUprawomocnienia.wartosc) === null) {
+      w.bledy.dataUprawomocnienia = '0010';
     }
   }
 
@@ -434,12 +492,19 @@ export function walidujFormularz(f: FormularzKalkulatora, dzis: DataISO, katalog
     const masa = liczbaCalkowita(f.masaG.wartosc);
     if (tydzien === null || tydzien < 22 || tydzien > 44) w.bledy.tydzienCiazy = '0021';
     if (masa === null || masa < 300 || masa > 7000) w.bledy.masaG = '0022';
-    const kat = kategoriaWczesniactwa(tydzien, masa);
-    const maks = MAKS_DNI_POBYTU[kat ?? 'a'];
+    // Progi uzupełniającego urlopu ze słownika wymiarów i okresów obowiązujące w dniu porodu (bez daty: dziś).
+    const progi = progiUzupelniajacego(katalog, dataPorodu ?? dzis);
+    const kat = kategoriaWczesniactwa(tydzien, masa, progi);
+    const maks = maksDniPobytu(kat ?? 'a', progi);
     const dni = liczbaCalkowita(f.dniPobytu.wartosc);
     if (dni === null || dni > maks) {
       w.bledy.dniPobytu = '0164';
       w.parametry.dniPobytu = { liczbaDni: String(maks) };
+    }
+    // Od 37. tygodnia dzień życia, w którym zaczął się pobyt: nieobowiązkowo, od 1 do końca 8. tygodnia życia (0202).
+    if (kat === 'c' && f.pierwszyDzienPobytu.wartosc.trim() !== '') {
+      const dzien = liczbaCalkowita(f.pierwszyDzienPobytu.wartosc);
+      if (dzien === null || dzien < 1 || dzien > MAKS_DZIEN_POCZATKU_POBYTU) w.bledy.pierwszyDzienPobytu = '0202';
     }
   }
 
@@ -516,6 +581,12 @@ export function zbudujDaneWejsciowe(f: FormularzKalkulatora): DaneWejscioweKalku
           tydzienCiazy: Number(f.tydzienCiazy.wartosc.trim()),
           masaG: Number(f.masaG.wartosc.trim()),
           dniPobytu: Number(f.dniPobytu.wartosc.trim()),
+          // Silnik stosuje dzień początku pobytu tylko przy porodzie w terminie według progów z katalogu, więc pole
+          // przekazujemy zawsze, gdy zawiera dzień od 1 do 56.
+          ...((liczbaCalkowita(f.pierwszyDzienPobytu.wartosc) ?? 0) >= 1 &&
+          (liczbaCalkowita(f.pierwszyDzienPobytu.wartosc) ?? 0) <= MAKS_DZIEN_POCZATKU_POBYTU
+            ? { pierwszyDzienPobytu: liczbaCalkowita(f.pierwszyDzienPobytu.wartosc)! }
+            : {}),
         },
         zrodlo: najnowszeZrodlo([f.wczesniactwo, f.tydzienCiazy, f.masaG, f.dniPobytu]),
       };
@@ -547,8 +618,14 @@ export function zbudujDaneWejsciowe(f: FormularzKalkulatora): DaneWejscioweKalku
         dataPrzyjecia,
         dataUrodzeniaDziecka,
         odroczenie: f.formaPrzyjecia.wartosc === 'rodzina-zastepcza-niezawodowa' && f.odroczenie.wartosc,
+        ...(f.liczbaDzieci.wartosc > 1
+          ? { datyUrodzeniaDzieci: [dataUrodzeniaDziecka, ...datyKolejnych(f).map((t) => parsujDate(t) ?? dataUrodzeniaDziecka)] }
+          : {}),
+        ...(f.formaPrzyjecia.wartosc === 'przysposobienie' && parsujDate(f.dataUprawomocnienia.wartosc) !== null
+          ? { dataUprawomocnienia: parsujDate(f.dataUprawomocnienia.wartosc)! }
+          : {}),
       },
-      zrodlo: najnowszeZrodlo([f.formaPrzyjecia, f.dataPrzyjecia, f.dataUrodzeniaDziecka, f.odroczenie]),
+      zrodlo: najnowszeZrodlo([f.formaPrzyjecia, f.dataPrzyjecia, f.dataUrodzeniaDziecka, f.odroczenie, f.datyUrodzeniaKolejnych, f.dataUprawomocnienia]),
     };
   }
   return d;
@@ -557,6 +634,11 @@ export function zbudujDaneWejsciowe(f: FormularzKalkulatora): DaneWejscioweKalku
 // Grupa pól ma jedno źródło: wartość wpisana w kalkulatorze, gdy którekolwiek pole zmieniono.
 function najnowszeZrodlo(pola: PoleF<unknown>[]): ZrodloWartosciKalkulatora {
   return pola.some((p) => p.zrodlo === 'wartosc-w-kalkulatorze') ? 'wartosc-w-kalkulatorze' : (pola[0]?.zrodlo ?? 'wartosc-domyslna');
+}
+
+/** Teksty dat urodzenia 2. do n-tego przyjętego dziecka dla bieżącej liczby dzieci (brakujące jako puste). */
+export function datyKolejnych(f: FormularzKalkulatora): string[] {
+  return Array.from({ length: Math.max(0, f.liczbaDzieci.wartosc - 1) }, (_, i) => f.datyUrodzeniaKolejnych.wartosc[i] ?? '');
 }
 
 /** Data zdarzenia: poród, przewidywany termin porodu albo przyjęcie dziecka. */

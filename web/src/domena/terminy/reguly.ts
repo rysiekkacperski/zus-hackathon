@@ -41,11 +41,16 @@ export const REGULY_POZYCJI: Readonly<Record<string, RegulaTerminu>> = {
   K32: { typ: 'przesuniecie', kotwica: 'data-przyjecia', ...dni(21) },
 };
 
-/** Reguła terminu pozycji: reguła z wymagania epiku dla K01–K37, a dla pozycji dodanych w panelu reguła z katalogu. */
+/**
+ * Reguła terminu pozycji: reguła ustawiona przez Administratora w panelu katalogu, a bez niej reguła z wymagania
+ * epiku dla K01–K37 i reguła z katalogu dla pozycji dodanych w panelu.
+ */
 export function regulaPozycji(idPozycji: IdPozycji, katalog: Katalog): RegulaTerminu {
+  const zKatalogu = katalog.pozycje.find((p) => p.id === idPozycji);
+  if (zKatalogu?.zmieniono?.regulaTerminu) return zKatalogu.regulaTerminu;
   const numer = Number(idPozycji.replace(/^K/, ''));
   if (Number.isFinite(numer) && numer >= 1 && numer <= 37) return REGULY_POZYCJI[idPozycji] ?? { typ: 'brak' };
-  return katalog.pozycje.find((p) => p.id === idPozycji)?.regulaTerminu ?? { typ: 'brak' };
+  return zKatalogu?.regulaTerminu ?? { typ: 'brak' };
 }
 
 function przesun(d: DataISO, p: { przesuniecie: number; jednostka: 'dni' | 'miesiace' }): DataISO {

@@ -8,7 +8,9 @@ import type { WniosekZas53 } from '@/domena/typy';
 import { formatujRachunek } from '@/domena/walidacje';
 import { useKonto, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
 import { Kafelki } from '@/komponenty/kafelki';
+import { ODNOSNIKI } from '@/dane/katalog/pozycje';
 import { Karta } from '@/komponenty/karta';
+import { KartaWiecejInformacji } from '@/komponenty/karta-wiecej-informacji';
 import { ListaDefinicji } from '@/komponenty/lista-definicji';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
 import { Odnosnik } from '@/komponenty/odnosnik';
@@ -110,18 +112,21 @@ export function WidokWyslanegoZas53() {
           </div>
         }
         boczna={
-          <Karta tytul={t.coDalej} bezLinii as="section">
-            {wniosek.numerRachunku ? (
-              <>
-                <p className="m-0">{t.naRachunek}</p>
-                <p className="m-0 mb-4 text-body-strong">{formatujRachunek(wniosek.numerRachunku)}</p>
-              </>
-            ) : (
-              <p className="m-0 mb-4">{t.przekazem({ adres })}</p>
-            )}
-            <p className="m-0 mb-4">{t.kolejne({ numer: z?.seriaINumer || teksty.ViewZas53Start.kreator.bezNumeru })}</p>
-            <Kafelki kafelki={[{ href: trasy.ViewSickLeaveList(), etykieta: t.ezla, ikona: 'plik' }]} />
-          </Karta>
+          <>
+            <Karta tytul={t.coDalej} bezLinii as="section">
+              {wniosek.numerRachunku ? (
+                <>
+                  <p className="m-0">{t.naRachunek}</p>
+                  <p className="m-0 mb-4 text-body-strong">{formatujRachunek(wniosek.numerRachunku)}</p>
+                </>
+              ) : (
+                <p className="m-0 mb-4">{t.przekazem({ adres })}</p>
+              )}
+              <p className="m-0 mb-4">{t.kolejne({ numer: z?.seriaINumer || teksty.ViewZas53Start.kreator.bezNumeru })}</p>
+              <Kafelki kafelki={[{ href: trasy.ViewSickLeaveList(), etykieta: t.ezla, ikona: 'plik' }]} />
+            </Karta>
+            <KartaWiecejInformacji odnosniki={[ODNOSNIKI.zus]} />
+          </>
         }
       />
     </>

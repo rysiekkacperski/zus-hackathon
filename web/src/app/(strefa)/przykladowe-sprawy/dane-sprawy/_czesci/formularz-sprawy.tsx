@@ -14,7 +14,7 @@ import { Komunikat } from '@/komponenty/komunikat';
 import { PostepKreatora } from '@/komponenty/kroki';
 import { useNawigacjaZLadowaniem } from '@/komponenty/nawigacja-z-ladowaniem';
 import { BladPola, idBledu } from '@/komponenty/pole';
-import { Przycisk, klasyPrzycisku } from '@/komponenty/przycisk';
+import { Przycisk, PrzyciskLink, klasyPrzycisku } from '@/komponenty/przycisk';
 import { PrzyciskIkona } from '@/komponenty/przycisk-ikona';
 import { trasy } from '@/komponenty/rama/trasy';
 import { Segmenty } from '@/komponenty/segmenty';
@@ -42,7 +42,8 @@ import {
   type PoleProste,
 } from '@/domena/przykladowe-sprawy/walidacja';
 import { zapiszKorekte, zapiszRozstrzygniecie } from '@/dane/magazyn/operacje/przykladowe-sprawy';
-import { zatwierdzDaneSprawy } from '@/dane/magazyn/operacje/weryfikacja-sprawy';
+import { zweryfikujPrzykladowaSprawe } from '@/dane/api/klient';
+import { odczytajSpraweDoWeryfikacji, zapiszWeryfikacjeSprawy } from '@/dane/magazyn/operacje/weryfikacja-sprawy';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import type { DokumentSprawy, KodKomunikatu, SprawaPrzykladowa, WartoscOdczytana, WartoscSprawy, ZrodloWartosciSprawy } from '@/domena/typy';
 import { teksty } from '@/teksty';
@@ -186,6 +187,7 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
   const pokazMatke = f.pola.rola === 'ojciec-przejmujacy' || d.wniosek.okresMatki.wartosc !== null;
   const dalszeOkresy = d.zdarzenie.dalszeOkresy.wartosc ?? [];
   const przyznane = d.swiadczeniaPrzyznane.wartosc ?? [];
+  const odmowione = d.swiadczeniaOdmowione?.wartosc ?? [];
   const rodzajKwot = d.kwotyMiesieczne.wartosc?.[0]?.rodzaj ?? 'wynagrodzenie';
   const zZrzutu = sprawa.rozstrzygniecie.some((r) => r.zrodlo.rodzaj === 'dokument');
   const swiadczeniaWniosku = f.swiadczeniaWniosku.length > 0 ? f.swiadczeniaWniosku : [''];
@@ -343,18 +345,29 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
     if (numer !== null) setAktywnyWpis(numer);
   }
 
-  // Akcja ostatniej części po poprawnej walidacji całego formularza w czesci.dalej.
-  function zatwierdz() {
+  // Akcja ostatniej części po poprawnej walidacji całego formularza w czesci.dalej. Weryfikację ubezpieczenia
+  // chorobowego liczy serwer (POST /api/v1/przykladowe-sprawy/weryfikacja), a wynik trafia do danych sesji.
+  async function zatwierdz() {
     setBladStrony(null);
     ustawZajety(true);
     if (!zapiszZmiany()) {
       ustawZajety(false);
       return;
     }
-    const wynik = zatwierdzDaneSprawy(pobierzKontekstOperacji());
+    const biezaca = odczytajSpraweDoWeryfikacji();
+    const odpowiedz = biezaca.ok
+      ? await zweryfikujPrzykladowaSprawe({
+          teraz: pobierzKontekstOperacji().teraz,
+          dane: biezaca.wartosc.dane,
+          dokumenty: biezaca.wartosc.dokumenty,
+          rozstrzygniecie: biezaca.wartosc.rozstrzygniecie,
+        })
+      : biezaca;
+    const wynik = odpowiedz.ok ? zapiszWeryfikacjeSprawy(odpowiedz.wartosc.weryfikacja) : odpowiedz;
     if (!wynik.ok) {
       ustawZajety(false);
-      const bledyPol = wynik.bledyPol ?? {};
+      // Błędy pól API mają klucze 'dane.<pole>', a formularz klucze pól danych sprawy.
+      const bledyPol = Object.fromEntries(Object.entries(wynik.bledyPol ?? {}).map(([pole, kod]) => [pole.replace(/^dane\./, ''), kod]));
       const pierwsze = Object.keys(pola).find((id) => bledyPol[id]) ?? Object.keys(bledyPol)[0];
       if (pierwsze === undefined) {
         setBladStrony(wynik.kod);
@@ -436,10 +449,22 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
           ))}
         </ul>
         <div className="mt-5 grid justify-items-start gap-2">
-          <label htmlFor={ID_DODAJ} className={klasyPrzycisku('drugorzedny', 'auto', dodawanie ? 'pointer-events-none opacity-70' : 'cursor-pointer')}>
-            <Ikona nazwa="plus" />
-            {t.dokumenty.dodaj}
-          </label>
+          <div className="flex flex-wrap items-center gap-4">
+            <label htmlFor={ID_DODAJ} className={klasyPrzycisku('drugorzedny', 'auto', dodawanie ? 'pointer-events-none opacity-70' : 'cursor-pointer')}>
+              <Ikona nazwa="plus" />
+              {t.dokumenty.dodaj}
+            </label>
+            {/* Dokument przykładowy zespołu dodajemy na ekranie wgrywania w trybie dodania do bieżącej sprawy;
+                poprawki z formularza zapisujemy przed przejściem tak jak przed dodaniem pliku. */}
+            <PrzyciskLink
+              href={`${trasy.ViewSampleCaseUpload({ trybWgrania: 'dodaj' })}#dokumenty-przykladowe`}
+              wariant="tlo"
+              ikona="dokument"
+              onClick={() => zapiszZmiany(Object.values(walidacja.bledyAktualne).every((k) => k === '0006' || k === '0018' || k === '0109'))}
+            >
+              {t.dokumenty.dodajPrzykladowy}
+            </PrzyciskLink>
+          </div>
           <input
             id={ID_DODAJ}
             type="file"
@@ -751,17 +776,29 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
           etykietaPrzewijania={t.przyznane.etykietaPrzewijania}
           kolumny={[
             { klucz: 'swiadczenie', naglowek: t.przyznane.swiadczenie },
+            { klucz: 'decyzja', naglowek: t.przyznane.decyzja },
             { klucz: 'okres', naglowek: t.przyznane.okres },
             { klucz: 'kwota', naglowek: t.przyznane.kwota, liczbowa: true },
             { klucz: 'zrodlo', naglowek: t.przyznane.zrodlo },
           ]}
-          wiersze={przyznane.map((p, i) => ({
-            id: `${p.rodzaj}-${i}`,
-            swiadczenie: p.rodzaj in o.swiadczenie ? o.swiadczenie[p.rodzaj as keyof typeof o.swiadczenie] : p.rodzaj,
-            okres: teksty.wspolne.zlozone.zakresDat({ od: formatujDate(p.od), do: formatujDate(p.do) }),
-            kwota: formatujKwote(p.kwota),
-            zrodlo: opisElementu(d.swiadczeniaPrzyznane, false, '').tekst,
-          }))}
+          wiersze={[
+            ...przyznane.map((p, i) => ({
+              id: `przyznane-${p.rodzaj}-${i}`,
+              swiadczenie: p.rodzaj in o.swiadczenie ? o.swiadczenie[p.rodzaj as keyof typeof o.swiadczenie] : p.rodzaj,
+              decyzja: t.przyznane.przyznano,
+              okres: teksty.wspolne.zlozone.zakresDat({ od: formatujDate(p.od), do: formatujDate(p.do) }),
+              kwota: formatujKwote(p.kwota),
+              zrodlo: opisElementu(d.swiadczeniaPrzyznane, false, '').tekst,
+            })),
+            ...odmowione.map((p, i) => ({
+              id: `odmowione-${p.rodzaj}-${i}`,
+              swiadczenie: p.rodzaj in o.swiadczenie ? o.swiadczenie[p.rodzaj as keyof typeof o.swiadczenie] : p.rodzaj,
+              decyzja: p.przyczyna ? t.przyznane.odmowaZPrzyczyna({ przyczyna: p.przyczyna }) : t.przyznane.odmowa,
+              okres: p.od ? t.przyznane.odDnia({ od: formatujDate(p.od) }) : '',
+              kwota: '',
+              zrodlo: d.swiadczeniaOdmowione ? opisElementu(d.swiadczeniaOdmowione, false, '').tekst : '',
+            })),
+          ]}
         />
       </Karta>
     );
@@ -831,7 +868,7 @@ export function FormularzDanychSprawy({ sprawa, konto, teraz, onDodajDokument, d
 
       <PrzyciskiCzesci
         czesci={czesciZWpisem}
-        onAkcjaKroku={zatwierdz}
+        onAkcjaKroku={() => void zatwierdz()}
         etykietaAkcji={t.zatwierdzenie.zatwierdz}
         onWrocKroku={() => przejdz(trasy.ViewSampleCaseList())}
         zajety={zajety}

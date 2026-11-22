@@ -1,12 +1,13 @@
 // Zaświadczenie o niezaleganiu w opłacaniu składek albo decyzja o odmowie jego wydania i powiadomienie o zmianie statusu wniosku w ZUS
 // (kontrakt, sekcja 6.5; ANALIZY/17 R8–R9, ANALIZY/15 R6; 3.4.5.1.4). Właściciel: u14.
-import { zrodloweDaneKonta } from '@/dane/konta-zus';
+// Dokument wydaje REST API symulowanego ZUS (POST /api/v1/zus/zaswiadczenia-o-niezaleganiu) według stanu rozliczeń z danych
+// konta z nałożonym stanem symulowanego ZUS z magazynu, a magazyn zapisuje go w danych konta ZUS i jako plik do pobrania.
+import { zawnioskujOZaswiadczenieONiezaleganiu } from '@/dane/api/klient';
+import { opcjeSymulowanegoZus } from '@/dane/api/symulowany-zus';
 import { utworzPowiadomienie } from '@/dane/magazyn/operacje/powiadomienia';
-import { losowyCiag } from '@/dane/magazyn/losowanie';
 import { zapiszPlik } from '@/dane/magazyn/pliki';
 import { czyBladZapisu } from '@/dane/magazyn/rdzen';
 import {
-  czySymulacja,
   odczytajKatalog,
   odczytajStanKonta,
   odczytajStanRodziny,
@@ -18,7 +19,6 @@ import {
   zmienStanZus,
 } from '@/dane/magazyn/stan';
 import { dataZeZnacznika } from '@/domena/daty';
-import { idZLosowych } from '@/domena/numery';
 import { zmianyStatusowZus } from '@/domena/plan/kroki/statusy-zus';
 import type {
   DataISO,
@@ -29,7 +29,6 @@ import type {
   WynikOperacji,
   ZaswiadczenieOStanieRozliczen,
 } from '@/domena/typy';
-import { rodzajZaswiadczenia, stanNaDzien } from '@/domena/zasilki/stan-rozliczen';
 import '@/domena/zasilki/rozszerzenia-typow';
 import { trasy } from '@/komponenty/rama/trasy';
 import { teksty } from '@/teksty';
@@ -45,8 +44,9 @@ export async function wyslijWniosekOZaswiadczenieONiezaleganiu(
 }
 
 /**
- * Zaświadczenie o niezaleganiu albo decyzja o odmowie jego wydania na dzień `dzien`, zapisane w danych konta ZUS
- * i jako plik do pobrania do zakończenia sesji (0133 przy pueEzusNiedostepne).
+ * Zaświadczenie o niezaleganiu albo decyzja o odmowie jego wydania na dzień `dzien` z REST API symulowanego ZUS, zapisane
+ * w danych konta ZUS i jako plik do pobrania do zakończenia sesji. Kod 0133 oznacza niedostępne PUE/eZUS (symulacja
+ * pueEzusNiedostepne), konto bez stanu rozliczeń albo błąd sieci.
  */
 export async function wystawZaswiadczenieORozliczeniach(
   dzien: DataISO,
@@ -54,25 +54,20 @@ export async function wystawZaswiadczenieORozliczeniach(
 ): Promise<WynikOperacji<{ idPliku: IdPliku }>> {
   const zalogowany = odczytajZalogowanego();
   if (zalogowany === null) return { ok: false, kod: '0003' };
-  if (czySymulacja('pueEzusNiedostepne')) return { ok: false, kod: '0133' };
 
   const { konto } = zalogowany.stanKonta;
-  const zrodlo = zrodloweDaneKonta(konto.pesel, odczytajStanZus(konto.pesel), { imie: konto.imie, nazwisko: konto.nazwisko });
-  const os = zrodlo?.osZadluzenia;
-  if (!zrodlo || !os || zrodlo.stanRozliczenNiedostepny) return { ok: false, kod: '0133' };
-
-  const stan = stanNaDzien(os, dzien, ctx.teraz);
-  const zaswiadczenie: ZaswiadczenieOStanieRozliczen = {
-    id: idZLosowych('ZSR', ctx.teraz, losowyCiag(6)),
-    rodzaj: rodzajZaswiadczenia(stan),
-    dzienStanu: dzien,
-    kwotaZadluzenia: stan.kwotaZadluzenia,
-    ...(stan.umowa ? { umowa: stan.umowa } : {}),
-    wystawiono: ctx.teraz,
-    imie: konto.imie,
-    nazwisko: konto.nazwisko,
-    pesel: konto.pesel,
-  };
+  const wydane = await zawnioskujOZaswiadczenieONiezaleganiu(
+    {
+      pesel: konto.pesel,
+      dzien,
+      teraz: ctx.teraz,
+      stanSymulowany: odczytajStanZus(konto.pesel),
+      wnioskodawca: { imie: konto.imie, nazwisko: konto.nazwisko },
+    },
+    opcjeSymulowanegoZus(),
+  );
+  if (!wydane.ok) return { ok: false, kod: '0133' };
+  const zaswiadczenie: ZaswiadczenieOStanieRozliczen = wydane.wartosc.zaswiadczenie;
 
   let idPliku: IdPliku;
   try {

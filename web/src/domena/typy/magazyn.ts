@@ -11,7 +11,7 @@ import type {
   ZrodloweDaneKontaZus,
 } from '@/domena/typy/dane-zus';
 import type { WynikiKalkulacji } from '@/domena/typy/kalkulacje';
-import type { EdycjeKatalogu } from '@/domena/typy/katalog';
+import type { EdycjeKatalogu, ZmianaKatalogu } from '@/domena/typy/katalog';
 import type { KodKomunikatu } from '@/domena/typy/komunikaty';
 import type { KontoDemo, KontoPrzewodnika } from '@/domena/typy/konto';
 import type { PlanRodziny } from '@/domena/typy/plan';
@@ -56,7 +56,8 @@ export interface ParametrySystemu {
   };
 }
 export interface StanGlobalny { wersjaSchematu: 1; noweKontaDemo: KontoDemo[]; parametry: ParametrySystemu;
-  edycjeKatalogu: EdycjeKatalogu; licznikiPotwierdzen: Record<string, number>; zaproszenia: Record<string, IdRodziny> }
+  edycjeKatalogu: EdycjeKatalogu; licznikiPotwierdzen: Record<string, number>; zaproszenia: Record<string, IdRodziny>;
+  zmianyKataloguDoWyslania?: ZmianaKatalogu[] }      // zmiany Administratora czekające na zapis w usłudze /api/katalog
 export interface StanKonta { konto: KontoPrzewodnika; ustawienia: Ustawienia | null; powiadomienia: Powiadomienie[];
   kopiaDanychZus: DaneZKontaZus | null; stanOdczytuZus: StanOdczytuZus; szkicProfilu: SzkicProfilu | null;
   wynikiKalkulacji: WynikiKalkulacji; interakcjeAsystenta: InterakcjeAsystenta }

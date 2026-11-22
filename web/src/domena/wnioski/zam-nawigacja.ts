@@ -38,8 +38,8 @@ const BEZ_PODZIALU: WarunkiCzesciZam = { liczbaDzieciZDanymi: 0, okresWDwochCzes
 
 /**
  * Liczba części ekranu. Początek zasiłku: termin porodu, dzień początku i zaświadczenie. Okres: okres urlopu
- * i wariant albo tryb i liczba tygodni. Dane po porodzie: wnioskodawca z rachunkiem i dwie części na każde dziecko,
- * przed porodem: wnioskodawca z informacją o danych dziecka i rachunek.
+ * i wariant albo tryb i liczba tygodni. Dane po porodzie: wnioskodawca, rachunek i dwie części na każde dziecko,
+ * przed porodem: wnioskodawca, potem informacja o danych dziecka z rachunkiem.
  */
 export function liczbaCzesciEkranuZam(ekran: IdWidoku, w: WarunkiCzesciZam = BEZ_PODZIALU): number {
   switch (ekran) {
@@ -48,7 +48,7 @@ export function liczbaCzesciEkranuZam(ekran: IdWidoku, w: WarunkiCzesciZam = BEZ
     case 'ViewZamPeriod':
       return w.okresWDwochCzesciach ? 2 : 1;
     case 'ViewZamData':
-      return w.liczbaDzieciZDanymi > 0 ? 1 + 2 * w.liczbaDzieciZDanymi : 2;
+      return w.liczbaDzieciZDanymi > 0 ? 2 + 2 * w.liczbaDzieciZDanymi : 2;
     default:
       return 1;
   }

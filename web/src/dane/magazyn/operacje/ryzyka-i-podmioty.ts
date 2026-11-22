@@ -16,13 +16,13 @@ import type {
   StanRodziny,
   WynikOperacji,
 } from '@/domena/typy';
+import { zapiszZmianeKatalogu, zaplanujWysylkeKatalogu } from '@/dane/magazyn/katalog-serwer';
 import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
 import {
   odczytajKatalog,
   odczytajZalogowanego,
   rodzinaKonta,
   wykonajOperacjeZWynikiem,
-  zmienGlobalne,
   zmienStanRodziny,
 } from '@/dane/magazyn/stan';
 
@@ -103,22 +103,17 @@ export function zapiszPodmiotWsparcia(dane: FormularzPodmiotu, ctx: KontekstOper
   const istniejacy = dane.id === undefined ? undefined : katalog.podmiotyWsparcia.find((p) => p.id === dane.id);
   if (dane.id !== undefined && istniejacy === undefined) return { ok: false, kod: '0003' };
 
-  return wykonajOperacjeZWynikiem<void>(() => {
-    zmienGlobalne((g) => {
-      const edycje = g.edycjeKatalogu;
-      const { dodane, zmienione } = edycje.podmioty;
-      let podmioty = edycje.podmioty;
-      if (istniejacy === undefined) {
-        const { id, kolejnosc } = kolejnyIdentyfikator(katalog.podmiotyWsparcia);
-        podmioty = { dodane: [...dodane, podmiotZFormularza(dane, id, kolejnosc)], zmienione };
-      } else {
-        const podmiot = podmiotZFormularza(dane, istniejacy.id, istniejacy.kolejnosc);
-        podmioty = dodane.some((p) => p.id === podmiot.id)
-          ? { dodane: dodane.map((p) => (p.id === podmiot.id ? podmiot : p)), zmienione }
-          : { dodane, zmienione: [...zmienione.filter((p) => p.id !== podmiot.id), podmiot] };
-      }
-      return { ...g, edycjeKatalogu: { ...edycje, wersja: edycje.wersja + 1, podmioty } };
-    }, 'domenowe');
+  // Zmiana trafia do kopii lokalnej i do kolejki wspólnego katalogu (usługa /api/katalog, dane/magazyn/katalog-serwer.ts).
+  const wynik = wykonajOperacjeZWynikiem<void>(() => {
+    if (istniejacy === undefined) {
+      const { id, kolejnosc } = kolejnyIdentyfikator(katalog.podmiotyWsparcia);
+      zapiszZmianeKatalogu({ rodzaj: 'podmiot', podmiot: podmiotZFormularza(dane, id, kolejnosc), nowy: true });
+    } else {
+      const podmiot = podmiotZFormularza(dane, istniejacy.id, istniejacy.kolejnosc);
+      zapiszZmianeKatalogu({ rodzaj: 'podmiot', podmiot, nowy: false });
+    }
     return { ok: true, wartosc: undefined };
   });
+  if (wynik.ok) zaplanujWysylkeKatalogu();
+  return wynik;
 }

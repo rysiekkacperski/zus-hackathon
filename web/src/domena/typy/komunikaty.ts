@@ -1,7 +1,7 @@
 // Kody i typy komunikatów z docs/03-user-stories/tablica-komunikatow.md (kolumny ID, Nazwa i Typ).
 // Treści komunikatów leżą w teksty.komunikaty w src/teksty.ts.
 
-// komunikaty.ts: zamknięta unia wszystkich 334 kodów tablicy komunikatów
+// komunikaty.ts: zamknięta unia wszystkich 341 kodów tablicy komunikatów
 export type KodKomunikatu =
   | '0001' // Brak połączenia z danymi konta ZUS
   | '0002' // Nieaktualne dane konta ZUS
@@ -336,7 +336,14 @@ export type KodKomunikatu =
   | '0331' // Matka bez zasiłku macierzyńskiego w 8 tygodniach po porodzie
   | '0332' // Ojciec bez przerwy w pracy
   | '0333' // Dodatkowy zasiłek opiekuńczy poza limitem dni
-  | '0334'; // Pobyt matki w szpitalu bez daty wypisu
+  | '0334' // Pobyt matki w szpitalu bez daty wypisu
+  | '0335' // Usługa wyliczeń przewodnika niedostępna
+  | '0336' // Data rezygnacji z zasiłku macierzyńskiego nie później niż dziś
+  | '0337' // Wniosek ZAS-23 wysłany
+  | '0338' // Wniosek ZAS-23 niedostępny
+  | '0339' // Rezygnacja z części zasiłku dla zleceniodawcy przygotowana
+  | '0340' // Puste pole tekstowe katalogu
+  | '0341'; // Nazwa wpisu słownika już istnieje
 
 // Wartości kolumny Typ tablicy komunikatów.
 export type TypKomunikatu = 'ERROR' | 'WARNING' | 'INFO';
@@ -677,4 +684,11 @@ export const typyKomunikatow: Record<KodKomunikatu, TypKomunikatu> = {
   '0332': 'WARNING',
   '0333': 'INFO',
   '0334': 'INFO',
+  '0335': 'ERROR',
+  '0336': 'ERROR',
+  '0337': 'INFO',
+  '0338': 'INFO',
+  '0339': 'INFO',
+  '0340': 'ERROR',
+  '0341': 'ERROR',
 };

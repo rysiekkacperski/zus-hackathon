@@ -2,6 +2,7 @@
 // Dla każdej sprawy planu: termin z reguły pozycji i daty kotwiczącej, oznaczenie szacowany, liczba dni,
 // oznaczenie po terminie, terminy powtarzalne i koszt albo skutek spóźnienia.
 import { dodajDni, dodajLata, dodajMiesiace, formatujDate, minData, ostatniDzienMiesiaca, pierwszyDzienMiesiaca, roznicaDni } from '@/domena/daty';
+import { terminOplaceniaSkladek as terminOplaceniaSkladekZaMiesiac } from '@/domena/plan/straznik';
 import { kosztSprawy } from '@/domena/terminy/koszt';
 import {
   nastepnyTerminPowtarzalny,
@@ -317,11 +318,17 @@ function terminRegulyZListy(r: RegulaTerminu, kotwice: KotwiceTerminow, w: Wejsc
   return { termin, kotwica: kotwa(r.kotwica, baza, opisPrzesuniecia(r, baza, nazwa)), szacowany: false };
 }
 
-/** Termin sprawy Opłacenie składek: 20. dzień miesiąca następującego po miesiącu składek. */
+/**
+ * Termin sprawy Opłacenie składek: 20. dzień miesiąca następującego po miesiącu składek, a gdy przypada w sobotę
+ * albo w dniu ustawowo wolnym od pracy, najbliższy następny dzień roboczy. Termin liczy ta sama funkcja co
+ * strażnik ubezpieczenia chorobowego, więc kalendarz terminów i sprawa planu pokazują ten sam dzień.
+ * Podstawa: art. 47 ust. 1 pkt 4 ustawy o systemie ubezpieczeń społecznych (do 20. dnia następnego miesiąca)
+ * w związku z art. 31 tej ustawy i art. 12 § 5 Ordynacji podatkowej (sobota albo dzień ustawowo wolny od pracy).
+ */
 function terminOplaceniaSkladek(sprawa: PozycjaPlanu): WynikReguly {
   if (!sprawa.miesiacSkladek) return BRAK;
   const pierwszyDzien = `${sprawa.miesiacSkladek}-01`;
-  const termin = dodajDni(dodajMiesiace(pierwszyDzien, 1), 19);
+  const termin = terminOplaceniaSkladekZaMiesiac(sprawa.miesiacSkladek);
   return { termin, kotwica: kotwa('rok-kalendarzowy', pierwszyDzien, tk.oplacenieSkladek({ miesiac: formatujMiesiac(sprawa.miesiacSkladek) })), szacowany: false };
 }
 

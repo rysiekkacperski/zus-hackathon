@@ -27,7 +27,7 @@ const t = teksty.ViewContributionBalance;
 export function WidokStanuRozliczen() {
   const wynik = useStanRozliczenKonta();
   if (!wynik) return null;
-  const { dane, dzialalnosc, niedostepny, karty, prog, minimalne, maChorobowe } = wynik;
+  const { dane, dzialalnosc, niedostepny, karty, progi, maChorobowe } = wynik;
   const kopia = dane.kopia;
 
   const stopka = (
@@ -103,7 +103,10 @@ export function WidokStanuRozliczen() {
         <ListaDefinicji
           szerokoscEtykiety="waska"
           pozycje={[
-            { etykieta: t.progZadluzenia, wartosc: t.wplywProg({ prog: formatujKwote(prog), minimalne: formatujKwote(minimalne) }) },
+            ...progi.map((p) => ({
+              etykieta: progi.length > 1 ? t.progZadluzeniaWRoku({ rok: String(p.rok) }) : t.progZadluzenia,
+              wartosc: t.wplywProg({ prog: formatujKwote(p.prog), minimalne: formatujKwote(p.minimalne) }),
+            })),
             { etykieta: t.wplywPonadProgEtykieta, wartosc: t.wplywPonadProg },
             { etykieta: t.wplywWyplataEtykieta, wartosc: t.wplywWyplata },
           ]}

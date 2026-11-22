@@ -36,7 +36,8 @@ export function brakiPodsumowaniaZam(wniosek: WniosekZam): BrakiPodsumowaniaZam 
       break;
     }
   }
-  const rachunek = walidujRachunek(wniosek.numerRachunku ?? '', true);
+  // Numer rachunku jest opcjonalny tak jak w kroku Dane (walidujDaneZam): bez numeru ZUS wypłaca zasiłek przekazem pocztowym.
+  const rachunek = walidujRachunek(wniosek.numerRachunku ?? '', false);
   if (rachunek) braki.rachunek = rachunek;
   if (!wniosek.oswiadczeniaPotwierdzone) braki.oswiadczenia = '0043';
   return braki;

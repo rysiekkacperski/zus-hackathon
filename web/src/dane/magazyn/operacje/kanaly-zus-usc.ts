@@ -1,12 +1,15 @@
 // Pytanie do ZUS, dane konta ubezpieczonego i wniosek o odpis aktu urodzenia (kontrakt, sekcja 6.5).
 // Właściciel: u29 (Pytanie do ZUS, dane konta i odpis aktu urodzenia).
-// Połączenie z PUE/eZUS i z rejestrem stanu cywilnego jest symulowane: pytanie trafia do korespondencji konta
-// w symulowanym ZUS i do kopii danych konta ZUS, a wniosek o odpis przyjmuje albo odrzuca symulowany rejestr.
+// PUE/eZUS symuluje REST API symulowanego ZUS: pytanie wysyła POST /api/v1/zus/pytania, a magazyn zapisuje pytanie
+// z odpowiedzi w korespondencji konta w symulowanym ZUS i w kopii danych konta ZUS. Dane konta ubezpieczonego czyta
+// GET /api/v1/zus/konto (PESEL w nagłówku X-Pesel) z kanałem PUE/eZUS. Wniosek o odpis przyjmuje albo odrzuca symulowany rejestr.
+import { wyslijPytanieDoZus as wyslijPytanieDoZusApi } from '@/dane/api/klient';
+import { opcjeSymulowanegoZus } from '@/dane/api/symulowany-zus';
 import { gminy } from '@/dane/gminy';
 import { adresyProdukcyjne } from '@/dane/parametry-produkcyjne';
 import { losowyCiag } from '@/dane/magazyn/losowanie';
 import { nastepnyNumerPotwierdzenia } from '@/dane/magazyn/operacje/konto';
-import { odczytajDaneKontaZus, poczekajNaSymulowanyOdczytZus } from '@/dane/magazyn/operacje/odczyt-zus';
+import { odczytajDaneKontaZus } from '@/dane/magazyn/operacje/odczyt-zus';
 import { uruchomPoOdczycieDanychZus } from '@/dane/magazyn/operacje/po-odczycie-zus';
 import { ustawStatusSprawy } from '@/dane/magazyn/operacje/plan';
 import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
@@ -25,7 +28,7 @@ import {
 } from '@/dane/magazyn/stan';
 import { parsujDate } from '@/domena/daty';
 import { idZLosowych } from '@/domena/numery';
-import { przytnijTrescPytania, walidujTrescPytania, zbudujKontekstPytania } from '@/domena/pytania-zus';
+import { walidujTrescPytania, zbudujKontekstPytania } from '@/domena/pytania-zus';
 import type {
   IdSprawy,
   IdWniosku,
@@ -60,15 +63,15 @@ export interface DanePytaniaDoZus {
 }
 
 /**
- * Wysłanie pytania przez PUE/eZUS zalogowanego użytkownika (R2, R3). Błędna treść: 0129 albo 0130,
- * PUE/eZUS niedostępne: 0133. Pytanie z kontekstem z chwili wysłania trafia do korespondencji konta.
+ * Wysłanie pytania przez PUE/eZUS zalogowanego użytkownika (R2, R3) do REST API symulowanego ZUS. Błędna treść: 0129
+ * albo 0130 (sprawdzana przed wysłaniem i przez API), PUE/eZUS niedostępne albo błąd sieci: 0133. Pytanie z kontekstem
+ * z chwili wysłania, które zwraca API, trafia do korespondencji konta.
  */
-export function wyslijPytanieDoZus(dane: DanePytaniaDoZus, ctx: KontekstOperacji): WynikOperacji<PytanieDoZus> {
+export async function wyslijPytanieDoZus(dane: DanePytaniaDoZus, ctx: KontekstOperacji): Promise<WynikOperacji<PytanieDoZus>> {
   const bladTresci = walidujTrescPytania(dane.tresc);
   if (bladTresci) return { ok: false, kod: bladTresci, bledyPol: { tresc: bladTresci } };
   const zalogowany = odczytajZalogowanego();
   if (zalogowany === null) return { ok: false, kod: '0133' };
-  if (czySymulacja('pueEzusNiedostepne')) return { ok: false, kod: '0133' };
 
   const konto = zalogowany.stanKonta.konto;
   const rodzina = rodzinaKonta(konto);
@@ -81,15 +84,21 @@ export function wyslijPytanieDoZus(dane: DanePytaniaDoZus, ctx: KontekstOperacji
     kalendarz: rodzina?.kalendarz ?? null,
     katalog: odczytajKatalog(),
   });
-  const pytanie: PytanieDoZus = {
-    idPytania: idZLosowych('PYT', ctx.teraz, losowyCiag(6)),
-    ...(kontekst.sprawa ? { idSprawy: kontekst.sprawa.idSprawy } : {}),
-    tresc: przytnijTrescPytania(dane.tresc),
-    kontekst,
-    wyslano: ctx.teraz,
-    status: 'wyslane',
-    peselNadawcy: konto.pesel,
-  };
+  const wyslane = await wyslijPytanieDoZusApi(
+    {
+      pesel: konto.pesel,
+      tresc: dane.tresc,
+      ...(kontekst.sprawa ? { idSprawy: kontekst.sprawa.idSprawy } : {}),
+      kontekst,
+      teraz: ctx.teraz,
+    },
+    opcjeSymulowanegoZus(),
+  );
+  if (!wyslane.ok) {
+    const kod = wyslane.kod === '0129' || wyslane.kod === '0130' ? wyslane.kod : '0133';
+    return { ok: false, kod, ...(kod === '0133' ? {} : { bledyPol: { tresc: kod } }) };
+  }
+  const pytanie: PytanieDoZus = wyslane.wartosc.pytanie;
   return wykonajOperacje(() => {
     zmienStanZus(konto.pesel, (s) => ({ ...s, korespondencja: [...s.korespondencja, pytanie] }));
     zmienStanKonta(konto.pesel, (s) =>
@@ -104,29 +113,16 @@ export function wyslijPytanieDoZus(dane: DanePytaniaDoZus, ctx: KontekstOperacji
 // --- Dane konta ubezpieczonego (3.8.2.2.1) --------------------------------------------------------
 
 /**
- * Odczyt danych konta ubezpieczonego przy otwarciu ViewZusAccountData i przy ponowieniu (R8): udany odczyt
- * zastępuje kopię; nieudany z kopią daje 0002, bez kopii 0133.
+ * Odczyt danych konta ubezpieczonego przy otwarciu ViewZusAccountData i przy ponowieniu (R8) przez PUE/eZUS, czyli
+ * GET /api/v1/zus/konto (PESEL w nagłówku X-Pesel) z kanałem pue-ezus: udany odczyt zastępuje kopię; nieudany (pueEzusNiedostepne,
+ * daneZusNiedostepne albo błąd sieci) kończy się po czasie symulowanego odczytu i z kopią daje 0002, bez kopii 0133.
  */
 export async function odczytajDaneKontaUbezpieczonego(ctx: KontekstOperacji): Promise<WynikOperacji> {
   const zalogowany = odczytajZalogowanego();
   if (zalogowany === null) return { ok: false, kod: '0133' };
   const pesel = zalogowany.sesja.pesel;
 
-  if (czySymulacja('pueEzusNiedostepne') || czySymulacja('daneZusNiedostepne')) {
-    // Nieudany odczyt kończy się po czasie symulowanego odczytu, tak jak odczyt udany.
-    await poczekajNaSymulowanyOdczytZus();
-    const maKopie = (odczytajStanKonta(pesel)?.kopiaDanychZus ?? null) !== null;
-    wykonajOperacje(() => {
-      zmienStanKonta(
-        pesel,
-        (s) => ({ ...s, stanOdczytuZus: { stan: maKopie ? 'nieudany-z-kopia' : 'nieudany-bez-kopii', czas: ctx.teraz } }),
-        'systemowe',
-      );
-    });
-    return { ok: false, kod: maKopie ? '0002' : '0133' };
-  }
-
-  const wynik = await odczytajDaneKontaZus(pesel, ctx);
+  const wynik = await odczytajDaneKontaZus(pesel, ctx, { kanal: 'pue-ezus' });
   if (!wynik.ok) {
     if (wynik.kod === '0003') return wynik;
     return { ok: false, kod: odczytajStanKonta(pesel)?.kopiaDanychZus ? '0002' : '0133' };

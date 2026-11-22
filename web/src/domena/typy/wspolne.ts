@@ -26,6 +26,8 @@ export type Plec = 'kobieta' | 'mezczyzna';
 
 export type WynikOperacji<T = void> =
   | { ok: true; wartosc: T }
-  | { ok: false; kod: KodKomunikatu; bledyPol?: Record<string, KodKomunikatu> };
+  | { ok: false; kod: KodKomunikatu; bledyPol?: Record<string, KodKomunikatu>;
+      /** Parametry treści komunikatu, na przykład z odpowiedzi błędu REST API. */
+      parametry?: Record<string, string> };
 export type BledyPol<P extends string> = Partial<Record<P, KodKomunikatu>>;
 export interface KontekstOperacji { dzis: DataISO; teraz: ZnacznikCzasu }

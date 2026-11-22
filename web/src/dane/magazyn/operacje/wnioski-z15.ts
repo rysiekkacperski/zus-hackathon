@@ -1,7 +1,7 @@
 // Kreator wniosku o zasiłek opiekuńczy Z-15 (epik 3.9.3). Właściciel: u30.
-// Szkic wniosku w grupie Wnioski rodziny, zapis kroków, pliki załączników, wysyłka do ZUS (w trybie demonstracyjnym
-// numer Z15-DEMO-RRRRMMDD-NNNN), przygotowanie dla płatnika składek i oznaczenie przekazania. Status sprawy K22
-// zmienia operacja planu ustawStatusSprawy.
+// Szkic wniosku w grupie Wnioski rodziny, zapis kroków, pliki załączników, wysyłka do ZUS przez REST API symulowanego ZUS
+// (POST /api/v1/zus/wnioski, w trybie demonstracyjnym numer Z15-DEMO-RRRRMMDD-NNNN z odpowiedzi), przygotowanie dla płatnika
+// składek i oznaczenie przekazania. Status sprawy K22 zmienia operacja planu ustawStatusSprawy.
 import { idZLosowych } from '@/domena/numery';
 import { walidujPlik } from '@/domena/walidacje';
 import type {
@@ -16,13 +16,13 @@ import type {
   WniosekZ15,
   WynikOperacji,
 } from '@/domena/typy';
+import { wyslijWniosekDoZus } from '@/dane/api/klient';
+import { opcjeSymulowanegoZus } from '@/dane/api/symulowany-zus';
 import { losowyCiag } from '@/dane/magazyn/losowanie';
-import { nastepnyNumerPotwierdzenia } from '@/dane/magazyn/operacje/konto';
 import { ustawStatusSprawy } from '@/dane/magazyn/operacje/plan';
 import { przeliczRodzine } from '@/dane/magazyn/operacje/przeliczenie';
 import { usunPlik, zapiszPlik } from '@/dane/magazyn/pliki';
 import {
-  czySymulacja,
   czyTrybDemonstracyjny,
   odczytajZalogowanego,
   rodzinaKonta,
@@ -148,22 +148,33 @@ export async function dolaczPlikZ15(id: IdWniosku, idZalacznika: string, rodzaj:
   return wynik;
 }
 
-/** Wysłanie wniosku do ZUS (0043 bez oświadczenia, 0149 bez plików, 0044 przy niedostępnym kanale). */
+/**
+ * Wysłanie wniosku do ZUS przez REST API symulowanego ZUS (0043 bez oświadczenia, 0149 bez plików, 0044 przy niedostępnym
+ * kanale albo błędzie sieci). Numer potwierdzenia i datę złożenia nadaje API; wymagane załączniki z kreatora API sprawdza
+ * ponownie. W treści żądania załączniki spoza listy wymaganych z kreatora mają wyłączone oznaczenie wymaganego, bo kreator
+ * ich już nie żąda.
+ */
 export async function wyslijZ15(id: IdWniosku, wymaganeZalaczniki: string[], ctx: KontekstOperacji): Promise<WynikOperacji<{ potwierdzenie: string }>> {
   const k = kontekstZalogowanego();
   const obecny = k ? znajdz(k, id) : undefined;
   if (!k || !obecny || obecny.stan !== 'szkic') return { ok: false, kod: '0003' };
   if (!obecny.oswiadczeniePotwierdzone) return { ok: false, kod: '0043' };
   if (wymaganeZalaczniki.some((z) => !obecny.zalaczniki.find((p) => p.id === z)?.plik)) return { ok: false, kod: '0149' };
-  if (!czyTrybDemonstracyjny() || czySymulacja('wysylkaDoZusNiedostepna')) return { ok: false, kod: '0044' };
+  if (!czyTrybDemonstracyjny()) return { ok: false, kod: '0044' };
+  const doWyslania: WniosekZ15 = {
+    ...obecny,
+    zalaczniki: obecny.zalaczniki.map((z) => (wymaganeZalaczniki.includes(z.id) ? z : { ...z, wymagany: false })),
+  };
+  const odpowiedz = await wyslijWniosekDoZus({ wniosek: doWyslania, wymaganeZalaczniki, teraz: ctx.teraz }, opcjeSymulowanegoZus());
+  if (!odpowiedz.ok) return { ok: false, kod: odpowiedz.kod === '0043' || odpowiedz.kod === '0149' ? odpowiedz.kod : '0044' };
+  const { potwierdzenie, dataZlozenia } = odpowiedz.wartosc;
   const pliki = obecny.zalaczniki.flatMap((z) => (z.plik ? [z.plik.idPliku] : []));
   const wynik = wykonajOperacjeZWynikiem<{ potwierdzenie: string }>(() => {
-    const potwierdzenie = nastepnyNumerPotwierdzenia('Z15-DEMO', ctx.dzis);
     const wyslany: WniosekZ15 = {
       ...obecny,
       stan: 'wyslany',
       adresat: 'zus',
-      dataZlozenia: ctx.dzis,
+      dataZlozenia,
       potwierdzenie,
       zaktualizowano: ctx.teraz,
       zalaczniki: obecny.zalaczniki.map(({ plik, ...z }) => (plik ? { ...z, nazwaPoWyslaniu: plik.nazwa } : z)),

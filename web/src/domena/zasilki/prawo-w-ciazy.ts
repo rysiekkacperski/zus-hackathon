@@ -4,9 +4,11 @@
 // katalogu w wersji obowiązującej we wskazanym dniu. Kolejność przyczyn braku prawa: brak ubezpieczenia,
 // ustanie ubezpieczenia, okres wyczekiwania, wyczerpany okres zasiłkowy, zadłużenie ponad próg.
 import { WPISY_REGUL } from '@/dane/katalog/reguly-swiadczen';
+import { ID_KWOT } from '@/dane/katalog/slownik-kwot';
 import { dodajDni, dodajMiesiace, formatujDate, porownajDaty, roznicaDni } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
 import { dataUrodzeniaZPesel } from '@/domena/pesel';
+import { czyUmowaPrzedluzonaDoPorodu } from '@/domena/przewodnik/ryzyka';
 import {
   analizujUbezpieczenie,
   wartoscSlownika,
@@ -14,6 +16,7 @@ import {
   type AnalizaUbezpieczenia,
   type WartoscSlownika,
 } from '@/domena/zasilki/okres-ubezpieczenia';
+import { okresZasilkowyWCiazy } from '@/domena/zasilki/okres-zasilkowy';
 import {
   opisPlatnikaNieustalonego,
   opisPracodawcy,
@@ -96,13 +99,58 @@ function tytulyZProfilu(daneRodziny: DaneRodziny, pomocnicze: readonly TytulUbez
   }];
 }
 
+/** Kopia obiektu z datą końca `koniec`, a bez niej bez daty końca. */
+function zDataKonca<O extends { do?: DataISO }>(o: O, koniec: DataISO | undefined): O {
+  const kopia = { ...o };
+  if (koniec === undefined) delete kopia.do;
+  else kopia.do = koniec;
+  return kopia;
+}
+
+/**
+ * Tytuły z końcem zatrudnienia z profilu. Tytuł formy, której dotyczy ustanie, trwający w dniu ustania, kończy się
+ * w tym dniu razem z ubezpieczeniem chorobowym, a tytuły innych form trwają według danych. Umowa o pracę przedłużona
+ * do dnia porodu (art. 177 § 3 Kodeksu pracy) trwa do dnia porodu, a przed porodem bez daty końca. Bez formy ustania
+ * koniec obejmuje wszystkie tytuły trwające w dniu ustania.
+ */
+function zKoncemZatrudnienia(
+  tytuly: readonly TytulUbezpieczenia[],
+  rodzaj: TytulUbezpieczenia['rodzaj'] | undefined,
+  dataUstania: DataISO,
+  przedluzenie: { koniec?: DataISO } | null,
+): TytulUbezpieczenia[] {
+  return tytuly.map((t) => {
+    if (rodzaj !== undefined && t.rodzaj !== rodzaj) return t;
+    if (porownajDaty(t.od, dataUstania) > 0) return t;
+    if (t.do !== undefined && porownajDaty(t.do, dataUstania) < 0) return t;
+    const ch = t.ubezpieczenieChorobowe;
+    if (przedluzenie) {
+      const przedluzoneChorobowe = ch.rodzaj !== 'brak' && ch.do !== undefined && porownajDaty(ch.do, dataUstania) >= 0;
+      return {
+        ...zDataKonca(t, przedluzenie.koniec),
+        ubezpieczenieChorobowe: przedluzoneChorobowe ? zDataKonca(ch, przedluzenie.koniec) : ch,
+      };
+    }
+    // Ubezpieczenie chorobowe zaczęte po dniu ustania trwa według danych, jak w okresach ubezpieczenia.
+    if (ch.od !== undefined && porownajDaty(ch.od, dataUstania) > 0) return t;
+    const skroconeChorobowe = ch.do !== undefined && porownajDaty(ch.do, dataUstania) > 0;
+    return {
+      ...zDataKonca(t, dataUstania),
+      ubezpieczenieChorobowe: skroconeChorobowe ? zDataKonca(ch, dataUstania) : ch,
+    };
+  });
+}
+
 interface Przygotowanie {
   zgoda: boolean;
   zKonta: boolean;
   forma: FormaZatrudnienia | null;
   tytuly: TytulUbezpieczenia[];
   tytulGlowny?: TytulUbezpieczenia;
+  /** Koniec zatrudnienia z profilu: dzień ustania, a przy umowie przedłużonej do dnia porodu dzień porodu. */
   koniecZProfilu?: DataISO;
+  /** Umowa o pracę na czas określony albo na okres próbny dłuższy niż miesiąc przedłużona do dnia porodu. */
+  przedluzonaDoPorodu: boolean;
   ezla: ZaswiadczenieEzla[];
   stany: StanRozliczenSkladek[];
   stanNiedostepny: boolean;
@@ -116,13 +164,25 @@ function przygotuj(w: WejscieUstaleniaPrawa): Przygotowanie {
   const zgoda = w.zgoda ?? true;
   const zKonta = w.osoba === 'matka' && w.kopia !== null;
   const pomocnicze = w.tytulyMatkiDlaProfilu?.tytuly ?? [];
-  const tytuly = zKonta && w.kopia ? w.kopia.tytuly : tytulyZProfilu(w.daneRodziny, pomocnicze);
+  const zmiana = w.daneRodziny.matka.zmianaZatrudnienia;
+  const dataUstania = zmiana?.rodzaj.wartosc === 'ustanie' ? zmiana.data?.wartosc : undefined;
+  const przedluzonaDoPorodu = dataUstania !== undefined && czyUmowaPrzedluzonaDoPorodu(w.daneRodziny.matka, w.daneCiazy);
+  const dataPorodu = w.daneCiazy?.dataPorodu;
+  const koniecZProfilu = przedluzonaDoPorodu ? dataPorodu : dataUstania;
+  const formaUstania = zmiana?.forma?.wartosc;
+  const tytulyZrodlowe = zKonta && w.kopia ? w.kopia.tytuly : tytulyZProfilu(w.daneRodziny, pomocnicze);
+  const tytuly = dataUstania === undefined
+    ? tytulyZrodlowe
+    : zKoncemZatrudnienia(
+        tytulyZrodlowe,
+        formaUstania ? RODZAJ_TYTULU[formaUstania] : undefined,
+        dataUstania,
+        przedluzonaDoPorodu ? (dataPorodu ? { koniec: dataPorodu } : {}) : null,
+      );
   const forma = w.daneRodziny.matka.formaZatrudnienia?.wartosc ?? (zKonta ? formaZTytulow(tytuly) : null);
   const rodzaj = forma && forma !== 'brak-tytulu' ? RODZAJ_TYTULU[forma] : undefined;
   const zRodzaju = tytuly.filter((t) => t.rodzaj === rodzaj);
   const tytulGlowny = zRodzaju[zRodzaju.length - 1] ?? tytuly[tytuly.length - 1];
-  const zmiana = w.daneRodziny.matka.zmianaZatrudnienia;
-  const koniecZProfilu = zmiana?.rodzaj.wartosc === 'ustanie' ? zmiana.data?.wartosc : undefined;
   const ezla = zgoda && zKonta && w.kopia
     ? w.kopia.zaswiadczeniaEzla.filter((z) => z.rodzaj === 'choroba').sort((a, b) => porownajDaty(a.od, b.od))
     : [];
@@ -135,7 +195,8 @@ function przygotuj(w: WejscieUstaleniaPrawa): Przygotowanie {
     forma,
     tytuly,
     tytulGlowny,
-    koniecZProfilu,
+    ...(koniecZProfilu !== undefined ? { koniecZProfilu } : {}),
+    przedluzonaDoPorodu,
     ezla,
     stany: zKonta && w.kopia ? [...w.kopia.stanyRozliczen].sort((a, b) => porownajDaty(a.dzien, b.dzien)) : [],
     stanNiedostepny: !zKonta || w.kopia?.stanRozliczenNiedostepny === true || (w.kopia?.stanyRozliczen.length ?? 0) === 0,
@@ -161,6 +222,8 @@ export interface OkresZasilkowy {
   wyczerpany: boolean;
   zaswiadczenia: ZaswiadczenieEzla[];
   ostatniDzien: DataISO;
+  /** Dni wykorzystanej części przypadające po dniu `dzis`, objęte już wystawionymi zaświadczeniami. */
+  poDzis: number;
   wynagrodzenie?: { rok: number; limit: number; wykorzystane: number };
 }
 
@@ -174,6 +237,37 @@ function limitWynagrodzenia(katalog: Katalog, rok: number, rokUrodzenia: number 
   return poUkonczeniuWieku
     ? wartoscSlownika(katalog, WPISY_REGUL.wynagrodzenieChorobowe, dzien, 'dniPoUkonczeniuWieku', 14).wartosc
     : wartoscSlownika(katalog, WPISY_REGUL.wynagrodzenieChorobowe, dzien, 'dni', 33).wartosc;
+}
+
+/** Stawki zasiłku chorobowego i wynagrodzenia chorobowego przy zaświadczeniu e-ZLA z kodem B i bez kodu B. */
+export interface StawkiChorobowe {
+  zasilekZKodemB: WartoscSlownika;
+  zasilekBezKoduB: WartoscSlownika;
+  wynagrodzenieZKodemB: WartoscSlownika;
+  wynagrodzenieBezKoduB: number;
+}
+
+/**
+ * Stawka wynagrodzenia chorobowego za niezdolność do pracy poza ciążą: art. 92 § 1 pkt 1 Kodeksu pracy
+ * (Dz.U. 2026 poz. 1245). To minimum ustawowe, a przepisy prawa pracy u pracodawcy mogą przewidywać wyższą stawkę.
+ * Słownik kwot i progów nie ma wpisu tej stawki.
+ */
+const STAWKA_WYNAGRODZENIA_BEZ_KODU_B = 80;
+
+/**
+ * Stawki w dniu `dzien`. Zasiłek chorobowy wynosi 80% podstawy wymiaru, a 100%, gdy niezdolność do pracy przypada
+ * w okresie ciąży: art. 11 ust. 1 i ust. 2 pkt 1 ustawy z 25 czerwca 1999 r. o świadczeniach pieniężnych
+ * z ubezpieczenia społecznego w razie choroby i macierzyństwa (Dz.U. 2026 poz. 854). Wynagrodzenie chorobowe wynosi
+ * 80% wynagrodzenia, a za chorobę przypadającą w czasie ciąży 100%: art. 92 § 1 pkt 1 i 2 Kodeksu pracy. Niezdolność
+ * do pracy w ciąży oznacza na zaświadczeniu e-ZLA kod literowy B.
+ */
+export function stawkiChorobowe(katalog: Katalog, dzien: DataISO): StawkiChorobowe {
+  return {
+    zasilekZKodemB: wartoscSlownika(katalog, WPISY_REGUL.zasilekChorobowyWCiazy, dzien, 'stawka', 100),
+    zasilekBezKoduB: wartoscSlownika(katalog, ID_KWOT.zasilekChorobowyBezKoduB, dzien, 'stawka', 80),
+    wynagrodzenieZKodemB: wartoscSlownika(katalog, WPISY_REGUL.wynagrodzenieWCiazy, dzien, 'stawka', 100),
+    wynagrodzenieBezKoduB: STAWKA_WYNAGRODZENIA_BEZ_KODU_B,
+  };
 }
 
 /** Zaświadczenia ostatniego okresu zasiłkowego: przerwa do 60 dni łączy zaświadczenia w jeden okres. */
@@ -218,27 +312,49 @@ function okresZasilkowyZ(p: Przygotowanie, katalog: Katalog, dzis: DataISO): Okr
   const limit = wCiazy
     ? wartoscSlownika(katalog, WPISY_REGUL.okresZasilkowy, start, 'ciaza', 270).wartosc
     : wartoscSlownika(katalog, WPISY_REGUL.okresZasilkowy, start, 'podstawowy', 182).wartosc;
-  const analiza = analizujUbezpieczenie(p.tytuly, start, katalog, p.koniecZProfilu);
+  const analiza = analizujUbezpieczenie(p.tytuly, start, katalog);
   const nabycie = analiza?.dzienNabycia;
+  // Wykorzystana część obejmuje wszystkie dni wystawionych zaświadczeń, także dni po dniu `dzis` (3.4.4.1.4).
+  // Okres zasiłkowy w ciąży liczy ta sama funkcja co ekran ViewSickLeaveList.
+  const wspolny = wCiazy
+    ? okresZasilkowyWCiazy(
+        p.ezla,
+        limit,
+        wartoscSlownika(katalog, WPISY_REGUL.przerwaWNiezdolnosci, dzis, 'dni', 60).wartosc,
+        { dzis, ...(nabycie !== undefined ? { poczatekPrawa: nabycie } : {}) },
+      )
+    : null;
   let licznik = 0;
   let wykorzystane = 0;
+  let poDzis = 0;
   let dzienWyczerpania: DataISO | undefined;
   let ostatniDzien = lancuch[0].do;
-  // Dzień objęty kilkoma zaświadczeniami, także wystawionymi dla różnych płatników, system liczy raz.
-  const policzone = new Set<DataISO>();
-  for (const z of lancuch) {
-    for (const d of dni(z.od, z.do)) {
-      if (nabycie !== undefined && porownajDaty(d, nabycie) < 0) continue;
-      if (policzone.has(d)) continue;
-      policzone.add(d);
-      licznik += 1;
-      if (porownajDaty(d, dzis) <= 0) wykorzystane += 1;
-      if (licznik === limit) dzienWyczerpania = d;
+  let zaswiadczeniaOkresu = lancuch;
+  let koniec: DataISO;
+  if (wspolny && wspolny.zaswiadczenia.length > 0 && wspolny.dataWyczerpania) {
+    zaswiadczeniaOkresu = wspolny.zaswiadczenia;
+    ostatniDzien = zaswiadczeniaOkresu.reduce((m, z) => (porownajDaty(z.do, m) > 0 ? z.do : m), zaswiadczeniaOkresu[0].do);
+    wykorzystane = wspolny.wykorzystane;
+    poDzis = wspolny.poDzis ?? 0;
+    if (wspolny.pozostale === 0) dzienWyczerpania = wspolny.dataWyczerpania;
+    koniec = wspolny.dataWyczerpania;
+  } else {
+    // Dzień objęty kilkoma zaświadczeniami, także wystawionymi dla różnych płatników, system liczy raz.
+    const policzone = new Set<DataISO>();
+    for (const z of lancuch) {
+      for (const d of dni(z.od, z.do)) {
+        if (nabycie !== undefined && porownajDaty(d, nabycie) < 0) continue;
+        if (policzone.has(d)) continue;
+        policzone.add(d);
+        licznik += 1;
+        if (licznik <= limit && porownajDaty(d, dzis) > 0) poDzis += 1;
+        if (licznik === limit) dzienWyczerpania = d;
+      }
+      if (porownajDaty(z.do, ostatniDzien) > 0) ostatniDzien = z.do;
     }
-    if (porownajDaty(z.do, ostatniDzien) > 0) ostatniDzien = z.do;
+    wykorzystane = Math.min(licznik, limit);
+    koniec = dzienWyczerpania ?? dodajDni(ostatniDzien, limit - licznik);
   }
-  wykorzystane = Math.min(wykorzystane, limit);
-  const koniec = dzienWyczerpania ?? dodajDni(ostatniDzien, limit - licznik);
   let wynagrodzenie: OkresZasilkowy['wynagrodzenie'];
   if (p.forma === 'umowa-o-prace') {
     const rok = Number(ostatniDzien.slice(0, 4));
@@ -257,8 +373,9 @@ function okresZasilkowyZ(p: Przygotowanie, katalog: Katalog, dzis: DataISO): Okr
     pozostale: limit - wykorzystane,
     dzienWyczerpania: koniec,
     wyczerpany: dzienWyczerpania !== undefined && porownajDaty(dzienWyczerpania, dzis) < 0,
-    zaswiadczenia: lancuch,
+    zaswiadczenia: zaswiadczeniaOkresu,
     ostatniDzien,
+    poDzis,
     ...(wynagrodzenie ? { wynagrodzenie } : {}),
   };
 }
@@ -271,11 +388,14 @@ export interface KontekstPodzialu {
   katalog: Katalog;
   wyplacaZasilek: string;
   wyplacaWynagrodzenie: string;
+  /** Stawki z kodem B i bez kodu B; bez nich stawki ze słowników w dniu początku pierwszego zaświadczenia. */
+  stawki?: StawkiChorobowe;
 }
 
 /**
  * Podział okresu zaświadczeń e-ZLA na wynagrodzenie chorobowe (pracownica, pierwsze 33 albo 14 dni w roku
  * kalendarzowym), zasiłek chorobowy i zasiłek po ustaniu ubezpieczenia. Dni w okresie wyczekiwania pomija.
+ * Stawka odcinka zależy od kodu B zaświadczenia, więc zaświadczenia z różną stawką dają osobne odcinki.
  */
 export function podzialZaswiadczenia(
   z: ZaswiadczenieEzla | readonly ZaswiadczenieEzla[],
@@ -285,8 +405,13 @@ export function podzialZaswiadczenia(
   const licznikRoku = new Map<number, number>();
   const wynik: PodzialZaswiadczenia = [];
   const policzone = new Set<DataISO>();
+  const stawki = k.stawki ?? (lista.length > 0 ? stawkiChorobowe(k.katalog, lista[0].od) : null);
   for (const zaswiadczenie of lista) {
-    const stawkaZasilku = zaswiadczenie.kodyLiterowe.includes('B') ? 100 : 80;
+    const ciaza = zaswiadczenie.kodyLiterowe.includes('B');
+    const stawkaZasilku = ciaza ? stawki?.zasilekZKodemB.wartosc ?? 100 : stawki?.zasilekBezKoduB.wartosc ?? 80;
+    const stawkaWynagrodzenia = ciaza
+      ? stawki?.wynagrodzenieZKodemB.wartosc ?? 100
+      : stawki?.wynagrodzenieBezKoduB ?? STAWKA_WYNAGRODZENIA_BEZ_KODU_B;
     for (const d of dni(zaswiadczenie.od, zaswiadczenie.do)) {
       if (k.dzienNabycia !== undefined && porownajDaty(d, k.dzienNabycia) < 0) continue;
       if (policzone.has(d)) continue;
@@ -304,13 +429,14 @@ export function podzialZaswiadczenia(
         licznikRoku.set(rok, (licznikRoku.get(rok) ?? 0) + 1);
       } else rodzaj = 'zasilek-chorobowy';
       const ostatni = wynik[wynik.length - 1];
-      if (ostatni && ostatni.rodzaj === rodzaj && dodajDni(ostatni.do, 1) === d) {
+      const stawka = rodzaj === 'wynagrodzenie-chorobowe' ? stawkaWynagrodzenia : stawkaZasilku;
+      if (ostatni && ostatni.rodzaj === rodzaj && ostatni.stawka === stawka && dodajDni(ostatni.do, 1) === d) {
         ostatni.do = d;
         ostatni.dni += 1;
       } else {
         wynik.push({
           od: d, do: d, dni: 1, rodzaj,
-          stawka: rodzaj === 'wynagrodzenie-chorobowe' ? 100 : stawkaZasilku,
+          stawka,
           wyplaca: rodzaj === 'wynagrodzenie-chorobowe' ? k.wyplacaWynagrodzenie
             : rodzaj === 'zasilek-po-ustaniu' ? T.platnicy.zus : k.wyplacaZasilek,
         });
@@ -375,7 +501,36 @@ export interface UstalenieSwiadczenia {
   wyczekiwanieZaDni?: { od: DataISO; do: DataISO };
   /** Świadczenie rehabilitacyjne: ostatni dzień stawki 100% podstawy wymiaru, czyli dzień przed porodem. */
   stawkaCiazyDo?: DataISO;
+  /**
+   * Zasiłek chorobowy: stawki z kodem B i bez kodu B oraz stawka ustalonego okresu, gdy wszystkie zaświadczenia e-ZLA
+   * tego okresu mają tę samą stawkę. Bez zaświadczeń albo przy różnych stawkach `wartosc` nie występuje.
+   */
+  stawkaZasilku?: { wartosc?: number; zKodemB: number; bezKoduB: number };
+  /** Zasiłek chorobowy pracownicy: stawki wynagrodzenia chorobowego z kodem B i bez kodu B. */
+  stawkaWynagrodzenia?: { zKodemB: number; bezKoduB: number };
+  /** Zasiłek chorobowy: liczba zaświadczeń e-ZLA ustalonego okresu bez kodu B (komunikat 0234). */
+  zaswiadczeniaBezKoduB?: number;
+  /**
+   * Zasiłek w wysokości zasiłku macierzyńskiego i zasiłek macierzyński: ubezpieczenie ustało w ciąży, a po porodzie
+   * przysługuje zasiłek macierzyński po ustaniu ubezpieczenia, bez zasiłku do dnia porodu (art. 30 ust. 1 pkt 2
+   * i ust. 4 ustawy zasiłkowej).
+   */
+  macierzynskiPoUstaniu?: 'naruszenie-z-wyrokiem' | 'przedluzenie-umowy';
   platnikNieustalony: boolean;
+}
+
+/** Stawka zasiłku zaświadczeń e-ZLA: jedna wartość, gdy wszystkie zaświadczenia mają tę samą stawkę. */
+function stawkaZaswiadczen(ezla: readonly ZaswiadczenieEzla[], st: StawkiChorobowe): NonNullable<UstalenieSwiadczenia['stawkaZasilku']> {
+  const zKodemB = st.zasilekZKodemB.wartosc;
+  const bezKoduB = st.zasilekBezKoduB.wartosc;
+  const stawki = new Set(ezla.map((z) => (z.kodyLiterowe.includes('B') ? zKodemB : bezKoduB)));
+  const [jedyna] = [...stawki];
+  return { ...(stawki.size === 1 ? { wartosc: jedyna } : {}), zKodemB, bezKoduB };
+}
+
+/** Zaświadczenia e-ZLA, których okres przypada od dnia `od` do dnia `koniec`. */
+function zaswiadczeniaOkresu(ezla: readonly ZaswiadczenieEzla[], od: DataISO, koniec: DataISO | undefined): ZaswiadczenieEzla[] {
+  return ezla.filter((z) => porownajDaty(z.do, od) >= 0 && (koniec === undefined || porownajDaty(z.od, koniec) <= 0));
 }
 
 const PRZYCZYNY_ZWZM = ['upadlosc', 'likwidacja', 'smierc-pracodawcy'] as const;
@@ -403,6 +558,13 @@ function daneZrodlowe(w: WejscieUstaleniaPrawa, p: Przygotowanie, an: AnalizaUbe
       pole: zmiana.rodzaj.wartosc === 'rozpoczecie' ? T.dane.rozpoczecie : T.dane.ustanie,
       wartosc: formatujDate(zmiana.data.wartosc),
       zrodlo: zmiana.data.zrodlo,
+    });
+  }
+  if (p.przedluzonaDoPorodu) {
+    dane.push({
+      pole: T.dane.przedluzenie,
+      wartosc: p.koniecZProfilu ? T.dane.przedluzonaDo({ data: formatujDate(p.koniecZProfilu) }) : T.dane.przedluzonaDoPorodu,
+      zrodlo: w.daneRodziny.matka.rodzajUmowy?.zrodlo ?? 'odpowiedz-rodzica',
     });
   }
   const pz = w.daneRodziny.matka.platnikZasilku;
@@ -445,10 +607,11 @@ function wiersz(wpis: string, wartosc: string, v: WartoscSlownika): WierszWartos
 function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): UstalenieSwiadczenia {
   const D = w.wskazanyDzien;
   const k = w.katalog;
-  const an = analizujUbezpieczenie(p.tytuly, D, k, p.koniecZProfilu);
+  const an = analizujUbezpieczenie(p.tytuly, D, k);
   const wycz = wartosciWyczekiwania(k, D);
   const prog = progZadluzenia(k, D);
-  const stawka = wartoscSlownika(k, WPISY_REGUL.zasilekChorobowyWCiazy, D, 'stawka', 100);
+  const st = stawkiChorobowe(k, D);
+  const stawka = st.zasilekZKodemB;
   const reguly: WynikUstaleniaPrawa['zastosowaneReguly'] = [
     regula('podleganie', []),
     regula('okres-wyczekiwania', [wycz.obowiazkowe, wycz.dobrowolne, wycz.przerwa]),
@@ -464,11 +627,17 @@ function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): Usta
   if (p.forma === 'umowa-o-prace') {
     const limitW = wartoscSlownika(k, WPISY_REGUL.wynagrodzenieChorobowe, D, 'dni', 33);
     const limit50 = wartoscSlownika(k, WPISY_REGUL.wynagrodzenieChorobowe, D, 'dniPoUkonczeniuWieku', 14);
-    reguly.push(regula('wynagrodzenie-chorobowe', [limitW, limit50]));
+    reguly.push(regula('wynagrodzenie-chorobowe', [limitW, limit50, st.wynagrodzenieZKodemB]));
     wartosci.push(wiersz(T.wpisy.wynagrodzenie, T.jednostki.dniIDni({ a: String(limitW.wartosc), b: String(limit50.wartosc) }), limitW));
+    wartosci.push(wiersz(
+      T.wpisy.wynagrodzenieWCiazy,
+      T.jednostki.stawkiWynagrodzenia({ zKodemB: String(st.wynagrodzenieZKodemB.wartosc), bezKoduB: String(st.wynagrodzenieBezKoduB) }),
+      st.wynagrodzenieZKodemB,
+    ));
   }
-  reguly.push(regula('zasilek-chorobowy', [stawka]), regula('okres-zasilkowy', []), regula('platnik-swiadczenia', []));
+  reguly.push(regula('zasilek-chorobowy', [stawka, st.zasilekBezKoduB]), regula('okres-zasilkowy', []), regula('platnik-swiadczenia', []));
   wartosci.push(wiersz(T.wpisy.zasilekWCiazy, T.jednostki.procentPodstawy({ procent: String(stawka.wartosc) }), stawka));
+  wartosci.push(wiersz(T.wpisy.zasilekBezKoduB, T.jednostki.procentPodstawy({ procent: String(st.zasilekBezKoduB.wartosc) }), st.zasilekBezKoduB));
   if (p.forma === 'jdg') {
     reguly.push(regula('zadluzenie', [prog]));
     wartosci.push(wiersz(T.wpisy.progZadluzenia, formatujKwote(prog.wartosc), prog));
@@ -502,15 +671,19 @@ function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): Usta
     const powstalaPo = niezdolnosc !== undefined && porownajDaty(niezdolnosc.od, dodajDni(ustanie, poUstaniu.wartosc)) <= 0
       && roznicaDni(niezdolnosc.od, niezdolnosc.do) + 1 >= nieprzerwana.wartosc;
     if (niezdolnosc && (trwalaWUbezpieczeniu || powstalaPo)) {
+      const stawkaPoUstaniu = stawkaZaswiadczen([niezdolnosc], st);
       return {
         wynik: {
-          ...baza, postac: 'przysluguje', od: niezdolnosc.od, do: niezdolnosc.do, wyplaca: T.platnicy.zus, stawka: stawka.wartosc,
+          ...baza, postac: 'przysluguje', od: niezdolnosc.od, do: niezdolnosc.do, wyplaca: T.platnicy.zus,
+          stawka: stawkaPoUstaniu.wartosc ?? stawka.wartosc,
           podzial: podzialZaswiadczenia(p.ezla, {
             forma: p.forma, dzienNabycia: an.dzienNabycia, koniecUbezpieczenia: ustanie, rokUrodzenia: p.rokUrodzenia, katalog: k,
-            wyplacaZasilek: wyplaca, wyplacaWynagrodzenie: opisPracodawcy(p.tytulGlowny),
+            wyplacaZasilek: wyplaca, wyplacaWynagrodzenie: opisPracodawcy(p.tytulGlowny), stawki: st,
           }),
         },
         wartosci, platnikNieustalony: false,
+        stawkaZasilku: stawkaPoUstaniu,
+        zaswiadczeniaBezKoduB: niezdolnosc.kodyLiterowe.includes('B') ? 0 : 1,
       };
     }
     return {
@@ -587,14 +760,18 @@ function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): Usta
     koniec = dodajDni(p.dataPorodu, -1);
     macierzynskiZaDni = { od: p.dataPorodu, do: nieprzerwana.do };
   }
-  const ustaniePrzedPorodem = p.koniecZProfilu && porownajDaty(p.koniecZProfilu, w.dzis) > 0
+  const ustaniePrzedPorodem = !p.przedluzonaDoPorodu && p.koniecZProfilu && porownajDaty(p.koniecZProfilu, w.dzis) > 0
     && (p.ptp === undefined || porownajDaty(p.koniecZProfilu, p.ptp) < 0) ? p.koniecZProfilu : undefined;
   const podzialPelny = p.ezla.length > 0
     ? podzialZaswiadczenia(p.ezla, {
         forma: p.forma, dzienNabycia: an.dzienNabycia, ...(koniecUbezpieczenia ? { koniecUbezpieczenia } : {}), rokUrodzenia: p.rokUrodzenia,
-        katalog: k, wyplacaZasilek: wyplaca, wyplacaWynagrodzenie: opisPracodawcy(p.tytulGlowny),
+        katalog: k, wyplacaZasilek: wyplaca, wyplacaWynagrodzenie: opisPracodawcy(p.tytulGlowny), stawki: st,
       })
     : undefined;
+  // Stawka ustalonego okresu z kodów B zaświadczeń e-ZLA tego okresu; bez trwającej niezdolności okres nie ma
+  // zaświadczeń, więc ekran pokazuje obie stawki.
+  const ezlaOkresu = wNiezdolnosci ? zaswiadczeniaOkresu(p.ezla, od, koniec) : [];
+  const stawkaOkresu = ezlaOkresu.length > 0 ? stawkaZaswiadczen(ezlaOkresu, st) : { zKodemB: stawka.wartosc, bezKoduB: st.zasilekBezKoduB.wartosc };
   // Podział za okres ustalonego prawa: odcinki wcześniejszej niezdolności liczą się wyłącznie do limitu dni w roku.
   const podzial = podzialPelny && wNiezdolnosci
     ? podzialPelny
@@ -607,12 +784,17 @@ function ustalZasilekChorobowy(w: WejscieUstaleniaPrawa, p: Przygotowanie): Usta
     : podzialPelny;
   return {
     wynik: {
-      ...baza, postac: 'przysluguje', od, ...(koniec ? { do: koniec } : {}), wyplaca, stawka: stawka.wartosc,
+      ...baza, postac: 'przysluguje', od, ...(koniec ? { do: koniec } : {}), wyplaca, stawka: stawkaOkresu.wartosc ?? stawka.wartosc,
       ...(podzial ? { podzial } : {}),
       ...(wyczekiwanieWNiezdolnosci ? { przyczyna: wyczekiwanieWNiezdolnosci } : {}),
       ...(warunekZadluzenia !== undefined ? { kodKomunikatu: '0155' as const, parametryKomunikatu: { prog: formatujKwote(warunekZadluzenia) } } : {}),
     },
     wartosci,
+    stawkaZasilku: stawkaOkresu,
+    ...(p.forma === 'umowa-o-prace'
+      ? { stawkaWynagrodzenia: { zKodemB: st.wynagrodzenieZKodemB.wartosc, bezKoduB: st.wynagrodzenieBezKoduB } }
+      : {}),
+    zaswiadczeniaBezKoduB: ezlaOkresu.filter((z) => !z.kodyLiterowe.includes('B')).length,
     ...(ustaniePrzedPorodem ? { ustaniePrzedPorodem } : {}),
     ...(warunekZadluzenia !== undefined ? { warunekZadluzenia } : {}),
     ...(macierzynskiZaDni ? { macierzynskiZaDni } : {}),
@@ -630,7 +812,7 @@ function ustalRehabilitacyjne(w: WejscieUstaleniaPrawa, p: Przygotowanie): Ustal
   const stawka = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneStawka, D, 'ciaza', 100);
   const pierwsze = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneStawka, D, 'pierwszyOkres', 90);
   const dalej = wartoscSlownika(k, WPISY_REGUL.rehabilitacyjneStawka, D, 'pozostalyOkres', 75);
-  const an = analizujUbezpieczenie(p.tytuly, w.dzis, k, p.koniecZProfilu);
+  const an = analizujUbezpieczenie(p.tytuly, w.dzis, k);
   const baza = {
     swiadczenie: 'swiadczenie-rehabilitacyjne' as const,
     wskazanyDzien: D,
@@ -667,7 +849,7 @@ function ustalZwzm(w: WejscieUstaleniaPrawa, p: Przygotowanie): UstalenieSwiadcz
   const D = w.wskazanyDzien;
   const stawka = wartoscSlownika(k, WPISY_REGUL.zwzm, D, 'stawka', 100);
   const minimum = wartoscSlownika(k, WPISY_REGUL.minimalnaPodstawa, D, 'kwota', 414710);
-  const an = analizujUbezpieczenie(p.tytuly, w.dzis, k, p.koniecZProfilu);
+  const an = analizujUbezpieczenie(p.tytuly, w.dzis, k);
   const baza = {
     swiadczenie: 'zwzm' as const,
     wskazanyDzien: D,
@@ -694,13 +876,23 @@ function ustalZwzm(w: WejscieUstaleniaPrawa, p: Przygotowanie): UstalenieSwiadcz
       return { wynik: { ...baza, wskazanyDzien: od, postac: 'przysluguje', od, do: koniec }, wartosci, platnikNieustalony: false };
     }
   }
-  return { wynik: { ...baza, postac: 'warunek' }, wartosci, platnikNieustalony: false };
+  // Art. 30 ust. 3 ustawy zasiłkowej (Dz.U. 2026 poz. 854) daje zasiłek w wysokości zasiłku macierzyńskiego do dnia
+  // porodu wyłącznie przy wygaśnięciu umowy z powodu śmierci pracodawcy albo rozwiązaniu jej w ciąży z powodu upadłości
+  // albo likwidacji pracodawcy. Ustanie z naruszeniem przepisów stwierdzonym prawomocnym orzeczeniem sądu (art. 30
+  // ust. 1 pkt 2) i umowa przedłużona do dnia porodu (art. 30 ust. 4) dają zasiłek macierzyński od dnia porodu.
+  const macierzynskiPoUstaniu = p.forma === 'umowa-o-prace' && ustanie !== undefined && przyczyna === 'naruszenie-z-wyrokiem'
+    ? 'naruszenie-z-wyrokiem' as const
+    : p.przedluzonaDoPorodu ? 'przedluzenie-umowy' as const : undefined;
+  return {
+    wynik: { ...baza, postac: 'warunek' }, wartosci, platnikNieustalony: false,
+    ...(macierzynskiPoUstaniu ? { macierzynskiPoUstaniu } : {}),
+  };
 }
 
 function ustalMacierzynski(w: WejscieUstaleniaPrawa, p: Przygotowanie): UstalenieSwiadczenia {
   const k = w.katalog;
   const D = w.wskazanyDzien;
-  const an = analizujUbezpieczenie(p.tytuly, D, k, p.koniecZProfilu);
+  const an = analizujUbezpieczenie(p.tytuly, D, k);
   const wariant = wartoscSlownika(k, WPISY_REGUL.zasilekMacierzynski, D, 'stawka', 81.5);
   const baza = {
     swiadczenie: 'zasilek-macierzynski' as const,
@@ -710,16 +902,28 @@ function ustalMacierzynski(w: WejscieUstaleniaPrawa, p: Przygotowanie): Ustaleni
     warunkiBezSprawdzenia: [] as string[],
   };
   const wartosci = [wiersz(T.wpisy.macierzynski, T.jednostki.procentPodstawy({ procent: String(wariant.wartosc) }), wariant)];
+  // Umowa przedłużona do dnia porodu: zasiłek macierzyński po ustaniu ubezpieczenia wypłaca ZUS (art. 30 ust. 4
+  // ustawy zasiłkowej, Dz.U. 2026 poz. 854).
+  if (p.przedluzonaDoPorodu) {
+    return {
+      wynik: { ...baza, postac: 'przysluguje', od: D, wyplaca: T.platnicy.zus }, wartosci, platnikNieustalony: false,
+      macierzynskiPoUstaniu: 'przedluzenie-umowy',
+    };
+  }
   if (an === null) {
     return { wynik: { ...baza, postac: 'nie-przysluguje', przyczyna: { rodzaj: 'brak-ubezpieczenia' } }, wartosci, platnikNieustalony: false };
   }
   if (!an.podlega) {
     const zmiana = w.daneRodziny.matka.zmianaZatrudnienia;
     const przyczyna = zmiana?.przyczyna?.wartosc;
-    const chroniona = (przyczyna !== undefined && (PRZYCZYNY_MACIERZYNSKIEGO as readonly string[]).includes(przyczyna))
-      || zmiana?.umowaPrzedluzonaDoPorodu === true;
+    // Art. 30 ust. 1 ustawy zasiłkowej: ubezpieczenie ustało w ciąży z powodu śmierci, upadłości albo likwidacji
+    // pracodawcy albo z naruszeniem przepisów prawa stwierdzonym prawomocnym orzeczeniem sądu.
+    const chroniona = przyczyna !== undefined && (PRZYCZYNY_MACIERZYNSKIEGO as readonly string[]).includes(przyczyna);
     if (chroniona) {
-      return { wynik: { ...baza, postac: 'przysluguje', od: D, wyplaca: T.platnicy.zus }, wartosci, platnikNieustalony: false };
+      return {
+        wynik: { ...baza, postac: 'przysluguje', od: D, wyplaca: T.platnicy.zus }, wartosci, platnikNieustalony: false,
+        ...(przyczyna === 'naruszenie-z-wyrokiem' ? { macierzynskiPoUstaniu: 'naruszenie-z-wyrokiem' as const } : {}),
+      };
     }
     return { wynik: { ...baza, postac: 'nie-przysluguje', przyczyna: { rodzaj: 'ustanie', dzien: an.okres.do as DataISO } }, wartosci, platnikNieustalony: false };
   }
@@ -764,6 +968,8 @@ export interface SwiadczeniaWCiazy {
   zgoda: boolean;
   forma: FormaZatrudnienia | null;
   poUstaniu: boolean;
+  /** Umowa o pracę matki przedłużona do dnia porodu (art. 177 § 3 Kodeksu pracy). */
+  przedluzonaDoPorodu: boolean;
   zasilekChorobowy: UstalenieSwiadczenia;
   rehabilitacyjne: UstalenieSwiadczenia;
   zwzm: UstalenieSwiadczenia;
@@ -784,7 +990,7 @@ export function wskazaneDni(w: WejscieSwiadczen): Record<SwiadczenieWCiazy, Data
   // w okresie wyczekiwania i trwa po jego upływie, dzień nabycia prawa.
   let dzienChorobowego = nieprzerwana?.od ?? w.dzis;
   if (nieprzerwana) {
-    const nabycie = analizujUbezpieczenie(p.tytuly, nieprzerwana.od, w.katalog, p.koniecZProfilu)?.dzienNabycia;
+    const nabycie = analizujUbezpieczenie(p.tytuly, nieprzerwana.od, w.katalog)?.dzienNabycia;
     if (nabycie && porownajDaty(nieprzerwana.od, nabycie) < 0 && porownajDaty(nabycie, nieprzerwana.do) <= 0) dzienChorobowego = nabycie;
   }
   return {
@@ -800,12 +1006,13 @@ export function ustalSwiadczeniaWCiazy(w: WejscieSwiadczen): SwiadczeniaWCiazy {
   const dniWsk = wskazaneDni(w);
   const ustal = (s: SwiadczenieWCiazy) => ustalSwiadczenie({ ...w, swiadczenie: s, wskazanyDzien: dniWsk[s] });
   const p = przygotuj({ ...w, swiadczenie: 'zasilek-chorobowy', wskazanyDzien: w.dzis });
-  const an = analizujUbezpieczenie(p.tytuly, w.dzis, w.katalog, p.koniecZProfilu);
+  const an = analizujUbezpieczenie(p.tytuly, w.dzis, w.katalog);
   return {
     tryb: p.zKonta ? 'konto-zus' : 'profil-rodziny',
     zgoda: p.zgoda,
     forma: p.forma,
     poUstaniu: an !== null && !an.podlega,
+    przedluzonaDoPorodu: p.przedluzonaDoPorodu,
     zasilekChorobowy: ustal('zasilek-chorobowy'),
     rehabilitacyjne: ustal('swiadczenie-rehabilitacyjne'),
     zwzm: ustal('zwzm'),

@@ -7,14 +7,16 @@ import {
   OgloszenieOdczytuDanychZus,
 } from '@/app/(strefa)/profil-na-start/dane-z-konta-zus/_czesci/stan-odczytu-zus';
 import { DanePytania } from '@/app/(strefa)/pytania-do-zus/_czesci/karta-kontekstu';
-import { zrodloweDaneKonta } from '@/dane/konta-zus';
 import { adresEzus, odczytajDaneKontaUbezpieczonego } from '@/dane/magazyn/operacje/kanaly-zus-usc';
-import { useDzis, useKonto, useStanKonta, useStanSymulowanegoZus } from '@/dane/magazyn/hooki';
+import { zrodloOstatniegoOdczytuZus } from '@/dane/magazyn/operacje/odczyt-zus';
+import { useDzis, useKonto, useStanKonta } from '@/dane/magazyn/hooki';
 import { pobierzKontekstOperacji } from '@/dane/magazyn/zegar';
 import { dodajDni, porownajDaty } from '@/domena/daty';
 import type { DaneZKontaZus, KodKomunikatu, StanRozliczenSkladek, TytulUbezpieczenia } from '@/domena/typy';
 import { formatujDate, formatujDateICzas, formatujKwote, formatujMiesiac } from '@/komponenty/format';
+import { ODNOSNIKI } from '@/dane/katalog/pozycje';
 import { Karta } from '@/komponenty/karta';
+import { KartaWiecejInformacji } from '@/komponenty/karta-wiecej-informacji';
 import { Komunikat } from '@/komponenty/komunikat';
 import { Kwota } from '@/komponenty/kwota';
 import { NaglowekStrony } from '@/komponenty/naglowek-strony';
@@ -173,7 +175,6 @@ export function WidokDanychKontaZus() {
   const parametry = useSearchParams();
   const konto = useKonto();
   const stanKonta = useStanKonta();
-  const stanZus = useStanSymulowanegoZus(konto?.pesel);
   const dzis = useDzis();
   const kopia = stanKonta?.kopiaDanychZus ?? null;
 
@@ -200,12 +201,12 @@ export function WidokDanychKontaZus() {
     void Promise.resolve().then(odczytaj);
   }, [odczytaj]);
 
-  // Konto ma zaświadczenia e-ZLA, ale żadne z ostatnich 12 miesięcy: sekcja z komunikatem 0114 (R7).
+  // Konto ma zaświadczenia e-ZLA, ale żadne z ostatnich 12 miesięcy: sekcja z komunikatem 0114 (R7). Dane źródłowe
+  // pochodzą z ostatniego odczytu z REST API symulowanego ZUS, który zapisał bieżącą kopię.
   const staraHistoriaEzla = useMemo(() => {
     if (konto === null || kopia === null || kopia.zaswiadczeniaEzla.length > 0) return false;
-    const zrodlo = zrodloweDaneKonta(konto.pesel, stanZus, { imie: konto.imie, nazwisko: konto.nazwisko });
-    return (zrodlo?.zaswiadczeniaEzla.length ?? 0) > 0;
-  }, [konto, kopia, stanZus]);
+    return (zrodloOstatniegoOdczytuZus(konto.pesel)?.zaswiadczeniaEzla.length ?? 0) > 0;
+  }, [konto, kopia]);
 
   const przejdzDoEzus = () => {
     const wynik = adresEzus();
@@ -281,8 +282,17 @@ export function WidokDanychKontaZus() {
               <StanPusty ikona="baza-danych" przerywany>
                 <p className="m-0">{t.pusta.opis}</p>
               </StanPusty>
+              {/* Bez danych z ZUS rodzic wpisuje dane samodzielnie w profilu rodziny (wymaganie Personalizacja
+                  na podstawie danych wpisanych przez użytkownika). */}
+              <p className="m-0 mt-6">{t.pusta.wlasneDane}</p>
+              <div className="mt-4">
+                <PrzyciskLink href={trasy.ViewProfileSummary({ tryb: 'rodzina' })} wariant="drugorzedny">
+                  {t.pusta.wpiszDane}
+                </PrzyciskLink>
+              </div>
             </Karta>
           )}
+          <KartaWiecejInformacji odnosniki={[ODNOSNIKI.zus]} />
           {stopka}
         </Stos>
       </>
@@ -351,6 +361,7 @@ export function WidokDanychKontaZus() {
         ) : null}
         <SekcjaEzla kopia={kopia} staraHistoria={staraHistoriaEzla} />
         <SekcjaStanuRozliczen kopia={kopia} />
+        <KartaWiecejInformacji odnosniki={[ODNOSNIKI.zus]} />
         {stopka}
       </Stos>
     </>
