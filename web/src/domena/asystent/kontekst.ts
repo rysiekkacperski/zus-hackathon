@@ -3,10 +3,17 @@
 // i Katalog świadczeń. Nowy użytkownik: wyłącznie Katalog świadczeń, Dane z konta ZUS i Wyniki kalkulacji konta.
 // Dane ciąży i dziecka trafiają do kontekstu tylko przy udzielonej zgodzie.
 import type { KontekstRodziny } from '@/dane/magazyn/hooki';
-import type { SzczegolyKontekstuAsystenta, WariantyZasilkuWKontekscie } from '@/domena/asystent/rozszerzenia-typow';
+import type {
+  NajblizszyTerminWKontekscie,
+  SzczegolyKontekstuAsystenta,
+  WariantyZasilkuWKontekscie,
+} from '@/domena/asystent/rozszerzenia-typow';
 import { formatujDate, porownajDaty } from '@/domena/daty';
 import { wartoscObowiazujaca } from '@/domena/katalog/odczyt';
 import { formatujKwote } from '@/domena/kwoty';
+import { formaStraznika, oplacenieSkladekNaDzien } from '@/domena/plan/straznik';
+import { tytulSprawyPlanu } from '@/domena/plan/tytul-sprawy';
+import { najblizszeTerminy, tytulNajblizszegoTerminu, type WpisNajblizszegoTerminu } from '@/domena/terminy/najblizsze';
 import type {
   DaneZKontaZus,
   DataISO,
@@ -199,6 +206,43 @@ function kontekstWynikow(warianty: WariantyZasilkuWKontekscie): KontekstAsystent
   return wyniki;
 }
 
+// --- Najbliższe terminy --------------------------------------------------------------------------
+
+/** Najwięcej najbliższych terminów w kontekście; odpowiedź pokazuje trzy, a pytanie o tydzień szuka też terminu po tygodniu. */
+const LIMIT_TERMINOW_W_KONTEKSCIE = 10;
+
+function terminWKontekscie(katalog: Katalog, w: WpisNajblizszegoTerminu): NajblizszyTerminWKontekscie {
+  const wspolne = { rodzaj: w.rodzaj, data: w.data, tytul: tytulNajblizszegoTerminu(katalog, w) };
+  switch (w.rodzaj) {
+    case 'sprawa':
+      return { ...wspolne, rodzic: w.sprawa.rodzic, idSprawy: w.sprawa.idSprawy, szacowany: w.szacowany };
+    case 'oplacenie-skladek':
+      return { ...wspolne, rodzic: w.sprawa?.rodzic ?? 'matka', ...(w.sprawa ? { idSprawy: w.sprawa.idSprawy } : {}) };
+    case 'kolejne-oplacenie-skladek':
+      return { ...wspolne, rodzic: 'matka', dzienUtworzenia: w.dzienUtworzenia };
+    case 'przewidywany-termin-porodu':
+      return wspolne;
+  }
+}
+
+/**
+ * Najbliższe terminy z karty Najbliższe terminy: terminy kalendarza otwartych spraw, Opłacenie składek strażnika
+ * i przewidywany termin porodu. Przewidywany termin porodu trafia do kontekstu tylko przy udzielonej zgodzie.
+ */
+function kontekstNajblizszychTerminow(k: KontekstRodziny, zgoda: boolean, dzis: DataISO): NajblizszyTerminWKontekscie[] {
+  const { rodzina, katalog } = k;
+  const oplacenie = oplacenieSkladekNaDzien(formaStraznika(rodzina.daneRodziny, rodzina.daneCiazy), dzis);
+  return najblizszeTerminy({
+    plan: rodzina.plan,
+    kalendarz: rodzina.kalendarz,
+    daneCiazy: zgoda ? rodzina.daneCiazy : null,
+    oplacenie,
+    dzis,
+  })
+    .slice(0, LIMIT_TERMINOW_W_KONTEKSCIE)
+    .map((w) => terminWKontekscie(katalog, w));
+}
+
 // --- Kontekst ------------------------------------------------------------------------------------
 
 function imieINazwisko(o: { imie: string; nazwisko: string } | null | undefined): string | undefined {
@@ -239,12 +283,11 @@ export function zbudujKontekstAsystenta(k: KontekstRodziny | KontekstKontaBezRod
   const pozycjeSpraw: Record<IdSprawy, string> = {};
   const sprawy: KontekstAsystenta['sprawy'] = (rodzina.plan?.pozycje ?? []).map((p) => {
     const termin = terminy.get(p.idSprawy);
-    const pozycja = p.idPozycji === null ? undefined : katalog.pozycje.find((x) => x.id === p.idPozycji);
     pozycjeSpraw[p.idSprawy] = p.idPozycji ?? p.idSprawy;
     const wariant = p.wybranyWariant && 'wariant' in p.wybranyWariant ? p.wybranyWariant.wariant : undefined;
     return {
       idSprawy: p.idSprawy,
-      tytul: pozycja?.tytul ?? p.idSprawy,
+      tytul: tytulSprawyPlanu(katalog, p),
       etap: p.etap,
       rodzic: p.rodzic,
       status: p.status,
@@ -296,6 +339,7 @@ export function zbudujKontekstAsystenta(k: KontekstRodziny | KontekstKontaBezRod
       kwotyKatalogu: kwotyKatalogu(katalog, dzis),
       dochodNaOsobe: typeof dochod === 'number' ? formatujKwote(dochod) : undefined,
       pozycjeSpraw,
+      najblizszeTerminy: kontekstNajblizszychTerminow(k, zgoda, dzis),
     },
   };
 }

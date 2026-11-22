@@ -282,6 +282,13 @@ function OdpowiedzMerytoryczna({ wiadomosc, k }: { wiadomosc: WiadomoscAsystenta
         {propozycja?.rodzaj === 'przejdz' ? (
           <PropozycjaPrzejscia wiadomosc={wiadomosc} propozycja={propozycja} sprawa={sprawaPropozycji} k={k} />
         ) : null}
+        {propozycja?.rodzaj === 'przejdz' && propozycja.idWidoku === 'ViewDeadlines' ? (
+          <p className="m-0 mt-3">
+            <Odnosnik href={sciezkaWidoku('ViewDeadlines')} onClick={k.poPrzejsciu}>
+              {T.przejdzDoTerminow}
+            </Odnosnik>
+          </p>
+        ) : null}
         <StopkaAI />
       </div>
       {odrzucona ? (

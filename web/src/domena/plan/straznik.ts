@@ -120,6 +120,16 @@ export function idSprawyOplacenia(miesiac: MiesiacISO): IdSprawy {
   return `${PRZEDROSTEK_SPRAWY_OPLACENIA}${miesiac}`;
 }
 
+/** Miesiąc składek, termin i identyfikator sprawy Opłacenie składek w dniu `dzis`; strażnik prowadzi tę sprawę przy JDG. */
+export function oplacenieSkladekNaDzien(
+  forma: FormaStraznika | null,
+  dzis: DataISO,
+): { miesiac: MiesiacISO; termin: DataISO; idSprawy: IdSprawy } | null {
+  if (forma !== 'jdg') return null;
+  const miesiac = miesiacSkladekNaDzien(dzis);
+  return { miesiac, termin: terminOplaceniaSkladek(miesiac), idSprawy: idSprawyOplacenia(miesiac) };
+}
+
 export function czySprawaOplacenia(idSprawy: IdSprawy): boolean {
   return idSprawy.startsWith(PRZEDROSTEK_SPRAWY_OPLACENIA);
 }
@@ -333,14 +343,12 @@ export function ocenStraznika(w: WejscieStraznika): OcenaStraznika | null {
   // Matce na umowie o pracę strażnik pokazuje wyłącznie ostrzeżenie o podwyższeniu podstawy.
   if (uop && podwyzszenie === null) return null;
   let oplacenie: OcenaStraznika['oplacenie'] = null;
-  if (forma === 'jdg') {
-    const miesiac = miesiacSkladekNaDzien(w.dzis);
+  const sprawaOplacenia = oplacenieSkladekNaDzien(forma, w.dzis);
+  if (sprawaOplacenia) {
     oplacenie = {
-      miesiac,
-      termin: terminOplaceniaSkladek(miesiac),
-      idSprawy: idSprawyOplacenia(miesiac),
+      ...sprawaOplacenia,
       ...statusOplacenia({
-        miesiac,
+        miesiac: sprawaOplacenia.miesiac,
         potwierdzenia: w.daneRodziny.matka.potwierdzeniaSkladek ?? [],
         stan,
         stanNiedostepny: forma === 'jdg' && stanNiedostepny,

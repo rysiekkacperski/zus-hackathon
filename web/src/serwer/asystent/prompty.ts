@@ -17,7 +17,8 @@ Zasady:
 - porównanie wariantów 81,5% oraz 100% i 70% to porownanie-wariantow;
 - pytanie o kwotę zasiłku to wysokosc-zasilku;
 - chęć złożenia wniosku o zasiłek macierzyński to rozpoczecie-wniosku-zam, a pytanie, jak go złożyć, to sposob-zalatwienia;
-- pytanie o sprawy na ten tydzień to sprawy-na-tydzien, a pytanie o termin konkretnej sprawy to termin-sprawy.
+- pytanie o najbliższe terminy, o to, co rodzica czeka, albo o to, kiedy musi coś złożyć, załatwić lub opłacić, bez wskazania konkretnej sprawy, to najblizsze-terminy;
+- pytanie wprost o sprawy na ten tydzień to sprawy-na-tydzien, a pytanie o termin konkretnej sprawy to termin-sprawy.
 W polu idSprawy podaj identyfikatory spraw z listy spraw planu, których dotyczy pytanie, albo pustą listę.`;
 
 export const SCHEMAT_KLASYFIKACJI: Record<string, unknown> = {
@@ -40,6 +41,8 @@ Zasady odpowiedzi:
 - napisz najwyżej 5 zdań;
 - korzystaj wyłącznie z faktów podanych w wiadomości, nie dodawaj innych informacji;
 - każdą datę, kwotę i liczbę przepisz dokładnie w zapisie z faktów, nie licz niczego samodzielnie;
+- gdy fakty wymieniają terminy, podaj każdy z nich z datą, nazwą sprawy i osobą, której dotyczy, w kolejności z faktów;
+- nie wymyślaj dat ani terminów i nie podawaj dat, których nie ma w faktach;
 - nie używaj myślników, wypunktowań ani formatowania Markdown;
 - nie obiecuj działań, których fakty nie opisują.
 Zwróć sam tekst odpowiedzi.`;

@@ -2,14 +2,15 @@
 
 // Karty ViewFamilyPlan (wzór Plan-rodziny): Twoja ścieżka z przejściem do stron etapów, Najbliższe terminy,
 // Sytuacje szczególne, Co się zmieniło w planie. Właściciel: u12.
-import { dodajMiesiaceDoMiesiaca, formatujDate, porownajDaty } from '@/domena/daty';
+import { formatujDate } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
+import { miesiacZIdSprawyOplacenia, type OcenaStraznika } from '@/domena/plan/straznik';
 import {
-  dzienUtworzeniaSprawyOplacenia,
-  miesiacZIdSprawyOplacenia,
-  terminOplaceniaSkladek,
-  type OcenaStraznika,
-} from '@/domena/plan/straznik';
+  LICZBA_NAJBLIZSZYCH_TERMINOW,
+  najblizszeTerminy,
+  tytulNajblizszegoTerminu,
+  type WpisNajblizszegoTerminu,
+} from '@/domena/terminy/najblizsze';
 import type { KontekstRodziny } from '@/dane/magazyn/hooki';
 import { OPIS_ZMIANY } from '@/domena/plan/zmiany';
 import type { Etap, PozycjaPlanu, StatusSprawy, ZmianaPlanu } from '@/domena/typy';
@@ -133,62 +134,24 @@ export function licznikSprawEtapu(sprawy: PozycjaPlanu[]): string {
   return czesci.join(', ');
 }
 
-/** Liczba terminów na karcie Najbliższe terminy. */
-const LIMIT_NAJBLIZSZYCH = 3;
-
-interface WpisTerminu {
-  id: string;
-  data: string;
-  tytul: string;
-  opis?: string;
+function opisNajblizszegoTerminu(wpis: WpisNajblizszegoTerminu): string | null {
+  if (wpis.rodzaj === 'kolejne-oplacenie-skladek') return t.najblizszeTerminy.dodamy({ data: formatujDate(wpis.dzienUtworzenia) });
+  if (wpis.rodzaj === 'przewidywany-termin-porodu') return t.najblizszeTerminy.ptpOpis;
+  return null;
 }
 
 export function KartaTerminow({ kontekst, ocena }: { kontekst: KontekstRodziny; ocena: OcenaStraznika | null }) {
   const { rodzina, katalog, dzis } = kontekst;
-  const pozycje = rodzina.plan?.pozycje ?? [];
-  const wpisy: WpisTerminu[] = [];
-  for (const termin of rodzina.kalendarz?.terminy ?? []) {
-    const sprawa = pozycje.find((p) => p.idSprawy === termin.idSprawy);
-    if (!sprawa || !czyOtwarta(sprawa.status) || termin.termin === null) continue;
-    if (porownajDaty(termin.termin, dzis) < 0) continue;
-    wpisy.push({ id: termin.idSprawy, data: termin.termin, tytul: tytulSprawy(katalog, sprawa) });
-  }
-  const oplacenie = ocena?.oplacenie ?? null;
-  if (oplacenie && porownajDaty(oplacenie.termin, dzis) >= 0 && !wpisy.some((w) => w.id === oplacenie.idSprawy)) {
-    const sprawa = pozycje.find((p) => p.idSprawy === oplacenie.idSprawy);
-    if (!sprawa || czyOtwarta(sprawa.status)) {
-      wpisy.push({
-        id: oplacenie.idSprawy,
-        data: oplacenie.termin,
-        tytul: t.oplacenie.tytul({ miesiac: formatujMiesiac(oplacenie.miesiac) }),
-      });
-    }
-  }
-  if (oplacenie) {
-    const nastepny = dodajMiesiaceDoMiesiaca(oplacenie.miesiac, 1);
-    wpisy.push({
-      id: `nastepna-${nastepny}`,
-      data: terminOplaceniaSkladek(nastepny),
-      tytul: t.oplacenie.tytul({ miesiac: formatujMiesiac(nastepny) }),
-      opis: t.najblizszeTerminy.dodamy({ data: formatujDate(dzienUtworzeniaSprawyOplacenia(nastepny)) }),
-    });
-  }
-  const daneCiazy = rodzina.daneCiazy;
-  if (
-    daneCiazy?.przewidywanyTerminPorodu &&
-    !daneCiazy.dataPoroduPotwierdzona &&
-    porownajDaty(daneCiazy.przewidywanyTerminPorodu, dzis) >= 0
-  ) {
-    wpisy.push({
-      id: 'ptp',
-      data: daneCiazy.przewidywanyTerminPorodu,
-      tytul: t.najblizszeTerminy.ptp,
-      opis: t.najblizszeTerminy.ptpOpis,
-    });
-  }
   // Pełna lista terminów w kolejności dat, z której karta pokazuje trzy najbliższe.
-  wpisy.sort((a, b) => porownajDaty(a.data, b.data) || a.id.localeCompare(b.id));
-  const najblizsze = wpisy.slice(0, LIMIT_NAJBLIZSZYCH);
+  const najblizsze = najblizszeTerminy({
+    plan: rodzina.plan,
+    kalendarz: rodzina.kalendarz,
+    daneCiazy: rodzina.daneCiazy,
+    oplacenie: ocena?.oplacenie ?? null,
+    dzis,
+  })
+    .slice(0, LICZBA_NAJBLIZSZYCH_TERMINOW)
+    .map((w) => ({ id: w.id, data: w.data, tytul: tytulNajblizszegoTerminu(katalog, w), opis: opisNajblizszegoTerminu(w) }));
   return (
     <Karta tytul={t.najblizszeTerminy.tytul} bezLinii>
       <div className="flex flex-col gap-6">

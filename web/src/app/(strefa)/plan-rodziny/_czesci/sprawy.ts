@@ -1,7 +1,8 @@
 // Pomocnicze funkcje prezentacji spraw planu dla ViewFamilyPlan, ViewCaseDetails i ViewApplicationList. Właściciel: u12.
 import { dodajDni, formatujDate, porownajDaty } from '@/domena/daty';
 import { formatujKwote } from '@/domena/kwoty';
-import { czySprawaOplacenia, miesiacZIdSprawyOplacenia } from '@/domena/plan/straznik';
+import { tytulSprawyPlanu } from '@/domena/plan/tytul-sprawy';
+import { czySprawaOtwarta } from '@/domena/terminy/najblizsze';
 import type {
   DaneCiazyIDziecka,
   Etap,
@@ -13,7 +14,6 @@ import type {
   Rola,
   StatusSprawy,
 } from '@/domena/typy';
-import { formatujMiesiac } from '@/komponenty/format';
 import { teksty } from '@/teksty';
 
 const t = teksty.ViewFamilyPlan;
@@ -44,11 +44,7 @@ export function pozycjaKatalogu(katalog: Katalog, sprawa: PozycjaPlanu): Pozycja
 }
 
 export function tytulSprawy(katalog: Katalog, sprawa: PozycjaPlanu): string {
-  if (czySprawaOplacenia(sprawa.idSprawy)) {
-    const miesiac = sprawa.miesiacSkladek ?? miesiacZIdSprawyOplacenia(sprawa.idSprawy);
-    return miesiac ? t.oplacenie.tytul({ miesiac: formatujMiesiac(miesiac) }) : sprawa.idSprawy;
-  }
-  return pozycjaKatalogu(katalog, sprawa)?.tytul ?? sprawa.idSprawy;
+  return tytulSprawyPlanu(katalog, sprawa);
 }
 
 /** Etykieta rodzica sprawy; konto Drugi rodzic widzi swoje sprawy jako „Drugi rodzic (Ty)”. */
@@ -90,7 +86,7 @@ export function kwotaSprawy(sprawa: PozycjaPlanu): string {
 }
 
 export function czyOtwarta(status: StatusSprawy): boolean {
-  return status === 'do-zrobienia' || status === 'wymaga-uzupelnienia-profilu';
+  return czySprawaOtwarta(status);
 }
 
 export function nazwaFormy(forma: FormaZatrudnienia | FormaZatrudnieniaDrugiegoRodzica): string {

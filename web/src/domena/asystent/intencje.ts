@@ -8,6 +8,7 @@ export const MAKS_DLUGOSC_WIADOMOSCI = 1000;
 /** Wszystkie intencje słownika asystenta w kolejności z kontraktu. */
 export const INTENCJE_ASYSTENTA: readonly IntencjaAsystenta[] = [
   'termin-sprawy',
+  'najblizsze-terminy',
   'prawo-do-swiadczenia',
   'sprawy-na-tydzien',
   'wysokosc-zasilku',
@@ -49,10 +50,14 @@ export function normalizujTekst(tekst: string): string {
 interface RegulaIntencji {
   intencja: IntencjaAsystenta;
   wzorce: RegExp[];
+  /** Reguła obowiązuje, gdy wiadomość nie wskazuje żadnej sprawy z katalogu. */
+  bezWskazanejSprawy?: boolean;
 }
 
 // Kolejność reguł rozstrzyga pytania pasujące do kilku intencji: granice asystenta, oznaczenie sprawy
 // i porównanie wariantów mają pierwszeństwo przed ogólnymi pytaniami o termin i prawo do świadczenia.
+// Pytanie o ten tydzień ma pierwszeństwo przed pytaniem o najbliższe terminy, a pytanie o najbliższe terminy
+// bez wskazanej sprawy przed pytaniem o termin konkretnej sprawy.
 const REGULY: readonly RegulaIntencji[] = [
   { intencja: 'zaswiadczenia-lekarskie', wzorce: [/zwolnieni(e|u|a|em) lekarsk/, /\be-?zla\b/, /zaswiadczen(ie|ia|iu) lekarsk/, /\bl4\b/] },
   {
@@ -79,6 +84,19 @@ const REGULY: readonly RegulaIntencji[] = [
   { intencja: 'sposob-zalatwienia', wzorce: [/\bjak (zlozyc|zalatwic|zglosic|zrobic)/, /gdzie (zlozyc|zalatwic|zglosic)/, /w jaki sposob/] },
   { intencja: 'rozpoczecie-wniosku-zam', wzorce: [/(chce|chcialabym|chcialbym) (zlozyc|zaczac|rozpoczac|wypelnic) wniosek o zasilek macierzyn/, /rozpocznij wniosek/, /zacznij wniosek/] },
   { intencja: 'sprawy-na-tydzien', wzorce: [/w tym tygodniu/, /na ten tydzien/, /co mam (teraz )?zrobic/, /co teraz/] },
+  {
+    intencja: 'najblizsze-terminy',
+    bezWskazanejSprawy: true,
+    wzorce: [
+      /najblizsz/,
+      /co (mnie|nas) czeka/,
+      /nadchodzac/,
+      /zblizajac/,
+      /(jakie|ktore) (mam |mamy )?(teraz )?terminy/,
+      /(moje|nasze) terminy/,
+      /kiedy (musze|musimy|mam|mamy|powinnam|powinienem|powinnismy|trzeba) (cos )?(zlozyc|zalatwic|zglosic|oplacic|zrobic)/,
+    ],
+  },
   { intencja: 'termin-sprawy', wzorce: [/do kiedy/, /\btermin/, /\bkiedy\b/, /zdaz/, /spoznie/] },
   { intencja: 'prawo-do-swiadczenia', wzorce: [/czy dostan/, /czy (mi |nam )?przysluguj/, /czy mam prawo/, /czy nalezy/, /\bbecikow/, /\b800/, /zasilek/, /swiadczeni/] },
   { intencja: 'uzupelnienie-profilu', wzorce: [/\bprofil/] },
@@ -87,10 +105,38 @@ const REGULY: readonly RegulaIntencji[] = [
 /** Intencja ze słów kluczowych, gdy model jest niedostępny. */
 export function klasyfikujSlowamiKluczowymi(tekst: string): IntencjaAsystenta {
   const znormalizowany = normalizujTekst(tekst);
+  const wskazujeSprawe = pozycjeZTekstu(tekst).length > 0;
   for (const regula of REGULY) {
+    if (regula.bezWskazanejSprawy && wskazujeSprawe) continue;
     if (regula.wzorce.some((wzorzec) => wzorzec.test(znormalizowany))) return regula.intencja;
   }
   return 'poza-zakresem-spoza-katalogu';
+}
+
+/**
+ * Intencja po uzgodnieniu klasyfikacji modelu ze słowami kluczowymi wiadomości `wiadomosc`.
+ * - Pytanie o najbliższe terminy bez sprawy z katalogu w wiadomości, które model uznał za pytanie o ten tydzień,
+ *   dostaje intencję najblizsze-terminy. Tak samo pytanie, które model uznał za termin sprawy bez wskazanej sprawy.
+ *   Sprawy, które model wskazał przy intencji najblizsze-terminy, zostają wtedy bez wpływu na intencję.
+ * - Pytanie wprost o ten tydzień zostaje intencją sprawy-na-tydzien.
+ * - Pytanie o sprawę z katalogu albo pytanie o termin ze sprawami wskazanymi przez model dostaje intencję termin-sprawy.
+ */
+export function uzgodnijIntencje(
+  zModelu: IntencjaAsystenta,
+  zeSlowKluczowych: IntencjaAsystenta,
+  idSprawy: readonly string[],
+  wiadomosc: string,
+): IntencjaAsystenta {
+  if (zeSlowKluczowych === 'najblizsze-terminy') {
+    if (zModelu === 'sprawy-na-tydzien') return 'najblizsze-terminy';
+    if (zModelu === 'termin-sprawy' && idSprawy.length === 0) return 'najblizsze-terminy';
+    return zModelu;
+  }
+  if (zModelu !== 'najblizsze-terminy') return zModelu;
+  if (zeSlowKluczowych === 'sprawy-na-tydzien') return 'sprawy-na-tydzien';
+  const sprawaWWiadomosci = pozycjeZTekstu(wiadomosc).length > 0;
+  if (sprawaWWiadomosci || (zeSlowKluczowych === 'termin-sprawy' && idSprawy.length > 0)) return 'termin-sprawy';
+  return zModelu;
 }
 
 // Słowa kluczowe pozycji katalogu, z których odczytujemy sprawy wskazane w pytaniu.

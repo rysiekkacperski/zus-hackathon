@@ -52,7 +52,8 @@ export interface ProfilDoPokazania {
   daneCiazy: Partial<DaneCiazyIDziecka> | null;
 }
 
-function zrodloDoPokazania(zrodlo: ZrodloDanej | undefined): ZrodloDanej | undefined {
+/** Źródło pokazywane przy wierszu: konto ZUS albo pełnomocnictwo PEL. */
+export function zrodloDoPokazania(zrodlo: ZrodloDanej | null | undefined): ZrodloDanej | undefined {
   return zrodlo === 'konto-zus' || zrodlo === 'pelnomocnictwo-pel' ? zrodlo : undefined;
 }
 

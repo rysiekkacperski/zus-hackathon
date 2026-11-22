@@ -7,7 +7,8 @@
 // profilu ze śladem „Zmienione, przed zmianą”, anulowanie i zapis zmian (wzory cz1/Profil-rodziny i cz1/P03-26).
 // Sekcje profilu, w trybie rodziny zakładka „Dane planu” i sekcje ze slotów stoją w zakładkach (ZakladkiPodsumowania), a przyciski pod panelem zakładek,
 // więc strona mieści się w oknie 1440×800 bez przewijania. Po nieudanym zapisie widok wybiera pierwszą zakładkę
-// ze wskaźnikiem błędu i przenosi fokus na komunikat.
+// ze wskaźnikiem błędu i przenosi fokus na komunikat. Slot drugiego rodzica uzupełnia zakładkę „Drugi rodzic”
+// o zaproszenie, dostęp do planu i pełnomocnictwo PEL, a propsy karty sekcji odczytuje z KartySekcjiProfilu.
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useDzis, useKontekstRodziny, useRodzina, useStanKonta } from '@/dane/magazyn/hooki';
 import { zapiszProfil, zapiszZmianyProfilu } from '@/dane/magazyn/operacje/profil-zapis';
@@ -32,10 +33,10 @@ import { SzkieletKreatoraProfilu } from '../_czesci/szkielet-kreatora-profilu';
 import { sciezkaPowrotuProfilu } from '../_czesci/trasy-profilu';
 import { slotyPodsumowania } from './_sloty';
 import { KartaDanychPlanu } from './_czesci/karta-danych-planu';
-import { KartaSekcjiProfilu } from './_czesci/karta-sekcji-profilu';
+import { KartaSekcjiProfilu, KartySekcjiProfilu, type KartaSekcjiProfiluProps } from './_czesci/karta-sekcji-profilu';
 import { sekcjeProfilu, wartosciWierszy, type ProfilDoPokazania, type SekcjaProfilu } from './_czesci/sekcje-profilu';
 import { ZakladkiPodsumowania, zakladkaSlotu, type PanelZakladki } from './_czesci/zakladki-podsumowania';
-import { BUDZET_PANELU, zakladkiSekcji } from './_czesci/zakladki-sekcji';
+import { BUDZET_PANELU, zakladkiSekcji, type ZakladkaSekcji } from './_czesci/zakladki-sekcji';
 
 const t = teksty.ViewProfileSummary;
 const EKRAN: IdWidoku = 'ViewProfileSummary';
@@ -178,23 +179,25 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
     if (!wynik.ok) pokazBladProby(wynik.kod);
   }
 
-  const panelySekcji: PanelZakladki[] = zakladki.map((z) => ({
+  // Propsy karty każdej zakładki sekcji; slot, który uzupełnia zakładkę sekcji, odczytuje je z KartySekcjiProfilu.
+  const kartySekcji = zakladki.map((z): [ZakladkaSekcji, KartaSekcjiProfiluProps] => [
+    z,
+    {
+      sekcja: z.sekcja,
+      adresEkranu,
+      onZmien: przygotujZmianeSekcji,
+      przedZmiana,
+      naglowekTresci: czyZeStanemNa(tryb, z.sekcja) ? (
+        <p className="m-0 mb-2 text-body-strong">{teksty.wspolne.stanNa({ data: formatujDate(stanNa) })}</p>
+      ) : undefined,
+    },
+  ]);
+
+  const panelySekcji: PanelZakladki[] = kartySekcji.map(([z, karta]) => ({
     id: z.id,
     etykieta: z.etykieta,
     blad: z.blad,
-    tresc: (
-      <KartaSekcjiProfilu
-        sekcja={z.sekcja}
-        adresEkranu={adresEkranu}
-        onZmien={przygotujZmianeSekcji}
-        przedZmiana={przedZmiana}
-        naglowekTresci={
-          czyZeStanemNa(tryb, z.sekcja) ? (
-            <p className="m-0 mb-2 text-body-strong">{teksty.wspolne.stanNa({ data: formatujDate(stanNa) })}</p>
-          ) : undefined
-        }
-      />
-    ),
+    tresc: <KartaSekcjiProfilu {...karta} />,
   }));
 
   const panelySlotow: PanelZakladki[] = slotyPodsumowania.map(({ id, Komponent }) => ({
@@ -209,7 +212,9 @@ export function WidokPodsumowaniaProfilu({ tryb }: { tryb: TrybWidoku<'ViewProfi
       : panelySekcji;
 
   const zakladkiProfilu = (
-    <ZakladkiPodsumowania sekcje={panelyZDanymiPlanu} sloty={panelySlotow} wyborPoProbie={wyborPoProbie} />
+    <KartySekcjiProfilu value={Object.fromEntries(kartySekcji.map(([z, karta]) => [z.id, karta]))}>
+      <ZakladkiPodsumowania sekcje={panelyZDanymiPlanu} sloty={panelySlotow} wyborPoProbie={wyborPoProbie} />
+    </KartySekcjiProfilu>
   );
 
   const komunikatBledu = blad ? (

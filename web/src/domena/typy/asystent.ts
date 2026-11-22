@@ -6,7 +6,7 @@ import type { StatusSprawy } from '@/domena/typy/plan';
 import type { IdWidoku } from '@/domena/typy/widoki';
 import type { IdSprawy, Pesel, ZnacznikCzasu } from '@/domena/typy/wspolne';
 
-export type IntencjaAsystenta = 'termin-sprawy' | 'prawo-do-swiadczenia' | 'sprawy-na-tydzien' | 'wysokosc-zasilku' | 'sposob-zalatwienia'
+export type IntencjaAsystenta = 'termin-sprawy' | 'najblizsze-terminy' | 'prawo-do-swiadczenia' | 'sprawy-na-tydzien' | 'wysokosc-zasilku' | 'sposob-zalatwienia'
   | 'rozpoczecie-wniosku-zam' | 'porownanie-wariantow' | 'oznaczenie-sprawy' | 'otwarcie-kalkulatora' | 'otwarcie-instrukcji'
   | 'uzupelnienie-profilu' | 'zaswiadczenia-lekarskie' | 'poza-zakresem-medyczne' | 'poza-zakresem-podatkowe' | 'poza-zakresem-inne-osoby'
   | 'poza-zakresem-spoza-katalogu' | 'poza-zakresem-ocena-indywidualna';

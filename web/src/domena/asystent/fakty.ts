@@ -3,11 +3,14 @@
 // i katalogu świadczeń, a asystent niczego nie liczy samodzielnie (R-AS-ZRODLA). Razem z faktami funkcja
 // `analizujPytanie` wyznacza sprawy odpowiedzi, propozycję działania (R-AS-DZIAL) i akcje kanałów (R-AS-GRAN).
 import '@/domena/asystent/rozszerzenia-typow';
+import type { NajblizszyTerminWKontekscie } from '@/domena/asystent/rozszerzenia-typow';
 import { czyPozaZakresem, normalizujTekst, pozycjeZTekstu } from '@/domena/asystent/intencje';
 import { czyRolaZmieniaSprawe, dozwoloneDzialanieDlaSpraw } from '@/domena/asystent/uprawnienia';
 import { dodajDni, formatujDate, porownajDaty, roznicaDni } from '@/domena/daty';
+import { czySprawaOtwarta, LICZBA_NAJBLIZSZYCH_TERMINOW } from '@/domena/terminy/najblizsze';
 import type {
   AkcjaKanaluAsystenta,
+  DataISO,
   Fakt,
   IdSprawy,
   IdWidoku,
@@ -28,6 +31,8 @@ export interface AnalizaPytania {
   propozycja?: PropozycjaDzialania;
   akcjeKanalow?: AkcjaKanaluAsystenta[];
   kodKomunikatu: '0070' | '0148' | '0275' | '0276';
+  /** Daty, które musi zawierać tekst modelu, żeby zastąpić tekst z szablonów, na przykład daty listy terminów. */
+  wymaganeLiczby?: string[];
 }
 
 export interface WskazaniePytania {
@@ -101,14 +106,85 @@ function przejdz(idWidoku: IdWidoku, parametry?: Record<string, string>): Propoz
 
 const PROFIL_NA_START = przejdz('ViewProfileZusData');
 const KALKULATOR = przejdz('ViewCalcMaternityInput');
+const TERMINY = przejdz('ViewDeadlines');
 
-function analiza(fakty: Fakt[], sprawy: (SprawaKontekstu | undefined)[], propozycja?: PropozycjaDzialania): AnalizaPytania {
+function analiza(
+  fakty: Fakt[],
+  sprawy: (SprawaKontekstu | undefined)[],
+  propozycja?: PropozycjaDzialania,
+  wymaganeLiczby?: string[],
+): AnalizaPytania {
   return {
     fakty,
     sprawy: sprawy.filter((s): s is SprawaKontekstu => s !== undefined).map((s) => s.idSprawy),
     ...(propozycja ? { propozycja } : {}),
     kodKomunikatu: '0148',
+    ...(wymaganeLiczby && wymaganeLiczby.length > 0 ? { wymaganeLiczby } : {}),
   };
+}
+
+// --- Najbliższe terminy --------------------------------------------------------------------------
+
+type TerminKontekstu = NajblizszyTerminWKontekscie;
+
+/** Najbliższe terminy planu od dnia pytania: lista z kontekstu, a bez niej terminy otwartych spraw planu. */
+function terminyOdDzis(k: KontekstAsystenta): TerminKontekstu[] {
+  const lista = k.szczegoly?.najblizszeTerminy;
+  if (lista !== undefined) return lista.filter((t) => porownajDaty(t.data, k.dzis) >= 0);
+  return k.sprawy
+    .filter((s): s is SprawaKontekstu & { termin: DataISO } => czySprawaOtwarta(s.status) && s.termin !== undefined && porownajDaty(s.termin, k.dzis) >= 0)
+    .map((s): TerminKontekstu => ({ rodzaj: 'sprawa', data: s.termin, tytul: s.tytul, rodzic: s.rodzic, idSprawy: s.idSprawy }))
+    .sort((a, b) => porownajDaty(a.data, b.data) || (a.idSprawy ?? '').localeCompare(b.idSprawy ?? ''));
+}
+
+/** Termin sprawy do załatwienia: sprawa planu albo Opłacenie składek bieżącego miesiąca. */
+function czyDoZalatwienia(t: TerminKontekstu): boolean {
+  return t.rodzaj === 'sprawa' || t.rodzaj === 'oplacenie-skladek';
+}
+
+function opisTerminu(t: TerminKontekstu): string {
+  if (t.rodzaj === 'przewidywany-termin-porodu') return F.opisTerminuPorodu;
+  const tytul = zMalejLitery(t.tytul);
+  const kto = F.kogoDotyczy[t.rodzic ?? 'matka'];
+  if (t.rodzaj === 'kolejne-oplacenie-skladek' && t.dzienUtworzenia) {
+    return F.opisKolejnegoOplacenia({ tytul, kto, dzien: formatujDate(t.dzienUtworzenia) });
+  }
+  return F.opisTerminuSprawy({ tytul, kto });
+}
+
+function faktTerminu(klucz: string, szablon: (p: { data: string; opis: string }) => string, t: TerminKontekstu): Fakt {
+  const data = formatujDate(t.data);
+  const liczby = t.dzienUtworzenia ? [data, formatujDate(t.dzienUtworzenia)] : [data];
+  return fakt(klucz, szablon({ data, opis: opisTerminu(t) }), liczby, t.idSprawy);
+}
+
+/** Wyjaśnienie liczenia terminów po porodzie, gdy lista zawiera przewidywany termin porodu albo termin od niego liczony. */
+function faktyTerminuPorodu(terminy: readonly TerminKontekstu[]): Fakt[] {
+  return terminy.some((t) => t.rodzaj === 'przewidywany-termin-porodu' || t.szacowany === true)
+    ? [fakt('termin-porodu', F.wyjasnienieTerminuPorodu)]
+    : [];
+}
+
+/** Sprawy planu z listy terminów, do których szczegółów prowadzą karty odpowiedzi. */
+function sprawyTerminow(k: KontekstAsystenta, terminy: readonly TerminKontekstu[]): SprawaKontekstu[] {
+  const wynik: SprawaKontekstu[] = [];
+  for (const t of terminy) {
+    const s = t.idSprawy === undefined ? undefined : k.sprawy.find((x) => x.idSprawy === t.idSprawy);
+    if (s && !wynik.includes(s)) wynik.push(s);
+  }
+  return wynik;
+}
+
+/** Najbliższe terminy z planu rodziny: trzy pierwsze wpisy karty Najbliższe terminy z odnośnikiem do Terminów. */
+function analizaNajblizszychTerminow(k: KontekstAsystenta): AnalizaPytania {
+  const terminy = terminyOdDzis(k).slice(0, LICZBA_NAJBLIZSZYCH_TERMINOW);
+  if (terminy.length === 0) return analiza([fakt('brak', F.najblizszeBrak)], [], TERMINY);
+  const fakty: Fakt[] = [
+    ...terminy.map((t, i) => (i === 0 ? faktTerminu('najblizszy', F.najblizszyTermin, t) : faktTerminu(`kolejny-${i}`, F.kolejnyTermin, t))),
+    ...faktyTerminuPorodu(terminy),
+    fakt('wszystkie', F.tydzienWszystkie),
+  ];
+  return analiza(fakty, sprawyTerminow(k, terminy), TERMINY, terminy.map((t) => formatujDate(t.data)));
 }
 
 // --- Nowy użytkownik (R-AS-NU) -------------------------------------------------------------------
@@ -122,6 +198,8 @@ function analizaNowegoUzytkownika(intencja: IntencjaAsystenta, k: KontekstAsyste
       return analiza([fakt('kalkulator', F.nuKalkulator)], [], KALKULATOR);
     case 'sprawy-na-tydzien':
       return analiza([fakt('brak-planu', F.nuBrakPlanu)], [], PROFIL_NA_START);
+    case 'najblizsze-terminy':
+      return analiza([fakt('brak-planu', F.nuBrakPlanuTerminy)], [], PROFIL_NA_START);
     case 'prawo-do-swiadczenia':
     case 'rozpoczecie-wniosku-zam':
     case 'sposob-zalatwienia': {
@@ -191,25 +269,37 @@ function analizaPrawa(k: KontekstAsystenta, wskazane: SprawaKontekstu[], w?: Wsk
   return analiza([fakt('w-planie', F.prawoWPlanie({ tytul: s.tytul }), [], s.idSprawy), ...faktyTerminu(k, s)], [s]);
 }
 
+/**
+ * Sprawy na ten tydzień (od dziś do dziś plus 6 dni) z listy najbliższych terminów. Bez sprawy w tygodniu
+ * odpowiedź podaje najbliższy termin z planu, a bez żadnego terminu odsyła do Terminów.
+ */
 function analizaTygodnia(k: KontekstAsystenta): AnalizaPytania {
   const koniec = dodajDni(k.dzis, 6);
-  const doZrobienia = k.sprawy
-    .filter((s) => s.status === 'do-zrobienia' && s.termin && porownajDaty(s.termin, k.dzis) >= 0)
-    .sort((a, b) => porownajDaty(a.termin as string, b.termin as string));
-  const wTygodniu = doZrobienia.filter((s) => porownajDaty(s.termin as string, koniec) <= 0);
-  const pierwsza = wTygodniu[0];
-  if (pierwsza === undefined) return analiza([fakt('brak', F.tydzienBrak)], []);
-  const data = formatujDate(pierwsza.termin as string);
-  const dni = String(dniDoTerminu(k, pierwsza) ?? roznicaDni(k.dzis, pierwsza.termin as string));
+  const terminy = terminyOdDzis(k);
+  const doZalatwienia = terminy.filter(czyDoZalatwienia);
+  const pierwsza = doZalatwienia.find((t) => porownajDaty(t.data, koniec) <= 0);
+  if (pierwsza === undefined) {
+    const najblizszy = terminy[0];
+    if (najblizszy === undefined) return analiza([fakt('brak', F.tydzienBrak)], [], TERMINY);
+    const szablon = porownajDaty(najblizszy.data, koniec) > 0 ? F.terminPoTygodniu : F.najblizszyTermin;
+    return analiza(
+      [fakt('brak', F.tydzienBrakSpraw), faktTerminu('najblizszy', szablon, najblizszy), ...faktyTerminuPorodu([najblizszy]), fakt('wszystkie', F.tydzienWszystkie)],
+      sprawyTerminow(k, [najblizszy]),
+      TERMINY,
+      [formatujDate(najblizszy.data)],
+    );
+  }
+  const data = formatujDate(pierwsza.data);
+  const dni = String(roznicaDni(k.dzis, pierwsza.data));
   const fakty: Fakt[] = [fakt('tydzien', F.tydzienSprawa({ tytul: zMalejLitery(pierwsza.tytul), data, liczbaDni: dni }), [data, dni], pierwsza.idSprawy)];
-  const kolejna = doZrobienia.find((s) => s !== pierwsza && porownajDaty(s.termin as string, pierwsza.termin as string) > 0);
+  const kolejna = doZalatwienia.find((t) => porownajDaty(t.data, pierwsza.data) > 0);
   if (kolejna) {
-    const tegoDnia = doZrobienia.filter((s) => s.termin === kolejna.termin);
-    const dataKolejna = formatujDate(kolejna.termin as string);
-    fakty.push(fakt('kolejne', F.tydzienKolejne({ data: dataKolejna, sprawy: tegoDnia.map((s) => zMalejLitery(s.tytul)).join(' i ') }), [dataKolejna]));
+    const tegoDnia = doZalatwienia.filter((t) => t.data === kolejna.data);
+    const dataKolejna = formatujDate(kolejna.data);
+    fakty.push(fakt('kolejne', F.tydzienKolejne({ data: dataKolejna, sprawy: tegoDnia.map((t) => zMalejLitery(t.tytul)).join(' i ') }), [dataKolejna]));
   }
   fakty.push(fakt('wszystkie', F.tydzienWszystkie));
-  return analiza(fakty, [pierwsza]);
+  return analiza(fakty, sprawyTerminow(k, [pierwsza]), TERMINY, [data]);
 }
 
 function sprawaZasilku(k: KontekstAsystenta): SprawaKontekstu | undefined {
@@ -382,6 +472,8 @@ export function analizujPytanie(intencja: IntencjaAsystenta, k: KontekstAsystent
       return analizaPrawa(k, wskazane, w);
     case 'sprawy-na-tydzien':
       return analizaTygodnia(k);
+    case 'najblizsze-terminy':
+      return analizaNajblizszychTerminow(k);
     case 'wysokosc-zasilku':
       return analizaWysokosci(k);
     case 'porownanie-wariantow':

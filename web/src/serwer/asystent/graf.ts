@@ -5,7 +5,7 @@ import 'server-only';
 //   → zbierzFakty (deterministycznie) → sformuluj (model, wysiłek medium) → sprawdz → zbudujOdpowiedz → END
 import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
 import { analizujPytanie, type AnalizaPytania } from '@/domena/asystent/fakty';
-import { czyIntencjaAsystenta, czyPozaZakresem, klasyfikujSlowamiKluczowymi } from '@/domena/asystent/intencje';
+import { czyIntencjaAsystenta, czyPozaZakresem, klasyfikujSlowamiKluczowymi, uzgodnijIntencje } from '@/domena/asystent/intencje';
 import { czyTekstZgodnyZFaktami, zbudujOdpowiedz } from '@/domena/asystent/odpowiedz';
 import type { IdSprawy, IntencjaAsystenta, OdpowiedzAsystenta, ZapytanieAsystenta } from '@/domena/typy';
 import { utworzModel, wywolajModel, wywolajZeSchematem } from '@/serwer/model';
@@ -56,7 +56,8 @@ async function klasyfikuj(stan: Stan, config?: { signal?: AbortSignal }): Promis
       { schemat: SCHEMAT_KLASYFIKACJI, czyPoprawny: czyWynikKlasyfikacji, signal: config?.signal },
     );
     const znane = new Set(kontekst.sprawy.map((s) => s.idSprawy));
-    return { intencja: wynik.intencja, sprawy: wynik.idSprawy.filter((id) => znane.has(id)) };
+    const sprawy = wynik.idSprawy.filter((id) => znane.has(id));
+    return { intencja: uzgodnijIntencje(wynik.intencja, zSlow, sprawy, wiadomosc), sprawy };
   } catch (blad) {
     if (config?.signal?.aborted) throw blad;
     return { intencja: zSlow, sprawy: [] };
@@ -95,7 +96,8 @@ async function sformuluj(stan: Stan, config?: { signal?: AbortSignal }): Promise
 
 function sprawdz(stan: Stan): Partial<Stan> {
   const fakty = stan.fakty?.fakty ?? [];
-  return { tekst: stan.tekst && czyTekstZgodnyZFaktami(stan.tekst, fakty) ? stan.tekst : null };
+  const wymagane = stan.fakty?.wymaganeLiczby ?? [];
+  return { tekst: stan.tekst && czyTekstZgodnyZFaktami(stan.tekst, fakty, wymagane) ? stan.tekst : null };
 }
 
 function zbuduj(stan: Stan): Partial<Stan> {
