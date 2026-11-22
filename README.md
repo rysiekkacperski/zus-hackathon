@@ -11,7 +11,8 @@ ZUS Mama to moduł aplikacji mZUS dla przyszłych i świeżo upieczonych rodzic�
 | Materiał | Link |
 | --- | --- |
 | Demo | [zus-mama.vercel.app](https://zus-mama.vercel.app) |
-| Prezentacja | [Google Drive](https://drive.google.com/file/d/1rlUu9m9wVllJs7SS8uUQ2DbAQsNdQLx5/view?usp=sharing) |
+| Prezentacja wideo | [YouTube](https://www.youtube.com/watch?v=oNwCVOfmxog) |
+| Prezentacja w PDF | [Google Drive](https://drive.google.com/file/d/1rlUu9m9wVllJs7SS8uUQ2DbAQsNdQLx5/view?usp=sharing) |
 | Instrukcja dla jury | [Jak sprawdzić rozwiązanie](#jak-sprawdzić-rozwiązanie) |
 | Dokumenty przykładowe do wgrania | [dokumenty-przykladowe.zip](https://zus-mama.vercel.app/przyklady/dokumenty-przykladowe.zip) |
 | REST API | [/api-docs](https://zus-mama.vercel.app/api-docs), opis [OpenAPI 3.1](https://zus-mama.vercel.app/api/v1/openapi.json) |
